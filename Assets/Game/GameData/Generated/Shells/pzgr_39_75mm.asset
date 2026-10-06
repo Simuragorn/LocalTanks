@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: 7.5 cm PzGr 39
   damage: 120
   penetration: 105
-  speed: 16.5
+  speed: 13.5
   radius: 0.048
   lifetimeSeconds: 3
   maximumRange: 42

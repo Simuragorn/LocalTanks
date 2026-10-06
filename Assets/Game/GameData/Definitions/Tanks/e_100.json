@@ -6,12 +6,12 @@
   "weaponId": "kwk_44_l38_15cm",
   "mobility": {
     "maxForwardSpeed": 1.45,
-    "maxReverseSpeed": 0.55,
-    "acceleration": 0.16,
-    "groundResistance": 1.55,
-    "braking": 1.6,
-    "hullTurnSpeed": 13.0,
-    "turretTurnSpeed": 10.0
+    "maxReverseSpeed": 0.45,
+    "acceleration": 0.075,
+    "groundResistance": 0.6,
+    "braking": 0.9,
+    "hullTurnSpeed": 8.0,
+    "turretTurnSpeed": 8.0
   },
   "armor": {
     "front": 200.0,

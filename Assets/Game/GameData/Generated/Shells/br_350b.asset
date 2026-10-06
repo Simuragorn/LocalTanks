@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: BR-350B
   damage: 130
   penetration: 75
-  speed: 15.5
+  speed: 12
   radius: 0.05
   lifetimeSeconds: 3
   maximumRange: 42

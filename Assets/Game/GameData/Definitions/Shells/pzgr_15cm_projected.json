@@ -4,7 +4,7 @@
   "displayName": "15 cm PzGr (projected)",
   "damage": 750,
   "penetration": 250.0,
-  "speed": 14.0,
+  "speed": 15.5,
   "radius": 0.085,
   "lifetimeSeconds": 3.5,
   "maximumRange": 45.0,

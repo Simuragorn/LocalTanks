@@ -18,11 +18,11 @@ MonoBehaviour:
   weapon: {fileID: 11400000, guid: 47911f615fdd21f45b8a4bdfab0e2320, type: 2}
   maxForwardSpeed: 2.9
   maxReverseSpeed: 0.75
-  acceleration: 0.42
-  groundResistance: 1.55
-  braking: 2
-  hullTurnSpeed: 28
-  turretTurnSpeed: 20
+  acceleration: 0.28
+  groundResistance: 1.3
+  braking: 1.8
+  hullTurnSpeed: 22
+  turretTurnSpeed: 14
   armor:
     front: 50
     left: 30

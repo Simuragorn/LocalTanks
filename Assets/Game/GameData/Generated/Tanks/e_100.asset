@@ -17,12 +17,12 @@ MonoBehaviour:
   maxHitPoints: 2600
   weapon: {fileID: 11400000, guid: bd352bfbc999a63459b33bb217723812, type: 2}
   maxForwardSpeed: 1.45
-  maxReverseSpeed: 0.55
-  acceleration: 0.16
-  groundResistance: 1.55
-  braking: 1.6
-  hullTurnSpeed: 13
-  turretTurnSpeed: 10
+  maxReverseSpeed: 0.45
+  acceleration: 0.075
+  groundResistance: 0.6
+  braking: 0.9
+  hullTurnSpeed: 8
+  turretTurnSpeed: 8
   armor:
     front: 200
     left: 120

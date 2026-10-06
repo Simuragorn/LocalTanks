@@ -7,9 +7,9 @@
   "mobility": {
     "maxForwardSpeed": 1.9,
     "maxReverseSpeed": 0.85,
-    "acceleration": 0.3,
-    "groundResistance": 1.35,
-    "braking": 1.8,
+    "acceleration": 0.16,
+    "groundResistance": 0.85,
+    "braking": 1.25,
     "hullTurnSpeed": 18.0,
     "turretTurnSpeed": 18.0
   },

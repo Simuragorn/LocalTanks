@@ -20,6 +20,27 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void HistoricalRoster_PreservesMobilityAndProtectionDifferences()
+        {
+            CombatDefinitionSet definitions = CombatDefinitionImporter.LoadAndValidate();
+            TankDefinitionJson tiger = definitions.Tanks.Single(item => item.id == "tiger_ii");
+            TankDefinitionJson e100 = definitions.Tanks.Single(item => item.id == "e_100");
+            TankDefinitionJson t34 = definitions.Tanks.Single(item => item.id == "t_34_76");
+            TankDefinitionJson panzer = definitions.Tanks.Single(item => item.id == "panzer_iv");
+
+            Assert.That(t34.mobility.maxForwardSpeed, Is.GreaterThan(panzer.mobility.maxForwardSpeed));
+            Assert.That(panzer.mobility.maxForwardSpeed, Is.GreaterThan(tiger.mobility.maxForwardSpeed));
+            Assert.That(tiger.mobility.maxForwardSpeed, Is.GreaterThan(e100.mobility.maxForwardSpeed));
+            Assert.That(e100.mobility.acceleration, Is.LessThan(tiger.mobility.acceleration));
+            Assert.That(tiger.mobility.acceleration, Is.LessThan(panzer.mobility.acceleration));
+            Assert.That(panzer.mobility.acceleration, Is.LessThan(t34.mobility.acceleration));
+            Assert.That(t34.mobility.maxReverseSpeed, Is.LessThan(panzer.mobility.maxReverseSpeed));
+            Assert.That(e100.armor.front, Is.GreaterThan(tiger.armor.front));
+            Assert.That(tiger.armor.front, Is.GreaterThan(panzer.armor.front));
+            Assert.That(panzer.armor.front, Is.GreaterThan(t34.armor.front));
+        }
+
+        [Test]
         public void Validator_RejectsMissingWeaponReference()
         {
             CombatDefinitionSet definitions = new CombatDefinitionSet(
