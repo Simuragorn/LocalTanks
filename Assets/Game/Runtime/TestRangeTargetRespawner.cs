@@ -10,8 +10,10 @@ namespace LocalTanks
         [SerializeField] private Vector3[] spawnPositions;
         [SerializeField] private float[] spawnRotations;
         [SerializeField] private float[] rotationSpeeds;
+        [SerializeField] private bool rotationPaused;
 
         public GameObject[] CurrentTargets => currentTargets;
+        public bool RotationPaused => rotationPaused;
 
         public void Configure(
             GameObject[] prefabs,
@@ -27,6 +29,7 @@ namespace LocalTanks
             spawnPositions = positions;
             spawnRotations = rotations;
             rotationSpeeds = speeds;
+            PrepareCurrentTargets();
         }
 
         public void RespawnAllTargets()
@@ -76,8 +79,61 @@ namespace LocalTanks
                     ? rotationSpeeds[index]
                     : 9f;
                 display.Configure(speed);
+                display.SetPaused(rotationPaused);
+                AddHealthBar(target);
                 currentTargets[index] = target;
             }
+        }
+
+        public void ToggleTargetRotation()
+        {
+            SetRotationPaused(!rotationPaused);
+        }
+
+        public void SetRotationPaused(bool paused)
+        {
+            rotationPaused = paused;
+            if (currentTargets == null)
+            {
+                return;
+            }
+
+            foreach (GameObject target in currentTargets)
+            {
+                RotatingTankDisplay display = target != null ? target.GetComponent<RotatingTankDisplay>() : null;
+                display?.SetPaused(paused);
+            }
+        }
+
+        private void PrepareCurrentTargets()
+        {
+            if (currentTargets == null)
+            {
+                return;
+            }
+
+            foreach (GameObject target in currentTargets)
+            {
+                if (target == null)
+                {
+                    continue;
+                }
+
+                AddHealthBar(target);
+                RotatingTankDisplay display = target.GetComponent<RotatingTankDisplay>();
+                display?.SetPaused(rotationPaused);
+            }
+        }
+
+        private static void AddHealthBar(GameObject target)
+        {
+            TankHealthBar healthBar = target.GetComponent<TankHealthBar>();
+            if (healthBar == null)
+            {
+                healthBar = target.AddComponent<TankHealthBar>();
+            }
+
+            healthBar.Configure(1.45f);
         }
 
         private string GetTargetName(int index)

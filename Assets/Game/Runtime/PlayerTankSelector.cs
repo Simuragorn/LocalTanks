@@ -58,6 +58,11 @@ namespace LocalTanks
             {
                 SelectTank(3);
             }
+
+            if (keyboard.pKey.wasPressedThisFrame)
+            {
+                targetRespawner?.ToggleTargetRotation();
+            }
         }
 
         public bool SelectTank(int index)
@@ -108,7 +113,7 @@ namespace LocalTanks
 
             const float width = 310f;
             float controlsTop = 41f + tankPrefabs.Length * 29f;
-            float height = controlsTop + 65f;
+            float height = controlsTop + 94f;
             GUI.Box(new Rect(12f, 12f, width, height), "Выбор танка (1–4)");
 
             for (int index = 0; index < tankPrefabs.Length; index++)
@@ -134,6 +139,14 @@ namespace LocalTanks
             if (GUI.Button(new Rect(22f, controlsTop + 29f, width - 20f, 26f), "Респавн ИИ-танков"))
             {
                 targetRespawner?.RespawnAllTargets();
+            }
+
+            string rotationLabel = targetRespawner != null && targetRespawner.RotationPaused
+                ? "Возобновить вращение (P)"
+                : "Остановить вращение (P)";
+            if (GUI.Button(new Rect(22f, controlsTop + 58f, width - 20f, 26f), rotationLabel))
+            {
+                targetRespawner?.ToggleTargetRotation();
             }
         }
 

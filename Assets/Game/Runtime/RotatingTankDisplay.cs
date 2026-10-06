@@ -6,11 +6,13 @@ namespace LocalTanks
     public sealed class RotatingTankDisplay : MonoBehaviour
     {
         [SerializeField] private float degreesPerSecond = 9f;
+        [SerializeField] private bool isPaused;
 
         private Rigidbody2D body;
         private TankHealth health;
 
         public float DegreesPerSecond => degreesPerSecond;
+        public bool IsPaused => isPaused;
 
         private void Awake()
         {
@@ -23,9 +25,18 @@ namespace LocalTanks
             degreesPerSecond = rotationSpeed;
         }
 
+        public void SetPaused(bool paused)
+        {
+            isPaused = paused;
+            if (paused && body != null)
+            {
+                body.angularVelocity = 0f;
+            }
+        }
+
         private void FixedUpdate()
         {
-            if (health != null && health.IsDestroyed)
+            if (isPaused || health != null && health.IsDestroyed)
             {
                 return;
             }

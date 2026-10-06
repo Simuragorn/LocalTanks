@@ -28,8 +28,25 @@ namespace LocalTanks.Tests
                 GameObject target = GameObject.Find(targetName);
                 Assert.That(target, Is.Not.Null, targetName);
                 Assert.That(target.GetComponent<RotatingTankDisplay>(), Is.Not.Null, targetName);
+                Assert.That(target.GetComponent<TankHealthBar>(), Is.Not.Null, targetName);
                 Assert.That(target.GetComponent<PolygonCollider2D>().points.Length, Is.GreaterThanOrEqualTo(10), targetName);
             }
+        }
+
+        [UnityTest]
+        public IEnumerator CameraZoom_ClampsToConfiguredRange()
+        {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
+            CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
+            follow.SetZoom(100f, true);
+            Assert.That(follow.TargetZoom, Is.EqualTo(follow.MaximumZoom));
+            Assert.That(follow.CurrentZoom, Is.EqualTo(follow.MaximumZoom));
+
+            follow.SetZoom(-100f, true);
+            Assert.That(follow.TargetZoom, Is.EqualTo(follow.MinimumZoom));
+            Assert.That(follow.CurrentZoom, Is.EqualTo(follow.MinimumZoom));
         }
 
         [UnityTest]
@@ -116,6 +133,39 @@ namespace LocalTanks.Tests
 
             float rotationDelta = Mathf.Abs(Mathf.DeltaAngle(initialAngle, target.GetComponent<Rigidbody2D>().rotation));
             Assert.That(rotationDelta, Is.GreaterThan(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator TargetHealthBarAndRotationPause_PersistThroughRespawn()
+        {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
+            TestRangeTargetRespawner respawner = Object.FindFirstObjectByType<TestRangeTargetRespawner>();
+            GameObject target = GameObject.Find("E100_Target");
+            TankHealth health = target.GetComponent<TankHealth>();
+            TankHealthBar healthBar = target.GetComponent<TankHealthBar>();
+            health.ApplyDamage(health.MaximumHitPoints / 2);
+            Assert.That(healthBar.HealthRatio, Is.EqualTo((float)health.CurrentHitPoints / health.MaximumHitPoints));
+
+            respawner.SetRotationPaused(true);
+            float pausedAngle = target.GetComponent<Rigidbody2D>().rotation;
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+            Assert.That(Mathf.Abs(Mathf.DeltaAngle(pausedAngle, target.GetComponent<Rigidbody2D>().rotation)), Is.LessThan(0.001f));
+
+            respawner.RespawnAllTargets();
+            yield return null;
+
+            GameObject respawnedTarget = GameObject.Find("E100_Target");
+            Assert.That(respawnedTarget.GetComponent<TankHealthBar>().HealthRatio, Is.EqualTo(1f));
+            Assert.That(respawnedTarget.GetComponent<RotatingTankDisplay>().IsPaused, Is.True);
+
+            respawner.SetRotationPaused(false);
+            float resumedAngle = respawnedTarget.GetComponent<Rigidbody2D>().rotation;
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+            Assert.That(Mathf.Abs(Mathf.DeltaAngle(resumedAngle, respawnedTarget.GetComponent<Rigidbody2D>().rotation)), Is.GreaterThan(0.01f));
         }
 
         [UnityTest]
