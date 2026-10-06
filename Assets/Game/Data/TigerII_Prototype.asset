@@ -15,7 +15,8 @@ MonoBehaviour:
   maxForwardSpeed: 3
   maxReverseSpeed: 0.85
   acceleration: 0.3
-  braking: 0.65
+  groundResistance: 1.35
+  braking: 1.8
   hullTurnSpeed: 24
   turretTurnSpeed: 18
   reloadSeconds: 0.8
