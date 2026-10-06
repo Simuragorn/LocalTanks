@@ -1,0 +1,11 @@
+{
+  "name": "LocalTanks.PlayModeTests",
+  "rootNamespace": "LocalTanks.Tests",
+  "references": [
+    "LocalTanks.Core",
+    "LocalTanks.Runtime"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "LocalTanks.EditModeTests",
+  "rootNamespace": "LocalTanks.Tests",
+  "references": [
+    "LocalTanks.Core",
+    "LocalTanks.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
