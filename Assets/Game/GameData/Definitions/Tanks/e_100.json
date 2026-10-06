@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "e_100",
+  "displayName": "E-100",
+  "maxHitPoints": 2600,
+  "weaponId": "kwk_44_l38_15cm",
+  "mobility": {
+    "maxForwardSpeed": 1.45,
+    "maxReverseSpeed": 0.55,
+    "acceleration": 0.16,
+    "groundResistance": 1.55,
+    "braking": 1.6,
+    "hullTurnSpeed": 13.0,
+    "turretTurnSpeed": 10.0
+  },
+  "armor": {
+    "front": 200.0,
+    "left": 120.0,
+    "right": 120.0,
+    "rear": 150.0
+  }
+}

@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2d55c50e0cb13394e9090ad258b4ef38, type: 3}
-  m_Name: pzgr_39_43
+  m_Name: pzgr_39_75mm
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.ShellDefinition
-  id: pzgr_39_43
-  displayName: PzGr 39/43
-  damage: 300
-  penetration: 203
-  speed: 18
-  radius: 0.06
+  id: pzgr_39_75mm
+  displayName: 7.5 cm PzGr 39
+  damage: 120
+  penetration: 105
+  speed: 16.5
+  radius: 0.048
   lifetimeSeconds: 3
-  maximumRange: 45
+  maximumRange: 42
   ricochetAngle: 70
   ricochetSpeedMultiplier: 0.7
   ricochetPenetrationMultiplier: 0.65

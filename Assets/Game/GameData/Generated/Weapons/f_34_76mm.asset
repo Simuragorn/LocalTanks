@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6f6919c3bb522b84e993b4ddfa24016e, type: 3}
-  m_Name: kwk_43_l71
+  m_Name: f_34_76mm
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponDefinition
-  id: kwk_43_l71
-  displayName: 8.8 cm KwK 43 L/71
-  reloadSeconds: 8
-  shell: {fileID: 11400000, guid: 74486f7327b383e49b4b22f6d895ce4c, type: 2}
+  id: f_34_76mm
+  displayName: 76.2 mm F-34
+  reloadSeconds: 10
+  shell: {fileID: 11400000, guid: 6a0255f028147214b9d76ea2f0e9eb98, type: 2}

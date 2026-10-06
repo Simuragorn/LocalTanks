@@ -5,12 +5,12 @@
   "maxHitPoints": 1600,
   "weaponId": "kwk_43_l71",
   "mobility": {
-    "maxForwardSpeed": 3.0,
+    "maxForwardSpeed": 1.9,
     "maxReverseSpeed": 0.85,
     "acceleration": 0.3,
     "groundResistance": 1.35,
     "braking": 1.8,
-    "hullTurnSpeed": 24.0,
+    "hullTurnSpeed": 18.0,
     "turretTurnSpeed": 18.0
   },
   "armor": {

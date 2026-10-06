@@ -14,6 +14,7 @@ namespace LocalTanks
         public int CurrentHitPoints => state != null ? state.CurrentHitPoints : 0;
         public int MaximumHitPoints => state != null ? state.MaximumHitPoints : 0;
         public bool IsDestroyed => state != null && state.IsDestroyed;
+        public TankDefinition Definition => definition;
 
         private void Awake()
         {

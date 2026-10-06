@@ -8,6 +8,8 @@ namespace LocalTanks
         [SerializeField, Min(0f)] private float smoothTime = 0.15f;
         private Vector3 velocity;
 
+        public Transform Target => target;
+
         public void Configure(Transform newTarget)
         {
             target = newTarget;

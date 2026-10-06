@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "t_34_76",
+  "displayName": "T-34/76",
+  "maxHitPoints": 850,
+  "weaponId": "f_34_76mm",
+  "mobility": {
+    "maxForwardSpeed": 3.8,
+    "maxReverseSpeed": 0.36,
+    "acceleration": 0.55,
+    "groundResistance": 1.6,
+    "braking": 2.2,
+    "hullTurnSpeed": 31.0,
+    "turretTurnSpeed": 22.0
+  },
+  "armor": {
+    "front": 45.0,
+    "left": 45.0,
+    "right": 45.0,
+    "rear": 40.0
+  }
+}

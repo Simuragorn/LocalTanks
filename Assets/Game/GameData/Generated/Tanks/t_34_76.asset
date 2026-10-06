@@ -10,21 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fa5fa75625e111249b94a3b56f33e8a2, type: 3}
-  m_Name: tiger_ii
+  m_Name: t_34_76
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
-  id: tiger_ii
-  displayName: Tiger II
-  maxHitPoints: 1600
-  weapon: {fileID: 11400000, guid: 217b06bef7fe9b042acc40f8085a571d, type: 2}
-  maxForwardSpeed: 1.9
-  maxReverseSpeed: 0.85
-  acceleration: 0.3
-  groundResistance: 1.35
-  braking: 1.8
-  hullTurnSpeed: 18
-  turretTurnSpeed: 18
+  id: t_34_76
+  displayName: T-34/76
+  maxHitPoints: 850
+  weapon: {fileID: 11400000, guid: 527e0d72279755d4aa0835b43de5b3aa, type: 2}
+  maxForwardSpeed: 3.8
+  maxReverseSpeed: 0.36
+  acceleration: 0.55
+  groundResistance: 1.6
+  braking: 2.2
+  hullTurnSpeed: 31
+  turretTurnSpeed: 22
   armor:
-    front: 150
-    left: 80
-    right: 80
-    rear: 80
+    front: 45
+    left: 45
+    right: 45
+    rear: 40

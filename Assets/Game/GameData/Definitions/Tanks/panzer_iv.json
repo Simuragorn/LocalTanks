@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "panzer_iv",
+  "displayName": "Panzer IV (long 7.5 cm)",
+  "maxHitPoints": 650,
+  "weaponId": "kwk_40_l43",
+  "mobility": {
+    "maxForwardSpeed": 2.9,
+    "maxReverseSpeed": 0.75,
+    "acceleration": 0.42,
+    "groundResistance": 1.55,
+    "braking": 2.0,
+    "hullTurnSpeed": 28.0,
+    "turretTurnSpeed": 20.0
+  },
+  "armor": {
+    "front": 50.0,
+    "left": 30.0,
+    "right": 30.0,
+    "rear": 20.0
+  }
+}

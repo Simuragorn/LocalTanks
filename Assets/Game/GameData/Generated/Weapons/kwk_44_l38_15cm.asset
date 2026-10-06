@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6f6919c3bb522b84e993b4ddfa24016e, type: 3}
-  m_Name: kwk_43_l71
+  m_Name: kwk_44_l38_15cm
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponDefinition
-  id: kwk_43_l71
-  displayName: 8.8 cm KwK 43 L/71
-  reloadSeconds: 8
-  shell: {fileID: 11400000, guid: 74486f7327b383e49b4b22f6d895ce4c, type: 2}
+  id: kwk_44_l38_15cm
+  displayName: 15 cm KwK 44 L/38 (projected)
+  reloadSeconds: 20
+  shell: {fileID: 11400000, guid: 7c60976e061f51f408375b70575b473a, type: 2}

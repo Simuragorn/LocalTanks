@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "pzgr_15cm_projected",
+  "displayName": "15 cm PzGr (projected)",
+  "damage": 750,
+  "penetration": 250.0,
+  "speed": 14.0,
+  "radius": 0.085,
+  "lifetimeSeconds": 3.5,
+  "maximumRange": 45.0,
+  "ricochetAngle": 70.0,
+  "ricochetSpeedMultiplier": 0.62,
+  "ricochetPenetrationMultiplier": 0.58,
+  "maximumRicochets": 2
+}
