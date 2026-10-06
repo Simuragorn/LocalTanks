@@ -94,5 +94,114 @@ namespace LocalTanks.Tests
             Assert.That(travelled, Is.EqualTo(1.5f));
             Assert.That(budget.IsExpired, Is.True);
         }
+
+        [TestCase(0f, 1f, ArmorZone.Front)]
+        [TestCase(0f, -1f, ArmorZone.Rear)]
+        [TestCase(-1f, 0f, ArmorZone.Left)]
+        [TestCase(1f, 0f, ArmorZone.Right)]
+        [TestCase(0.7f, 0.7f, ArmorZone.Front)]
+        public void ArmorZone_UsesLocalColliderNormal(float x, float y, ArmorZone expected)
+        {
+            Assert.That(ArmorMath.SelectZone(new UnityEngine.Vector2(x, y)), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void EffectiveArmor_IncreasesWithColliderImpactAngle()
+        {
+            float straight = ArmorMath.EffectiveArmor(100f, 1f, 0.1f);
+            float angled = ArmorMath.EffectiveArmor(100f, 0.5f, 0.1f);
+
+            Assert.That(straight, Is.EqualTo(100f));
+            Assert.That(angled, Is.EqualTo(200f));
+        }
+
+        [Test]
+        public void Impact_PenetratesWhenPenetrationEqualsEffectiveArmor()
+        {
+            ImpactResult result = ResolveImpact(
+                UnityEngine.Vector2.down,
+                UnityEngine.Vector2.up,
+                penetration: 150f,
+                remainingRicochets: 1);
+
+            Assert.That(result.Outcome, Is.EqualTo(ImpactOutcome.Penetrated));
+            Assert.That(result.Zone, Is.EqualTo(ArmorZone.Front));
+        }
+
+        [Test]
+        public void Impact_BlocksWithoutDamageAtDirectAngle()
+        {
+            ImpactResult result = ResolveImpact(
+                UnityEngine.Vector2.down,
+                UnityEngine.Vector2.up,
+                penetration: 149f,
+                remainingRicochets: 1);
+
+            Assert.That(result.Outcome, Is.EqualTo(ImpactOutcome.Blocked));
+        }
+
+        [Test]
+        public void Impact_RicochetsFromAngledColliderSegment()
+        {
+            UnityEngine.Vector2 normal = new UnityEngine.Vector2(0.94f, 0.342f).normalized;
+            ImpactResult result = ResolveImpact(
+                UnityEngine.Vector2.down,
+                normal,
+                penetration: 100f,
+                remainingRicochets: 1);
+
+            Assert.That(result.Outcome, Is.EqualTo(ImpactOutcome.Ricocheted));
+            Assert.That(result.ImpactAngle, Is.EqualTo(70f).Within(0.1f));
+            Assert.That(result.OutgoingSpeed, Is.EqualTo(7f).Within(0.001f));
+            Assert.That(result.RemainingPenetration, Is.EqualTo(65f).Within(0.001f));
+            Assert.That(UnityEngine.Vector2.Dot(result.OutgoingDirection, normal), Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void Impact_CannotRicochetAfterLimitIsExhausted()
+        {
+            UnityEngine.Vector2 normal = new UnityEngine.Vector2(0.94f, 0.342f).normalized;
+            ImpactResult result = ResolveImpact(
+                UnityEngine.Vector2.down,
+                normal,
+                penetration: 100f,
+                remainingRicochets: 0);
+
+            Assert.That(result.Outcome, Is.EqualTo(ImpactOutcome.Blocked));
+        }
+
+        [Test]
+        public void Health_ClampsAtZeroAndDestroysOnlyOnce()
+        {
+            HealthState health = new HealthState(100);
+
+            DamageResult first = health.ApplyDamage(150);
+            DamageResult second = health.ApplyDamage(10);
+
+            Assert.That(first.AppliedDamage, Is.EqualTo(100));
+            Assert.That(first.RemainingHitPoints, Is.Zero);
+            Assert.That(first.WasDestroyed, Is.True);
+            Assert.That(second.AppliedDamage, Is.Zero);
+            Assert.That(second.WasDestroyed, Is.False);
+        }
+
+        private static ImpactResult ResolveImpact(
+            UnityEngine.Vector2 direction,
+            UnityEngine.Vector2 surfaceNormal,
+            float penetration,
+            int remainingRicochets)
+        {
+            return ImpactResolver.Resolve(new ImpactRequest(
+                direction,
+                surfaceNormal,
+                surfaceNormal,
+                new ArmorProfile(150f, 80f, 80f, 80f),
+                penetration,
+                speed: 10f,
+                ricochetAngle: 70f,
+                ricochetSpeedMultiplier: 0.7f,
+                ricochetPenetrationMultiplier: 0.65f,
+                remainingRicochets));
+        }
     }
 }
