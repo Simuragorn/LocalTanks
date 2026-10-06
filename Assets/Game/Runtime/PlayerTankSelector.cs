@@ -10,22 +10,28 @@ namespace LocalTanks
         [SerializeField] private GameObject currentTank;
         [SerializeField] private int currentTankIndex;
         [SerializeField] private CameraFollow2D cameraFollow;
+        [SerializeField] private TestRangeTargetRespawner targetRespawner;
+        [SerializeField] private bool developerFastReload;
 
         public GameObject CurrentTank => currentTank;
         public int CurrentTankIndex => currentTankIndex;
+        public bool DeveloperFastReloadEnabled => developerFastReload;
 
         public void Configure(
             GameObject[] prefabs,
             string[] displayNames,
             GameObject initialTank,
             int initialIndex,
-            CameraFollow2D follow)
+            CameraFollow2D follow,
+            TestRangeTargetRespawner respawner)
         {
             tankPrefabs = prefabs;
             tankNames = displayNames;
             currentTank = initialTank;
             currentTankIndex = initialIndex;
             cameraFollow = follow;
+            targetRespawner = respawner;
+            ApplyDeveloperReload();
         }
 
         private void Update()
@@ -77,6 +83,7 @@ namespace LocalTanks
             currentTank.name = $"Player_{GetTankName(index).Replace(' ', '_').Replace('/', '_')}";
             currentTankIndex = index;
             cameraFollow?.Configure(currentTank.transform);
+            ApplyDeveloperReload();
 
             if (previousTank != null)
             {
@@ -86,6 +93,12 @@ namespace LocalTanks
             return true;
         }
 
+        public void SetDeveloperFastReload(bool enabled)
+        {
+            developerFastReload = enabled;
+            ApplyDeveloperReload();
+        }
+
         private void OnGUI()
         {
             if (tankPrefabs == null || tankPrefabs.Length == 0)
@@ -93,8 +106,9 @@ namespace LocalTanks
                 return;
             }
 
-            const float width = 235f;
-            float height = 36f + tankPrefabs.Length * 29f;
+            const float width = 310f;
+            float controlsTop = 41f + tankPrefabs.Length * 29f;
+            float height = controlsTop + 65f;
             GUI.Box(new Rect(12f, 12f, width, height), "Выбор танка (1–4)");
 
             for (int index = 0; index < tankPrefabs.Length; index++)
@@ -107,6 +121,26 @@ namespace LocalTanks
                     SelectTank(index);
                 }
             }
+
+            bool fastReload = GUI.Toggle(
+                new Rect(22f, controlsTop, width - 20f, 24f),
+                developerFastReload,
+                "Режим разработчика: перезарядка 1 с");
+            if (fastReload != developerFastReload)
+            {
+                SetDeveloperFastReload(fastReload);
+            }
+
+            if (GUI.Button(new Rect(22f, controlsTop + 29f, width - 20f, 26f), "Респавн ИИ-танков"))
+            {
+                targetRespawner?.RespawnAllTargets();
+            }
+        }
+
+        private void ApplyDeveloperReload()
+        {
+            WeaponController weapon = currentTank != null ? currentTank.GetComponent<WeaponController>() : null;
+            weapon?.SetReloadOverride(developerFastReload ? 1f : 0f);
         }
 
         private string GetTankName(int index)

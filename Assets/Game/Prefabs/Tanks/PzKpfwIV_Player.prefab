@@ -292,6 +292,7 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: 4cbec875c7c9faa47a25fbb542ab591e, type: 2}
   projectilePrefab: {fileID: 6266017310525627264, guid: b2f589a05d276434bbcdf20f79526a87, type: 3}
   muzzle: {fileID: 525201365999733529}
+  reloadOverrideSeconds: 0
 --- !u!114 &2412956231356553347
 MonoBehaviour:
   m_ObjectHideFlags: 0

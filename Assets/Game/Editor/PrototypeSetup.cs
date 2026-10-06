@@ -299,23 +299,39 @@ namespace LocalTanks.Editor
 
             CameraFollow2D follow = EnsureCamera(player.transform);
             GameObject selectorObject = new GameObject("PlayerTankSelector");
-            PlayerTankSelector selector = selectorObject.AddComponent<PlayerTankSelector>();
-            selector.Configure(tankPrefabs, TankSpecs.Select(spec => spec.DisplayName).ToArray(), player, 0, follow);
 
             Vector3[] positions =
             {
                 new Vector3(-7.2f, 5.7f, 0f), new Vector3(-2.5f, 5.7f, 0f),
                 new Vector3(2.5f, 5.7f, 0f), new Vector3(7.2f, 5.7f, 0f)
             };
+            float[] rotations = Enumerable.Repeat(180f, tankPrefabs.Length).ToArray();
+            float[] rotationSpeeds = Enumerable.Range(0, tankPrefabs.Length)
+                .Select(index => 7f + index * 1.5f)
+                .ToArray();
+            string[] targetNames = TankSpecs.Select(spec => spec.SpritePrefix + "_Target").ToArray();
+            GameObject[] targets = new GameObject[tankPrefabs.Length];
             for (int index = 0; index < tankPrefabs.Length; index++)
             {
                 GameObject target = (GameObject)PrefabUtility.InstantiatePrefab(tankPrefabs[index], scene);
-                target.name = TankSpecs[index].SpritePrefix + "_Target";
-                target.transform.SetPositionAndRotation(positions[index], Quaternion.Euler(0f, 0f, 180f));
+                target.name = targetNames[index];
+                target.transform.SetPositionAndRotation(positions[index], Quaternion.Euler(0f, 0f, rotations[index]));
                 DisablePlayerControls(target);
                 RotatingTankDisplay display = target.AddComponent<RotatingTankDisplay>();
-                display.Configure(7f + index * 1.5f);
+                display.Configure(rotationSpeeds[index]);
+                targets[index] = target;
             }
+
+            TestRangeTargetRespawner respawner = selectorObject.AddComponent<TestRangeTargetRespawner>();
+            respawner.Configure(tankPrefabs, targetNames, targets, positions, rotations, rotationSpeeds);
+            PlayerTankSelector selector = selectorObject.AddComponent<PlayerTankSelector>();
+            selector.Configure(
+                tankPrefabs,
+                TankSpecs.Select(spec => spec.DisplayName).ToArray(),
+                player,
+                0,
+                follow,
+                respawner);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);

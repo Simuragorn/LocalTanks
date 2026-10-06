@@ -52,6 +52,58 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator DeveloperReload_PersistsWhenPlayerSelectsAnotherTank()
+        {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
+            PlayerTankSelector selector = Object.FindFirstObjectByType<PlayerTankSelector>();
+            WeaponController initialWeapon = selector.CurrentTank.GetComponent<WeaponController>();
+            Assert.That(initialWeapon.EffectiveReloadSeconds, Is.GreaterThan(1f));
+
+            selector.SetDeveloperFastReload(true);
+            Assert.That(initialWeapon.EffectiveReloadSeconds, Is.EqualTo(1f));
+            Assert.That(selector.SelectTank(1), Is.True);
+            yield return null;
+
+            Assert.That(selector.DeveloperFastReloadEnabled, Is.True);
+            Assert.That(selector.CurrentTank.GetComponent<WeaponController>().EffectiveReloadSeconds, Is.EqualTo(1f));
+        }
+
+        [UnityTest]
+        public IEnumerator TargetRespawn_RecreatesAiTanksWithoutReplacingPlayer()
+        {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
+            PlayerTankSelector selector = Object.FindFirstObjectByType<PlayerTankSelector>();
+            TestRangeTargetRespawner respawner = Object.FindFirstObjectByType<TestRangeTargetRespawner>();
+            GameObject player = selector.CurrentTank;
+            TankHealth playerHealth = player.GetComponent<TankHealth>();
+            playerHealth.ApplyDamage(25);
+            int playerHitPoints = playerHealth.CurrentHitPoints;
+            Vector3 playerPosition = player.transform.position;
+
+            GameObject oldTarget = GameObject.Find("E100_Target");
+            TankHealth oldHealth = oldTarget.GetComponent<TankHealth>();
+            oldHealth.ApplyDamage(oldHealth.MaximumHitPoints);
+            oldTarget.transform.position = Vector3.zero;
+
+            respawner.RespawnAllTargets();
+            yield return null;
+
+            GameObject newTarget = GameObject.Find("E100_Target");
+            Assert.That(selector.CurrentTank, Is.SameAs(player));
+            Assert.That(playerHealth.CurrentHitPoints, Is.EqualTo(playerHitPoints));
+            Assert.That(player.transform.position, Is.EqualTo(playerPosition));
+            Assert.That(newTarget, Is.Not.SameAs(oldTarget));
+            Assert.That(newTarget.GetComponent<TankHealth>().CurrentHitPoints,
+                Is.EqualTo(newTarget.GetComponent<TankHealth>().MaximumHitPoints));
+            Assert.That(newTarget.GetComponent<RotatingTankDisplay>(), Is.Not.Null);
+            Assert.That(newTarget.GetComponent<PlayerTankInput>().enabled, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator DisplayTank_RotatesWhenAlive()
         {
             SceneManager.LoadScene("Battle_TestRange");

@@ -7,10 +7,16 @@ namespace LocalTanks
         [SerializeField] private TankDefinition config;
         [SerializeField] private Projectile2D projectilePrefab;
         [SerializeField] private Transform muzzle;
+        [SerializeField, Min(0f)] private float reloadOverrideSeconds;
 
         private readonly ReloadTimer reloadTimer = new ReloadTimer();
 
         public bool IsReady => reloadTimer.IsReady;
+        public float EffectiveReloadSeconds => reloadOverrideSeconds > 0f
+            ? reloadOverrideSeconds
+            : config != null && config.weapon != null
+                ? config.weapon.reloadSeconds
+                : 0f;
 
         public void Configure(
             TankDefinition newConfig,
@@ -20,6 +26,15 @@ namespace LocalTanks
             config = newConfig;
             projectilePrefab = newProjectilePrefab;
             muzzle = newMuzzle;
+        }
+
+        public void SetReloadOverride(float seconds)
+        {
+            reloadOverrideSeconds = Mathf.Max(0f, seconds);
+            if (reloadOverrideSeconds > 0f && reloadTimer.Remaining > reloadOverrideSeconds)
+            {
+                reloadTimer.Start(reloadOverrideSeconds);
+            }
         }
 
         private void Update()
@@ -41,7 +56,7 @@ namespace LocalTanks
                 muzzle.up,
                 shell,
                 transform.root);
-            reloadTimer.Start(weapon.reloadSeconds);
+            reloadTimer.Start(EffectiveReloadSeconds);
             return true;
         }
     }
