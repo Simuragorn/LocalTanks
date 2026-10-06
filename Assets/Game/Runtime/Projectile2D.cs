@@ -94,6 +94,8 @@ namespace LocalTanks
                 TankArmor armor = hit.collider.GetComponentInParent<TankArmor>();
                 if (armor == null)
                 {
+                    DestructibleObstacle obstacle = hit.collider.GetComponentInParent<DestructibleObstacle>();
+                    obstacle?.ApplyDamage(damage);
                     Destroy(gameObject);
                     return;
                 }

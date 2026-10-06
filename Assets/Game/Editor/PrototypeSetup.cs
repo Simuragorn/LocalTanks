@@ -339,7 +339,7 @@ namespace LocalTanks.Editor
 
         private static CameraFollow2D EnsureCamera(Transform target)
         {
-            Camera camera = Object.FindFirstObjectByType<Camera>();
+            Camera camera = Object.FindAnyObjectByType<Camera>();
             if (camera == null)
             {
                 GameObject cameraObject = new GameObject("Main Camera");

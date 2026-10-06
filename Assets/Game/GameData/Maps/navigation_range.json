@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "navigation_range",
+  "width": 40,
+  "height": 24,
+  "cellSize": 0.75,
+  "terrains": [
+    { "symbol": ".", "kind": "Grass", "navigationCost": 1.25, "speedMultiplier": 0.85, "accelerationMultiplier": 0.85, "blocked": false, "red": 0.20, "green": 0.36, "blue": 0.18 },
+    { "symbol": "=", "kind": "Road", "navigationCost": 1.0, "speedMultiplier": 1.0, "accelerationMultiplier": 1.0, "blocked": false, "red": 0.43, "green": 0.42, "blue": 0.38 },
+    { "symbol": "m", "kind": "Mud", "navigationCost": 2.2, "speedMultiplier": 0.55, "accelerationMultiplier": 0.45, "blocked": false, "red": 0.30, "green": 0.20, "blue": 0.10 },
+    { "symbol": "w", "kind": "ShallowWater", "navigationCost": 3.5, "speedMultiplier": 0.35, "accelerationMultiplier": 0.30, "blocked": false, "red": 0.12, "green": 0.34, "blue": 0.50 },
+    { "symbol": "#", "kind": "Blocked", "navigationCost": 10.0, "speedMultiplier": 1.0, "accelerationMultiplier": 1.0, "blocked": true, "red": 0.22, "green": 0.23, "blue": 0.25 },
+    { "symbol": "d", "kind": "Blocked", "navigationCost": 10.0, "speedMultiplier": 1.0, "accelerationMultiplier": 1.0, "blocked": true, "red": 0.42, "green": 0.24, "blue": 0.10 }
+  ],
+  "rows": [
+    "########################################",
+    "#......................................#",
+    "#....==============================....#",
+    "#....=............................=....#",
+    "#....=....mmmmmmmm................=....#",
+    "#....=....mmmmmmmm....wwwwww......=....#",
+    "#....=....mmmmmmmm....wwwwww......=....#",
+    "#....=....mmmmmmmm....wwwwww......=....#",
+    "#....=................wwwwww......=....#",
+    "#....=............................=....#",
+    "#....=............................=....#",
+    "#.....############dddd############.....#",
+    "#....=............................=....#",
+    "#....=............................=....#",
+    "#....=....wwwwww..................=....#",
+    "#....=....wwwwww....mmmmmmmm......=....#",
+    "#....=....wwwwww....mmmmmmmm......=....#",
+    "#....=....wwwwww....mmmmmmmm......=....#",
+    "#....=................mmmmmmmm....=....#",
+    "#....=............................=....#",
+    "#....=............................=....#",
+    "#....==============================....#",
+    "#......................................#",
+    "########################################"
+  ]
+}
