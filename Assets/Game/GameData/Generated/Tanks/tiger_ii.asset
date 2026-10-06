@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa5fa75625e111249b94a3b56f33e8a2, type: 3}
+  m_Name: tiger_ii
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
+  id: tiger_ii
+  displayName: Tiger II
+  maxHitPoints: 1600
+  weapon: {fileID: 11400000, guid: 217b06bef7fe9b042acc40f8085a571d, type: 2}
+  maxForwardSpeed: 3
+  maxReverseSpeed: 0.85
+  acceleration: 0.3
+  groundResistance: 1.35
+  braking: 1.8
+  hullTurnSpeed: 24
+  turretTurnSpeed: 18
+  armor:
+    front: 150
+    left: 80
+    right: 80
+    rear: 80

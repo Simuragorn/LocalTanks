@@ -1,0 +1,26 @@
+using UnityEngine;
+
+namespace LocalTanks
+{
+    public sealed class TankDefinition : ScriptableObject
+    {
+        public string id;
+        public string displayName;
+        [Min(1)] public int maxHitPoints = 1;
+        public WeaponDefinition weapon;
+
+        [Header("Hull movement")]
+        [Min(0f)] public float maxForwardSpeed;
+        [Min(0f)] public float maxReverseSpeed;
+        [Min(0f)] public float acceleration;
+        [Min(0f)] public float groundResistance;
+        [Min(0f)] public float braking;
+        [Min(0f)] public float hullTurnSpeed;
+
+        [Header("Turret")]
+        [Min(0f)] public float turretTurnSpeed;
+
+        [Header("Hull armor")]
+        public ArmorProfile armor;
+    }
+}

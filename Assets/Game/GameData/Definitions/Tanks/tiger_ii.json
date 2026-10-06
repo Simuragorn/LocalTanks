@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "tiger_ii",
+  "displayName": "Tiger II",
+  "maxHitPoints": 1600,
+  "weaponId": "kwk_43_l71",
+  "mobility": {
+    "maxForwardSpeed": 3.0,
+    "maxReverseSpeed": 0.85,
+    "acceleration": 0.3,
+    "groundResistance": 1.35,
+    "braking": 1.8,
+    "hullTurnSpeed": 24.0,
+    "turretTurnSpeed": 18.0
+  },
+  "armor": {
+    "front": 150.0,
+    "left": 80.0,
+    "right": 80.0,
+    "rear": 80.0
+  }
+}

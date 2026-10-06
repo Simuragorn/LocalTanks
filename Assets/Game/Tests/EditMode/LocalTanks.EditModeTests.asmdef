@@ -3,7 +3,8 @@
   "rootNamespace": "LocalTanks.Tests",
   "references": [
     "LocalTanks.Core",
-    "LocalTanks.Runtime"
+    "LocalTanks.Runtime",
+    "LocalTanks.Editor"
   ],
   "includePlatforms": [
     "Editor"
