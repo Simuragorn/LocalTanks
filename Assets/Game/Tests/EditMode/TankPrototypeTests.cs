@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UnityEngine;
 
 namespace LocalTanks.Tests
 {
@@ -183,6 +184,68 @@ namespace LocalTanks.Tests
             Assert.That(first.WasDestroyed, Is.True);
             Assert.That(second.AppliedDamage, Is.Zero);
             Assert.That(second.WasDestroyed, Is.False);
+        }
+
+        [Test]
+        public void WeightedAStar_AvoidsBlockedCells()
+        {
+            NavigationGridModel grid = new NavigationGridModel(5, 3);
+            grid.SetBlocked(new Vector2Int(2, 1), true);
+
+            var path = WeightedAStar.FindPath(grid, new Vector2Int(0, 1), new Vector2Int(4, 1));
+
+            Assert.That(path, Is.Not.Empty);
+            Assert.That(path, Has.None.EqualTo(new Vector2Int(2, 1)));
+        }
+
+        [Test]
+        public void WeightedAStar_PrefersLongerRoadOverExpensiveMud()
+        {
+            NavigationGridModel grid = new NavigationGridModel(5, 3);
+            for (int x = 1; x < 4; x++)
+            {
+                grid.SetCell(new Vector2Int(x, 1), 8f, false);
+            }
+
+            var path = WeightedAStar.FindPath(
+                grid,
+                new Vector2Int(0, 1),
+                new Vector2Int(4, 1),
+                heuristicWeight: 1f);
+
+            Assert.That(path, Is.Not.Empty);
+            Assert.That(path.Exists(cell => cell.y != 1), Is.True);
+        }
+
+        [Test]
+        public void WeightedAStar_DoesNotCutBlockedDiagonalCorner()
+        {
+            NavigationGridModel grid = new NavigationGridModel(3, 3);
+            grid.SetBlocked(new Vector2Int(1, 0), true);
+            grid.SetBlocked(new Vector2Int(0, 1), true);
+
+            var path = WeightedAStar.FindPath(grid, Vector2Int.zero, new Vector2Int(2, 2));
+
+            Assert.That(path, Is.Empty);
+        }
+
+        [Test]
+        public void WeightedAStar_ClearanceRejectsNarrowPassage()
+        {
+            NavigationGridModel grid = new NavigationGridModel(7, 7);
+            for (int y = 0; y < 7; y++)
+            {
+                if (y != 3)
+                {
+                    grid.SetBlocked(new Vector2Int(3, y), true);
+                }
+            }
+
+            var pointPath = WeightedAStar.FindPath(grid, new Vector2Int(1, 3), new Vector2Int(5, 3), 0);
+            var widePath = WeightedAStar.FindPath(grid, new Vector2Int(1, 3), new Vector2Int(5, 3), 1);
+
+            Assert.That(pointPath, Is.Not.Empty);
+            Assert.That(widePath, Is.Empty);
         }
 
         private static ImpactResult ResolveImpact(

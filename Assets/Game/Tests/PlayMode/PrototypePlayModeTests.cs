@@ -3,6 +3,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.Tilemaps;
 
 namespace LocalTanks.Tests
 {
@@ -55,7 +56,7 @@ namespace LocalTanks.Tests
             SceneManager.LoadScene("Battle_TestRange");
             yield return null;
 
-            PlayerTankSelector selector = Object.FindFirstObjectByType<PlayerTankSelector>();
+            PlayerTankSelector selector = Object.FindAnyObjectByType<PlayerTankSelector>();
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
 
             Assert.That(selector, Is.Not.Null);
@@ -74,7 +75,7 @@ namespace LocalTanks.Tests
             SceneManager.LoadScene("Battle_TestRange");
             yield return null;
 
-            PlayerTankSelector selector = Object.FindFirstObjectByType<PlayerTankSelector>();
+            PlayerTankSelector selector = Object.FindAnyObjectByType<PlayerTankSelector>();
             WeaponController initialWeapon = selector.CurrentTank.GetComponent<WeaponController>();
             Assert.That(initialWeapon.EffectiveReloadSeconds, Is.GreaterThan(1f));
 
@@ -93,8 +94,8 @@ namespace LocalTanks.Tests
             SceneManager.LoadScene("Battle_TestRange");
             yield return null;
 
-            PlayerTankSelector selector = Object.FindFirstObjectByType<PlayerTankSelector>();
-            TestRangeTargetRespawner respawner = Object.FindFirstObjectByType<TestRangeTargetRespawner>();
+            PlayerTankSelector selector = Object.FindAnyObjectByType<PlayerTankSelector>();
+            TestRangeTargetRespawner respawner = Object.FindAnyObjectByType<TestRangeTargetRespawner>();
             GameObject player = selector.CurrentTank;
             TankHealth playerHealth = player.GetComponent<TankHealth>();
             playerHealth.ApplyDamage(25);
@@ -141,7 +142,7 @@ namespace LocalTanks.Tests
             SceneManager.LoadScene("Battle_TestRange");
             yield return null;
 
-            TestRangeTargetRespawner respawner = Object.FindFirstObjectByType<TestRangeTargetRespawner>();
+            TestRangeTargetRespawner respawner = Object.FindAnyObjectByType<TestRangeTargetRespawner>();
             GameObject target = GameObject.Find("E100_Target");
             TankHealth health = target.GetComponent<TankHealth>();
             TankHealthBar healthBar = target.GetComponent<TankHealthBar>();
@@ -182,8 +183,84 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator NavigationRange_LoadsMapAndMovingAgents()
+        {
+            SceneManager.LoadScene("Battle_NavigationRange");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            NavigationAgent[] agents = Object.FindObjectsByType<NavigationAgent>();
+            Assert.That(map, Is.Not.Null);
+            Assert.That(map.Width, Is.EqualTo(40));
+            Assert.That(map.Height, Is.EqualTo(24));
+            Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(2));
+            Assert.That(agents.Length, Is.EqualTo(3));
+            Assert.That(agents, Has.All.Matches<NavigationAgent>(agent => agent.HasPath));
+
+            GameObject movingAgent = GameObject.Find("NavAgent_T34");
+            Vector3 initialPosition = movingAgent.transform.position;
+            for (int frame = 0; frame < 60; frame++)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(Vector3.Distance(initialPosition, movingAgent.transform.position), Is.GreaterThan(0.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator NavigationRange_AppliesTerrainMovementModifiers()
+        {
+            SceneManager.LoadScene("Battle_NavigationRange");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            GameObject player = GameObject.Find("Navigation_Player");
+            TankMotor motor = player.GetComponent<TankMotor>();
+            TerrainMotorModifier modifier = player.GetComponent<TerrainMotorModifier>();
+
+            player.transform.position = map.CellToWorld(new Vector2Int(5, 2));
+            yield return new WaitForFixedUpdate();
+            Assert.That(modifier.CurrentTerrain, Is.EqualTo(TerrainKind.Road));
+            Assert.That(motor.TerrainSpeedMultiplier, Is.EqualTo(1f));
+
+            player.transform.position = map.CellToWorld(new Vector2Int(22, 7));
+            yield return new WaitForFixedUpdate();
+            Assert.That(modifier.CurrentTerrain, Is.EqualTo(TerrainKind.Mud));
+            Assert.That(motor.TerrainSpeedMultiplier, Is.EqualTo(0.55f).Within(0.001f));
+            Assert.That(motor.TerrainAccelerationMultiplier, Is.EqualTo(0.45f).Within(0.001f));
+        }
+
+        [UnityTest]
+        public IEnumerator DestroyedWall_OpensCellsAndShortensRoute()
+        {
+            SceneManager.LoadScene("Battle_NavigationRange");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            DestructibleObstacle wall = Object.FindAnyObjectByType<DestructibleObstacle>();
+            Vector2Int start = new Vector2Int(19, 4);
+            Vector2Int destination = new Vector2Int(19, 19);
+            var closedPath = map.FindCellPath(start, destination);
+            int version = map.Version;
+
+            wall.ApplyDamage(10000);
+            var openPath = map.FindCellPath(start, destination);
+
+            Assert.That(wall.IsDestroyed, Is.True);
+            Assert.That(map.Version, Is.GreaterThan(version));
+            Assert.That(map.IsBlocked(new Vector2Int(19, 12)), Is.False);
+            Assert.That(map.GetTerrain(new Vector2Int(19, 12)), Is.EqualTo(TerrainKind.Grass));
+            Assert.That(map.GetNavigationCost(new Vector2Int(19, 12)), Is.EqualTo(1.25f));
+            Assert.That(openPath, Is.Not.Empty);
+            Assert.That(openPath.Count, Is.LessThan(closedPath.Count));
+        }
+
+        [UnityTest]
         public IEnumerator PenetratingProjectile_ReducesTankHitPoints()
         {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
             TankDefinition tank = CreateTankDefinition(100, 10f);
             ShellDefinition shell = CreateShellDefinition(40, 100f);
             GameObject target = CreateArmoredTarget("PenetrationTarget", new Vector2(0f, 1f), 0f, tank);
@@ -207,6 +284,9 @@ namespace LocalTanks.Tests
         [UnityTest]
         public IEnumerator RicochetedProjectile_CanPenetrateSecondTarget()
         {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
             TankDefinition ricochetTank = CreateTankDefinition(100, 1000f);
             TankDefinition weakTank = CreateTankDefinition(100, 1f);
             ShellDefinition shell = CreateShellDefinition(100, 100f);
