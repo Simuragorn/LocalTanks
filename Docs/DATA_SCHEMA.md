@@ -23,12 +23,12 @@
   "maxHitPoints": 1600,
   "weaponId": "kwk_43_l71",
   "mobility": {
-    "maxForwardSpeed": 3.0,
+    "maxForwardSpeed": 1.9,
     "maxReverseSpeed": 0.85,
     "acceleration": 0.3,
     "groundResistance": 1.35,
     "braking": 1.8,
-    "hullTurnSpeed": 24.0,
+    "hullTurnSpeed": 18.0,
     "turretTurnSpeed": 18.0
   },
   "armor": {
@@ -55,7 +55,7 @@
   "schemaVersion": 1,
   "id": "kwk_43_l71",
   "displayName": "8.8 cm KwK 43 L/71",
-  "reloadSeconds": 0.8,
+  "reloadSeconds": 8.0,
   "shellId": "pzgr_39_43"
 }
 ```
@@ -69,8 +69,8 @@
   "schemaVersion": 1,
   "id": "pzgr_39_43",
   "displayName": "PzGr 39/43",
-  "damage": 320,
-  "penetration": 225.0,
+  "damage": 300,
+  "penetration": 203.0,
   "speed": 18.0,
   "radius": 0.06,
   "lifetimeSeconds": 3.0,
@@ -89,6 +89,8 @@
 - `ricochetAngle` — от `0` до `90` градусов включительно;
 - множители после рикошета — больше нуля и не больше единицы;
 - `maximumRicochets` — целое число от `0` до `8`.
+
+Исторические ориентиры и перевод скорости из игровых единиц приведены в `Docs/TANK_REFERENCE.md`. HP, урон и визуальная скорость снаряда являются игровыми величинами и не должны выдаваться за паспортные характеристики.
 
 ## Ошибки, которые обязан находить валидатор
 
