@@ -26,7 +26,14 @@ namespace LocalTanks.Editor
             TankPrototypeConfig config = CreateOrUpdateConfig();
             Projectile2D projectile = CreateProjectilePrefab();
             GameObject tankPrefab = CreateTankPrefab(config, projectile);
-            CreateTestScene(tankPrefab);
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
+            {
+                CreateTestScene(tankPrefab);
+            }
+            else
+            {
+                EnsureSceneInBuildSettings();
+            }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
@@ -55,13 +62,27 @@ namespace LocalTanks.Editor
             ISpriteEditorDataProvider provider = factories.GetSpriteEditorDataProviderFromObject(importer);
             provider.InitSpriteEditorDataProvider();
 
+            GUID hullId = GUID.Generate();
+            GUID turretId = GUID.Generate();
+            foreach (SpriteRect existingRect in provider.GetSpriteRects())
+            {
+                if (existingRect.name == "TigerII_Hull")
+                {
+                    hullId = existingRect.spriteID;
+                }
+                else if (existingRect.name == "TigerII_Turret")
+                {
+                    turretId = existingRect.spriteID;
+                }
+            }
+
             SpriteRect hull = new SpriteRect
             {
                 name = "TigerII_Hull",
                 rect = new Rect(7f, 83f, 105f, 191f),
                 alignment = SpriteAlignment.Custom,
                 pivot = new Vector2(0.5f, 0.5f),
-                spriteID = GUID.Generate()
+                spriteID = hullId
             };
 
             SpriteRect turret = new SpriteRect
@@ -71,7 +92,7 @@ namespace LocalTanks.Editor
                 alignment = SpriteAlignment.Custom,
                 // The pivot is at the turret ring instead of the centre of its long barrel.
                 pivot = new Vector2(0.5f, 0.78f),
-                spriteID = GUID.Generate()
+                spriteID = turretId
             };
 
             SpriteRect[] spriteRects = { hull, turret };
@@ -98,12 +119,13 @@ namespace LocalTanks.Editor
                 AssetDatabase.CreateAsset(config, ConfigPath);
             }
 
-            config.maxForwardSpeed = 5f;
-            config.maxReverseSpeed = 2.25f;
-            config.acceleration = 3.5f;
-            config.braking = 6f;
-            config.hullTurnSpeed = 75f;
-            config.turretTurnSpeed = 110f;
+            // The 1.91-unit hull represents a 7.38 m Tiger II, so 3 units/s is about 42 km/h.
+            config.maxForwardSpeed = 3f;
+            config.maxReverseSpeed = 0.85f;
+            config.acceleration = 0.3f;
+            config.braking = 0.65f;
+            config.hullTurnSpeed = 24f;
+            config.turretTurnSpeed = 18f;
             config.reloadSeconds = 0.8f;
             config.projectileSpeed = 18f;
             config.projectileRadius = 0.06f;
@@ -238,7 +260,23 @@ namespace LocalTanks.Editor
             follow.Configure(player.transform);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            EnsureSceneInBuildSettings();
+        }
+
+        private static void EnsureSceneInBuildSettings()
+        {
+            List<EditorBuildSettingsScene> scenes = EditorBuildSettings.scenes.ToList();
+            EditorBuildSettingsScene existing = scenes.FirstOrDefault(scene => scene.path == ScenePath);
+            if (existing == null)
+            {
+                scenes.Insert(0, new EditorBuildSettingsScene(ScenePath, true));
+            }
+            else
+            {
+                existing.enabled = true;
+            }
+
+            EditorBuildSettings.scenes = scenes.ToArray();
         }
 
         private static GameObject CreateSpriteChild(

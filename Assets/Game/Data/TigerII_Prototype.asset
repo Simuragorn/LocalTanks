@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e333b80e1a55f141b576c32b24eeada, type: 3}
   m_Name: TigerII_Prototype
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankPrototypeConfig
-  maxForwardSpeed: 5
-  maxReverseSpeed: 2.25
-  acceleration: 3.5
-  braking: 6
-  hullTurnSpeed: 75
-  turretTurnSpeed: 110
+  maxForwardSpeed: 3
+  maxReverseSpeed: 0.85
+  acceleration: 0.3
+  braking: 0.65
+  hullTurnSpeed: 24
+  turretTurnSpeed: 18
   reloadSeconds: 0.8
   projectileSpeed: 18
   projectileRadius: 0.06

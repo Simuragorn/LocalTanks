@@ -42,7 +42,7 @@ namespace LocalTanks
                 turret.SetTarget(world);
             }
 
-            if (mouse.leftButton.wasPressedThisFrame)
+            if (mouse.leftButton.isPressed)
             {
                 weapon?.TryFire();
             }

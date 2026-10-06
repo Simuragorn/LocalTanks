@@ -49,7 +49,8 @@ namespace LocalTanks
                 config.braking,
                 deltaTime);
 
-            float nextAngle = body.rotation - turnInput * config.hullTurnSpeed * deltaTime;
+            float steeringInput = TankMotionMath.SteeringInput(turnInput, CurrentSpeed);
+            float nextAngle = body.rotation - steeringInput * config.hullTurnSpeed * deltaTime;
             Vector2 nextPosition = body.position + (Vector2)transform.up * (CurrentSpeed * deltaTime);
             body.MoveRotation(nextAngle);
             body.MovePosition(nextPosition);

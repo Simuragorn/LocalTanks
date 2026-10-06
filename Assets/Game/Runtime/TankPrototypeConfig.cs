@@ -6,14 +6,14 @@ namespace LocalTanks
     public sealed class TankPrototypeConfig : ScriptableObject
     {
         [Header("Hull movement")]
-        [Min(0f)] public float maxForwardSpeed = 5f;
-        [Min(0f)] public float maxReverseSpeed = 2.25f;
-        [Min(0f)] public float acceleration = 3.5f;
-        [Min(0f)] public float braking = 6f;
-        [Min(0f)] public float hullTurnSpeed = 75f;
+        [Min(0f)] public float maxForwardSpeed = 3f;
+        [Min(0f)] public float maxReverseSpeed = 0.85f;
+        [Min(0f)] public float acceleration = 0.3f;
+        [Min(0f)] public float braking = 0.65f;
+        [Min(0f)] public float hullTurnSpeed = 24f;
 
         [Header("Turret")]
-        [Min(0f)] public float turretTurnSpeed = 110f;
+        [Min(0f)] public float turretTurnSpeed = 18f;
 
         [Header("Cannon")]
         [Min(0.01f)] public float reloadSeconds = 0.8f;

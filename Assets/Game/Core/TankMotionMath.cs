@@ -17,7 +17,12 @@ namespace LocalTanks
             float braking,
             float deltaTime)
         {
-            float rate = Mathf.Approximately(targetSpeed, 0f) ? braking : acceleration;
+            bool changingDirection = !Mathf.Approximately(currentSpeed, 0f) &&
+                                     !Mathf.Approximately(targetSpeed, 0f) &&
+                                     Mathf.Sign(currentSpeed) != Mathf.Sign(targetSpeed);
+            float rate = Mathf.Approximately(targetSpeed, 0f) || changingDirection
+                ? braking
+                : acceleration;
             return Mathf.MoveTowards(currentSpeed, targetSpeed, Mathf.Max(0f, rate) * deltaTime);
         }
 
@@ -27,6 +32,12 @@ namespace LocalTanks
                 currentAngle,
                 targetAngle,
                 Mathf.Max(0f, degreesPerSecond) * deltaTime);
+        }
+
+        public static float SteeringInput(float turnInput, float currentSpeed)
+        {
+            float clampedTurn = Mathf.Clamp(turnInput, -1f, 1f);
+            return currentSpeed < -0.001f ? -clampedTurn : clampedTurn;
         }
     }
 }

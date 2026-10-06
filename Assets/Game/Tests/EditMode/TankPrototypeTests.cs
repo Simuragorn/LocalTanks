@@ -24,10 +24,29 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void Speed_UsesBrakingWhenChangingDirection()
+        {
+            float speed = TankMotionMath.ApproachSpeed(2f, -1f, 0.3f, 1f, 1f);
+            Assert.That(speed, Is.EqualTo(1f).Within(0.001f));
+        }
+
+        [Test]
         public void TurretAngle_IsLimitedByTurnRate()
         {
             float angle = TankMotionMath.StepAngle(0f, 90f, 30f, 1f);
             Assert.That(angle, Is.EqualTo(30f).Within(0.001f));
+        }
+
+        [Test]
+        public void Steering_IsInvertedWhileReversing()
+        {
+            Assert.That(TankMotionMath.SteeringInput(1f, -0.5f), Is.EqualTo(-1f));
+        }
+
+        [Test]
+        public void Steering_IsNotInvertedWhileMovingForward()
+        {
+            Assert.That(TankMotionMath.SteeringInput(1f, 0.5f), Is.EqualTo(1f));
         }
 
         [Test]
