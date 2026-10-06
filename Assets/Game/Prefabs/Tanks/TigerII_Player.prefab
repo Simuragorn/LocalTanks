@@ -133,10 +133,13 @@ GameObject:
   m_Component:
   - component: {fileID: 852533068805856430}
   - component: {fileID: 3920106303397966198}
-  - component: {fileID: 7117156869174824876}
+  - component: {fileID: 7294076012409569639}
   - component: {fileID: 6598801164163643703}
   - component: {fileID: 3325340310409873891}
   - component: {fileID: 1271144910613082445}
+  - component: {fileID: 1009099874877684003}
+  - component: {fileID: 5472071886320374147}
+  - component: {fileID: 8059095518150276308}
   m_Layer: 0
   m_Name: TigerII_Player
   m_TagString: Untagged
@@ -188,8 +191,8 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 0
---- !u!61 &7117156869174824876
-BoxCollider2D:
+--- !u!60 &7294076012409569639
+PolygonCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -232,8 +235,25 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.9, y: 1.7}
-  m_EdgeRadius: 0
+  m_Points:
+    m_Paths:
+    - - {x: -0.37, y: 0.955}
+      - {x: 0.37, y: 0.955}
+      - {x: 0.47, y: 0.91}
+      - {x: 0.515, y: 0.8}
+      - {x: 0.525, y: 0.62}
+      - {x: 0.525, y: -0.7}
+      - {x: 0.5, y: -0.84}
+      - {x: 0.43, y: -0.925}
+      - {x: 0.34, y: -0.955}
+      - {x: -0.34, y: -0.955}
+      - {x: -0.43, y: -0.925}
+      - {x: -0.5, y: -0.84}
+      - {x: -0.525, y: -0.7}
+      - {x: -0.525, y: 0.62}
+      - {x: -0.515, y: 0.8}
+      - {x: -0.47, y: 0.91}
+  m_UseDelaunayMesh: 1
 --- !u!114 &6598801164163643703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -246,7 +266,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b861edc07ec79c4495af62fae7cfd43, type: 3}
   m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankMotor
-  config: {fileID: 11400000, guid: 5bb1b37f582645a4aa31d25a875e6f92, type: 2}
+  config: {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}
 --- !u!114 &3325340310409873891
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -259,7 +279,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e929359c191d4448ac0419bc7833351, type: 3}
   m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponController
-  config: {fileID: 11400000, guid: 5bb1b37f582645a4aa31d25a875e6f92, type: 2}
+  config: {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}
   projectilePrefab: {fileID: 6266017310525627264, guid: b2f589a05d276434bbcdf20f79526a87, type: 3}
   muzzle: {fileID: 7589511858242689961}
 --- !u!114 &1271144910613082445
@@ -278,6 +298,51 @@ MonoBehaviour:
   turret: {fileID: 710693342537775573}
   weapon: {fileID: 3325340310409873891}
   worldCamera: {fileID: 0}
+--- !u!114 &1009099874877684003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5542802717953612855}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fbfb80bf6b44fb4fab4154747213f74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankHealth
+  definition: {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}
+--- !u!114 &5472071886320374147
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5542802717953612855}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c709e3c458ef48f4fbd16eb4a902c7f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankArmor
+  definition: {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}
+  health: {fileID: 1009099874877684003}
+  logImpacts: 1
+--- !u!114 &8059095518150276308
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5542802717953612855}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 856a50e1628091041ab48047c97445c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDestroyedState
+  health: {fileID: 1009099874877684003}
+  motor: {fileID: 6598801164163643703}
+  turret: {fileID: 710693342537775573}
+  weapon: {fileID: 3325340310409873891}
+  playerInput: {fileID: 1271144910613082445}
 --- !u!1 &8070536689276459188
 GameObject:
   m_ObjectHideFlags: 0
@@ -416,4 +481,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 508d3bed0c7b7bf4ebcc99e9a7243c98, type: 3}
   m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TurretAiming
-  config: {fileID: 11400000, guid: 5bb1b37f582645a4aa31d25a875e6f92, type: 2}
+  config: {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}

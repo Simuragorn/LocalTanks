@@ -5,7 +5,7 @@ namespace LocalTanks
     [RequireComponent(typeof(Rigidbody2D))]
     public sealed class TankMotor : MonoBehaviour
     {
-        [SerializeField] private TankPrototypeConfig config;
+        [SerializeField] private TankDefinition config;
 
         private Rigidbody2D body;
         private float driveInput;
@@ -18,7 +18,7 @@ namespace LocalTanks
             body = GetComponent<Rigidbody2D>();
         }
 
-        public void Configure(TankPrototypeConfig newConfig)
+        public void Configure(TankDefinition newConfig)
         {
             config = newConfig;
         }
@@ -27,6 +27,18 @@ namespace LocalTanks
         {
             driveInput = Mathf.Clamp(drive, -1f, 1f);
             turnInput = Mathf.Clamp(turn, -1f, 1f);
+        }
+
+        public void StopImmediately()
+        {
+            driveInput = 0f;
+            turnInput = 0f;
+            CurrentSpeed = 0f;
+            if (body != null)
+            {
+                body.linearVelocity = Vector2.zero;
+                body.angularVelocity = 0f;
+            }
         }
 
         private void FixedUpdate()

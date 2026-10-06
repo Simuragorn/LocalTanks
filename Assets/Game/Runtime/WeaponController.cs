@@ -4,7 +4,7 @@ namespace LocalTanks
 {
     public sealed class WeaponController : MonoBehaviour
     {
-        [SerializeField] private TankPrototypeConfig config;
+        [SerializeField] private TankDefinition config;
         [SerializeField] private Projectile2D projectilePrefab;
         [SerializeField] private Transform muzzle;
 
@@ -13,7 +13,7 @@ namespace LocalTanks
         public bool IsReady => reloadTimer.IsReady;
 
         public void Configure(
-            TankPrototypeConfig newConfig,
+            TankDefinition newConfig,
             Projectile2D newProjectilePrefab,
             Transform newMuzzle)
         {
@@ -29,7 +29,9 @@ namespace LocalTanks
 
         public bool TryFire()
         {
-            if (!reloadTimer.IsReady || config == null || projectilePrefab == null || muzzle == null)
+            WeaponDefinition weapon = config != null ? config.weapon : null;
+            ShellDefinition shell = weapon != null ? weapon.shell : null;
+            if (!reloadTimer.IsReady || shell == null || projectilePrefab == null || muzzle == null)
             {
                 return false;
             }
@@ -37,12 +39,9 @@ namespace LocalTanks
             Projectile2D projectile = Instantiate(projectilePrefab, muzzle.position, muzzle.rotation);
             projectile.Initialize(
                 muzzle.up,
-                config.projectileSpeed,
-                config.projectileRadius,
-                config.projectileLifetime,
-                config.projectileRange,
+                shell,
                 transform.root);
-            reloadTimer.Start(config.reloadSeconds);
+            reloadTimer.Start(weapon.reloadSeconds);
             return true;
         }
     }

@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Linq;
 using LocalTanks;
 using UnityEditor;
-using UnityEditor.Callbacks;
 using UnityEditor.SceneManagement;
 using UnityEditor.U2D.Sprites;
 using UnityEngine;
@@ -13,37 +12,53 @@ namespace LocalTanks.Editor
     public static class PrototypeSetup
     {
         private const string TigerTexturePath = "Assets/Game/Art/Tanks/TigerII/Source/Tiger-II_strip2.png";
-        private const string ConfigPath = "Assets/Game/Data/TigerII_Prototype.asset";
+        private const string TankDefinitionPath = "Assets/Game/GameData/Generated/Tanks/tiger_ii.asset";
         private const string ProjectilePrefabPath = "Assets/Game/Prefabs/Combat/PrototypeProjectile.prefab";
         private const string TankPrefabPath = "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab";
         private const string ScenePath = "Assets/Game/Scenes/Battle_TestRange.unity";
 
-        [DidReloadScripts]
-        private static void UpgradePrototypeHandling()
+        [InitializeOnLoadMethod]
+        private static void ScheduleSprintTwoAssetUpgrade()
         {
             EditorApplication.delayCall += () =>
             {
-                TankPrototypeConfig config = AssetDatabase.LoadAssetAtPath<TankPrototypeConfig>(ConfigPath);
-                if (config == null || !Mathf.Approximately(config.braking, 0.65f))
+                if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling)
                 {
                     return;
                 }
 
-                config.groundResistance = 1.35f;
-                config.braking = 1.8f;
-                EditorUtility.SetDirty(config);
-                AssetDatabase.SaveAssets();
-                Debug.Log("Local Tanks: upgraded Tiger II ground resistance and braking values.");
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TankPrefabPath);
+                if (prefab != null &&
+                    prefab.GetComponent<TankHealth>() != null &&
+                    prefab.GetComponent<PolygonCollider2D>() != null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    BuildAll();
+                }
+                catch (System.Exception exception)
+                {
+                    Debug.LogException(exception);
+                }
             };
         }
 
-        [MenuItem("Local Tanks/Build First Sprint Prototype")]
+        [MenuItem("Local Tanks/Build Sprint 002 Prototype")]
         public static void BuildAll()
         {
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
 
             ConfigureTigerTexture();
-            TankPrototypeConfig config = CreateOrUpdateConfig();
+            CombatDefinitionImporter.Reimport();
+            TankDefinition config = AssetDatabase.LoadAssetAtPath<TankDefinition>(TankDefinitionPath);
+            if (config == null)
+            {
+                throw new System.InvalidOperationException("Tiger II definition was not generated.");
+            }
+
             Projectile2D projectile = CreateProjectilePrefab();
             GameObject tankPrefab = CreateTankPrefab(config, projectile);
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
@@ -52,12 +67,13 @@ namespace LocalTanks.Editor
             }
             else
             {
+                UpgradeTestScene(tankPrefab);
                 EnsureSceneInBuildSettings();
             }
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            Debug.Log($"Local Tanks first sprint prototype created: {ScenePath}");
+            Debug.Log($"Local Tanks Sprint 002 prototype created: {ScenePath}");
         }
 
         private static void ConfigureTigerTexture()
@@ -130,33 +146,6 @@ namespace LocalTanks.Editor
             importer.SaveAndReimport();
         }
 
-        private static TankPrototypeConfig CreateOrUpdateConfig()
-        {
-            TankPrototypeConfig config = AssetDatabase.LoadAssetAtPath<TankPrototypeConfig>(ConfigPath);
-            if (config == null)
-            {
-                config = ScriptableObject.CreateInstance<TankPrototypeConfig>();
-                AssetDatabase.CreateAsset(config, ConfigPath);
-            }
-
-            // The 1.91-unit hull represents a 7.38 m Tiger II, so 3 units/s is about 42 km/h.
-            config.maxForwardSpeed = 3f;
-            config.maxReverseSpeed = 0.85f;
-            config.acceleration = 0.3f;
-            // Track and soil resistance stops the tank from feeling like it is coasting on ice.
-            config.groundResistance = 1.35f;
-            config.braking = 1.8f;
-            config.hullTurnSpeed = 24f;
-            config.turretTurnSpeed = 18f;
-            config.reloadSeconds = 0.8f;
-            config.projectileSpeed = 18f;
-            config.projectileRadius = 0.06f;
-            config.projectileLifetime = 3f;
-            config.projectileRange = 45f;
-            EditorUtility.SetDirty(config);
-            return config;
-        }
-
         private static Projectile2D CreateProjectilePrefab()
         {
             GameObject root = new GameObject("PrototypeProjectile");
@@ -178,7 +167,7 @@ namespace LocalTanks.Editor
             }
         }
 
-        private static GameObject CreateTankPrefab(TankPrototypeConfig config, Projectile2D projectilePrefab)
+        private static GameObject CreateTankPrefab(TankDefinition config, Projectile2D projectilePrefab)
         {
             Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(TigerTexturePath)
                 .OfType<Sprite>()
@@ -201,8 +190,8 @@ namespace LocalTanks.Editor
                 body.interpolation = RigidbodyInterpolation2D.Interpolate;
                 body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
 
-                BoxCollider2D collider = root.AddComponent<BoxCollider2D>();
-                collider.size = new Vector2(0.9f, 1.7f);
+                PolygonCollider2D collider = root.AddComponent<PolygonCollider2D>();
+                collider.points = CreateTigerHullOutline();
 
                 GameObject hullVisual = CreateSpriteChild(
                     root.transform,
@@ -238,12 +227,46 @@ namespace LocalTanks.Editor
                 PlayerTankInput input = root.AddComponent<PlayerTankInput>();
                 input.Configure(motor, aiming, weapon);
 
+                TankHealth health = root.AddComponent<TankHealth>();
+                health.Configure(config);
+
+                TankArmor armor = root.AddComponent<TankArmor>();
+                armor.Configure(config, health);
+
+                TankDestroyedState destroyedState = root.AddComponent<TankDestroyedState>();
+                destroyedState.Configure(health, motor, aiming, weapon, input);
+
                 return PrefabUtility.SaveAsPrefabAsset(root, TankPrefabPath);
             }
             finally
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        private static Vector2[] CreateTigerHullOutline()
+        {
+            // Local +Y is forward. The outline follows the visible track and hull silhouette,
+            // retaining the angled nose/shoulders and rounded rear instead of using a box.
+            return new[]
+            {
+                new Vector2(-0.37f, 0.955f),
+                new Vector2(0.37f, 0.955f),
+                new Vector2(0.47f, 0.91f),
+                new Vector2(0.515f, 0.80f),
+                new Vector2(0.525f, 0.62f),
+                new Vector2(0.525f, -0.70f),
+                new Vector2(0.50f, -0.84f),
+                new Vector2(0.43f, -0.925f),
+                new Vector2(0.34f, -0.955f),
+                new Vector2(-0.34f, -0.955f),
+                new Vector2(-0.43f, -0.925f),
+                new Vector2(-0.50f, -0.84f),
+                new Vector2(-0.525f, -0.70f),
+                new Vector2(-0.525f, 0.62f),
+                new Vector2(-0.515f, 0.80f),
+                new Vector2(-0.47f, 0.91f)
+            };
         }
 
         private static void CreateTestScene(GameObject tankPrefab)
@@ -283,6 +306,36 @@ namespace LocalTanks.Editor
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EnsureSceneInBuildSettings();
+        }
+
+        private static void UpgradeTestScene(GameObject tankPrefab)
+        {
+            Scene scene = SceneManager.GetActiveScene().path == ScenePath
+                ? SceneManager.GetActiveScene()
+                : EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+
+            GameObject legacyTarget = GameObject.Find("Target");
+            if (legacyTarget != null)
+            {
+                Object.DestroyImmediate(legacyTarget);
+            }
+
+            GameObject target = GameObject.Find("TigerII_Target");
+            if (target == null)
+            {
+                target = (GameObject)PrefabUtility.InstantiatePrefab(tankPrefab, scene);
+                target.name = "TigerII_Target";
+            }
+
+            target.transform.SetPositionAndRotation(new Vector3(0f, 5f, 0f), Quaternion.Euler(0f, 0f, 180f));
+            PlayerTankInput targetInput = target.GetComponent<PlayerTankInput>();
+            if (targetInput != null)
+            {
+                targetInput.enabled = false;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, ScenePath);
         }
 
         private static void EnsureSceneInBuildSettings()

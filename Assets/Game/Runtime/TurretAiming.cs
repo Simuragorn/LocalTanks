@@ -4,11 +4,11 @@ namespace LocalTanks
 {
     public sealed class TurretAiming : MonoBehaviour
     {
-        [SerializeField] private TankPrototypeConfig config;
+        [SerializeField] private TankDefinition config;
         private Vector2 targetPosition;
         private bool hasTarget;
 
-        public void Configure(TankPrototypeConfig newConfig)
+        public void Configure(TankDefinition newConfig)
         {
             config = newConfig;
         }
