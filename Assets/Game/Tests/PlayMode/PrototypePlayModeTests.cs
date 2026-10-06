@@ -21,6 +21,49 @@ namespace LocalTanks.Tests
             Assert.That(hullCollider, Is.Not.Null);
             Assert.That(hullCollider.points.Length, Is.GreaterThanOrEqualTo(12));
             Assert.That(player.GetComponent<BoxCollider2D>(), Is.Null);
+
+            string[] targetNames = { "TigerII_Target", "E100_Target", "T34_Target", "PzKpfwIV_Target" };
+            foreach (string targetName in targetNames)
+            {
+                GameObject target = GameObject.Find(targetName);
+                Assert.That(target, Is.Not.Null, targetName);
+                Assert.That(target.GetComponent<RotatingTankDisplay>(), Is.Not.Null, targetName);
+                Assert.That(target.GetComponent<PolygonCollider2D>().points.Length, Is.GreaterThanOrEqualTo(10), targetName);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Selector_ReplacesPlayerAndRetargetsCamera()
+        {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
+            PlayerTankSelector selector = Object.FindFirstObjectByType<PlayerTankSelector>();
+            CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
+
+            Assert.That(selector, Is.Not.Null);
+            Assert.That(selector.SelectTank(2), Is.True);
+            yield return null;
+
+            Assert.That(selector.CurrentTankIndex, Is.EqualTo(2));
+            Assert.That(selector.CurrentTank.GetComponent<TankHealth>().Definition.id, Is.EqualTo("t_34_76"));
+            Assert.That(selector.CurrentTank.GetComponent<PlayerTankInput>().enabled, Is.True);
+            Assert.That(follow.Target, Is.EqualTo(selector.CurrentTank.transform));
+        }
+
+        [UnityTest]
+        public IEnumerator DisplayTank_RotatesWhenAlive()
+        {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
+            GameObject target = GameObject.Find("E100_Target");
+            float initialAngle = target.GetComponent<Rigidbody2D>().rotation;
+            yield return new WaitForFixedUpdate();
+            yield return new WaitForFixedUpdate();
+
+            float rotationDelta = Mathf.Abs(Mathf.DeltaAngle(initialAngle, target.GetComponent<Rigidbody2D>().rotation));
+            Assert.That(rotationDelta, Is.GreaterThan(0.01f));
         }
 
         [UnityTest]

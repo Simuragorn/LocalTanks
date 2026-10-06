@@ -11,7 +11,10 @@ namespace LocalTanks.Tests
         {
             CombatDefinitionSet definitions = CombatDefinitionImporter.LoadAndValidate();
 
-            Assert.That(definitions.Tanks.Select(item => item.id), Does.Contain("tiger_ii"));
+            Assert.That(definitions.Tanks.Select(item => item.id), Is.EquivalentTo(new[]
+            {
+                "e_100", "panzer_iv", "t_34_76", "tiger_ii"
+            }));
             Assert.That(definitions.Weapons.Select(item => item.id), Does.Contain("kwk_43_l71"));
             Assert.That(definitions.Shells.Select(item => item.id), Does.Contain("pzgr_39_43"));
         }
