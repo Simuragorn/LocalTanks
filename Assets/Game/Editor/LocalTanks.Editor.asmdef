@@ -1,0 +1,12 @@
+{
+  "name": "LocalTanks.Editor",
+  "rootNamespace": "LocalTanks.Editor",
+  "references": [
+    "LocalTanks.Core",
+    "LocalTanks.Runtime",
+    "Unity.2D.Sprite.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

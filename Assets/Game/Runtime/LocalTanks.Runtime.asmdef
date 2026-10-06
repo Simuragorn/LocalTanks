@@ -1,0 +1,8 @@
+{
+  "name": "LocalTanks.Runtime",
+  "rootNamespace": "LocalTanks",
+  "references": [
+    "LocalTanks.Core",
+    "Unity.InputSystem"
+  ]
+}
