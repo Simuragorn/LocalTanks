@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LocalTanks;
 using UnityEditor;
+using UnityEditor.Callbacks;
 using UnityEditor.SceneManagement;
 using UnityEditor.U2D.Sprites;
 using UnityEngine;
@@ -16,6 +17,25 @@ namespace LocalTanks.Editor
         private const string ProjectilePrefabPath = "Assets/Game/Prefabs/Combat/PrototypeProjectile.prefab";
         private const string TankPrefabPath = "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab";
         private const string ScenePath = "Assets/Game/Scenes/Battle_TestRange.unity";
+
+        [DidReloadScripts]
+        private static void UpgradePrototypeHandling()
+        {
+            EditorApplication.delayCall += () =>
+            {
+                TankPrototypeConfig config = AssetDatabase.LoadAssetAtPath<TankPrototypeConfig>(ConfigPath);
+                if (config == null || !Mathf.Approximately(config.braking, 0.65f))
+                {
+                    return;
+                }
+
+                config.groundResistance = 1.35f;
+                config.braking = 1.8f;
+                EditorUtility.SetDirty(config);
+                AssetDatabase.SaveAssets();
+                Debug.Log("Local Tanks: upgraded Tiger II ground resistance and braking values.");
+            };
+        }
 
         [MenuItem("Local Tanks/Build First Sprint Prototype")]
         public static void BuildAll()
@@ -123,7 +143,9 @@ namespace LocalTanks.Editor
             config.maxForwardSpeed = 3f;
             config.maxReverseSpeed = 0.85f;
             config.acceleration = 0.3f;
-            config.braking = 0.65f;
+            // Track and soil resistance stops the tank from feeling like it is coasting on ice.
+            config.groundResistance = 1.35f;
+            config.braking = 1.8f;
             config.hullTurnSpeed = 24f;
             config.turretTurnSpeed = 18f;
             config.reloadSeconds = 0.8f;

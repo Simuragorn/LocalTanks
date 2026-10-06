@@ -9,7 +9,10 @@ namespace LocalTanks
         [Min(0f)] public float maxForwardSpeed = 3f;
         [Min(0f)] public float maxReverseSpeed = 0.85f;
         [Min(0f)] public float acceleration = 0.3f;
-        [Min(0f)] public float braking = 0.65f;
+        [Tooltip("Natural deceleration from tracks and ground when drive input is released.")]
+        [Min(0f)] public float groundResistance = 1.35f;
+        [Tooltip("Deceleration while changing between forward and reverse.")]
+        [Min(0f)] public float braking = 1.8f;
         [Min(0f)] public float hullTurnSpeed = 24f;
 
         [Header("Turret")]

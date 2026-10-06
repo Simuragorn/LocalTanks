@@ -14,15 +14,29 @@ namespace LocalTanks
             float currentSpeed,
             float targetSpeed,
             float acceleration,
+            float groundResistance,
             float braking,
             float deltaTime)
         {
             bool changingDirection = !Mathf.Approximately(currentSpeed, 0f) &&
                                      !Mathf.Approximately(targetSpeed, 0f) &&
                                      Mathf.Sign(currentSpeed) != Mathf.Sign(targetSpeed);
-            float rate = Mathf.Approximately(targetSpeed, 0f) || changingDirection
-                ? braking
-                : acceleration;
+            bool slowingDown = Mathf.Abs(targetSpeed) < Mathf.Abs(currentSpeed);
+
+            float rate;
+            if (changingDirection)
+            {
+                rate = braking;
+            }
+            else if (Mathf.Approximately(targetSpeed, 0f) || slowingDown)
+            {
+                rate = groundResistance;
+            }
+            else
+            {
+                rate = acceleration;
+            }
+
             return Mathf.MoveTowards(currentSpeed, targetSpeed, Mathf.Max(0f, rate) * deltaTime);
         }
 

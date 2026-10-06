@@ -46,6 +46,7 @@ namespace LocalTanks
                 CurrentSpeed,
                 targetSpeed,
                 config.acceleration,
+                config.groundResistance,
                 config.braking,
                 deltaTime);
 

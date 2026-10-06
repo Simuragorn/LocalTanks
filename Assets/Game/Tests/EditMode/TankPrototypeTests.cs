@@ -19,14 +19,28 @@ namespace LocalTanks.Tests
         [Test]
         public void Speed_AcceleratesWithoutOvershootingTarget()
         {
-            float speed = TankMotionMath.ApproachSpeed(0f, 2f, 3f, 8f, 1f);
+            float speed = TankMotionMath.ApproachSpeed(0f, 2f, 3f, 4f, 8f, 1f);
             Assert.That(speed, Is.EqualTo(2f));
+        }
+
+        [Test]
+        public void Speed_UsesGroundResistanceWhenInputIsReleased()
+        {
+            float speed = TankMotionMath.ApproachSpeed(2f, 0f, 0.3f, 1.25f, 3f, 1f);
+            Assert.That(speed, Is.EqualTo(0.75f).Within(0.001f));
         }
 
         [Test]
         public void Speed_UsesBrakingWhenChangingDirection()
         {
-            float speed = TankMotionMath.ApproachSpeed(2f, -1f, 0.3f, 1f, 1f);
+            float speed = TankMotionMath.ApproachSpeed(2f, -1f, 0.3f, 1f, 1.5f, 1f);
+            Assert.That(speed, Is.EqualTo(0.5f).Within(0.001f));
+        }
+
+        [Test]
+        public void Speed_UsesGroundResistanceWhenReducingThrottle()
+        {
+            float speed = TankMotionMath.ApproachSpeed(2f, 1f, 0.3f, 1f, 3f, 1f);
             Assert.That(speed, Is.EqualTo(1f).Within(0.001f));
         }
 
