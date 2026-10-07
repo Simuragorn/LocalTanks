@@ -22,6 +22,7 @@ namespace LocalTanks
         [SerializeField] private TankMotor motor;
         [SerializeField] private WeaponController weapon;
         [SerializeField] private TankVisibilityPresenter visibilityPresenter;
+        [SerializeField] private Transform visionDirection;
 
         public static event Action<TeamMember, bool> MembershipChanged;
         public static IReadOnlyCollection<TeamMember> ActiveMembers => Members;
@@ -34,6 +35,15 @@ namespace LocalTanks
         public bool IsAlive => health != null && !health.IsDestroyed;
         public bool IsMoving => motor != null && Mathf.Abs(motor.CurrentSpeed) > 0.05f;
         public float LastFiredTime { get; private set; } = float.NegativeInfinity;
+        public Transform VisionDirection => visionDirection != null ? visionDirection : transform;
+        public Vector2 VisionForward
+        {
+            get
+            {
+                Vector2 forward = VisionDirection.up;
+                return forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector2.up;
+            }
+        }
 
         private void Awake()
         {
@@ -86,6 +96,11 @@ namespace LocalTanks
             if (motor == null) motor = GetComponent<TankMotor>();
             if (weapon == null) weapon = GetComponent<WeaponController>();
             if (visibilityPresenter == null) visibilityPresenter = GetComponent<TankVisibilityPresenter>();
+            if (visionDirection == null)
+            {
+                TurretAiming turret = GetComponentInChildren<TurretAiming>(true);
+                visionDirection = turret != null ? turret.transform : transform;
+            }
         }
 
         private void OnFired(WeaponController source)

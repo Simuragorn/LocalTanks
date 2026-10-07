@@ -89,6 +89,80 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator TargetBehindHull_IsOutsideViewArc()
+        {
+            VisionRules rules = CreateRules();
+            TeamVisionSystem system = new GameObject("VisionSystem").AddComponent<TeamVisionSystem>();
+            system.Configure(rules, TeamId.TeamA);
+            TeamMember observer = CreateTank("Observer", TeamId.TeamA, Vector2.zero, 10f, 0f);
+            TeamMember target = CreateTank("RearTarget", TeamId.TeamB, new Vector2(0f, -1f), 10f, 0f);
+
+            DetectionResult result = system.Evaluate(observer, target, out _);
+            system.ForceEvaluateAll();
+
+            Assert.That(result.Detected, Is.False);
+            Assert.That(result.Reason, Is.EqualTo(DetectionReason.OutsideViewArc));
+            Assert.That(system.IsVisibleTo(TeamId.TeamA, target), Is.False);
+            Assert.That(target.VisibilityPresenter.IsVisible, Is.False);
+            Assert.That(target.GetComponent<SpriteRenderer>().color.a, Is.EqualTo(0.28f).Within(0.01f));
+            Cleanup(system.gameObject, observer.gameObject, target.gameObject, rules);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator TurretDirection_DrivesDetectionAndPlayerArcVisual()
+        {
+            VisionRules rules = CreateRules();
+            GameObject systems = new GameObject("Systems");
+            TeamVisionSystem vision = systems.AddComponent<TeamVisionSystem>();
+            vision.Configure(rules, TeamId.TeamA);
+            VisionArcPresenter presenter = systems.AddComponent<VisionArcPresenter>();
+            presenter.Configure(vision, null);
+            TeamMember observer = CreateTank("TurretObserver", TeamId.TeamA, Vector2.zero, 10f, 0f, 1.5f, true);
+            observer.Definition.vehicleClass = VehicleClass.HeavyTank;
+            observer.VisionDirection.rotation = Quaternion.Euler(0f, 0f, -90f);
+            TeamMember target = CreateTank("RightTarget", TeamId.TeamB, new Vector2(5f, 0f), 10f, 0f);
+
+            DetectionResult result = vision.Evaluate(observer, target, out _);
+            presenter.RefreshNow();
+
+            Assert.That(result.Detected, Is.True);
+            Assert.That(presenter.TrackedMember, Is.EqualTo(observer));
+            Assert.That(presenter.CurrentViewAngle, Is.EqualTo(rules.heavyTankViewAngle));
+            Assert.That(presenter.OutsideOverlayRenderer, Is.Not.Null);
+            Assert.That(presenter.LeftBoundary, Is.Not.Null);
+            Assert.That(presenter.RightBoundary, Is.Not.Null);
+            Cleanup(systems, observer.gameObject, target.gameObject, rules);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator PlayerReplacement_RebuildsArcForNewVehicleClass()
+        {
+            VisionRules rules = CreateRules();
+            GameObject systems = new GameObject("Systems");
+            TeamVisionSystem vision = systems.AddComponent<TeamVisionSystem>();
+            vision.Configure(rules, TeamId.TeamA);
+            VisionArcPresenter presenter = systems.AddComponent<VisionArcPresenter>();
+            presenter.Configure(vision, null);
+            TeamMember heavy = CreateTank("HeavyPlayer", TeamId.TeamA, Vector2.zero, 10f, 0f);
+            heavy.Definition.vehicleClass = VehicleClass.HeavyTank;
+
+            presenter.RefreshNow();
+            Assert.That(presenter.CurrentViewAngle, Is.EqualTo(rules.heavyTankViewAngle));
+
+            heavy.gameObject.SetActive(false);
+            TeamMember scout = CreateTank("LightPlayer", TeamId.TeamA, Vector2.zero, 10f, 0f);
+            scout.Definition.vehicleClass = VehicleClass.LightTank;
+            presenter.RefreshNow();
+
+            Assert.That(presenter.TrackedMember, Is.EqualTo(scout));
+            Assert.That(presenter.CurrentViewAngle, Is.EqualTo(rules.lightTankViewAngle));
+            Cleanup(systems, heavy.gameObject, scout.gameObject, rules);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator TeamContact_IsSharedAndHiddenDamageDoesNotLeakToRoster()
         {
             VisionRules rules = CreateRules();
@@ -244,7 +318,8 @@ namespace LocalTanks.Tests
             Vector2 position,
             float viewRange,
             float concealment,
-            float guaranteedRange = 1.5f)
+            float guaranteedRange = 1.5f,
+            bool addTurret = false)
         {
             TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
             definition.id = name.ToLowerInvariant();
@@ -259,6 +334,12 @@ namespace LocalTanks.Tests
             GameObject tank = new GameObject(name);
             tank.transform.position = position;
             tank.AddComponent<SpriteRenderer>();
+            if (addTurret)
+            {
+                GameObject turret = new GameObject("TurretPivot");
+                turret.transform.SetParent(tank.transform, false);
+                turret.AddComponent<TurretAiming>();
+            }
             TankVisibilityPresenter presenter = tank.AddComponent<TankVisibilityPresenter>();
             TankHealth health = tank.AddComponent<TankHealth>();
             health.Configure(definition);
@@ -277,6 +358,11 @@ namespace LocalTanks.Tests
             rules.checkInterval = 100f;
             rules.checksPerFrame = 32;
             rules.contactMemorySeconds = 5f;
+            rules.lightTankViewAngle = 160f;
+            rules.mediumTankViewAngle = 140f;
+            rules.heavyTankViewAngle = 120f;
+            rules.tankDestroyerViewAngle = 100f;
+            rules.artilleryViewAngle = 80f;
             return rules;
         }
 

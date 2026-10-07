@@ -18,3 +18,12 @@ MonoBehaviour:
   checkInterval: 0.2
   checksPerFrame: 24
   contactMemorySeconds: 8
+  lightTankViewAngle: 160
+  mediumTankViewAngle: 140
+  heavyTankViewAngle: 120
+  tankDestroyerViewAngle: 100
+  artilleryViewAngle: 80
+  viewArcVisualRadius: 60
+  outsideArcOverlayAlpha: 0.14
+  viewBoundaryAlpha: 0.2
+  viewBoundaryWidth: 0.04

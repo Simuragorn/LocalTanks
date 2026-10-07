@@ -133,9 +133,17 @@ namespace LocalTanks
             float distance = delta.magnitude;
             TankDefinition observerDefinition = observer.Definition;
             TankDefinition targetDefinition = target.Definition;
+            bool withinViewArc = distance <= 0.001f || DetectionMath.IsWithinViewArc(
+                Vector2.Dot(observer.VisionForward, delta / distance),
+                rules.GetViewAngle(observerDefinition.vehicleClass));
+            if (!withinViewArc)
+            {
+                return DetectionMath.Resolve(CreateInput(observer, target, distance, 0f, false, false));
+            }
+
             if (distance > observerDefinition.viewRange)
             {
-                return DetectionMath.Resolve(CreateInput(observer, target, distance, 0f, false));
+                return DetectionMath.Resolve(CreateInput(observer, target, distance, 0f, false, true));
             }
 
             bool hardBlocker = false;
@@ -165,7 +173,7 @@ namespace LocalTanks
             }
 
             bushBonus = Mathf.Min(bushBonus, rules.maximumBushBonus);
-            return DetectionMath.Resolve(CreateInput(observer, target, distance, bushBonus, hardBlocker));
+            return DetectionMath.Resolve(CreateInput(observer, target, distance, bushBonus, hardBlocker, true));
         }
 
         public void ForceEvaluateAll()
@@ -188,7 +196,8 @@ namespace LocalTanks
             TeamMember target,
             float distance,
             float bushBonus,
-            bool hardBlocker)
+            bool hardBlocker,
+            bool withinViewArc)
         {
             TankDefinition observerDefinition = observer.Definition;
             TankDefinition targetDefinition = target.Definition;
@@ -206,7 +215,8 @@ namespace LocalTanks
                 rules.maximumConcealment,
                 rules.minimumVisibilityFactor,
                 observerDefinition.guaranteedDetectionRange,
-                hardBlocker);
+                hardBlocker,
+                withinViewArc);
         }
 
         private void BeginSweep()

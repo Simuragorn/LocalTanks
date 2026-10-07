@@ -841,6 +841,15 @@ namespace LocalTanks.Editor
             visionRules.checkInterval = 0.2f;
             visionRules.checksPerFrame = 24;
             visionRules.contactMemorySeconds = 8f;
+            visionRules.lightTankViewAngle = 160f;
+            visionRules.mediumTankViewAngle = 140f;
+            visionRules.heavyTankViewAngle = 120f;
+            visionRules.tankDestroyerViewAngle = 100f;
+            visionRules.artilleryViewAngle = 80f;
+            visionRules.viewArcVisualRadius = 60f;
+            visionRules.outsideArcOverlayAlpha = 0.14f;
+            visionRules.viewBoundaryAlpha = 0.2f;
+            visionRules.viewBoundaryWidth = 0.04f;
             EditorUtility.SetDirty(visionRules);
 
             GameObject systems = new GameObject("BattleSystems");
@@ -849,6 +858,7 @@ namespace LocalTanks.Editor
             BattleRoster roster = systems.AddComponent<BattleRoster>();
             roster.Configure(TeamId.TeamA, vision);
             systems.AddComponent<VisionDebugOverlay>().Configure(vision);
+            systems.AddComponent<VisionArcPresenter>().Configure(vision, GetOrCreateLineMaterial());
 
             PanelSettings panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
             if (panelSettings == null)

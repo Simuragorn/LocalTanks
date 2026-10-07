@@ -46,6 +46,52 @@ namespace LocalTanks.Tests
             Assert.That(blocked.Reason, Is.EqualTo(DetectionReason.HardBlocker));
         }
 
+        [Test]
+        public void ViewArc_UsesFullAngleAroundForwardDirection()
+        {
+            Assert.That(DetectionMath.IsWithinViewArc(1f, 120f), Is.True);
+            Assert.That(DetectionMath.IsWithinViewArc(0.51f, 120f), Is.True);
+            Assert.That(DetectionMath.IsWithinViewArc(0.49f, 120f), Is.False);
+            Assert.That(DetectionMath.IsWithinViewArc(-1f, 360f), Is.True);
+        }
+
+        [Test]
+        public void TargetOutsideViewArc_IsNotDetectedInsideGuaranteedRange()
+        {
+            DetectionResult result = DetectionMath.Resolve(new DetectionInput(
+                1f,
+                10f,
+                0f,
+                0f,
+                0f,
+                0f,
+                0.8f,
+                0.2f,
+                1.5f,
+                false,
+                false));
+
+            Assert.That(result.Detected, Is.False);
+            Assert.That(result.Reason, Is.EqualTo(DetectionReason.OutsideViewArc));
+        }
+
+        [Test]
+        public void VehicleClassViewAngles_FollowScoutToArtilleryOrder()
+        {
+            VisionRules rules = UnityEngine.ScriptableObject.CreateInstance<VisionRules>();
+
+            Assert.That(rules.GetViewAngle(VehicleClass.LightTank),
+                Is.GreaterThan(rules.GetViewAngle(VehicleClass.MediumTank)));
+            Assert.That(rules.GetViewAngle(VehicleClass.MediumTank),
+                Is.GreaterThan(rules.GetViewAngle(VehicleClass.HeavyTank)));
+            Assert.That(rules.GetViewAngle(VehicleClass.HeavyTank),
+                Is.GreaterThan(rules.GetViewAngle(VehicleClass.TankDestroyer)));
+            Assert.That(rules.GetViewAngle(VehicleClass.TankDestroyer),
+                Is.GreaterThan(rules.GetViewAngle(VehicleClass.Artillery)));
+
+            UnityEngine.Object.DestroyImmediate(rules);
+        }
+
         private static DetectionResult Resolve(
             float concealment,
             float bush,

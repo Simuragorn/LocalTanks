@@ -7,6 +7,7 @@ namespace LocalTanks
         Detected,
         GuaranteedRange,
         HardBlocker,
+        OutsideViewArc,
         OutsideViewRange,
         Concealed
     }
@@ -23,7 +24,8 @@ namespace LocalTanks
             float maximumConcealment,
             float minimumVisibilityFactor,
             float guaranteedDetectionRange,
-            bool hasHardBlocker)
+            bool hasHardBlocker,
+            bool isWithinViewArc = true)
         {
             Distance = distance;
             ViewRange = viewRange;
@@ -35,6 +37,7 @@ namespace LocalTanks
             MinimumVisibilityFactor = minimumVisibilityFactor;
             GuaranteedDetectionRange = guaranteedDetectionRange;
             HasHardBlocker = hasHardBlocker;
+            IsWithinViewArc = isWithinViewArc;
         }
 
         public float Distance { get; }
@@ -47,6 +50,7 @@ namespace LocalTanks
         public float MinimumVisibilityFactor { get; }
         public float GuaranteedDetectionRange { get; }
         public bool HasHardBlocker { get; }
+        public bool IsWithinViewArc { get; }
     }
 
     public readonly struct DetectionResult
@@ -83,6 +87,11 @@ namespace LocalTanks
                 return new DetectionResult(false, DetectionReason.HardBlocker, concealment, detectionDistance);
             }
 
+            if (!input.IsWithinViewArc)
+            {
+                return new DetectionResult(false, DetectionReason.OutsideViewArc, concealment, detectionDistance);
+            }
+
             if (input.Distance > input.ViewRange)
             {
                 return new DetectionResult(false, DetectionReason.OutsideViewRange, concealment, detectionDistance);
@@ -99,6 +108,23 @@ namespace LocalTanks
                 detected ? DetectionReason.Detected : DetectionReason.Concealed,
                 concealment,
                 detectionDistance);
+        }
+
+        public static bool IsWithinViewArc(float forwardDot, float totalAngleDegrees)
+        {
+            if (totalAngleDegrees <= 0f)
+            {
+                return false;
+            }
+
+            if (totalAngleDegrees >= 360f)
+            {
+                return true;
+            }
+
+            double halfAngleRadians = totalAngleDegrees * 0.5d * Math.PI / 180d;
+            double threshold = Math.Cos(halfAngleRadians);
+            return Clamp(forwardDot, -1f, 1f) >= threshold;
         }
 
         private static float Clamp01(float value)
