@@ -147,6 +147,7 @@ namespace LocalTanks
                 bar.AddToClassList("health-track");
                 VisualElement fill = new VisualElement();
                 fill.AddToClassList("health-fill");
+                fill.style.backgroundColor = entry.TeamColor;
                 fill.style.width = Length.Percent(entry.IsAlive ? entry.HealthRatio * 100f : 0f);
                 bar.Add(fill);
                 data.Add(name);

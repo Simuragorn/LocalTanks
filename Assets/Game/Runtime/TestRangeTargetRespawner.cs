@@ -15,6 +15,11 @@ namespace LocalTanks
         public GameObject[] CurrentTargets => currentTargets;
         public bool RotationPaused => rotationPaused;
 
+        private void Awake()
+        {
+            PrepareCurrentTargets();
+        }
+
         public void Configure(
             GameObject[] prefabs,
             string[] names,
@@ -133,7 +138,7 @@ namespace LocalTanks
                 healthBar = target.AddComponent<TankHealthBar>();
             }
 
-            healthBar.Configure(1.45f);
+            healthBar.Configure(1.45f, false);
         }
 
         private string GetTargetName(int index)

@@ -138,7 +138,7 @@ namespace LocalTanks
                 if (input != null) input.enabled = false;
                 TankHealthBar healthBar = tank.GetComponent<TankHealthBar>();
                 if (healthBar == null) healthBar = tank.AddComponent<TankHealthBar>();
-                healthBar.Configure(1.45f);
+                healthBar.Configure(1.45f, entry.team == TeamId.TeamA);
 
                 NavigationAgent navigation = tank.GetComponent<NavigationAgent>();
                 if (navigation == null) navigation = tank.AddComponent<NavigationAgent>();

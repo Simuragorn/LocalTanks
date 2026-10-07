@@ -8,12 +8,17 @@ namespace LocalTanks
         [SerializeField, Min(1f)] private float width = 72f;
         [SerializeField, Min(1f)] private float height = 8f;
         [SerializeField, Min(0f)] private float worldOffset = 1.45f;
+        [SerializeField] private bool useTeamColor;
+        [SerializeField] private bool allied = true;
 
         private TankHealth health;
 
         public float HealthRatio => health != null && health.MaximumHitPoints > 0
             ? Mathf.Clamp01((float)health.CurrentHitPoints / health.MaximumHitPoints)
             : 0f;
+        public Color FillColor => useTeamColor
+            ? TeamPalette.ForRelation(allied)
+            : GetHealthColor(HealthRatio);
 
         private void Awake()
         {
@@ -23,10 +28,18 @@ namespace LocalTanks
         public void Configure(float offset)
         {
             worldOffset = Mathf.Max(0f, offset);
+            useTeamColor = false;
             if (health == null)
             {
                 health = GetComponent<TankHealth>();
             }
+        }
+
+        public void Configure(float offset, bool isAllied)
+        {
+            Configure(offset);
+            allied = isAllied;
+            useTeamColor = true;
         }
 
         private void OnGUI()
@@ -53,7 +66,7 @@ namespace LocalTanks
             Color previousColor = GUI.color;
             GUI.color = new Color(0.08f, 0.08f, 0.08f, 0.9f);
             GUI.DrawTexture(background, Texture2D.whiteTexture);
-            GUI.color = GetHealthColor(HealthRatio);
+            GUI.color = FillColor;
             GUI.DrawTexture(fill, Texture2D.whiteTexture);
             GUI.color = previousColor;
         }

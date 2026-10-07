@@ -168,6 +168,7 @@ namespace LocalTanks.Tests
             TankHealthBar healthBar = target.GetComponent<TankHealthBar>();
             health.ApplyDamage(health.MaximumHitPoints / 2);
             Assert.That(healthBar.HealthRatio, Is.EqualTo((float)health.CurrentHitPoints / health.MaximumHitPoints));
+            Assert.That(ColorsMatch(healthBar.FillColor, TeamPalette.Enemy), Is.True);
 
             respawner.SetRotationPaused(true);
             float pausedAngle = target.GetComponent<Rigidbody2D>().rotation;
@@ -180,6 +181,7 @@ namespace LocalTanks.Tests
 
             GameObject respawnedTarget = GameObject.Find("E100_Target");
             Assert.That(respawnedTarget.GetComponent<TankHealthBar>().HealthRatio, Is.EqualTo(1f));
+            Assert.That(ColorsMatch(respawnedTarget.GetComponent<TankHealthBar>().FillColor, TeamPalette.Enemy), Is.True);
             Assert.That(respawnedTarget.GetComponent<RotatingTankDisplay>().IsPaused, Is.True);
 
             respawner.SetRotationPaused(false);
@@ -314,6 +316,10 @@ namespace LocalTanks.Tests
                 .ToArray();
             Assert.That(enemyMembers, Has.All.Matches<TeamMember>(member =>
                 enemyBase.GetComponent<CircleCollider2D>().OverlapPoint(member.transform.position)));
+            Assert.That(enemyMembers, Has.All.Matches<TeamMember>(member =>
+                ColorsMatch(member.GetComponent<TankHealthBar>().FillColor, TeamPalette.Enemy)));
+            Assert.That(enemyMembers, Has.All.Matches<TeamMember>(member =>
+                ColorsMatch(member.GetComponent<TankClassIconPresenter>().TeamColor, TeamPalette.Enemy)));
             foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
             {
                 ai.enabled = false;
@@ -353,6 +359,14 @@ namespace LocalTanks.Tests
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
             Assert.That(follow.Target, Is.EqualTo(playerMember.transform));
             Assert.That(follow.MaximumZoom, Is.EqualTo(22f));
+        }
+
+        private static bool ColorsMatch(Color actual, Color expected)
+        {
+            return Mathf.Abs(actual.r - expected.r) < 0.001f &&
+                   Mathf.Abs(actual.g - expected.g) < 0.001f &&
+                   Mathf.Abs(actual.b - expected.b) < 0.001f &&
+                   Mathf.Abs(actual.a - expected.a) < 0.001f;
         }
 
         [UnityTest]
