@@ -11,6 +11,25 @@ namespace LocalTanks.Tests
     public sealed class PrototypePlayModeTests
     {
         [UnityTest]
+        public IEnumerator DeveloperTimeScale_TogglesThreeTimesSpeedAndRestoresNormalTime()
+        {
+            GameObject root = new GameObject("DeveloperTimeScale");
+            DeveloperTimeScaleController controller = root.AddComponent<DeveloperTimeScaleController>();
+            yield return null;
+
+            controller.SetAccelerated(true);
+            Assert.That(controller.IsAccelerated, Is.True);
+            Assert.That(Time.timeScale, Is.EqualTo(3f));
+
+            controller.SetAccelerated(false);
+            Assert.That(controller.IsAccelerated, Is.False);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            Object.Destroy(root);
+            yield return null;
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+        }
+
+        [UnityTest]
         public IEnumerator BattleTestRange_LoadsPlayerAndCamera()
         {
             SceneManager.LoadScene("Battle_TestRange");

@@ -68,7 +68,7 @@ namespace LocalTanks
                 ? $"{selected.RepositionDestination.x:0.0}, {selected.RepositionDestination.y:0.0}"
                 : "—";
             GUI.Box(
-                new Rect(Screen.width - 312f, 82f, 300f, 168f),
+                new Rect(Screen.width - 312f, 118f, 300f, 168f),
                 $"ИИ: {selected.name}\n" +
                 $"Состояние: {selected.State}\n" +
                 $"Линия / роль: {selected.Lane} / {selected.Role}\n" +

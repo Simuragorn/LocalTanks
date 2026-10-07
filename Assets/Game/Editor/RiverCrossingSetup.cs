@@ -878,6 +878,7 @@ namespace LocalTanks.Editor
             systems.AddComponent<VisionDebugOverlay>().Configure(vision);
             systems.AddComponent<VisionArcPresenter>().Configure(vision, GetOrCreateLineMaterial());
             systems.AddComponent<CombatAiDebugOverlay>();
+            systems.AddComponent<DeveloperTimeScaleController>();
 
             PanelSettings panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
             if (panelSettings == null)
