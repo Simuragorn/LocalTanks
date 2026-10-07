@@ -263,6 +263,9 @@ namespace LocalTanks.Tests
             Assert.That(roster.Enemies.Count, Is.EqualTo(3));
             Assert.That(hud.AllyList.childCount, Is.EqualTo(1));
             Assert.That(hud.EnemyList.childCount, Is.EqualTo(3));
+            Assert.That(roster.Allies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
+            Assert.That(roster.Enemies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
+            Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(4));
 
             Assert.That(map.IsBlocked(new Vector2Int(35, 35)), Is.False, "north bridge");
             Assert.That(map.IsBlocked(new Vector2Int(35, 22)), Is.False, "central bridge");

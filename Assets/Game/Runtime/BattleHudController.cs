@@ -112,6 +112,13 @@ namespace LocalTanks
 
                 Image icon = new Image { sprite = entry.Icon, scaleMode = ScaleMode.ScaleToFit };
                 icon.AddToClassList("tank-icon");
+                Image classIcon = new Image
+                {
+                    sprite = entry.ClassIcon,
+                    scaleMode = ScaleMode.ScaleToFit,
+                    tintColor = entry.TeamColor
+                };
+                classIcon.AddToClassList("class-icon");
                 Label name = new Label(entry.TankName);
                 name.AddToClassList("tank-name");
                 VisualElement data = new VisualElement();
@@ -127,6 +134,7 @@ namespace LocalTanks
 
                 if (ally)
                 {
+                    row.Add(classIcon);
                     row.Add(icon);
                     row.Add(data);
                 }
@@ -134,6 +142,7 @@ namespace LocalTanks
                 {
                     row.Add(data);
                     row.Add(icon);
+                    row.Add(classIcon);
                 }
 
                 container.Add(row);

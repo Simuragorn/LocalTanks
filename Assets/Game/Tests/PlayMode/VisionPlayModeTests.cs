@@ -25,6 +25,9 @@ namespace LocalTanks.Tests
             system.ForceEvaluateAll();
             Assert.That(system.IsVisibleTo(TeamId.TeamA, target), Is.False);
             Assert.That(target.VisibilityPresenter.IsVisible, Is.False);
+            SpriteRenderer hiddenRenderer = target.GetComponent<SpriteRenderer>();
+            Assert.That(hiddenRenderer.enabled, Is.True, "testing mode keeps a hidden enemy rendered");
+            Assert.That(hiddenRenderer.color.a, Is.EqualTo(0.28f).Within(0.01f));
 
             Cleanup(system.gameObject, observer.gameObject, target.gameObject, rules);
             yield return null;
@@ -141,6 +144,29 @@ namespace LocalTanks.Tests
             Assert.That(vision.IsVisibleTo(TeamId.TeamA, enemy), Is.False);
 
             Cleanup(systems, ally.gameObject, enemy.gameObject, rules);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator NearbyPlayer_MakesConcealmentVegetationTransparent()
+        {
+            TeamMember player = CreateTank("Player", TeamId.TeamA, Vector2.zero, 10f, 0f);
+            GameObject bush = new GameObject("Bush");
+            bush.transform.position = new Vector2(0.5f, 0f);
+            SpriteRenderer renderer = bush.AddComponent<SpriteRenderer>();
+            ConcealmentZone zone = bush.AddComponent<ConcealmentZone>();
+            zone.Configure(0.18f);
+
+            yield return new WaitForSeconds(0.3f);
+
+            Assert.That(zone.CurrentAlpha, Is.LessThan(0.5f));
+            Assert.That(renderer.color.a, Is.LessThan(0.5f));
+
+            player.transform.position = new Vector2(10f, 0f);
+            yield return new WaitForSeconds(0.3f);
+
+            Assert.That(zone.CurrentAlpha, Is.GreaterThan(0.8f));
+            Cleanup(player.gameObject, bush);
             yield return null;
         }
 

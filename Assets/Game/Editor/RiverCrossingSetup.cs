@@ -27,6 +27,7 @@ namespace LocalTanks.Editor
         private const string PanelSettingsPath = GeneratedRoot + "/BattleHudPanelSettings.asset";
         private const string BattleHudUxmlPath = "Assets/Game/UI/BattleHud.uxml";
         private const string BattleHudUssPath = "Assets/Game/UI/BattleHud.uss";
+        private const string ClassIconsRoot = "Assets/Game/Generated/UI/VehicleClasses";
 
         private static readonly string[] AtlasSpriteNames =
         {
@@ -74,7 +75,10 @@ namespace LocalTanks.Editor
             EnsureFolder("Assets/Game/Generated");
             EnsureFolder(GeneratedRoot);
             EnsureFolder(TilesRoot);
+            EnsureFolder("Assets/Game/Generated/UI");
+            EnsureFolder(ClassIconsRoot);
             ConfigureEnvironmentAtlas();
+            GenerateVehicleClassIcons();
 
             Scene previousScene = SceneManager.GetActiveScene();
             bool preservePreviousScene = previousScene.IsValid() && previousScene.isLoaded &&
@@ -658,6 +662,22 @@ namespace LocalTanks.Editor
 
         private static void AddTeamMember(GameObject tank, TeamId team, bool playerControlled)
         {
+            TankDefinition definition = tank.GetComponent<TankHealth>()?.Definition;
+            Sprite classIcon = definition != null
+                ? AssetDatabase.LoadAssetAtPath<Sprite>($"{ClassIconsRoot}/{definition.vehicleClass}.png")
+                : null;
+            if (classIcon == null)
+            {
+                throw new InvalidOperationException($"Class icon for '{definition?.vehicleClass}' was not generated.");
+            }
+
+            TankClassIconPresenter classPresenter = tank.GetComponent<TankClassIconPresenter>();
+            if (classPresenter == null)
+            {
+                classPresenter = tank.AddComponent<TankClassIconPresenter>();
+            }
+
+            classPresenter.Configure(classIcon, team == TeamId.TeamA, 1.7f);
             TankVisibilityPresenter presenter = tank.GetComponent<TankVisibilityPresenter>();
             if (presenter == null)
             {
@@ -671,6 +691,109 @@ namespace LocalTanks.Editor
             }
 
             member.Configure(team, playerControlled);
+        }
+
+        private static void GenerateVehicleClassIcons()
+        {
+            foreach (VehicleClass vehicleClass in Enum.GetValues(typeof(VehicleClass)))
+            {
+                const int size = 32;
+                Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+                texture.SetPixels(Enumerable.Repeat(Color.clear, size * size).ToArray());
+                switch (vehicleClass)
+                {
+                    case VehicleClass.HeavyTank:
+                        DrawSlantedBars(texture, 3, 5, 7);
+                        break;
+                    case VehicleClass.MediumTank:
+                        DrawSlantedBars(texture, 2, 9, 9);
+                        break;
+                    case VehicleClass.LightTank:
+                        FillPolygon(texture, new[]
+                        {
+                            new Vector2(16f, 5f), new Vector2(27f, 16f),
+                            new Vector2(16f, 27f), new Vector2(5f, 16f)
+                        });
+                        break;
+                    case VehicleClass.TankDestroyer:
+                        FillPolygon(texture, new[]
+                        {
+                            new Vector2(4f, 25f), new Vector2(28f, 25f), new Vector2(16f, 5f)
+                        });
+                        break;
+                    case VehicleClass.Artillery:
+                        FillPolygon(texture, new[]
+                        {
+                            new Vector2(7f, 7f), new Vector2(25f, 7f),
+                            new Vector2(25f, 25f), new Vector2(7f, 25f)
+                        });
+                        break;
+                }
+
+                texture.Apply();
+                string path = $"{ClassIconsRoot}/{vehicleClass}.png";
+                File.WriteAllBytes(Path.GetFullPath(path), texture.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(texture);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+                if (importer == null)
+                {
+                    throw new InvalidOperationException($"Could not import vehicle class icon '{path}'.");
+                }
+
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.spritePixelsPerUnit = size;
+                importer.mipmapEnabled = false;
+                importer.alphaIsTransparency = true;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SaveAndReimport();
+            }
+        }
+
+        private static void DrawSlantedBars(Texture2D texture, int count, int startX, int spacing)
+        {
+            for (int index = 0; index < count; index++)
+            {
+                float x = startX + index * spacing;
+                FillPolygon(texture, new[]
+                {
+                    new Vector2(x, 9f), new Vector2(x + 3f, 7f),
+                    new Vector2(x + 11f, 22f), new Vector2(x + 8f, 24f)
+                });
+            }
+        }
+
+        private static void FillPolygon(Texture2D texture, Vector2[] vertices)
+        {
+            for (int y = 0; y < texture.height; y++)
+            {
+                for (int x = 0; x < texture.width; x++)
+                {
+                    Vector2 point = new Vector2(x + 0.5f, y + 0.5f);
+                    bool inside = false;
+                    for (int current = 0, previous = vertices.Length - 1;
+                         current < vertices.Length;
+                         previous = current++)
+                    {
+                        Vector2 a = vertices[current];
+                        Vector2 b = vertices[previous];
+                        bool crosses = (a.y > point.y) != (b.y > point.y) &&
+                                       point.x < (b.x - a.x) * (point.y - a.y) /
+                                       (b.y - a.y) + a.x;
+                        if (crosses)
+                        {
+                            inside = !inside;
+                        }
+                    }
+
+                    if (inside)
+                    {
+                        texture.SetPixel(x, y, Color.white);
+                    }
+                }
+            }
         }
 
         private static void CreateBattleSystems()

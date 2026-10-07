@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "panzer_iv",
   "displayName": "Panzer IV (long 7.5 cm)",
+  "vehicleClass": "MediumTank",
   "maxHitPoints": 650,
   "weaponId": "kwk_40_l43",
   "mobility": {

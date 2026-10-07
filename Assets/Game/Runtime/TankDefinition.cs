@@ -2,10 +2,20 @@ using UnityEngine;
 
 namespace LocalTanks
 {
+    public enum VehicleClass
+    {
+        HeavyTank,
+        MediumTank,
+        LightTank,
+        TankDestroyer,
+        Artillery
+    }
+
     public sealed class TankDefinition : ScriptableObject
     {
         public string id;
         public string displayName;
+        public VehicleClass vehicleClass;
         [Min(1)] public int maxHitPoints = 1;
         public WeaponDefinition weapon;
 

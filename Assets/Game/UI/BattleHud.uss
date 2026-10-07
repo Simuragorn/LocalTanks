@@ -51,6 +51,7 @@
 
 .enemy-row { justify-content: flex-end; }
 .tank-icon { width: 34px; height: 34px; margin-left: 4px; margin-right: 4px; }
+.class-icon { width: 20px; height: 20px; margin-left: 2px; margin-right: 2px; }
 .tank-data { flex-grow: 1; }
 .enemy-row .tank-name { -unity-text-align: upper-right; }
 

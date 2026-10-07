@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
   id: panzer_iv
   displayName: Panzer IV (long 7.5 cm)
+  vehicleClass: 1
   maxHitPoints: 650
   weapon: {fileID: 11400000, guid: 47911f615fdd21f45b8a4bdfab0e2320, type: 2}
   maxForwardSpeed: 2.9

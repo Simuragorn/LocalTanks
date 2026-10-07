@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
   id: e_100
   displayName: E-100
+  vehicleClass: 0
   maxHitPoints: 2600
   weapon: {fileID: 11400000, guid: bd352bfbc999a63459b33bb217723812, type: 2}
   maxForwardSpeed: 1.45

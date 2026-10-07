@@ -16,14 +16,20 @@ namespace LocalTanks
             LastKnownHitPoints = member.Health != null ? member.Health.CurrentHitPoints : MaximumHitPoints;
             IsAlive = member.IsAlive;
             IsCurrentlyVisible = ally;
-            SpriteRenderer renderer = member.GetComponentsInChildren<SpriteRenderer>(true).FirstOrDefault();
+            SpriteRenderer renderer = member.GetComponentsInChildren<SpriteRenderer>(true)
+                .FirstOrDefault(item => item.transform.name != "ClassIcon");
             Icon = renderer != null ? renderer.sprite : null;
+            TankClassIconPresenter classPresenter = member.GetComponent<TankClassIconPresenter>();
+            ClassIcon = classPresenter != null ? classPresenter.Icon : null;
+            TeamColor = TeamPalette.ForRelation(ally);
         }
 
         public TeamMember Member { get; }
         public bool IsAlly { get; }
         public string TankName { get; }
         public Sprite Icon { get; }
+        public Sprite ClassIcon { get; }
+        public Color TeamColor { get; }
         public int MaximumHitPoints { get; }
         public int LastKnownHitPoints { get; internal set; }
         public bool IsAlive { get; internal set; }

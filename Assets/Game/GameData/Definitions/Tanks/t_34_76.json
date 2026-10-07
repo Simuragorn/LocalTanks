@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "t_34_76",
   "displayName": "T-34/76",
+  "vehicleClass": "MediumTank",
   "maxHitPoints": 850,
   "weaponId": "f_34_76mm",
   "mobility": {

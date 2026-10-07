@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "e_100",
   "displayName": "E-100",
+  "vehicleClass": "HeavyTank",
   "maxHitPoints": 2600,
   "weaponId": "kwk_44_l38_15cm",
   "mobility": {

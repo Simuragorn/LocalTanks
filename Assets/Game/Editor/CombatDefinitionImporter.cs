@@ -46,6 +46,7 @@ namespace LocalTanks.Editor
         public int schemaVersion;
         public string id;
         public string displayName;
+        public string vehicleClass;
         public int maxHitPoints;
         public string weaponId;
         public MobilityJson mobility;
@@ -138,6 +139,10 @@ namespace LocalTanks.Editor
             {
                 ValidateCommon(tank.schemaVersion, tank.id, tank.displayName, "Tank", allIds, errors);
                 RequirePositive(tank.maxHitPoints, $"Tank '{tank.id}'.maxHitPoints", errors);
+                if (!Enum.TryParse(tank.vehicleClass, false, out VehicleClass _))
+                {
+                    errors.Add($"Tank '{tank.id}' has unknown vehicleClass '{tank.vehicleClass}'.");
+                }
                 if (string.IsNullOrWhiteSpace(tank.weaponId) || !weaponIds.Contains(tank.weaponId))
                 {
                     errors.Add($"Tank '{tank.id}' references missing weapon '{tank.weaponId}'.");
@@ -414,6 +419,7 @@ namespace LocalTanks.Editor
             TankDefinition target = LoadOrCreate<TankDefinition>(path);
             target.id = source.id;
             target.displayName = source.displayName;
+            target.vehicleClass = Enum.Parse<VehicleClass>(source.vehicleClass, false);
             target.maxHitPoints = source.maxHitPoints;
             target.weapon = weapon;
             target.maxForwardSpeed = source.mobility.maxForwardSpeed;

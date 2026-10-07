@@ -41,6 +41,10 @@ namespace LocalTanks.Tests
             Assert.That(e100.vision.stationaryConcealment, Is.LessThan(tiger.vision.stationaryConcealment));
             Assert.That(tiger.vision.stationaryConcealment, Is.LessThan(t34.vision.stationaryConcealment));
             Assert.That(tiger.vision.stationaryConcealment, Is.LessThan(panzer.vision.stationaryConcealment));
+            Assert.That(tiger.vehicleClass, Is.EqualTo("HeavyTank"));
+            Assert.That(e100.vehicleClass, Is.EqualTo("HeavyTank"));
+            Assert.That(t34.vehicleClass, Is.EqualTo("MediumTank"));
+            Assert.That(panzer.vehicleClass, Is.EqualTo("MediumTank"));
         }
 
         [Test]
@@ -167,6 +171,20 @@ namespace LocalTanks.Tests
 
             Assert.That(errors.Any(error => error.Contains("stationaryConcealment")), Is.True);
             Assert.That(errors.Any(error => error.Contains("cannot exceed viewRange")), Is.True);
+        }
+
+        [Test]
+        public void Validator_RejectsUnknownVehicleClass()
+        {
+            CombatDefinitionSet definitions = CombatDefinitionImporter.LoadAndValidate();
+            TankDefinitionJson tank = definitions.Tanks[0];
+            string previous = tank.vehicleClass;
+            tank.vehicleClass = "SuperHeavySpaceship";
+
+            string[] errors = CombatDefinitionValidator.Validate(definitions);
+            tank.vehicleClass = previous;
+
+            Assert.That(errors.Any(error => error.Contains("unknown vehicleClass")), Is.True);
         }
     }
 }

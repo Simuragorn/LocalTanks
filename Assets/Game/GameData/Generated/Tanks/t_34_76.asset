@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
   id: t_34_76
   displayName: T-34/76
+  vehicleClass: 1
   maxHitPoints: 850
   weapon: {fileID: 11400000, guid: 527e0d72279755d4aa0835b43de5b3aa, type: 2}
   maxForwardSpeed: 3.8
