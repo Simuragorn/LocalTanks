@@ -121,10 +121,10 @@ TextureImporter:
       name: PzKpfwIV_Hull
       rect:
         serializedVersion: 2
-        x: 1
-        y: 2
-        width: 120
-        height: 237
+        x: 14
+        y: 17
+        width: 121
+        height: 260
       alignment: 9
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -143,12 +143,12 @@ TextureImporter:
       name: PzKpfwIV_Turret
       rect:
         serializedVersion: 2
-        x: 143
-        y: 38
-        width: 83
-        height: 149
+        x: 146
+        y: 16
+        width: 89
+        height: 199
       alignment: 9
-      pivot: {x: 0.5, y: 0.56}
+      pivot: {x: 0.5, y: 0.75}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []

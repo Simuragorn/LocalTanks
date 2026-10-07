@@ -121,10 +121,10 @@ TextureImporter:
       name: E100_Hull
       rect:
         serializedVersion: 2
-        x: 2
-        y: 41
-        width: 92
-        height: 164
+        x: 22
+        y: 39
+        width: 117
+        height: 227
       alignment: 9
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -143,12 +143,12 @@ TextureImporter:
       name: E100_Turret
       rect:
         serializedVersion: 2
-        x: 111
-        y: 2
-        width: 65
-        height: 167
+        x: 145
+        y: 33
+        width: 80
+        height: 188
       alignment: 9
-      pivot: {x: 0.5, y: 0.74}
+      pivot: {x: 0.5, y: 0.75}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
