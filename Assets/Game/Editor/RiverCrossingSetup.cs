@@ -81,6 +81,7 @@ namespace LocalTanks.Editor
             ConfigureEnvironmentAtlas();
             GenerateVehicleClassIcons();
             CaptureRules captureRules = GetOrCreateCaptureRules();
+            BattleScenario battleScenario = BattleScenarioImporter.Reimport();
 
             Scene previousScene = SceneManager.GetActiveScene();
             bool preservePreviousScene = previousScene.IsValid() && previousScene.isLoaded &&
@@ -101,9 +102,9 @@ namespace LocalTanks.Editor
                 CreateTilemaps(source, lookup);
                 NavigationMap map = CreateNavigationMap(source, lookup);
                 CreateEnvironment(source, map, captureRules);
-                GameObject player = CreateTanks(scene, map);
-                CreateCameraAndDiagnostics(player, map);
-                CreateBattleSystems();
+                CameraFollow2D cameraFollow = CreateCameraAndDiagnostics(map);
+                TeamVisionSystem visionSystem = CreateBattleSystems();
+                CreateBattleDirector(scene, map, battleScenario, visionSystem, cameraFollow);
                 new GameObject("RiverCrossingInstructions").AddComponent<RiverCrossingInstructions>();
 
                 EditorSceneManager.MarkSceneDirty(scene);
@@ -563,19 +564,19 @@ namespace LocalTanks.Editor
             for (int index = 0; index < ring.positionCount; index++)
             {
                 float angle = index * Mathf.PI * 2f / ring.positionCount;
-                ring.SetPosition(index, new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * 3.55f);
+                ring.SetPosition(index, new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * 5.9f);
             }
 
             Sprite markerSprite = GetShapeSprite();
             int spawnIndex = 0;
-            for (int row = -1; row <= 1; row++)
+            for (int row = -2; row <= 2; row++)
             {
-                for (int column = -2; column <= 2; column++)
+                for (int column = -1; column <= 1; column++)
                 {
                     spawnIndex++;
                     GameObject marker = new GameObject($"Spawn_{spawnIndex:00}");
                     marker.transform.SetParent(root.transform, false);
-                    marker.transform.localPosition = new Vector3(column * 1.25f, row * 1.35f, 0f);
+                    marker.transform.localPosition = new Vector3(column * 2.8f, row * 2.4f, 0f);
                     SpriteRenderer renderer = marker.AddComponent<SpriteRenderer>();
                     renderer.sprite = markerSprite;
                     renderer.color = new Color(color.r, color.g, color.b, 0.58f);
@@ -585,7 +586,7 @@ namespace LocalTanks.Editor
             }
 
             CircleCollider2D captureZone = root.AddComponent<CircleCollider2D>();
-            captureZone.radius = 3.55f;
+            captureZone.radius = 5.9f;
             captureZone.isTrigger = true;
             root.AddComponent<CaptureBase>().Configure(id, title, owner, captureRules, ring);
         }
@@ -843,7 +844,7 @@ namespace LocalTanks.Editor
             }
         }
 
-        private static void CreateBattleSystems()
+        private static TeamVisionSystem CreateBattleSystems()
         {
             VisionRules visionRules = AssetDatabase.LoadAssetAtPath<VisionRules>(VisionRulesPath);
             if (visionRules == null)
@@ -876,6 +877,7 @@ namespace LocalTanks.Editor
             roster.Configure(TeamId.TeamA, vision);
             systems.AddComponent<VisionDebugOverlay>().Configure(vision);
             systems.AddComponent<VisionArcPresenter>().Configure(vision, GetOrCreateLineMaterial());
+            systems.AddComponent<CombatAiDebugOverlay>();
 
             PanelSettings panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
             if (panelSettings == null)
@@ -905,6 +907,7 @@ namespace LocalTanks.Editor
                 .OrderBy(item => item.BaseId, StringComparer.Ordinal)
                 .ToArray();
             hud.AddComponent<BattleHudController>().Configure(roster, styleSheet, captureBases);
+            return vision;
         }
 
         private static void AddTerrainModifier(GameObject tank, NavigationMap map)
@@ -912,7 +915,7 @@ namespace LocalTanks.Editor
             tank.AddComponent<TerrainMotorModifier>().Configure(map, tank.GetComponent<TankMotor>());
         }
 
-        private static void CreateCameraAndDiagnostics(GameObject player, NavigationMap map)
+        private static CameraFollow2D CreateCameraAndDiagnostics(NavigationMap map)
         {
             GameObject cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
@@ -921,13 +924,67 @@ namespace LocalTanks.Editor
             camera.orthographicSize = 13f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.055f, 0.075f, 0.055f);
-            cameraObject.transform.position = new Vector3(player.transform.position.x, player.transform.position.y, -10f);
+            cameraObject.transform.position = new Vector3(0f, 0f, -10f);
             cameraObject.AddComponent<AudioListener>();
             CameraFollow2D follow = cameraObject.AddComponent<CameraFollow2D>();
-            follow.Configure(player.transform);
             follow.ConfigureZoomRange(5f, 22f, 1.5f);
             follow.SetZoom(13f, true);
             cameraObject.AddComponent<NavigationDebugOverlay>().Configure(map);
+            return follow;
+        }
+
+        private static void CreateBattleDirector(
+            Scene scene,
+            NavigationMap map,
+            BattleScenario scenario,
+            TeamVisionSystem visionSystem,
+            CameraFollow2D cameraFollow)
+        {
+            CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(CombatDefinitionImporter.DatabasePath);
+            if (database == null)
+            {
+                throw new InvalidOperationException("Combat database was not generated.");
+            }
+
+            GameObject[] prefabs = TankPrefabPaths.Select(AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
+            if (prefabs.Any(prefab => prefab == null))
+            {
+                throw new InvalidOperationException("Build the combat test range before building River Crossing.");
+            }
+
+            string[] tankIds = { "tiger_ii", "e_100", "t_34_76", "panzer_iv" };
+            TankPrefabBinding[] prefabBindings = tankIds.Select((tankId, index) => new TankPrefabBinding
+            {
+                tankId = tankId,
+                prefab = prefabs[index]
+            }).ToArray();
+            VehicleClassIconBinding[] iconBindings = Enum.GetValues(typeof(VehicleClass))
+                .Cast<VehicleClass>()
+                .Select(vehicleClass => new VehicleClassIconBinding
+                {
+                    vehicleClass = vehicleClass,
+                    icon = AssetDatabase.LoadAssetAtPath<Sprite>($"{ClassIconsRoot}/{vehicleClass}.png")
+                })
+                .ToArray();
+            if (iconBindings.Any(item => item.icon == null))
+            {
+                throw new InvalidOperationException("One or more vehicle class icons were not generated.");
+            }
+
+            CaptureBase[] captureBases = UnityEngine.Object.FindObjectsByType<CaptureBase>()
+                .OrderBy(item => item.BaseId, StringComparer.Ordinal)
+                .ToArray();
+            GameObject root = new GameObject("BattleDirector");
+            SceneManager.MoveGameObjectToScene(root, scene);
+            root.AddComponent<BattleDirector>().Configure(
+                scenario,
+                database,
+                map,
+                visionSystem,
+                cameraFollow,
+                captureBases,
+                prefabBindings,
+                iconBindings);
         }
 
         private static GameObject CreateShape(

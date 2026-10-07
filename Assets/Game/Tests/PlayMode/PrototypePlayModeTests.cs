@@ -196,7 +196,10 @@ namespace LocalTanks.Tests
             Assert.That(map.Height, Is.EqualTo(24));
             Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(2));
             Assert.That(agents.Length, Is.EqualTo(3));
-            Assert.That(agents, Has.All.Matches<NavigationAgent>(agent => agent.HasPath));
+            foreach (NavigationAgent navigationAgent in agents)
+            {
+                Assert.That(navigationAgent.HasPath, Is.True, $"{navigationAgent.name} has no initial path");
+            }
 
             GameObject movingAgent = GameObject.Find("NavAgent_T34");
             Vector3 initialPosition = movingAgent.transform.position;
@@ -249,24 +252,33 @@ namespace LocalTanks.Tests
             Assert.That(GameObject.Find("SouthWoodBridge"), Is.Not.Null);
             Assert.That(GameObject.Find("Farmhouse_27_27"), Is.Not.Null);
             Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(3));
-            Assert.That(agents.Length, Is.EqualTo(3));
-            Assert.That(agents, Has.All.Matches<NavigationAgent>(agent => agent.HasPath));
+            Assert.That(agents.Length, Is.EqualTo(29));
+            foreach (NavigationAgent navigationAgent in agents)
+            {
+                Assert.That(navigationAgent.HasPath || navigationAgent.DestinationReached, Is.True,
+                    $"{navigationAgent.name} has neither a path nor a reached first waypoint");
+            }
             Assert.That(Object.FindAnyObjectByType<TeamVisionSystem>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<BattleRoster>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<BattleHudController>(), Is.Not.Null);
-            Assert.That(Object.FindObjectsByType<TeamMember>().Length, Is.EqualTo(4));
+            Assert.That(Object.FindObjectsByType<TeamMember>().Length, Is.EqualTo(30));
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            Assert.That(director, Is.Not.Null);
+            Assert.That(director.TeamAAlive, Is.EqualTo(15));
+            Assert.That(director.TeamBAlive, Is.EqualTo(15));
+            Assert.That(Object.FindObjectsByType<CombatTankAI>().Length, Is.EqualTo(29));
             Assert.That(Object.FindObjectsByType<ConcealmentZone>().Length, Is.GreaterThan(0));
             Assert.That(GameObject.Find("VisionBlockers").GetComponent<VisionBlocker>(), Is.Not.Null);
             BattleRoster roster = Object.FindAnyObjectByType<BattleRoster>();
             BattleHudController hud = Object.FindAnyObjectByType<BattleHudController>();
             yield return null;
-            Assert.That(roster.Allies.Count, Is.EqualTo(1));
-            Assert.That(roster.Enemies.Count, Is.EqualTo(3));
-            Assert.That(hud.AllyList.childCount, Is.EqualTo(1));
-            Assert.That(hud.EnemyList.childCount, Is.EqualTo(3));
+            Assert.That(roster.Allies.Count, Is.EqualTo(15));
+            Assert.That(roster.Enemies.Count, Is.EqualTo(15));
+            Assert.That(hud.AllyList.childCount, Is.EqualTo(15));
+            Assert.That(hud.EnemyList.childCount, Is.EqualTo(15));
             Assert.That(roster.Allies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
             Assert.That(roster.Enemies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
-            Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(4));
+            Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(30));
             CaptureBase[] captureBases = Object.FindObjectsByType<CaptureBase>();
             Assert.That(captureBases.Length, Is.EqualTo(2));
             CaptureBase alliedBase = captureBases.Single(item => item.BaseId == "A");
@@ -275,13 +287,18 @@ namespace LocalTanks.Tests
             Assert.That(enemyBase.Owner, Is.EqualTo(TeamId.TeamB));
             Assert.That(alliedBase.SpawnPointCount, Is.EqualTo(15));
             Assert.That(enemyBase.SpawnPointCount, Is.EqualTo(15));
-            TeamMember playerMember = GameObject.Find("RiverCrossing_Player").GetComponent<TeamMember>();
+            TeamMember playerMember = director.PlayerMember;
+            Assert.That(playerMember, Is.Not.Null);
             Assert.That(alliedBase.GetComponent<CircleCollider2D>().OverlapPoint(playerMember.transform.position), Is.True);
             TeamMember[] enemyMembers = Object.FindObjectsByType<TeamMember>()
                 .Where(item => item.Team == TeamId.TeamB)
                 .ToArray();
             Assert.That(enemyMembers, Has.All.Matches<TeamMember>(member =>
                 enemyBase.GetComponent<CircleCollider2D>().OverlapPoint(member.transform.position)));
+            foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
+            {
+                ai.enabled = false;
+            }
             for (int first = 0; first < enemyMembers.Length; first++)
             {
                 Collider2D firstCollider = enemyMembers[first].GetComponent<Collider2D>();
@@ -315,8 +332,76 @@ namespace LocalTanks.Tests
             Assert.That(map.FindCellPath(new Vector2Int(7, 22), new Vector2Int(64, 22), 1), Is.Not.Empty);
 
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
-            Assert.That(follow.Target.name, Is.EqualTo("RiverCrossing_Player"));
+            Assert.That(follow.Target, Is.EqualTo(playerMember.transform));
             Assert.That(follow.MaximumZoom, Is.EqualTo(22f));
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_CombatAiLeavesBothBasesAndStopsWhenDestroyed()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            CombatTankAI[] agents = Object.FindObjectsByType<CombatTankAI>();
+            Vector3[] initialPositions = agents.Select(item => item.transform.position).ToArray();
+            float timeout = Time.time + 1.2f;
+            while (Time.time < timeout)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            int moved = agents.Where((item, index) =>
+                item != null && Vector3.Distance(initialPositions[index], item.transform.position) > 0.01f).Count();
+            Assert.That(moved, Is.GreaterThanOrEqualTo(20), "most AI tanks should leave their initial slots");
+
+            CombatTankAI destroyed = agents.First(item => item != null && item.enabled);
+            TankHealth health = destroyed.GetComponent<TankHealth>();
+            health.ApplyDamage(health.MaximumHitPoints);
+            yield return null;
+
+            Assert.That(destroyed.State, Is.EqualTo(CombatAiState.Destroyed));
+            Assert.That(destroyed.GetComponent<NavigationAgent>().enabled, Is.False);
+            Assert.That(destroyed.GetComponent<WeaponController>().enabled, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_CombatAiAimsAndFiresAtSharedVisibleContact()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            TeamVisionSystem vision = Object.FindAnyObjectByType<TeamVisionSystem>();
+            CombatTankAI shooter = Object.FindObjectsByType<CombatTankAI>()
+                .First(item => item.GetComponent<TeamMember>().Team == TeamId.TeamA &&
+                               item.GetComponent<TankHealth>().Definition.id == "t_34_76");
+            TeamMember target = Object.FindObjectsByType<TeamMember>()
+                .First(item => item.Team == TeamId.TeamB && item.Definition.id == "t_34_76");
+
+            foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
+            {
+                if (ai != shooter) ai.enabled = false;
+            }
+
+            TeamMember shooterMember = shooter.GetComponent<TeamMember>();
+            shooter.transform.SetPositionAndRotation(map.CellToWorld(new Vector2Int(30, 22)), Quaternion.Euler(0f, 0f, -90f));
+            target.transform.SetPositionAndRotation(map.CellToWorld(new Vector2Int(34, 22)), Quaternion.Euler(0f, 0f, 90f));
+            shooterMember.VisionDirection.rotation = Quaternion.Euler(0f, 0f, -90f);
+            Physics2D.SyncTransforms();
+            vision.ForceEvaluateAll();
+
+            bool fired = false;
+            WeaponController weapon = shooter.GetComponent<WeaponController>();
+            weapon.Fired += _ => fired = true;
+            float timeout = Time.time + 2f;
+            while (!fired && Time.time < timeout)
+            {
+                yield return null;
+            }
+
+            Assert.That(vision.IsVisibleTo(TeamId.TeamA, target), Is.True);
+            Assert.That(shooter.CurrentTarget, Is.EqualTo(target));
+            Assert.That(fired, Is.True, $"AI did not fire; block reason: {shooter.CurrentFireBlockReason}");
         }
 
         [UnityTest]
@@ -325,21 +410,32 @@ namespace LocalTanks.Tests
             SceneManager.LoadScene("Battle_RiverCrossing");
             yield return null;
 
-            TeamMember player = GameObject.Find("RiverCrossing_Player").GetComponent<TeamMember>();
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            TeamMember player = director.PlayerMember;
             TeamMember enemy = Object.FindObjectsByType<TeamMember>()
                 .First(item => item.Team == TeamId.TeamB);
             TeamVisionSystem vision = Object.FindAnyObjectByType<TeamVisionSystem>();
             PlayerTankInput input = player.GetComponent<PlayerTankInput>();
             TurretAiming turret = player.GetComponentInChildren<TurretAiming>();
             NavigationAgent agent = enemy.GetComponent<NavigationAgent>();
+            CombatTankAI combatAi = enemy.GetComponent<CombatTankAI>();
             if (input != null) input.enabled = false;
             if (turret != null) turret.enabled = false;
             if (agent != null) agent.enabled = false;
+            if (combatAi != null) combatAi.enabled = false;
+
+            TankMotor playerMotor = player.GetComponent<TankMotor>();
+            TankMotor enemyMotor = enemy.GetComponent<TankMotor>();
+            if (playerMotor != null) playerMotor.enabled = false;
+            if (enemyMotor != null) enemyMotor.enabled = false;
+            Rigidbody2D playerBody = player.GetComponent<Rigidbody2D>();
+            Rigidbody2D enemyBody = enemy.GetComponent<Rigidbody2D>();
+            if (playerBody != null) playerBody.linearVelocity = Vector2.zero;
+            if (enemyBody != null) enemyBody.linearVelocity = Vector2.zero;
 
             player.VisionDirection.rotation = Quaternion.identity;
-            enemy.transform.position = (Vector2)player.transform.position + player.VisionForward;
+            enemy.transform.position = (Vector2)player.transform.position + Vector2.up;
             Physics2D.SyncTransforms();
-            yield return new WaitForFixedUpdate();
 
             DetectionResult result = vision.Evaluate(player, enemy, out _);
             vision.ForceEvaluateAll();

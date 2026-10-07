@@ -66,6 +66,20 @@ namespace LocalTanks
                 playerInput.enabled = false;
             }
 
+            NavigationAgent navigation = GetComponent<NavigationAgent>();
+            if (navigation != null)
+            {
+                navigation.ClearDestination();
+                navigation.enabled = false;
+            }
+
+            CombatTankAI combatAi = GetComponent<CombatTankAI>();
+            if (combatAi != null)
+            {
+                combatAi.HandleDestroyed();
+                combatAi.enabled = false;
+            }
+
             foreach (SpriteRenderer renderer in GetComponentsInChildren<SpriteRenderer>())
             {
                 renderer.color = new Color(0.25f, 0.25f, 0.25f, renderer.color.a);

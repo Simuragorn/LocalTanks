@@ -23,9 +23,14 @@ namespace LocalTanks
         private Vector2 progressSamplePosition;
         private float progressSampleTime;
         private float unstuckTime;
+        private bool movementPaused;
+        private bool destinationReached;
 
         public IReadOnlyList<Vector2> CurrentPath => path;
         public bool HasPath => pathIndex < path.Count;
+        public bool HasDestination => hasDestination;
+        public bool DestinationReached => destinationReached;
+        public bool MovementPaused => movementPaused;
         public Vector2 Destination => destination;
 
         public void Configure(
@@ -40,6 +45,8 @@ namespace LocalTanks
             patrolPoints = waypoints;
             clearanceCells = Mathf.Max(0, clearance);
             loopPatrol = loop;
+            destinationReached = false;
+            movementPaused = false;
             progressSamplePosition = transform.position;
             progressSampleTime = Time.time;
             BeginPatrol();
@@ -49,7 +56,26 @@ namespace LocalTanks
         {
             destination = worldDestination;
             hasDestination = true;
+            destinationReached = false;
             return RebuildPath();
+        }
+
+        public void SetPaused(bool paused)
+        {
+            movementPaused = paused;
+            if (paused && motor != null)
+            {
+                motor.SetInput(0f, 0f);
+            }
+        }
+
+        public void ClearDestination()
+        {
+            path.Clear();
+            pathIndex = 0;
+            hasDestination = false;
+            destinationReached = false;
+            motor?.SetInput(0f, 0f);
         }
 
         private void Awake()
@@ -75,6 +101,12 @@ namespace LocalTanks
                 return;
             }
 
+            if (movementPaused)
+            {
+                motor.SetInput(0f, 0f);
+                return;
+            }
+
             if (hasDestination && map.Version != plannedMapVersion)
             {
                 RebuildPath();
@@ -83,6 +115,11 @@ namespace LocalTanks
             if (!HasPath)
             {
                 motor.SetInput(0f, 0f);
+                if (hasDestination)
+                {
+                    destinationReached = true;
+                }
+
                 AdvancePatrol();
                 return;
             }
@@ -96,6 +133,7 @@ namespace LocalTanks
             if (!HasPath)
             {
                 motor.SetInput(0f, 0f);
+                destinationReached = true;
                 AdvancePatrol();
                 return;
             }
@@ -143,6 +181,7 @@ namespace LocalTanks
         {
             path.Clear();
             pathIndex = 0;
+            destinationReached = false;
             if (map == null)
             {
                 return false;

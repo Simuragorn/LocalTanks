@@ -8,6 +8,19 @@ namespace LocalTanks
         private Vector2 targetPosition;
         private bool hasTarget;
 
+        public bool HasTarget => hasTarget;
+        public Vector2 TargetPosition => targetPosition;
+        public float AimErrorDegrees
+        {
+            get
+            {
+                Vector2 delta = targetPosition - (Vector2)transform.position;
+                return !hasTarget || delta.sqrMagnitude < 0.0001f
+                    ? 180f
+                    : Mathf.Abs(Vector2.SignedAngle(transform.up, delta.normalized));
+            }
+        }
+
         public void Configure(TankDefinition newConfig)
         {
             config = newConfig;
@@ -17,6 +30,11 @@ namespace LocalTanks
         {
             targetPosition = worldPosition;
             hasTarget = true;
+        }
+
+        public void ClearTarget()
+        {
+            hasTarget = false;
         }
 
         private void Update()

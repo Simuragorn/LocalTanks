@@ -15,6 +15,7 @@ namespace LocalTanks
         public event Action<WeaponController> Fired;
 
         public bool IsReady => reloadTimer.IsReady;
+        public Transform Muzzle => muzzle;
         public float EffectiveReloadSeconds => reloadOverrideSeconds > 0f
             ? reloadOverrideSeconds
             : config != null && config.weapon != null
