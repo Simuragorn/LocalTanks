@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,15 +11,19 @@ namespace LocalTanks
     {
         [SerializeField] private BattleRoster roster;
         [SerializeField] private StyleSheet styleSheet;
+        [SerializeField] private CaptureBase[] captureBases;
 
         private UIDocument document;
         private VisualElement allyList;
         private VisualElement enemyList;
         private Label allyScore;
         private Label enemyScore;
+        private VisualElement baseStatusList;
+        private float nextCaptureRefreshTime;
 
         public VisualElement AllyList => allyList;
         public VisualElement EnemyList => enemyList;
+        public VisualElement BaseStatusList => baseStatusList;
 
         private void Awake()
         {
@@ -42,7 +48,7 @@ namespace LocalTanks
             }
         }
 
-        public void Configure(BattleRoster battleRoster, StyleSheet styles)
+        public void Configure(BattleRoster battleRoster, StyleSheet styles, CaptureBase[] bases)
         {
             if (roster != null)
             {
@@ -51,6 +57,7 @@ namespace LocalTanks
 
             roster = battleRoster;
             styleSheet = styles;
+            captureBases = bases;
             if (isActiveAndEnabled && roster != null)
             {
                 roster.Changed += Rebuild;
@@ -74,7 +81,20 @@ namespace LocalTanks
             enemyList = root.Q<VisualElement>("enemy-list");
             allyScore = root.Q<Label>("ally-score");
             enemyScore = root.Q<Label>("enemy-score");
+            baseStatusList = root.Q<VisualElement>("base-status-list");
             Rebuild();
+            RefreshCaptureStatus();
+        }
+
+        private void Update()
+        {
+            if (Time.unscaledTime < nextCaptureRefreshTime)
+            {
+                return;
+            }
+
+            nextCaptureRefreshTime = Time.unscaledTime + 0.1f;
+            RefreshCaptureStatus();
         }
 
         private void Rebuild()
@@ -147,6 +167,66 @@ namespace LocalTanks
 
                 container.Add(row);
             }
+        }
+
+        private void RefreshCaptureStatus()
+        {
+            if (baseStatusList == null || roster == null)
+            {
+                return;
+            }
+
+            baseStatusList.Clear();
+            CaptureBase[] activeBases = captureBases == null
+                ? Array.Empty<CaptureBase>()
+                : captureBases.Where(item => item != null &&
+                    (item.State == BaseCaptureState.Capturing || item.State == BaseCaptureState.Contested))
+                    .OrderBy(item => item.BaseId, StringComparer.Ordinal)
+                    .ToArray();
+            baseStatusList.style.display = activeBases.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            foreach (CaptureBase captureBase in activeBases)
+            {
+                bool alliedCapture = captureBase.CapturingTeam == roster.LocalPlayerTeam;
+                VisualElement row = new VisualElement();
+                row.AddToClassList("base-status-row");
+                Label title = new Label(captureBase.State == BaseCaptureState.Contested
+                    ? $"{captureBase.DisplayName} • захват остановлен"
+                    : alliedCapture
+                        ? $"Захват: {captureBase.DisplayName} ({captureBase.CapturingTankCount})"
+                        : $"Противник захватывает {captureBase.DisplayName} ({captureBase.CapturingTankCount})");
+                title.AddToClassList("base-status-title");
+                Color color = captureBase.State == BaseCaptureState.Contested
+                    ? new Color32(190, 158, 92, 255)
+                    : TeamPalette.ForRelation(alliedCapture);
+                title.style.color = color;
+
+                Label timer = new Label(captureBase.State == BaseCaptureState.Contested
+                    ? "ПАУЗА"
+                    : FormatTime(captureBase.RemainingSeconds));
+                timer.AddToClassList("base-status-timer");
+                timer.style.color = color;
+
+                VisualElement header = new VisualElement();
+                header.AddToClassList("base-status-header");
+                header.Add(title);
+                header.Add(timer);
+                VisualElement track = new VisualElement();
+                track.AddToClassList("base-capture-track");
+                VisualElement fill = new VisualElement();
+                fill.AddToClassList("base-capture-fill");
+                fill.style.backgroundColor = color;
+                fill.style.width = Length.Percent(captureBase.Progress * 100f);
+                track.Add(fill);
+                row.Add(header);
+                row.Add(track);
+                baseStatusList.Add(row);
+            }
+        }
+
+        private static string FormatTime(float seconds)
+        {
+            int totalSeconds = Mathf.Max(0, Mathf.CeilToInt(seconds));
+            return $"{totalSeconds / 60}:{totalSeconds % 60:00}";
         }
     }
 }

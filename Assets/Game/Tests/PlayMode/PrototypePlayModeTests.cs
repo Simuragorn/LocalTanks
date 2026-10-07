@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -266,6 +267,26 @@ namespace LocalTanks.Tests
             Assert.That(roster.Allies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
             Assert.That(roster.Enemies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
             Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(4));
+            CaptureBase[] captureBases = Object.FindObjectsByType<CaptureBase>();
+            Assert.That(captureBases.Length, Is.EqualTo(2));
+            Assert.That(captureBases.Single(item => item.BaseId == "A").Owner, Is.EqualTo(TeamId.TeamA));
+            CaptureBase enemyBase = captureBases.Single(item => item.BaseId == "B");
+            Assert.That(enemyBase.Owner, Is.EqualTo(TeamId.TeamB));
+            foreach (TeamMember enemy in Object.FindObjectsByType<TeamMember>().Where(item => item.Team == TeamId.TeamB))
+            {
+                enemy.transform.position = new Vector3(100f, 100f, 0f);
+            }
+
+            Physics2D.SyncTransforms();
+            yield return new WaitForFixedUpdate();
+            TeamMember playerMember = GameObject.Find("RiverCrossing_Player").GetComponent<TeamMember>();
+            enemyBase.SetPresence(playerMember, true);
+            enemyBase.Tick(1f);
+            yield return new WaitForSeconds(0.15f);
+            Assert.That(enemyBase.State, Is.EqualTo(BaseCaptureState.Capturing));
+            Assert.That(enemyBase.RemainingSeconds, Is.LessThan(180f));
+            Assert.That(hud.BaseStatusList.childCount, Is.EqualTo(1));
+            enemyBase.SetPresence(playerMember, false);
 
             Assert.That(map.IsBlocked(new Vector2Int(35, 35)), Is.False, "north bridge");
             Assert.That(map.IsBlocked(new Vector2Int(35, 22)), Is.False, "central bridge");

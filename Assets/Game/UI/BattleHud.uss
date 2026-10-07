@@ -39,6 +39,41 @@
     font-size: 22px;
 }
 
+.base-status-list {
+    position: absolute;
+    top: 68px;
+    left: 50%;
+    translate: -50% 0;
+    width: 360px;
+}
+
+.base-status-row {
+    margin-bottom: 5px;
+    padding: 7px 10px;
+    background-color: rgba(15, 18, 16, 0.82);
+    border-radius: 4px;
+}
+
+.base-status-header {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.base-status-title, .base-status-timer {
+    font-size: 13px;
+    -unity-font-style: bold;
+}
+
+.base-capture-track {
+    height: 8px;
+    margin-top: 4px;
+    background-color: rgba(4, 5, 4, 0.92);
+    border-width: 1px;
+    border-color: rgba(200, 200, 190, 0.20);
+}
+
+.base-capture-fill { height: 100%; }
+
 .ally-text, .ally-row .tank-name { color: rgb(120, 169, 123); }
 .enemy-text, .enemy-row .tank-name { color: rgb(185, 104, 104); }
 

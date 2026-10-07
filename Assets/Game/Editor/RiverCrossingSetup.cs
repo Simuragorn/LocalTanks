@@ -24,6 +24,7 @@ namespace LocalTanks.Editor
         private const string ShapeTexturePath = GeneratedRoot + "/WhiteSquare.png";
         private const string PreviewPath = "Docs/Media/RiverCrossing.png";
         private const string VisionRulesPath = GeneratedRoot + "/VisionRules.asset";
+        private const string CaptureRulesPath = GeneratedRoot + "/CaptureRules.asset";
         private const string PanelSettingsPath = GeneratedRoot + "/BattleHudPanelSettings.asset";
         private const string BattleHudUxmlPath = "Assets/Game/UI/BattleHud.uxml";
         private const string BattleHudUssPath = "Assets/Game/UI/BattleHud.uss";
@@ -79,6 +80,7 @@ namespace LocalTanks.Editor
             EnsureFolder(ClassIconsRoot);
             ConfigureEnvironmentAtlas();
             GenerateVehicleClassIcons();
+            CaptureRules captureRules = GetOrCreateCaptureRules();
 
             Scene previousScene = SceneManager.GetActiveScene();
             bool preservePreviousScene = previousScene.IsValid() && previousScene.isLoaded &&
@@ -98,7 +100,7 @@ namespace LocalTanks.Editor
                 TerrainLookup lookup = BuildTerrainLookup(source);
                 CreateTilemaps(source, lookup);
                 NavigationMap map = CreateNavigationMap(source, lookup);
-                CreateEnvironment(source, map);
+                CreateEnvironment(source, map, captureRules);
                 GameObject player = CreateTanks(scene, map);
                 CreateCameraAndDiagnostics(player, map);
                 CreateBattleSystems();
@@ -407,7 +409,7 @@ namespace LocalTanks.Editor
             return map;
         }
 
-        private static void CreateEnvironment(MapSource source, NavigationMap map)
+        private static void CreateEnvironment(MapSource source, NavigationMap map, CaptureRules captureRules)
         {
             Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(AtlasPath)
                 .OfType<Sprite>()
@@ -460,8 +462,8 @@ namespace LocalTanks.Editor
 
             Vector2 baseA = map.CellToWorld(FindCell(source, 'A'));
             Vector2 baseB = map.CellToWorld(FindCell(source, 'Z'));
-            CreateBase("Base_A", baseA, new Color(0.25f, 0.68f, 1f, 1f));
-            CreateBase("Base_B", baseB, new Color(1f, 0.32f, 0.25f, 1f));
+            CreateBase("Base_A", "A", "База A", TeamId.TeamA, baseA, TeamPalette.Ally, captureRules);
+            CreateBase("Base_B", "B", "База B", TeamId.TeamB, baseB, TeamPalette.Enemy, captureRules);
         }
 
         private static void CreateBoundaryVegetation(
@@ -538,7 +540,14 @@ namespace LocalTanks.Editor
             CreateShape(bridge.transform, "SouthRail", new Vector2(0f, -height * 0.46f), new Vector2(5.0f, 0.11f), railColor, -7, shape);
         }
 
-        private static void CreateBase(string name, Vector2 position, Color color)
+        private static void CreateBase(
+            string name,
+            string id,
+            string title,
+            TeamId owner,
+            Vector2 position,
+            Color color,
+            CaptureRules captureRules)
         {
             GameObject root = new GameObject(name);
             root.transform.position = position;
@@ -574,6 +583,27 @@ namespace LocalTanks.Editor
                     marker.transform.localScale = Vector3.one * (0.12f / markerSprite.bounds.size.x);
                 }
             }
+
+            CircleCollider2D captureZone = root.AddComponent<CircleCollider2D>();
+            captureZone.radius = 3.55f;
+            captureZone.isTrigger = true;
+            root.AddComponent<CaptureBase>().Configure(id, title, owner, captureRules, ring);
+        }
+
+        private static CaptureRules GetOrCreateCaptureRules()
+        {
+            CaptureRules captureRules = AssetDatabase.LoadAssetAtPath<CaptureRules>(CaptureRulesPath);
+            if (captureRules == null)
+            {
+                captureRules = ScriptableObject.CreateInstance<CaptureRules>();
+                AssetDatabase.CreateAsset(captureRules, CaptureRulesPath);
+            }
+
+            captureRules.baseCaptureSeconds = 180f;
+            captureRules.maximumContributingTanks = 3;
+            captureRules.fullRecoverySeconds = 60f;
+            EditorUtility.SetDirty(captureRules);
+            return captureRules;
         }
 
         private static Material GetOrCreateLineMaterial()
@@ -844,7 +874,10 @@ namespace LocalTanks.Editor
             document.panelSettings = panelSettings;
             document.visualTreeAsset = visualTree;
             document.sortingOrder = 100;
-            hud.AddComponent<BattleHudController>().Configure(roster, styleSheet);
+            CaptureBase[] captureBases = UnityEngine.Object.FindObjectsByType<CaptureBase>()
+                .OrderBy(item => item.BaseId, StringComparer.Ordinal)
+                .ToArray();
+            hud.AddComponent<BattleHudController>().Configure(roster, styleSheet, captureBases);
         }
 
         private static void AddTerrainModifier(GameObject tank, NavigationMap map)

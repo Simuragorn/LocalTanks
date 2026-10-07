@@ -170,6 +170,74 @@ namespace LocalTanks.Tests
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator EnemyTanks_CaptureBaseAtCappedCombinedRate()
+        {
+            CaptureRules rules = CreateCaptureRules(3f, 3, 2f);
+            CaptureBase captureBase = CreateBase("TestBase", TeamId.TeamA, rules);
+            TeamMember first = CreateTank("FirstEnemy", TeamId.TeamB, Vector2.zero, 10f, 0f);
+            TeamMember second = CreateTank("SecondEnemy", TeamId.TeamB, Vector2.zero, 10f, 0f);
+            TeamMember third = CreateTank("ThirdEnemy", TeamId.TeamB, Vector2.zero, 10f, 0f);
+            int captureEvents = 0;
+            captureBase.Captured += (_, _, _) => captureEvents++;
+            captureBase.SetPresence(first, true);
+            captureBase.SetPresence(second, true);
+            captureBase.SetPresence(third, true);
+
+            captureBase.Tick(1f);
+
+            Assert.That(captureBase.Owner, Is.EqualTo(TeamId.TeamB));
+            Assert.That(captureBase.State, Is.EqualTo(BaseCaptureState.Owned));
+            Assert.That(captureEvents, Is.EqualTo(1));
+
+            Cleanup(captureBase.gameObject, first.gameObject, second.gameObject, third.gameObject, rules);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ContestedBase_PausesAndAbandonedProgressRecovers()
+        {
+            CaptureRules rules = CreateCaptureRules(180f, 3, 60f);
+            CaptureBase captureBase = CreateBase("TestBase", TeamId.TeamA, rules);
+            TeamMember attacker = CreateTank("Attacker", TeamId.TeamB, Vector2.zero, 10f, 0f);
+            TeamMember defender = CreateTank("Defender", TeamId.TeamA, Vector2.zero, 10f, 0f);
+            captureBase.SetPresence(attacker, true);
+            captureBase.Tick(30f);
+            float progress = captureBase.Progress;
+
+            captureBase.SetPresence(defender, true);
+            captureBase.Tick(30f);
+            Assert.That(captureBase.State, Is.EqualTo(BaseCaptureState.Contested));
+            Assert.That(captureBase.Progress, Is.EqualTo(progress).Within(0.0001f));
+
+            captureBase.SetPresence(defender, false);
+            captureBase.SetPresence(attacker, false);
+            captureBase.Tick(10f);
+            Assert.That(captureBase.State, Is.EqualTo(BaseCaptureState.Owned));
+            Assert.That(captureBase.Progress, Is.EqualTo(0f).Within(0.0001f));
+
+            Cleanup(captureBase.gameObject, attacker.gameObject, defender.gameObject, rules);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator DestroyedTank_DoesNotCaptureBase()
+        {
+            CaptureRules rules = CreateCaptureRules(1f, 3, 1f);
+            CaptureBase captureBase = CreateBase("TestBase", TeamId.TeamA, rules);
+            TeamMember attacker = CreateTank("DestroyedAttacker", TeamId.TeamB, Vector2.zero, 10f, 0f);
+            attacker.Health.ApplyDamage(1000);
+            captureBase.SetPresence(attacker, true);
+
+            captureBase.Tick(10f);
+
+            Assert.That(captureBase.Owner, Is.EqualTo(TeamId.TeamA));
+            Assert.That(captureBase.Progress, Is.EqualTo(0f));
+
+            Cleanup(captureBase.gameObject, attacker.gameObject, rules);
+            yield return null;
+        }
+
         private static TeamMember CreateTank(
             string name,
             TeamId team,
@@ -210,6 +278,25 @@ namespace LocalTanks.Tests
             rules.checksPerFrame = 32;
             rules.contactMemorySeconds = 5f;
             return rules;
+        }
+
+        private static CaptureRules CreateCaptureRules(float seconds, int maximumTanks, float recoverySeconds)
+        {
+            CaptureRules rules = ScriptableObject.CreateInstance<CaptureRules>();
+            rules.baseCaptureSeconds = seconds;
+            rules.maximumContributingTanks = maximumTanks;
+            rules.fullRecoverySeconds = recoverySeconds;
+            return rules;
+        }
+
+        private static CaptureBase CreateBase(string name, TeamId owner, CaptureRules rules)
+        {
+            GameObject root = new GameObject(name);
+            CircleCollider2D collider = root.AddComponent<CircleCollider2D>();
+            collider.isTrigger = true;
+            CaptureBase captureBase = root.AddComponent<CaptureBase>();
+            captureBase.Configure(name.ToLowerInvariant(), name, owner, rules, null);
+            return captureBase;
         }
 
         private static void Cleanup(params Object[] objects)
