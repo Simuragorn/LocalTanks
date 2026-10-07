@@ -58,6 +58,10 @@ namespace LocalTanks
             {
                 SelectTank(3);
             }
+            else if (keyboard.digit5Key.wasPressedThisFrame || keyboard.numpad5Key.wasPressedThisFrame)
+            {
+                SelectTank(4);
+            }
 
             if (keyboard.pKey.wasPressedThisFrame)
             {
@@ -114,7 +118,7 @@ namespace LocalTanks
             const float width = 310f;
             float controlsTop = 41f + tankPrefabs.Length * 29f;
             float height = controlsTop + 94f;
-            GUI.Box(new Rect(12f, 12f, width, height), "Выбор танка (1–4)");
+            GUI.Box(new Rect(12f, 12f, width, height), $"Выбор танка (1–{tankPrefabs.Length})");
 
             for (int index = 0; index < tankPrefabs.Length; index++)
             {

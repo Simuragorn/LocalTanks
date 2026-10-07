@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa5fa75625e111249b94a3b56f33e8a2, type: 3}
+  m_Name: bt_2
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
+  id: bt_2
+  displayName: BT-2
+  vehicleClass: 2
+  maxHitPoints: 300
+  weapon: {fileID: 11400000, guid: 8677e136429a3ae4483a2c50792c32e9, type: 2}
+  maxForwardSpeed: 3.75
+  maxReverseSpeed: 0.72
+  acceleration: 0.55
+  groundResistance: 1.8
+  braking: 2.6
+  hullTurnSpeed: 32
+  turretTurnSpeed: 24
+  viewRange: 9.3
+  stationaryConcealment: 0.28
+  movementRevealPenalty: 0.1
+  firingRevealPenalty: 0.11
+  firingRevealDuration: 4.5
+  guaranteedDetectionRange: 1.4
+  armor:
+    front: 13
+    left: 13
+    right: 13
+    rear: 13

@@ -13,7 +13,7 @@ namespace LocalTanks.Tests
 
             Assert.That(definitions.Tanks.Select(item => item.id), Is.EquivalentTo(new[]
             {
-                "e_100", "panzer_iv", "t_34_76", "tiger_ii"
+                "bt_2", "e_100", "panzer_iv", "t_34_76", "tiger_ii"
             }));
             Assert.That(definitions.Weapons.Select(item => item.id), Does.Contain("kwk_43_l71"));
             Assert.That(definitions.Shells.Select(item => item.id), Does.Contain("pzgr_39_43"));
@@ -27,7 +27,10 @@ namespace LocalTanks.Tests
             TankDefinitionJson e100 = definitions.Tanks.Single(item => item.id == "e_100");
             TankDefinitionJson t34 = definitions.Tanks.Single(item => item.id == "t_34_76");
             TankDefinitionJson panzer = definitions.Tanks.Single(item => item.id == "panzer_iv");
+            TankDefinitionJson bt2 = definitions.Tanks.Single(item => item.id == "bt_2");
 
+            Assert.That(bt2.mobility.maxForwardSpeed, Is.GreaterThan(panzer.mobility.maxForwardSpeed));
+            Assert.That(bt2.mobility.acceleration, Is.GreaterThan(t34.mobility.acceleration));
             Assert.That(t34.mobility.maxForwardSpeed, Is.GreaterThan(panzer.mobility.maxForwardSpeed));
             Assert.That(panzer.mobility.maxForwardSpeed, Is.GreaterThan(tiger.mobility.maxForwardSpeed));
             Assert.That(tiger.mobility.maxForwardSpeed, Is.GreaterThan(e100.mobility.maxForwardSpeed));
@@ -38,6 +41,7 @@ namespace LocalTanks.Tests
             Assert.That(e100.armor.front, Is.GreaterThan(tiger.armor.front));
             Assert.That(tiger.armor.front, Is.GreaterThan(panzer.armor.front));
             Assert.That(panzer.armor.front, Is.GreaterThan(t34.armor.front));
+            Assert.That(t34.armor.front, Is.GreaterThan(bt2.armor.front));
             Assert.That(e100.vision.stationaryConcealment, Is.LessThan(tiger.vision.stationaryConcealment));
             Assert.That(tiger.vision.stationaryConcealment, Is.LessThan(t34.vision.stationaryConcealment));
             Assert.That(tiger.vision.stationaryConcealment, Is.LessThan(panzer.vision.stationaryConcealment));
@@ -45,6 +49,8 @@ namespace LocalTanks.Tests
             Assert.That(e100.vehicleClass, Is.EqualTo("HeavyTank"));
             Assert.That(t34.vehicleClass, Is.EqualTo("MediumTank"));
             Assert.That(panzer.vehicleClass, Is.EqualTo("MediumTank"));
+            Assert.That(bt2.vehicleClass, Is.EqualTo("LightTank"));
+            Assert.That(bt2.weaponId, Is.EqualTo("b_3_37mm"));
         }
 
         [Test]

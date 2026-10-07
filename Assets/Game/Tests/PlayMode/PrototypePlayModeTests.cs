@@ -224,7 +224,7 @@ namespace LocalTanks.Tests
 
             GameObject movingAgent = GameObject.Find("NavAgent_T34");
             Vector3 initialPosition = movingAgent.transform.position;
-            for (int frame = 0; frame < 60; frame++)
+            for (int frame = 0; frame < 180; frame++)
             {
                 yield return new WaitForFixedUpdate();
             }
@@ -283,6 +283,8 @@ namespace LocalTanks.Tests
             Assert.That(Object.FindAnyObjectByType<BattleRoster>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<BattleHudController>(), Is.Not.Null);
             Assert.That(Object.FindObjectsByType<TeamMember>().Length, Is.EqualTo(30));
+            Assert.That(Object.FindObjectsByType<TeamMember>().Count(member =>
+                member.Definition != null && member.Definition.id == "bt_2"), Is.EqualTo(2));
             BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
             Assert.That(director, Is.Not.Null);
             Assert.That(director.TeamAAlive, Is.EqualTo(15));

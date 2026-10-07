@@ -47,7 +47,15 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/PzKpfwIV_Player.prefab",
                 new Rect(1f, 2f, 120f, 237f), new Rect(143f, 38f, 83f, 149f),
                 new Vector2(0.5f, 0.56f), new Vector2(0.625f, 0.768f), 0.84f, 20f,
-                CreatePanzerIVHullOutline())
+                CreatePanzerIVHullOutline()),
+            new TankBuildSpec(
+                "BT2", "BT-2",
+                "Assets/Game/Art/Tanks/BT2/Source/BT-2_strip2.png",
+                "Assets/Game/GameData/Generated/Tanks/bt_2.asset",
+                "Assets/Game/Prefabs/Tanks/BT2_Player.prefab",
+                new Rect(12f, 16f, 122f, 261f), new Rect(156f, 31f, 74f, 189f),
+                new Vector2(0.5f, 0.75f), new Vector2(0.475f, 0.55f), 0.77f, 11.3f,
+                CreateBT2HullOutline())
         };
 
         [InitializeOnLoadMethod]
@@ -67,7 +75,7 @@ namespace LocalTanks.Editor
 
                 try
                 {
-                    BuildAll();
+                    BuildCombatAssets();
                 }
                 catch (System.Exception exception)
                 {
@@ -80,17 +88,7 @@ namespace LocalTanks.Editor
         [MenuItem("Local Tanks/Build Sprint 002 Prototype")]
         public static void BuildAll()
         {
-            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            foreach (TankBuildSpec spec in TankSpecs)
-            {
-                ConfigureTankTexture(spec);
-            }
-
-            CombatDefinitionImporter.Reimport();
-            Projectile2D projectile = CreateProjectilePrefab();
-            GameObject[] tankPrefabs = TankSpecs
-                .Select(spec => CreateTankPrefab(spec, LoadDefinition(spec), projectile))
-                .ToArray();
+            GameObject[] tankPrefabs = BuildCombatAssetsInternal();
 
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
             {
@@ -102,6 +100,31 @@ namespace LocalTanks.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             Debug.Log($"Local Tanks test range created with {tankPrefabs.Length} selectable tanks: {ScenePath}");
+        }
+
+        [MenuItem("Local Tanks/Build Combat Assets")]
+        public static void BuildCombatAssets()
+        {
+            GameObject[] tankPrefabs = BuildCombatAssetsInternal();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            Debug.Log($"Local Tanks combat assets created with {tankPrefabs.Length} tank prefabs.");
+        }
+
+        private static GameObject[] BuildCombatAssetsInternal()
+        {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            foreach (TankBuildSpec spec in TankSpecs)
+            {
+                ConfigureTankTexture(spec);
+            }
+
+            CombatDefinitionImporter.Reimport();
+            Projectile2D projectile = CreateProjectilePrefab();
+            GameObject[] tankPrefabs = TankSpecs
+                .Select(spec => CreateTankPrefab(spec, LoadDefinition(spec), projectile))
+                .ToArray();
+            return tankPrefabs;
         }
 
         private static TankDefinition LoadDefinition(TankBuildSpec spec)
@@ -300,11 +323,14 @@ namespace LocalTanks.Editor
             CameraFollow2D follow = EnsureCamera(player.transform);
             GameObject selectorObject = new GameObject("PlayerTankSelector");
 
-            Vector3[] positions =
-            {
-                new Vector3(-7.2f, 5.7f, 0f), new Vector3(-2.5f, 5.7f, 0f),
-                new Vector3(2.5f, 5.7f, 0f), new Vector3(7.2f, 5.7f, 0f)
-            };
+            Vector3[] positions = Enumerable.Range(0, tankPrefabs.Length)
+                .Select(index => new Vector3(
+                    tankPrefabs.Length == 1
+                        ? 0f
+                        : Mathf.Lerp(-8.4f, 8.4f, index / (tankPrefabs.Length - 1f)),
+                    5.7f,
+                    0f))
+                .ToArray();
             float[] rotations = Enumerable.Repeat(180f, tankPrefabs.Length).ToArray();
             float[] rotationSpeeds = Enumerable.Range(0, tankPrefabs.Length)
                 .Select(index => 7f + index * 1.5f)
@@ -484,6 +510,19 @@ namespace LocalTanks.Editor
                 new Vector2(0.34f, -0.88f), new Vector2(0.27f, -0.91f),
                 new Vector2(-0.27f, -0.91f), new Vector2(-0.34f, -0.88f),
                 new Vector2(-0.375f, -0.76f), new Vector2(-0.37f, 0.84f)
+            };
+        }
+
+        private static Vector2[] CreateBT2HullOutline()
+        {
+            return new[]
+            {
+                new Vector2(-0.22f, 0.715f), new Vector2(0.22f, 0.715f),
+                new Vector2(0.28f, 0.68f), new Vector2(0.30f, 0.54f),
+                new Vector2(0.30f, -0.54f), new Vector2(0.28f, -0.67f),
+                new Vector2(0.22f, -0.715f), new Vector2(-0.22f, -0.715f),
+                new Vector2(-0.28f, -0.67f), new Vector2(-0.30f, -0.54f),
+                new Vector2(-0.30f, 0.54f), new Vector2(-0.28f, 0.68f)
             };
         }
 

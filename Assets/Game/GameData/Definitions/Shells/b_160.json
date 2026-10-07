@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "b_160",
+  "displayName": "B-160",
+  "damage": 55,
+  "penetration": 42.0,
+  "speed": 14.5,
+  "radius": 0.035,
+  "lifetimeSeconds": 3.0,
+  "maximumRange": 40.0,
+  "ricochetAngle": 70.0,
+  "ricochetSpeedMultiplier": 0.7,
+  "ricochetPenetrationMultiplier": 0.65,
+  "maximumRicochets": 2
+}

@@ -21,6 +21,9 @@ namespace LocalTanks.Tests
             Assert.That(scenario.entries.Count(item => item.playerControlled), Is.EqualTo(1));
             Assert.That(scenario.entries.GroupBy(item => $"{item.baseId}:{item.spawnSlot}")
                 .All(group => group.Count() == 1), Is.True);
+            Assert.That(scenario.entries.Select(item => item.tankId).Distinct(),
+                Is.EquivalentTo(database.tanks.Select(item => item.id)));
+            Assert.That(scenario.entries.Count(item => item.tankId == "bt_2"), Is.EqualTo(2));
         }
 
         [Test]

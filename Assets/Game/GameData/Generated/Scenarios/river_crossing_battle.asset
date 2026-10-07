@@ -29,8 +29,8 @@ MonoBehaviour:
     - {x: 36, y: 9}
     - {x: 49, y: 10}
     - {x: 60, y: 19}
-  - id: a_south_t34_2
-    tankId: t_34_76
+  - id: a_south_bt2
+    tankId: bt_2
     team: 1
     playerControlled: 0
     baseId: A
@@ -239,8 +239,8 @@ MonoBehaviour:
     - {x: 35, y: 9}
     - {x: 22, y: 10}
     - {x: 11, y: 19}
-  - id: b_south_t34_2
-    tankId: t_34_76
+  - id: b_south_bt2
+    tankId: bt_2
     team: 2
     playerControlled: 0
     baseId: B
