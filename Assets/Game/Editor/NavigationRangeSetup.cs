@@ -262,9 +262,54 @@ namespace LocalTanks.Editor
                 size.y / renderer.sprite.bounds.size.y,
                 1f);
 
+            CreateWallMarker(
+                wall.transform, "BreakableFace", Vector2.zero,
+                new Vector2(size.x * 0.92f, size.y * 0.72f),
+                new Color(0.68f, 0.36f, 0.12f), 2, renderer.sprite);
+            CreateWallMarker(
+                wall.transform, "BreakableSlashA", Vector2.zero,
+                new Vector2(size.x * 0.72f, 0.10f),
+                new Color(0.95f, 0.67f, 0.20f), 3, renderer.sprite, 14f);
+            CreateWallMarker(
+                wall.transform, "BreakableSlashB", Vector2.zero,
+                new Vector2(size.x * 0.72f, 0.10f),
+                new Color(0.95f, 0.67f, 0.20f), 3, renderer.sprite, -14f);
+            for (int index = 1; index < cells.Count; index++)
+            {
+                float x = -size.x * 0.5f + index * source.cellSize;
+                CreateWallMarker(
+                    wall.transform, $"BreakableJoint_{index:00}", new Vector2(x, 0f),
+                    new Vector2(0.035f, size.y * 0.66f),
+                    new Color(0.31f, 0.18f, 0.10f), 3, renderer.sprite);
+            }
+
             DestructibleObstacle obstacle = wall.AddComponent<DestructibleObstacle>();
             obstacle.Configure(map, cells.ToArray(), 400);
             return obstacle;
+        }
+
+        private static void CreateWallMarker(
+            Transform parent,
+            string name,
+            Vector2 localPosition,
+            Vector2 size,
+            Color color,
+            int sortingOrder,
+            Sprite sprite,
+            float rotation = 0f)
+        {
+            GameObject marker = new GameObject(name);
+            marker.transform.SetParent(parent, false);
+            marker.transform.localPosition = localPosition;
+            marker.transform.localRotation = Quaternion.Euler(0f, 0f, rotation);
+            SpriteRenderer markerRenderer = marker.AddComponent<SpriteRenderer>();
+            markerRenderer.sprite = sprite;
+            markerRenderer.color = color;
+            markerRenderer.sortingOrder = sortingOrder;
+            marker.transform.localScale = new Vector3(
+                size.x / sprite.bounds.size.x,
+                size.y / sprite.bounds.size.y,
+                1f);
         }
 
         private static void CreateTanks(Scene scene, NavigationMap map)

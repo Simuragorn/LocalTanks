@@ -78,6 +78,7 @@ namespace LocalTanks.Editor
             EnsureFolder(TilesRoot);
             EnsureFolder("Assets/Game/Generated/UI");
             EnsureFolder(ClassIconsRoot);
+            PrimitiveEnvironmentAtlasGenerator.Generate(AtlasPath, AtlasSpriteNames.Length);
             ConfigureEnvironmentAtlas();
             GenerateVehicleClassIcons();
             CaptureRules captureRules = GetOrCreateCaptureRules();
@@ -434,24 +435,24 @@ namespace LocalTanks.Editor
                             int detailHash = Math.Abs(x * 92821 ^ y * 68917);
                             if (detailHash % 97 == 0)
                             {
-                                PlaceSprite(environment.transform, $"Meadow_{x}_{y}", sprites["MeadowGrass"], position, -15, x, y, 1.25f);
+                                PlaceSprite(environment.transform, $"Meadow_{x}_{y}", sprites["MeadowGrass"], position, -15, x, y, 1.10f, 0.32f);
                             }
                             else if (detailHash % 173 == 0)
                             {
-                                PlaceSprite(environment.transform, $"DirtPatch_{x}_{y}", sprites["DirtPatch"], position, -14, x, y, 0.95f);
+                                PlaceSprite(environment.transform, $"DirtPatch_{x}_{y}", sprites["DirtPatch"], position, -14, x, y, 0.82f, 0.30f);
                             }
                             break;
-                        case 'T': PlaceSprite(environment.transform, $"Broadleaf_{x}_{y}", sprites["BroadleafTrees"], position, 4, x, y, 1f); break;
-                        case 'P': PlaceSprite(environment.transform, $"Pines_{x}_{y}", sprites["PineTrees"], position, 4, x, y, 1f); break;
-                        case 'b': CreateConcealment(environment.transform, $"Bush_{x}_{y}", sprites["BushCluster"], position, 3, x, y, 0.78f, 0.18f); break;
-                        case 'R': CreateConcealment(environment.transform, $"Reeds_{x}_{y}", sprites["Reeds"], position, 2, x, y, 0.72f, 0.08f); break;
-                        case 'c': PlaceSprite(environment.transform, $"Crater_{x}_{y}", sprites["Crater"], position, -8, x, y, 0.72f); break;
-                        case 'r': PlaceSprite(environment.transform, $"Rubble_{x}_{y}", sprites["Rubble"], position, 2, x, y, 0.82f); break;
-                        case 's': PlaceSprite(environment.transform, $"Wall_{x}_{y}", sprites["StoneWall"], position, 2, x, 0, 0.88f); break;
-                        case '1': PlaceSprite(environment.transform, $"Farmhouse_{x}_{y}", sprites["Farmhouse"], position, 2, x, 0, 1.15f); break;
-                        case '2': PlaceSprite(environment.transform, $"Workshop_{x}_{y}", sprites["Workshop"], position, 2, x, 0, 1.15f); break;
-                        case '3': PlaceSprite(environment.transform, $"RuinedHouse_{x}_{y}", sprites["RuinedHouse"], position, 2, x, 0, 1.15f); break;
-                        case '4': PlaceSprite(environment.transform, $"Barn_{x}_{y}", sprites["Barn"], position, 2, x, 0, 1.15f); break;
+                        case 'T': PlaceSprite(environment.transform, $"Broadleaf_{x}_{y}", sprites["BroadleafTrees"], position, 4, x, y, 0.90f, 0.28f); break;
+                        case 'P': PlaceSprite(environment.transform, $"Pines_{x}_{y}", sprites["PineTrees"], position, 4, x, y, 0.92f, 0.26f); break;
+                        case 'b': CreateConcealment(environment.transform, $"Bush_{x}_{y}", sprites["BushCluster"], position, 3, x, y, 0.64f, 0.35f, 0.18f); break;
+                        case 'R': CreateConcealment(environment.transform, $"Reeds_{x}_{y}", sprites["Reeds"], position, 2, x, y, 0.66f, 0.27f, 0.08f); break;
+                        case 'c': PlaceSprite(environment.transform, $"Crater_{x}_{y}", sprites["Crater"], position, -8, x, y, 0.66f, 0.30f); break;
+                        case 'r': PlaceSprite(environment.transform, $"Rubble_{x}_{y}", sprites["Rubble"], position, 2, x, y, 0.72f, 0.28f); break;
+                        case 's': PlaceSprite(environment.transform, $"Wall_{x}_{y}", sprites["StoneWall"], position, 2, x, 0, 0.78f, 0.15f); break;
+                        case '1': PlaceSprite(environment.transform, $"Farmhouse_{x}_{y}", sprites["Farmhouse"], position, 2, x, 0, 0.96f, 0.12f); break;
+                        case '2': PlaceSprite(environment.transform, $"Workshop_{x}_{y}", sprites["Workshop"], position, 2, x, 0, 1.06f, 0.12f); break;
+                        case '3': PlaceSprite(environment.transform, $"RuinedHouse_{x}_{y}", sprites["RuinedHouse"], position, 2, x, 0, 0.88f, 0.16f); break;
+                        case '4': PlaceSprite(environment.transform, $"Barn_{x}_{y}", sprites["Barn"], position, 2, x, 0, 1.18f, 0.12f); break;
                     }
                 }
             }
@@ -476,15 +477,15 @@ namespace LocalTanks.Editor
             for (int x = 2; x < source.width - 2; x += 4)
             {
                 string spriteName = x % 8 == 2 ? "BroadleafTrees" : "PineTrees";
-                PlaceSprite(parent, $"BorderNorth_{x}", sprites[spriteName], map.CellToWorld(new Vector2Int(x, source.height - 1)), 4, x, 1, 0.92f);
-                PlaceSprite(parent, $"BorderSouth_{x}", sprites[spriteName], map.CellToWorld(new Vector2Int(x, 0)), 4, x, 2, 0.92f);
+                PlaceSprite(parent, $"BorderNorth_{x}", sprites[spriteName], map.CellToWorld(new Vector2Int(x, source.height - 1)), 4, x, 1, 0.88f, 0.25f);
+                PlaceSprite(parent, $"BorderSouth_{x}", sprites[spriteName], map.CellToWorld(new Vector2Int(x, 0)), 4, x, 2, 0.88f, 0.25f);
             }
 
             for (int y = 4; y < source.height - 3; y += 4)
             {
                 string spriteName = y % 8 == 0 ? "PineTrees" : "BroadleafTrees";
-                PlaceSprite(parent, $"BorderWest_{y}", sprites[spriteName], map.CellToWorld(new Vector2Int(0, y)), 4, 1, y, 0.92f);
-                PlaceSprite(parent, $"BorderEast_{y}", sprites[spriteName], map.CellToWorld(new Vector2Int(source.width - 1, y)), 4, 2, y, 0.92f);
+                PlaceSprite(parent, $"BorderWest_{y}", sprites[spriteName], map.CellToWorld(new Vector2Int(0, y)), 4, 1, y, 0.88f, 0.25f);
+                PlaceSprite(parent, $"BorderEast_{y}", sprites[spriteName], map.CellToWorld(new Vector2Int(source.width - 1, y)), 4, 2, y, 0.88f, 0.25f);
             }
         }
 
@@ -496,14 +497,16 @@ namespace LocalTanks.Editor
             int sortingOrder,
             int seedX,
             int seedY,
-            float baseScale)
+            float baseScale,
+            float scaleVariation = 0.08f)
         {
             GameObject item = new GameObject(name);
             item.transform.SetParent(parent, false);
             item.transform.position = position;
             int hash = Math.Abs(seedX * 73856093 ^ seedY * 19349663);
             item.transform.rotation = Quaternion.Euler(0f, 0f, (hash % 4) * 90f);
-            float scale = baseScale * (0.94f + (hash % 13) * 0.01f);
+            float scaleAmount = (hash % 1000) / 999f;
+            float scale = baseScale * Mathf.Lerp(1f - scaleVariation, 1f + scaleVariation, scaleAmount);
             item.transform.localScale = Vector3.one * scale;
             SpriteRenderer renderer = item.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
@@ -520,9 +523,10 @@ namespace LocalTanks.Editor
             int seedX,
             int seedY,
             float baseScale,
+            float scaleVariation,
             float bonus)
         {
-            GameObject item = PlaceSprite(parent, name, sprite, position, sortingOrder, seedX, seedY, baseScale);
+            GameObject item = PlaceSprite(parent, name, sprite, position, sortingOrder, seedX, seedY, baseScale, scaleVariation);
             BoxCollider2D collider = item.AddComponent<BoxCollider2D>();
             collider.isTrigger = true;
             collider.size = new Vector2(0.9f, 0.9f);
