@@ -65,6 +65,36 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void PathFollowing_DrivesStraightWhenAligned()
+        {
+            Vector2 input = TankMotionMath.PathFollowingInput(0f);
+
+            Assert.That(input.x, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(input.y, Is.EqualTo(0f).Within(0.001f));
+        }
+
+        [TestCase(90f, -1f)]
+        [TestCase(-90f, 1f)]
+        [TestCase(180f, -1f)]
+        public void PathFollowing_PivotsBeforeDrivingTowardSharpTurn(float angle, float expectedTurn)
+        {
+            Vector2 input = TankMotionMath.PathFollowingInput(angle);
+
+            Assert.That(input.x, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(input.y, Is.EqualTo(expectedTurn).Within(0.001f));
+        }
+
+        [Test]
+        public void PathFollowing_ReducesThrottleAsTurnBecomesSharper()
+        {
+            float shallowDrive = TankMotionMath.PathFollowingInput(20f).x;
+            float mediumDrive = TankMotionMath.PathFollowingInput(50f).x;
+
+            Assert.That(shallowDrive, Is.GreaterThan(mediumDrive));
+            Assert.That(mediumDrive, Is.GreaterThan(0f));
+        }
+
+        [Test]
         public void ReloadTimer_BecomesReadyAfterDuration()
         {
             ReloadTimer timer = new ReloadTimer();

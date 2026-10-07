@@ -23,6 +23,7 @@ namespace LocalTanks
         private Vector2 progressSamplePosition;
         private float progressSampleTime;
         private float unstuckTime;
+        private float committedTurn;
         private bool movementPaused;
         private bool destinationReached;
 
@@ -140,12 +141,36 @@ namespace LocalTanks
 
             Vector2 desiredDirection = (path[pathIndex] - position).normalized;
             float angle = Vector2.SignedAngle(transform.up, desiredDirection);
-            float turn = -Mathf.Clamp(angle / 35f, -1f, 1f);
-            float drive = Mathf.Lerp(1f, 0.25f, Mathf.Clamp01(Mathf.Abs(angle) / 90f));
+            Vector2 pathInput = TankMotionMath.PathFollowingInput(angle);
+            float drive = pathInput.x;
+            float turn = ResolveCommittedTurn(angle, pathInput.y);
 
             ApplyLocalAvoidance(ref drive, ref turn);
             ApplyUnstuck(ref drive, ref turn, position);
             motor.SetInput(drive, turn);
+        }
+
+        private float ResolveCommittedTurn(float angle, float requestedTurn)
+        {
+            float absoluteAngle = Mathf.Abs(angle);
+            if (absoluteAngle >= 120f)
+            {
+                if (Mathf.Abs(committedTurn) < 0.5f)
+                {
+                    committedTurn = Mathf.Abs(requestedTurn) > 0.01f
+                        ? Mathf.Sign(requestedTurn)
+                        : (GetEntityId().GetHashCode() & 1) == 0 ? 1f : -1f;
+                }
+
+                return committedTurn;
+            }
+
+            if (absoluteAngle <= 60f)
+            {
+                committedTurn = 0f;
+            }
+
+            return requestedTurn;
         }
 
         private void BeginPatrol()

@@ -53,5 +53,13 @@ namespace LocalTanks
             float clampedTurn = Mathf.Clamp(turnInput, -1f, 1f);
             return currentSpeed < -0.001f ? -clampedTurn : clampedTurn;
         }
+
+        public static Vector2 PathFollowingInput(float signedAngle)
+        {
+            float angle = Mathf.DeltaAngle(0f, signedAngle);
+            float turn = -Mathf.Clamp(angle / 35f, -1f, 1f);
+            float drive = Mathf.Clamp01(1f - Mathf.Abs(angle) / 75f);
+            return new Vector2(drive, turn);
+        }
     }
 }
