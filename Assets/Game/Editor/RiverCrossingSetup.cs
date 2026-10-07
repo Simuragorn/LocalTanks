@@ -575,7 +575,7 @@ namespace LocalTanks.Editor
                     spawnIndex++;
                     GameObject marker = new GameObject($"Spawn_{spawnIndex:00}");
                     marker.transform.SetParent(root.transform, false);
-                    marker.transform.localPosition = new Vector3(column * 0.65f, row * 0.72f, 0f);
+                    marker.transform.localPosition = new Vector3(column * 1.25f, row * 1.35f, 0f);
                     SpriteRenderer renderer = marker.AddComponent<SpriteRenderer>();
                     renderer.sprite = markerSprite;
                     renderer.color = new Color(color.r, color.g, color.b, 0.58f);
@@ -633,36 +633,52 @@ namespace LocalTanks.Editor
                 throw new InvalidOperationException("Build the combat test range before building River Crossing.");
             }
 
-            GameObject player = CreateTank(prefabs[0], scene, "RiverCrossing_Player", map.CellToWorld(new Vector2Int(7, 22)));
+            CaptureBase[] bases = UnityEngine.Object.FindObjectsByType<CaptureBase>();
+            CaptureBase teamABase = bases.Single(item => item.Owner == TeamId.TeamA);
+            CaptureBase teamBBase = bases.Single(item => item.Owner == TeamId.TeamB);
+            Quaternion teamARotation = Quaternion.Euler(0f, 0f, -90f);
+            Quaternion teamBRotation = Quaternion.Euler(0f, 0f, 90f);
+
+            GameObject player = CreateTank(
+                prefabs[0],
+                scene,
+                "RiverCrossing_Player",
+                teamABase.GetSpawnPosition(7),
+                teamARotation);
             AddTerrainModifier(player, map);
             AddTeamMember(player, TeamId.TeamA, true);
 
-            GameObject north = CreateAgent(prefabs[2], scene, "Route_North_T34", map, new Vector2Int(11, 25), new[]
+            GameObject north = CreateAgent(prefabs[2], scene, "Route_North_T34", map, teamBBase.GetSpawnPosition(11), teamBRotation, new[]
             {
-                new Vector2Int(21, 33), new Vector2Int(35, 35), new Vector2Int(53, 31), new Vector2Int(61, 24),
-                new Vector2Int(53, 31), new Vector2Int(35, 35), new Vector2Int(21, 33), new Vector2Int(11, 25)
+                new Vector2Int(61, 24), new Vector2Int(53, 31), new Vector2Int(35, 35), new Vector2Int(21, 33),
+                new Vector2Int(11, 25), new Vector2Int(21, 33), new Vector2Int(35, 35), new Vector2Int(53, 31)
             });
             AddTeamMember(north, TeamId.TeamB, false);
-            GameObject center = CreateAgent(prefabs[1], scene, "Route_Center_E100", map, new Vector2Int(60, 22), new[]
+            GameObject center = CreateAgent(prefabs[1], scene, "Route_Center_E100", map, teamBBase.GetSpawnPosition(7), teamBRotation, new[]
             {
-                new Vector2Int(48, 22), new Vector2Int(35, 22), new Vector2Int(22, 22), new Vector2Int(11, 22),
-                new Vector2Int(22, 22), new Vector2Int(35, 22), new Vector2Int(48, 22), new Vector2Int(60, 22)
+                new Vector2Int(60, 22), new Vector2Int(48, 22), new Vector2Int(35, 22), new Vector2Int(22, 22),
+                new Vector2Int(11, 22), new Vector2Int(22, 22), new Vector2Int(35, 22), new Vector2Int(48, 22)
             });
             AddTeamMember(center, TeamId.TeamB, false);
-            GameObject south = CreateAgent(prefabs[3], scene, "Route_South_PanzerIV", map, new Vector2Int(11, 19), new[]
+            GameObject south = CreateAgent(prefabs[3], scene, "Route_South_PanzerIV", map, teamBBase.GetSpawnPosition(1), teamBRotation, new[]
             {
-                new Vector2Int(22, 10), new Vector2Int(35, 9), new Vector2Int(54, 14), new Vector2Int(61, 20),
-                new Vector2Int(54, 14), new Vector2Int(35, 9), new Vector2Int(22, 10), new Vector2Int(11, 19)
+                new Vector2Int(61, 20), new Vector2Int(54, 14), new Vector2Int(35, 9), new Vector2Int(22, 10),
+                new Vector2Int(11, 19), new Vector2Int(22, 10), new Vector2Int(35, 9), new Vector2Int(54, 14)
             });
             AddTeamMember(south, TeamId.TeamB, false);
             return player;
         }
 
-        private static GameObject CreateTank(GameObject prefab, Scene scene, string name, Vector2 position)
+        private static GameObject CreateTank(
+            GameObject prefab,
+            Scene scene,
+            string name,
+            Vector2 position,
+            Quaternion rotation)
         {
             GameObject tank = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
             tank.name = name;
-            tank.transform.SetPositionAndRotation(position, Quaternion.identity);
+            tank.transform.SetPositionAndRotation(position, rotation);
             return tank;
         }
 
@@ -671,10 +687,11 @@ namespace LocalTanks.Editor
             Scene scene,
             string name,
             NavigationMap map,
-            Vector2Int spawn,
+            Vector2 spawn,
+            Quaternion rotation,
             Vector2Int[] patrolCells)
         {
-            GameObject tank = CreateTank(prefab, scene, name, map.CellToWorld(spawn));
+            GameObject tank = CreateTank(prefab, scene, name, spawn, rotation);
             PlayerTankInput input = tank.GetComponent<PlayerTankInput>();
             TurretAiming turret = tank.GetComponentInChildren<TurretAiming>();
             WeaponController weapon = tank.GetComponent<WeaponController>();

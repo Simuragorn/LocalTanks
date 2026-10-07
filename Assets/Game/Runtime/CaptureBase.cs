@@ -36,6 +36,19 @@ namespace LocalTanks
         public float Progress { get; private set; }
         public int CapturingTankCount { get; private set; }
         public float RemainingSeconds { get; private set; }
+        public int SpawnPointCount => spawnMarkers != null ? spawnMarkers.Length : 0;
+
+        public Vector2 GetSpawnPosition(int slotIndex)
+        {
+            if (spawnMarkers == null || spawnMarkers.Length == 0)
+            {
+                return transform.position;
+            }
+
+            int normalizedIndex = ((slotIndex % spawnMarkers.Length) + spawnMarkers.Length) % spawnMarkers.Length;
+            SpriteRenderer marker = spawnMarkers[normalizedIndex];
+            return marker != null ? marker.transform.position : transform.position;
+        }
 
         private void Awake()
         {

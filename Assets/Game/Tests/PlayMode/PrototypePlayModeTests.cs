@@ -269,17 +269,37 @@ namespace LocalTanks.Tests
             Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(4));
             CaptureBase[] captureBases = Object.FindObjectsByType<CaptureBase>();
             Assert.That(captureBases.Length, Is.EqualTo(2));
-            Assert.That(captureBases.Single(item => item.BaseId == "A").Owner, Is.EqualTo(TeamId.TeamA));
+            CaptureBase alliedBase = captureBases.Single(item => item.BaseId == "A");
+            Assert.That(alliedBase.Owner, Is.EqualTo(TeamId.TeamA));
             CaptureBase enemyBase = captureBases.Single(item => item.BaseId == "B");
             Assert.That(enemyBase.Owner, Is.EqualTo(TeamId.TeamB));
-            foreach (TeamMember enemy in Object.FindObjectsByType<TeamMember>().Where(item => item.Team == TeamId.TeamB))
+            Assert.That(alliedBase.SpawnPointCount, Is.EqualTo(15));
+            Assert.That(enemyBase.SpawnPointCount, Is.EqualTo(15));
+            TeamMember playerMember = GameObject.Find("RiverCrossing_Player").GetComponent<TeamMember>();
+            Assert.That(alliedBase.GetComponent<CircleCollider2D>().OverlapPoint(playerMember.transform.position), Is.True);
+            TeamMember[] enemyMembers = Object.FindObjectsByType<TeamMember>()
+                .Where(item => item.Team == TeamId.TeamB)
+                .ToArray();
+            Assert.That(enemyMembers, Has.All.Matches<TeamMember>(member =>
+                enemyBase.GetComponent<CircleCollider2D>().OverlapPoint(member.transform.position)));
+            for (int first = 0; first < enemyMembers.Length; first++)
+            {
+                Collider2D firstCollider = enemyMembers[first].GetComponent<Collider2D>();
+                for (int second = first + 1; second < enemyMembers.Length; second++)
+                {
+                    Collider2D secondCollider = enemyMembers[second].GetComponent<Collider2D>();
+                    Assert.That(firstCollider.Distance(secondCollider).isOverlapped, Is.False,
+                        $"{enemyMembers[first].name} overlaps {enemyMembers[second].name} on Base B");
+                }
+            }
+
+            foreach (TeamMember enemy in enemyMembers)
             {
                 enemy.transform.position = new Vector3(100f, 100f, 0f);
             }
 
             Physics2D.SyncTransforms();
             yield return new WaitForFixedUpdate();
-            TeamMember playerMember = GameObject.Find("RiverCrossing_Player").GetComponent<TeamMember>();
             enemyBase.SetPresence(playerMember, true);
             enemyBase.Tick(1f);
             yield return new WaitForSeconds(0.15f);
