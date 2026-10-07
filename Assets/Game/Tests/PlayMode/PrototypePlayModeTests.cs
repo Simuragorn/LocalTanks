@@ -300,6 +300,38 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator RiverCrossing_CloseEnemyInsideTurretArc_IsFullyVisible()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            TeamMember player = GameObject.Find("RiverCrossing_Player").GetComponent<TeamMember>();
+            TeamMember enemy = Object.FindObjectsByType<TeamMember>()
+                .First(item => item.Team == TeamId.TeamB);
+            TeamVisionSystem vision = Object.FindAnyObjectByType<TeamVisionSystem>();
+            PlayerTankInput input = player.GetComponent<PlayerTankInput>();
+            TurretAiming turret = player.GetComponentInChildren<TurretAiming>();
+            NavigationAgent agent = enemy.GetComponent<NavigationAgent>();
+            if (input != null) input.enabled = false;
+            if (turret != null) turret.enabled = false;
+            if (agent != null) agent.enabled = false;
+
+            player.VisionDirection.rotation = Quaternion.identity;
+            enemy.transform.position = (Vector2)player.transform.position + player.VisionForward;
+            Physics2D.SyncTransforms();
+            yield return new WaitForFixedUpdate();
+
+            DetectionResult result = vision.Evaluate(player, enemy, out _);
+            vision.ForceEvaluateAll();
+
+            Assert.That(result.Detected, Is.True, result.Reason.ToString());
+            Assert.That(vision.IsVisibleTo(TeamId.TeamA, enemy), Is.True);
+            Assert.That(enemy.VisibilityPresenter.IsVisible, Is.True);
+            Assert.That(enemy.GetComponentsInChildren<SpriteRenderer>(),
+                Has.All.Matches<SpriteRenderer>(renderer => renderer.color.a > 0.99f));
+        }
+
+        [UnityTest]
         public IEnumerator DestroyedWall_OpensCellsAndShortensRoute()
         {
             SceneManager.LoadScene("Battle_NavigationRange");

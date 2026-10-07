@@ -16,7 +16,10 @@ namespace LocalTanks
 
         private void Awake()
         {
-            CacheVisuals();
+            if (renderers == null)
+            {
+                CacheVisuals();
+            }
         }
 
         public void SetVisible(bool visible)
