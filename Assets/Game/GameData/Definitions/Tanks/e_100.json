@@ -18,5 +18,13 @@
     "left": 120.0,
     "right": 120.0,
     "rear": 150.0
+  },
+  "vision": {
+    "viewRange": 8.5,
+    "stationaryConcealment": 0.05,
+    "movementRevealPenalty": 0.03,
+    "firingRevealPenalty": 0.22,
+    "firingRevealDuration": 6.0,
+    "guaranteedDetectionRange": 1.4
   }
 }

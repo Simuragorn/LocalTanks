@@ -23,6 +23,12 @@ MonoBehaviour:
   braking: 1.25
   hullTurnSpeed: 18
   turretTurnSpeed: 18
+  viewRange: 9.5
+  stationaryConcealment: 0.08
+  movementRevealPenalty: 0.04
+  firingRevealPenalty: 0.2
+  firingRevealDuration: 6
+  guaranteedDetectionRange: 1.4
   armor:
     front: 150
     left: 80

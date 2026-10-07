@@ -30,6 +30,17 @@ namespace LocalTanks.Editor
     }
 
     [Serializable]
+    public sealed class VisionJson
+    {
+        public float viewRange;
+        public float stationaryConcealment;
+        public float movementRevealPenalty;
+        public float firingRevealPenalty;
+        public float firingRevealDuration;
+        public float guaranteedDetectionRange;
+    }
+
+    [Serializable]
     public sealed class TankDefinitionJson
     {
         public int schemaVersion;
@@ -39,6 +50,7 @@ namespace LocalTanks.Editor
         public string weaponId;
         public MobilityJson mobility;
         public ArmorJson armor;
+        public VisionJson vision;
     }
 
     [Serializable]
@@ -156,6 +168,24 @@ namespace LocalTanks.Editor
                     RequireNonNegative(tank.armor.left, $"Tank '{tank.id}'.armor.left", errors);
                     RequireNonNegative(tank.armor.right, $"Tank '{tank.id}'.armor.right", errors);
                     RequireNonNegative(tank.armor.rear, $"Tank '{tank.id}'.armor.rear", errors);
+                }
+
+                if (tank.vision == null)
+                {
+                    errors.Add($"Tank '{tank.id}' is missing vision.");
+                }
+                else
+                {
+                    RequirePositive(tank.vision.viewRange, $"Tank '{tank.id}'.vision.viewRange", errors);
+                    RequireRange(tank.vision.stationaryConcealment, 0f, 0.95f, $"Tank '{tank.id}'.vision.stationaryConcealment", errors);
+                    RequireRange(tank.vision.movementRevealPenalty, 0f, 0.95f, $"Tank '{tank.id}'.vision.movementRevealPenalty", errors);
+                    RequireRange(tank.vision.firingRevealPenalty, 0f, 0.95f, $"Tank '{tank.id}'.vision.firingRevealPenalty", errors);
+                    RequireNonNegative(tank.vision.firingRevealDuration, $"Tank '{tank.id}'.vision.firingRevealDuration", errors);
+                    RequirePositive(tank.vision.guaranteedDetectionRange, $"Tank '{tank.id}'.vision.guaranteedDetectionRange", errors);
+                    if (tank.vision.guaranteedDetectionRange > tank.vision.viewRange)
+                    {
+                        errors.Add($"Tank '{tank.id}'.vision.guaranteedDetectionRange cannot exceed viewRange.");
+                    }
                 }
             }
 
@@ -393,6 +423,12 @@ namespace LocalTanks.Editor
             target.braking = source.mobility.braking;
             target.hullTurnSpeed = source.mobility.hullTurnSpeed;
             target.turretTurnSpeed = source.mobility.turretTurnSpeed;
+            target.viewRange = source.vision.viewRange;
+            target.stationaryConcealment = source.vision.stationaryConcealment;
+            target.movementRevealPenalty = source.vision.movementRevealPenalty;
+            target.firingRevealPenalty = source.vision.firingRevealPenalty;
+            target.firingRevealDuration = source.vision.firingRevealDuration;
+            target.guaranteedDetectionRange = source.vision.guaranteedDetectionRange;
             target.armor = new ArmorProfile(
                 source.armor.front,
                 source.armor.left,

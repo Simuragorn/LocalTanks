@@ -38,6 +38,9 @@ namespace LocalTanks.Tests
             Assert.That(e100.armor.front, Is.GreaterThan(tiger.armor.front));
             Assert.That(tiger.armor.front, Is.GreaterThan(panzer.armor.front));
             Assert.That(panzer.armor.front, Is.GreaterThan(t34.armor.front));
+            Assert.That(e100.vision.stationaryConcealment, Is.LessThan(tiger.vision.stationaryConcealment));
+            Assert.That(tiger.vision.stationaryConcealment, Is.LessThan(t34.vision.stationaryConcealment));
+            Assert.That(tiger.vision.stationaryConcealment, Is.LessThan(panzer.vision.stationaryConcealment));
         }
 
         [Test]
@@ -104,6 +107,66 @@ namespace LocalTanks.Tests
             string[] errors = CombatDefinitionValidator.Validate(definitions);
 
             Assert.That(errors.Any(error => error.Contains("Duplicate definition id")), Is.True);
+        }
+
+        [Test]
+        public void Validator_RejectsInvalidVisionProfile()
+        {
+            CombatDefinitionSet definitions = new CombatDefinitionSet(
+                new[]
+                {
+                    new TankDefinitionJson
+                    {
+                        schemaVersion = 1,
+                        id = "test_tank",
+                        displayName = "Test Tank",
+                        maxHitPoints = 100,
+                        weaponId = "test_weapon",
+                        mobility = new MobilityJson(),
+                        armor = new ArmorJson(),
+                        vision = new VisionJson
+                        {
+                            viewRange = 8f,
+                            stationaryConcealment = 1.2f,
+                            guaranteedDetectionRange = 9f
+                        }
+                    }
+                },
+                new[]
+                {
+                    new WeaponDefinitionJson
+                    {
+                        schemaVersion = 1,
+                        id = "test_weapon",
+                        displayName = "Test Weapon",
+                        reloadSeconds = 1f,
+                        shellId = "test_shell"
+                    }
+                },
+                new[]
+                {
+                    new ShellDefinitionJson
+                    {
+                        schemaVersion = 1,
+                        id = "test_shell",
+                        displayName = "Test Shell",
+                        damage = 1,
+                        penetration = 1f,
+                        speed = 1f,
+                        radius = 0.01f,
+                        lifetimeSeconds = 1f,
+                        maximumRange = 1f,
+                        ricochetAngle = 70f,
+                        ricochetSpeedMultiplier = 0.7f,
+                        ricochetPenetrationMultiplier = 0.65f,
+                        maximumRicochets = 1
+                    }
+                });
+
+            string[] errors = CombatDefinitionValidator.Validate(definitions);
+
+            Assert.That(errors.Any(error => error.Contains("stationaryConcealment")), Is.True);
+            Assert.That(errors.Any(error => error.Contains("cannot exceed viewRange")), Is.True);
         }
     }
 }

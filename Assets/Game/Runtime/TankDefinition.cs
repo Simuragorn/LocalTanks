@@ -20,6 +20,14 @@ namespace LocalTanks
         [Header("Turret")]
         [Min(0f)] public float turretTurnSpeed;
 
+        [Header("Vision")]
+        [Min(0f)] public float viewRange;
+        [Range(0f, 1f)] public float stationaryConcealment;
+        [Range(0f, 1f)] public float movementRevealPenalty;
+        [Range(0f, 1f)] public float firingRevealPenalty;
+        [Min(0f)] public float firingRevealDuration;
+        [Min(0f)] public float guaranteedDetectionRange;
+
         [Header("Hull armor")]
         public ArmorProfile armor;
     }
