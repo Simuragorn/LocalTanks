@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 353ffff3367f2ab449bc2741e4cba2e6, type: 3}
+  m_Name: VisionRules
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.VisionRules
+  maximumConcealment: 0.8
+  maximumBushBonus: 0.45
+  minimumVisibilityFactor: 0.2
+  checkInterval: 0.2
+  checksPerFrame: 24
+  contactMemorySeconds: 8

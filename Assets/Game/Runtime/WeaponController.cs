@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace LocalTanks
@@ -10,6 +11,8 @@ namespace LocalTanks
         [SerializeField, Min(0f)] private float reloadOverrideSeconds;
 
         private readonly ReloadTimer reloadTimer = new ReloadTimer();
+
+        public event Action<WeaponController> Fired;
 
         public bool IsReady => reloadTimer.IsReady;
         public float EffectiveReloadSeconds => reloadOverrideSeconds > 0f
@@ -57,6 +60,7 @@ namespace LocalTanks
                 shell,
                 transform.root);
             reloadTimer.Start(EffectiveReloadSeconds);
+            Fired?.Invoke(this);
             return true;
         }
     }

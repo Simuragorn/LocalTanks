@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:VisualElement name="battle-hud" class="battle-hud">
+        <ui:VisualElement name="ally-list" class="roster-panel ally-panel" />
+        <ui:VisualElement name="score" class="score-panel">
+            <ui:Label name="ally-score" text="0" class="score-number ally-text" />
+            <ui:Label text=" : " class="score-separator" />
+            <ui:Label name="enemy-score" text="0" class="score-number enemy-text" />
+        </ui:VisualElement>
+        <ui:VisualElement name="enemy-list" class="roster-panel enemy-panel" />
+    </ui:VisualElement>
+</ui:UXML>

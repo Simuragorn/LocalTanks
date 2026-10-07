@@ -247,9 +247,22 @@ namespace LocalTanks.Tests
             Assert.That(GameObject.Find("CentralStoneBridge"), Is.Not.Null);
             Assert.That(GameObject.Find("SouthWoodBridge"), Is.Not.Null);
             Assert.That(GameObject.Find("Farmhouse_27_27"), Is.Not.Null);
-            Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(2));
+            Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(3));
             Assert.That(agents.Length, Is.EqualTo(3));
             Assert.That(agents, Has.All.Matches<NavigationAgent>(agent => agent.HasPath));
+            Assert.That(Object.FindAnyObjectByType<TeamVisionSystem>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<BattleRoster>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<BattleHudController>(), Is.Not.Null);
+            Assert.That(Object.FindObjectsByType<TeamMember>().Length, Is.EqualTo(4));
+            Assert.That(Object.FindObjectsByType<ConcealmentZone>().Length, Is.GreaterThan(0));
+            Assert.That(GameObject.Find("VisionBlockers").GetComponent<VisionBlocker>(), Is.Not.Null);
+            BattleRoster roster = Object.FindAnyObjectByType<BattleRoster>();
+            BattleHudController hud = Object.FindAnyObjectByType<BattleHudController>();
+            yield return null;
+            Assert.That(roster.Allies.Count, Is.EqualTo(1));
+            Assert.That(roster.Enemies.Count, Is.EqualTo(3));
+            Assert.That(hud.AllyList.childCount, Is.EqualTo(1));
+            Assert.That(hud.EnemyList.childCount, Is.EqualTo(3));
 
             Assert.That(map.IsBlocked(new Vector2Int(35, 35)), Is.False, "north bridge");
             Assert.That(map.IsBlocked(new Vector2Int(35, 22)), Is.False, "central bridge");

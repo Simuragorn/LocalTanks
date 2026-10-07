@@ -1,0 +1,74 @@
+.battle-hud {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.roster-panel {
+    position: absolute;
+    top: 18px;
+    width: 250px;
+    padding: 8px;
+    background-color: rgba(15, 18, 16, 0.70);
+    border-radius: 5px;
+}
+
+.ally-panel { left: 18px; }
+.enemy-panel { right: 18px; }
+
+.score-panel {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    translate: -50% 0;
+    flex-direction: row;
+    padding: 7px 15px;
+    background-color: rgba(15, 18, 16, 0.78);
+    border-radius: 5px;
+}
+
+.score-number {
+    font-size: 22px;
+    -unity-font-style: bold;
+}
+
+.score-separator {
+    color: rgb(190, 190, 185);
+    font-size: 22px;
+}
+
+.ally-text, .ally-row .tank-name { color: rgb(120, 169, 123); }
+.enemy-text, .enemy-row .tank-name { color: rgb(185, 104, 104); }
+
+.roster-row {
+    height: 40px;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.enemy-row { justify-content: flex-end; }
+.tank-icon { width: 34px; height: 34px; margin-left: 4px; margin-right: 4px; }
+.tank-data { flex-grow: 1; }
+.enemy-row .tank-name { -unity-text-align: upper-right; }
+
+.tank-name {
+    font-size: 12px;
+    height: 17px;
+    -unity-font-style: bold;
+    overflow: hidden;
+}
+
+.health-track {
+    height: 9px;
+    background-color: rgba(4, 5, 4, 0.90);
+    border-width: 1px;
+    border-color: rgba(200, 200, 190, 0.20);
+}
+
+.health-fill { height: 100%; background-color: rgb(120, 169, 123); }
+.enemy-row .health-fill { background-color: rgb(185, 104, 104); }
+.destroyed-row { opacity: 0.32; }
+.unspotted-row { opacity: 0.58; }

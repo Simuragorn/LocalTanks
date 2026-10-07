@@ -9,6 +9,7 @@ using UnityEditor.U2D.Sprites;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using UnityEngine.UIElements;
 
 namespace LocalTanks.Editor
 {
@@ -22,6 +23,10 @@ namespace LocalTanks.Editor
         private const string LineMaterialPath = GeneratedRoot + "/MapLine.mat";
         private const string ShapeTexturePath = GeneratedRoot + "/WhiteSquare.png";
         private const string PreviewPath = "Docs/Media/RiverCrossing.png";
+        private const string VisionRulesPath = GeneratedRoot + "/VisionRules.asset";
+        private const string PanelSettingsPath = GeneratedRoot + "/BattleHudPanelSettings.asset";
+        private const string BattleHudUxmlPath = "Assets/Game/UI/BattleHud.uxml";
+        private const string BattleHudUssPath = "Assets/Game/UI/BattleHud.uss";
 
         private static readonly string[] AtlasSpriteNames =
         {
@@ -92,6 +97,7 @@ namespace LocalTanks.Editor
                 CreateEnvironment(source, map);
                 GameObject player = CreateTanks(scene, map);
                 CreateCameraAndDiagnostics(player, map);
+                CreateBattleSystems();
                 new GameObject("RiverCrossingInstructions").AddComponent<RiverCrossingInstructions>();
 
                 EditorSceneManager.MarkSceneDirty(scene);
@@ -317,6 +323,10 @@ namespace LocalTanks.Editor
 
             Tilemap ground = CreateTilemapLayer(gridObject.transform, "Ground", -20, false, true);
             Tilemap blockers = CreateTilemapLayer(gridObject.transform, "NavigationBlockers", -19, true, false);
+            Tilemap visionBlockers = CreateTilemapLayer(gridObject.transform, "VisionBlockers", -18, true, false);
+            TilemapCollider2D visionCollider = visionBlockers.GetComponent<TilemapCollider2D>();
+            visionCollider.isTrigger = true;
+            visionBlockers.gameObject.AddComponent<VisionBlocker>();
             for (int sourceRow = 0; sourceRow < source.height; sourceRow++)
             {
                 int y = source.height - 1 - sourceRow;
@@ -328,6 +338,11 @@ namespace LocalTanks.Editor
                     if (lookup.Definitions[symbol].blocked)
                     {
                         blockers.SetTile(cell, lookup.BlockerTile);
+                    }
+
+                    if (IsVisionBlockingSymbol(symbol))
+                    {
+                        visionBlockers.SetTile(cell, lookup.BlockerTile);
                     }
                 }
             }
@@ -421,8 +436,8 @@ namespace LocalTanks.Editor
                             break;
                         case 'T': PlaceSprite(environment.transform, $"Broadleaf_{x}_{y}", sprites["BroadleafTrees"], position, 4, x, y, 1f); break;
                         case 'P': PlaceSprite(environment.transform, $"Pines_{x}_{y}", sprites["PineTrees"], position, 4, x, y, 1f); break;
-                        case 'b': PlaceSprite(environment.transform, $"Bush_{x}_{y}", sprites["BushCluster"], position, 3, x, y, 0.78f); break;
-                        case 'R': PlaceSprite(environment.transform, $"Reeds_{x}_{y}", sprites["Reeds"], position, 2, x, y, 0.72f); break;
+                        case 'b': CreateConcealment(environment.transform, $"Bush_{x}_{y}", sprites["BushCluster"], position, 3, x, y, 0.78f, 0.18f); break;
+                        case 'R': CreateConcealment(environment.transform, $"Reeds_{x}_{y}", sprites["Reeds"], position, 2, x, y, 0.72f, 0.08f); break;
                         case 'c': PlaceSprite(environment.transform, $"Crater_{x}_{y}", sprites["Crater"], position, -8, x, y, 0.72f); break;
                         case 'r': PlaceSprite(environment.transform, $"Rubble_{x}_{y}", sprites["Rubble"], position, 2, x, y, 0.82f); break;
                         case 's': PlaceSprite(environment.transform, $"Wall_{x}_{y}", sprites["StoneWall"], position, 2, x, 0, 0.88f); break;
@@ -466,7 +481,7 @@ namespace LocalTanks.Editor
             }
         }
 
-        private static void PlaceSprite(
+        private static GameObject PlaceSprite(
             Transform parent,
             string name,
             Sprite sprite,
@@ -486,6 +501,25 @@ namespace LocalTanks.Editor
             SpriteRenderer renderer = item.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.sortingOrder = sortingOrder;
+            return item;
+        }
+
+        private static void CreateConcealment(
+            Transform parent,
+            string name,
+            Sprite sprite,
+            Vector2 position,
+            int sortingOrder,
+            int seedX,
+            int seedY,
+            float baseScale,
+            float bonus)
+        {
+            GameObject item = PlaceSprite(parent, name, sprite, position, sortingOrder, seedX, seedY, baseScale);
+            BoxCollider2D collider = item.AddComponent<BoxCollider2D>();
+            collider.isTrigger = true;
+            collider.size = new Vector2(0.9f, 0.9f);
+            item.AddComponent<ConcealmentZone>().Configure(bonus);
         }
 
         private static void CreateBridge(Transform parent, Vector2 position, string name, Color color, float height)
@@ -567,22 +601,26 @@ namespace LocalTanks.Editor
 
             GameObject player = CreateTank(prefabs[0], scene, "RiverCrossing_Player", map.CellToWorld(new Vector2Int(7, 22)));
             AddTerrainModifier(player, map);
+            AddTeamMember(player, TeamId.TeamA, true);
 
-            CreateAgent(prefabs[2], scene, "Route_North_T34", map, new Vector2Int(11, 25), new[]
+            GameObject north = CreateAgent(prefabs[2], scene, "Route_North_T34", map, new Vector2Int(11, 25), new[]
             {
                 new Vector2Int(21, 33), new Vector2Int(35, 35), new Vector2Int(53, 31), new Vector2Int(61, 24),
                 new Vector2Int(53, 31), new Vector2Int(35, 35), new Vector2Int(21, 33), new Vector2Int(11, 25)
             });
-            CreateAgent(prefabs[1], scene, "Route_Center_E100", map, new Vector2Int(60, 22), new[]
+            AddTeamMember(north, TeamId.TeamB, false);
+            GameObject center = CreateAgent(prefabs[1], scene, "Route_Center_E100", map, new Vector2Int(60, 22), new[]
             {
                 new Vector2Int(48, 22), new Vector2Int(35, 22), new Vector2Int(22, 22), new Vector2Int(11, 22),
                 new Vector2Int(22, 22), new Vector2Int(35, 22), new Vector2Int(48, 22), new Vector2Int(60, 22)
             });
-            CreateAgent(prefabs[3], scene, "Route_South_PanzerIV", map, new Vector2Int(11, 19), new[]
+            AddTeamMember(center, TeamId.TeamB, false);
+            GameObject south = CreateAgent(prefabs[3], scene, "Route_South_PanzerIV", map, new Vector2Int(11, 19), new[]
             {
                 new Vector2Int(22, 10), new Vector2Int(35, 9), new Vector2Int(54, 14), new Vector2Int(61, 20),
                 new Vector2Int(54, 14), new Vector2Int(35, 9), new Vector2Int(22, 10), new Vector2Int(11, 19)
             });
+            AddTeamMember(south, TeamId.TeamB, false);
             return player;
         }
 
@@ -594,7 +632,7 @@ namespace LocalTanks.Editor
             return tank;
         }
 
-        private static void CreateAgent(
+        private static GameObject CreateAgent(
             GameObject prefab,
             Scene scene,
             string name,
@@ -615,6 +653,75 @@ namespace LocalTanks.Editor
             NavigationAgent agent = tank.AddComponent<NavigationAgent>();
             agent.Configure(map, motor, patrolCells.Select(map.CellToWorld).ToArray(), 1, true);
             tank.AddComponent<TankHealthBar>().Configure(1.45f);
+            return tank;
+        }
+
+        private static void AddTeamMember(GameObject tank, TeamId team, bool playerControlled)
+        {
+            TankVisibilityPresenter presenter = tank.GetComponent<TankVisibilityPresenter>();
+            if (presenter == null)
+            {
+                presenter = tank.AddComponent<TankVisibilityPresenter>();
+            }
+
+            TeamMember member = tank.GetComponent<TeamMember>();
+            if (member == null)
+            {
+                member = tank.AddComponent<TeamMember>();
+            }
+
+            member.Configure(team, playerControlled);
+        }
+
+        private static void CreateBattleSystems()
+        {
+            VisionRules visionRules = AssetDatabase.LoadAssetAtPath<VisionRules>(VisionRulesPath);
+            if (visionRules == null)
+            {
+                visionRules = ScriptableObject.CreateInstance<VisionRules>();
+                AssetDatabase.CreateAsset(visionRules, VisionRulesPath);
+            }
+
+            visionRules.maximumConcealment = 0.8f;
+            visionRules.maximumBushBonus = 0.45f;
+            visionRules.minimumVisibilityFactor = 0.2f;
+            visionRules.checkInterval = 0.2f;
+            visionRules.checksPerFrame = 24;
+            visionRules.contactMemorySeconds = 8f;
+            EditorUtility.SetDirty(visionRules);
+
+            GameObject systems = new GameObject("BattleSystems");
+            TeamVisionSystem vision = systems.AddComponent<TeamVisionSystem>();
+            vision.Configure(visionRules, TeamId.TeamA);
+            BattleRoster roster = systems.AddComponent<BattleRoster>();
+            roster.Configure(TeamId.TeamA, vision);
+            systems.AddComponent<VisionDebugOverlay>().Configure(vision);
+
+            PanelSettings panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+            if (panelSettings == null)
+            {
+                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                AssetDatabase.CreateAsset(panelSettings, PanelSettingsPath);
+            }
+
+            panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+            panelSettings.match = 0.5f;
+            EditorUtility.SetDirty(panelSettings);
+
+            VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BattleHudUxmlPath);
+            StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(BattleHudUssPath);
+            if (visualTree == null || styleSheet == null)
+            {
+                throw new InvalidOperationException("Battle HUD UXML or USS could not be loaded.");
+            }
+
+            GameObject hud = new GameObject("BattleHUD");
+            UIDocument document = hud.AddComponent<UIDocument>();
+            document.panelSettings = panelSettings;
+            document.visualTreeAsset = visualTree;
+            document.sortingOrder = 100;
+            hud.AddComponent<BattleHudController>().Configure(roster, styleSheet);
         }
 
         private static void AddTerrainModifier(GameObject tank, NavigationMap map)
@@ -671,6 +778,13 @@ namespace LocalTanks.Editor
                 case '~': return "DeepWater";
                 default: return "Grass";
             }
+        }
+
+        private static bool IsVisionBlockingSymbol(char symbol)
+        {
+            return symbol == '#' || symbol == 'x' || symbol == 'T' || symbol == 'P' ||
+                   symbol == '1' || symbol == '2' || symbol == '3' || symbol == '4' ||
+                   symbol == 's' || symbol == 'r';
         }
 
         private static Vector2Int FindCell(MapSource source, char symbol)

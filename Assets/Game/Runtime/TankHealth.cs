@@ -10,6 +10,7 @@ namespace LocalTanks
         private HealthState state;
 
         public event Action<TankHealth> Destroyed;
+        public event Action<TankHealth> Changed;
 
         public int CurrentHitPoints => state != null ? state.CurrentHitPoints : 0;
         public int MaximumHitPoints => state != null ? state.MaximumHitPoints : 0;
@@ -36,6 +37,11 @@ namespace LocalTanks
                 Destroyed?.Invoke(this);
             }
 
+            if (result.AppliedDamage > 0)
+            {
+                Changed?.Invoke(this);
+            }
+
             return result;
         }
 
@@ -44,6 +50,7 @@ namespace LocalTanks
             if (state == null && definition != null)
             {
                 state = new HealthState(Mathf.Max(1, definition.maxHitPoints));
+                Changed?.Invoke(this);
             }
         }
     }
