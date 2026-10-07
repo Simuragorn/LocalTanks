@@ -34,6 +34,15 @@ namespace LocalTanks
             InitializeCamera();
         }
 
+        public void ConfigureZoomRange(float minimum, float maximum, float step = 1f)
+        {
+            minimumZoom = Mathf.Max(0.1f, minimum);
+            maximumZoom = Mathf.Max(minimumZoom, maximum);
+            zoomStep = Mathf.Max(0.1f, step);
+            InitializeCamera();
+            SetZoom(targetZoom > 0f ? targetZoom : minimumZoom);
+        }
+
         public void SetZoom(float size, bool immediate = false)
         {
             InitializeCamera();

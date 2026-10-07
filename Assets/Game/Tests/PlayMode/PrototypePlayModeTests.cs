@@ -231,6 +231,38 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator RiverCrossing_LoadsThreeRoutesBasesAndEnvironment()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            NavigationAgent[] agents = Object.FindObjectsByType<NavigationAgent>();
+            Assert.That(map, Is.Not.Null);
+            Assert.That(map.Width, Is.EqualTo(72));
+            Assert.That(map.Height, Is.EqualTo(44));
+            Assert.That(GameObject.Find("Base_A"), Is.Not.Null);
+            Assert.That(GameObject.Find("Base_B"), Is.Not.Null);
+            Assert.That(GameObject.Find("NorthStoneBridge"), Is.Not.Null);
+            Assert.That(GameObject.Find("CentralStoneBridge"), Is.Not.Null);
+            Assert.That(GameObject.Find("SouthWoodBridge"), Is.Not.Null);
+            Assert.That(GameObject.Find("Farmhouse_27_27"), Is.Not.Null);
+            Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(2));
+            Assert.That(agents.Length, Is.EqualTo(3));
+            Assert.That(agents, Has.All.Matches<NavigationAgent>(agent => agent.HasPath));
+
+            Assert.That(map.IsBlocked(new Vector2Int(35, 35)), Is.False, "north bridge");
+            Assert.That(map.IsBlocked(new Vector2Int(35, 22)), Is.False, "central bridge");
+            Assert.That(map.IsBlocked(new Vector2Int(35, 9)), Is.False, "south bridge");
+            Assert.That(map.IsBlocked(new Vector2Int(35, 29)), Is.True, "deep river");
+            Assert.That(map.FindCellPath(new Vector2Int(7, 22), new Vector2Int(64, 22), 1), Is.Not.Empty);
+
+            CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
+            Assert.That(follow.Target.name, Is.EqualTo("RiverCrossing_Player"));
+            Assert.That(follow.MaximumZoom, Is.EqualTo(22f));
+        }
+
+        [UnityTest]
         public IEnumerator DestroyedWall_OpensCellsAndShortensRoute()
         {
             SceneManager.LoadScene("Battle_NavigationRange");
