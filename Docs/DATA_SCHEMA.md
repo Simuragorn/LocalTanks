@@ -20,6 +20,7 @@
   "schemaVersion": 1,
   "id": "tiger_ii",
   "displayName": "Tiger II",
+  "vehicleClass": "HeavyTank",
   "maxHitPoints": 1600,
   "weaponId": "kwk_43_l71",
   "mobility": {
@@ -63,6 +64,8 @@
 - `movementRevealPenalty` и `firingRevealPenalty` — вычитаемые из маскировки коэффициенты от `0` до `0,95`;
 - `firingRevealDuration` — неотрицательная длительность штрафа после выстрела в секундах;
 - `guaranteedDetectionRange` — положительная дистанция, не превышающая `viewRange`.
+
+`vehicleClass` обязателен и принимает одно из пяти значений: `HeavyTank`, `MediumTank`, `LightTank`, `TankDestroyer` или `Artillery`. Класс определяет символ машины в мире и HUD, но сам по себе не меняет боевые характеристики.
 
 ## WeaponDefinition
 
