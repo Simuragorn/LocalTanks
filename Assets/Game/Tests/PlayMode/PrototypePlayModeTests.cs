@@ -412,6 +412,7 @@ namespace LocalTanks.Tests
             bool fired = false;
             WeaponController weapon = shooter.GetComponent<WeaponController>();
             weapon.Fired += _ => fired = true;
+            int initialHitPoints = target.Health.CurrentHitPoints;
             float timeout = Time.time + 2f;
             while (!fired && Time.time < timeout)
             {
@@ -421,6 +422,15 @@ namespace LocalTanks.Tests
             Assert.That(vision.IsVisibleTo(TeamId.TeamA, target), Is.True);
             Assert.That(shooter.CurrentTarget, Is.EqualTo(target));
             Assert.That(fired, Is.True, $"AI did not fire; block reason: {shooter.CurrentFireBlockReason}");
+
+            timeout = Time.time + 1f;
+            while (target.Health.CurrentHitPoints == initialHitPoints && Time.time < timeout)
+            {
+                yield return new WaitForFixedUpdate();
+            }
+
+            Assert.That(target.Health.CurrentHitPoints, Is.LessThan(initialHitPoints),
+                "Projectile fired by a BattleDirector child tank must hit another spawned tank.");
         }
 
         [UnityTest]

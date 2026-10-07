@@ -11,6 +11,7 @@ namespace LocalTanks
         [SerializeField, Min(0f)] private float reloadOverrideSeconds;
 
         private readonly ReloadTimer reloadTimer = new ReloadTimer();
+        private Transform projectileOwnerRoot;
 
         public event Action<WeaponController> Fired;
 
@@ -30,6 +31,12 @@ namespace LocalTanks
             config = newConfig;
             projectilePrefab = newProjectilePrefab;
             muzzle = newMuzzle;
+            ResolveProjectileOwner();
+        }
+
+        private void Awake()
+        {
+            ResolveProjectileOwner();
         }
 
         public void SetReloadOverride(float seconds)
@@ -59,10 +66,16 @@ namespace LocalTanks
             projectile.Initialize(
                 muzzle.up,
                 shell,
-                transform.root);
+                projectileOwnerRoot != null ? projectileOwnerRoot : transform);
             reloadTimer.Start(EffectiveReloadSeconds);
             Fired?.Invoke(this);
             return true;
+        }
+
+        private void ResolveProjectileOwner()
+        {
+            TankHealth ownerHealth = GetComponentInParent<TankHealth>();
+            projectileOwnerRoot = ownerHealth != null ? ownerHealth.transform : transform;
         }
     }
 }
