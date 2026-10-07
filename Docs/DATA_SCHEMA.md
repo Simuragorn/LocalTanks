@@ -36,6 +36,14 @@
     "left": 80.0,
     "right": 80.0,
     "rear": 80.0
+  },
+  "vision": {
+    "viewRange": 9.5,
+    "stationaryConcealment": 0.08,
+    "movementRevealPenalty": 0.04,
+    "firingRevealPenalty": 0.20,
+    "firingRevealDuration": 6.0,
+    "guaranteedDetectionRange": 1.4
   }
 }
 ```
@@ -47,6 +55,14 @@
 - угловые скорости — градусы в секунду;
 - броня — миллиметры;
 - HP — целое положительное число.
+
+Поля обзора:
+
+- `viewRange` — положительная максимальная дальность обзора в игровых единицах;
+- `stationaryConcealment` — базовая маскировка от `0` до `0,95`;
+- `movementRevealPenalty` и `firingRevealPenalty` — вычитаемые из маскировки коэффициенты от `0` до `0,95`;
+- `firingRevealDuration` — неотрицательная длительность штрафа после выстрела в секундах;
+- `guaranteedDetectionRange` — положительная дистанция, не превышающая `viewRange`.
 
 ## WeaponDefinition
 
