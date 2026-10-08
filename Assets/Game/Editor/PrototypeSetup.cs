@@ -22,7 +22,8 @@ namespace LocalTanks.Editor
                 "Assets/Game/GameData/Generated/Tanks/tiger_ii.asset",
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
                 new Rect(24f, 139f, 419f, 802f), new Rect(467f, 24f, 278f, 1031f),
-                new Vector2(0.5060606f, 0.5680255f), new Vector2(0.24f, 0.24f), 1.41f, 69.8f,
+                new Vector2(0.5060606f, 0.5680255f), new Vector2(0.5f, 0.2238099f),
+                new Vector2(0.24f, 0.24f), 1.41f, 69.8f,
                 CreateTigerHullOutline()),
             new TankBuildSpec(
                 "E100", "E-100",
@@ -30,7 +31,8 @@ namespace LocalTanks.Editor
                 "Assets/Game/GameData/Generated/Tanks/e_100.asset",
                 "Assets/Game/Prefabs/Tanks/E100_Player.prefab",
                 new Rect(22f, 39f, 117f, 227f), new Rect(145f, 33f, 80f, 188f),
-                new Vector2(0.5f, 0.75f), new Vector2(1.01f, 1f), 1.40f, 140f,
+                new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
+                new Vector2(1.01f, 1f), 1.40f, 140f,
                 CreateE100HullOutline()),
             new TankBuildSpec(
                 "T34", "T-34/76",
@@ -38,7 +40,8 @@ namespace LocalTanks.Editor
                 "Assets/Game/GameData/Generated/Tanks/t_34_76.asset",
                 "Assets/Game/Prefabs/Tanks/T34_Player.prefab",
                 new Rect(9f, 11f, 127f, 268f), new Rect(153f, 25f, 85f, 197f),
-                new Vector2(0.5f, 0.75f), new Vector2(0.63f, 0.65f), 0.95f, 26.5f,
+                new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.63f, 0.65f), 0.95f, 26.5f,
                 CreateT34HullOutline()),
             new TankBuildSpec(
                 "PzKpfwIV", "Panzer IV",
@@ -46,7 +49,8 @@ namespace LocalTanks.Editor
                 "Assets/Game/GameData/Generated/Tanks/panzer_iv.asset",
                 "Assets/Game/Prefabs/Tanks/PzKpfwIV_Player.prefab",
                 new Rect(14f, 17f, 121f, 260f), new Rect(146f, 16f, 89f, 199f),
-                new Vector2(0.5f, 0.75f), new Vector2(0.63f, 0.71f), 1.05f, 20f,
+                new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.63f, 0.71f), 1.05f, 20f,
                 CreatePanzerIVHullOutline()),
             new TankBuildSpec(
                 "BT2", "BT-2",
@@ -54,7 +58,8 @@ namespace LocalTanks.Editor
                 "Assets/Game/GameData/Generated/Tanks/bt_2.asset",
                 "Assets/Game/Prefabs/Tanks/BT2_Player.prefab",
                 new Rect(12f, 16f, 122f, 261f), new Rect(156f, 31f, 74f, 189f),
-                new Vector2(0.5f, 0.75f), new Vector2(0.475f, 0.55f), 0.77f, 11.3f,
+                new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
+                new Vector2(0.475f, 0.55f), 0.77f, 11.3f,
                 CreateBT2HullOutline())
         };
 
@@ -254,6 +259,7 @@ namespace LocalTanks.Editor
 
                 GameObject turretPivot = new GameObject("TurretPivot");
                 turretPivot.transform.SetParent(root.transform, false);
+                turretPivot.transform.localPosition = CalculateTurretMountPosition(spec);
                 TurretAiming aiming = turretPivot.AddComponent<TurretAiming>();
                 aiming.Configure(definition);
 
@@ -526,12 +532,23 @@ namespace LocalTanks.Editor
             };
         }
 
+        private static Vector3 CalculateTurretMountPosition(TankBuildSpec spec)
+        {
+            Vector2 sourcePixelOffset = new Vector2(
+                (spec.HullTurretMount.x - 0.5f) * spec.HullRect.width,
+                (spec.HullTurretMount.y - 0.5f) * spec.HullRect.height);
+            Vector2 scaledOffset = Vector2.Scale(sourcePixelOffset / 100f, spec.VisualScale);
+            float localX = Mathf.Approximately(scaledOffset.x, 0f) ? 0f : -scaledOffset.x;
+            float localY = Mathf.Approximately(scaledOffset.y, 0f) ? 0f : -scaledOffset.y;
+            return new Vector3(localX, localY, 0f);
+        }
+
         private sealed class TankBuildSpec
         {
             public TankBuildSpec(
                 string spritePrefix, string displayName, string texturePath,
                 string definitionPath, string prefabPath, Rect hullRect, Rect turretRect,
-                Vector2 turretPivot, Vector2 visualScale, float muzzleDistance,
+                Vector2 turretPivot, Vector2 hullTurretMount, Vector2 visualScale, float muzzleDistance,
                 float mass, Vector2[] hullOutline)
             {
                 SpritePrefix = spritePrefix;
@@ -542,6 +559,7 @@ namespace LocalTanks.Editor
                 HullRect = hullRect;
                 TurretRect = turretRect;
                 TurretPivot = turretPivot;
+                HullTurretMount = hullTurretMount;
                 VisualScale = visualScale;
                 MuzzleDistance = muzzleDistance;
                 Mass = mass;
@@ -556,6 +574,7 @@ namespace LocalTanks.Editor
             public Rect HullRect { get; }
             public Rect TurretRect { get; }
             public Vector2 TurretPivot { get; }
+            public Vector2 HullTurretMount { get; }
             public Vector2 VisualScale { get; }
             public float MuzzleDistance { get; }
             public float Mass { get; }

@@ -1,10 +1,23 @@
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace LocalTanks.Tests
 {
     public sealed class TankPrototypeTests
     {
+        [Test]
+        public void TigerIIPrefab_UsesProjectedTurretRingOnHull()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab");
+            Transform turretPivot = prefab.transform.Find("TurretPivot");
+
+            Assert.That(turretPivot, Is.Not.Null);
+            Assert.That(turretPivot.localPosition.x, Is.EqualTo(0f).Within(0.002f));
+            Assert.That(turretPivot.localPosition.y, Is.EqualTo(0.532f).Within(0.002f));
+        }
+
         [Test]
         public void ForwardSpeed_UsesForwardLimit()
         {

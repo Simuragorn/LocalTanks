@@ -78,7 +78,7 @@ try {
         $strip.Save($stripPath, [Drawing.Imaging.ImageFormat]::Png)
 
         $layout = [ordered]@{
-            schemaVersion = 1
+            schemaVersion = 2
             texture = [ordered]@{ width = $width; height = $height }
             hull = [ordered]@{
                 x = $padding
@@ -86,6 +86,7 @@ try {
                 width = $hullWidth
                 height = $hullHeight
                 pivot = [ordered]@{ x = 0.5; y = 0.5 }
+                turretMount = [ordered]@{ x = 0.5; y = 0.5 }
             }
             turret = [ordered]@{
                 x = $turretX
@@ -100,10 +101,21 @@ try {
         if (Test-Path -LiteralPath $renderMetadataPath -PathType Leaf) {
             $renderMetadata = Get-Content -LiteralPath $renderMetadataPath -Raw | ConvertFrom-Json
             if ($null -ne $renderMetadata.turretPivot) {
-                $pivotX = ([double]$renderMetadata.turretPivot.xPixels - $turretBounds.X) / $turretBounds.Width
-                $pivotFromTop = ([double]$renderMetadata.turretPivot.yPixels - $turretBounds.Y) / $turretBounds.Height
-                $layout.turret.pivot.x = [Math]::Max(0.0, [Math]::Min(1.0, $pivotX))
-                $layout.turret.pivot.y = [Math]::Max(0.0, [Math]::Min(1.0, 1.0 - $pivotFromTop))
+                $pivotPixelX = [double]$renderMetadata.turretPivot.xPixels
+                $pivotPixelY = [double]$renderMetadata.turretPivot.yPixels
+                $turretPivotX = ($pivotPixelX - $turretBounds.X) / $turretBounds.Width
+                $turretPivotY = 1.0 - (($pivotPixelY - $turretBounds.Y) / $turretBounds.Height)
+                $hullMountX = ($pivotPixelX - $hullBounds.X) / $hullBounds.Width
+                $hullMountY = 1.0 - (($pivotPixelY - $hullBounds.Y) / $hullBounds.Height)
+                foreach ($coordinate in @($turretPivotX, $turretPivotY, $hullMountX, $hullMountY)) {
+                    if ($coordinate -lt 0.0 -or $coordinate -gt 1.0) {
+                        throw "Projected turret-ring coordinate lies outside a cropped sprite: $coordinate"
+                    }
+                }
+                $layout.turret.pivot.x = $turretPivotX
+                $layout.turret.pivot.y = $turretPivotY
+                $layout.hull.turretMount.x = $hullMountX
+                $layout.hull.turretMount.y = $hullMountY
             }
         }
 

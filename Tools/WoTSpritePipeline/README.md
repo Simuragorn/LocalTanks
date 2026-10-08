@@ -74,7 +74,13 @@ relative vehicle dimensions remain stable.
 - `.../<vehicle id>_manifest.json` — provenance, module selection and render
   settings.
 - `.../<vehicle id>_layout.json` — Unity bottom-left slice rectangles and the
-  calculated turret-ring pivot.
+  two calculated turret-ring anchors: `turret.pivot` inside the turret layer
+  and `hull.turretMount` at the matching position on the hull.
+
+Layout schema 2 projects the same 3D turret-joint point into both cropped
+layers. Unity keeps the hull sprite centred for collider alignment and moves its
+`TurretPivot` child to `hull.turretMount`; using the hull centre unconditionally
+causes off-centre turrets to orbit when they rotate.
 
 The pipeline intentionally stops short of registering a generated sprite in
 game data. That integration will be a separate, explicit step so local derived

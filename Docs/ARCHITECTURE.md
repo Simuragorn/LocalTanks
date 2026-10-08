@@ -22,7 +22,7 @@
 
 `TestRangeTargetRespawner` управляет жизненным циклом стендовых машин: пересоздаёт их независимо от игрока, сохраняет общее состояние паузы вращения и добавляет каждой цели экранную `TankHealthBar`. Полоска читает фактический `TankHealth`, поэтому не хранит отдельную копию HP.
 
-`TankMotor` меняет положение и угол через `Rigidbody2D` в `FixedUpdate`. `TurretAiming` вращает отдельный `TurretPivot`, поэтому башня не меняет ориентацию корпуса.
+`TankMotor` меняет положение и угол через `Rigidbody2D` в `FixedUpdate`. `TurretAiming` вращает отдельный `TurretPivot`, поэтому башня не меняет ориентацию корпуса. Для спрайтов из 3D-моделей `TurretPivot` размещается в `hull.turretMount` из layout schema 2, а не обязательно в центре корпуса; `turret.pivot` обозначает ту же точку внутри слоя башни.
 
 `WeaponController` получает связку `TankDefinition -> WeaponDefinition -> ShellDefinition`, проверяет `ReloadTimer`, создаёт `Projectile2D` в точке `Muzzle` и передаёт параметры снаряда. Снаряд на каждом физическом шаге проверяет весь путь через `Physics2D.CircleCastAll`.
 
