@@ -99,14 +99,14 @@ MonoBehaviour:
     - {x: 36, y: 35}
     - {x: 50, y: 33}
     - {x: 60, y: 25}
-  - id: a_north_tiger
-    tankId: tiger_ii
+  - id: a_north_leichttraktor
+    tankId: leichttraktor
     team: 1
     playerControlled: 0
     baseId: A
     spawnSlot: 14
     lane: 0
-    role: 0
+    role: 2
     routeCells:
     - {x: 17, y: 28}
     - {x: 18, y: 31}
@@ -197,14 +197,14 @@ MonoBehaviour:
     - {x: 35, y: 35}
     - {x: 21, y: 33}
     - {x: 11, y: 25}
-  - id: b_north_tiger
-    tankId: tiger_ii
+  - id: b_north_leichttraktor
+    tankId: leichttraktor
     team: 2
     playerControlled: 0
     baseId: B
     spawnSlot: 14
     lane: 0
-    role: 0
+    role: 2
     routeCells:
     - {x: 54, y: 28}
     - {x: 53, y: 31}

@@ -69,7 +69,16 @@ namespace LocalTanks.Editor
                 new Rect(24f, 24f, 192f, 476f), new Rect(240f, 117f, 120f, 289f),
                 new Vector2(0.5f, 0.6802735f), new Vector2(0.5f, 0.4236555f),
                 new Vector2(0.24f, 0.24f), 0.45f, 5.5f,
-                CreateMS1HullOutline())
+                CreateMS1HullOutline()),
+            new TankBuildSpec(
+                "Leichttraktor", "Leichttraktor",
+                "Assets/Game/Art/Tanks/Leichttraktor/Source/Leichttraktor_strip2.png",
+                "Assets/Game/GameData/Generated/Tanks/leichttraktor.asset",
+                "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab",
+                new Rect(24f, 24f, 229f, 462f), new Rect(277f, 117f, 158f, 275f),
+                new Vector2(0.4986667f, 0.7045380f), new Vector2(0.5f, 0.6946704f),
+                new Vector2(0.24f, 0.24f), 0.48f, 8.96f,
+                CreateLeichttraktorHullOutline())
         };
 
         [InitializeOnLoadMethod]
@@ -553,6 +562,19 @@ namespace LocalTanks.Editor
                 new Vector2(-0.10f, -0.36f), new Vector2(-0.18f, -0.32f),
                 new Vector2(-0.21f, -0.20f), new Vector2(-0.22f, 0.02f),
                 new Vector2(-0.23f, 0.22f), new Vector2(-0.23f, 0.52f)
+            };
+        }
+
+        private static Vector2[] CreateLeichttraktorHullOutline()
+        {
+            return new[]
+            {
+                new Vector2(-0.22f, 0.55f), new Vector2(0.22f, 0.55f),
+                new Vector2(0.26f, 0.50f), new Vector2(0.27f, 0.34f),
+                new Vector2(0.27f, -0.34f), new Vector2(0.25f, -0.50f),
+                new Vector2(0.21f, -0.55f), new Vector2(-0.21f, -0.55f),
+                new Vector2(-0.25f, -0.50f), new Vector2(-0.27f, -0.34f),
+                new Vector2(-0.27f, 0.34f), new Vector2(-0.26f, 0.50f)
             };
         }
 

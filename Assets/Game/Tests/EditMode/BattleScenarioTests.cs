@@ -25,6 +25,8 @@ namespace LocalTanks.Tests
                 Is.EquivalentTo(database.tanks.Select(item => item.id)));
             Assert.That(scenario.entries.Count(item => item.tankId == "bt_2"), Is.EqualTo(2));
             Assert.That(scenario.entries.Count(item => item.tankId == "ms_1"), Is.EqualTo(2));
+            Assert.That(scenario.entries.Count(item => item.tankId == "leichttraktor"), Is.EqualTo(2));
+            Assert.That(scenario.entries.Count(item => item.tankId == "tiger_ii"), Is.EqualTo(2));
         }
 
         [Test]

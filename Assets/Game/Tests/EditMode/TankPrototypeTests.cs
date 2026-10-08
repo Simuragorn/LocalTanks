@@ -77,6 +77,54 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void LeichttraktorPrefab_UsesRenderedGeometryAndRearTurretRing()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            Transform turretPivot = prefab.transform.Find("TurretPivot");
+            Sprite turretSprite = AssetDatabase
+                .LoadAllAssetsAtPath("Assets/Game/Art/Tanks/Leichttraktor/Source/Leichttraktor_strip2.png")
+                .OfType<Sprite>()
+                .Single(sprite => sprite.name == "Leichttraktor_Turret");
+            Vector2 normalizedTurretPivot = new Vector2(
+                turretSprite.pivot.x / turretSprite.rect.width,
+                turretSprite.pivot.y / turretSprite.rect.height);
+
+            Assert.That(prefab.GetComponent<PolygonCollider2D>().points.Length, Is.EqualTo(12));
+            Assert.That(prefab.GetComponent<Rigidbody2D>().mass, Is.EqualTo(8.96f).Within(0.01f));
+            Assert.That(turretPivot.localPosition.x, Is.Zero.Within(0.002f));
+            Assert.That(turretPivot.localPosition.y, Is.EqualTo(-0.2158f).Within(0.002f));
+            Assert.That(normalizedTurretPivot.x, Is.EqualTo(0.49867f).Within(0.002f));
+            Assert.That(normalizedTurretPivot.y, Is.EqualTo(0.70454f).Within(0.002f));
+        }
+
+        [Test]
+        public void LeichttraktorTurret_RotatesNinetyDegreesWithoutLeavingRearRing()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab");
+            GameObject instance = Object.Instantiate(prefab);
+
+            try
+            {
+                Transform turretPivot = instance.transform.Find("TurretPivot");
+                Transform turretVisual = turretPivot.Find("TurretVisual");
+                Vector3 ringPosition = turretPivot.position;
+
+                Assert.That(turretVisual.localPosition, Is.EqualTo(Vector3.zero));
+                turretPivot.localRotation = Quaternion.Euler(0f, 0f, 90f);
+
+                Assert.That(Vector3.Distance(turretPivot.position, ringPosition), Is.LessThan(0.0001f));
+                Assert.That(Vector3.Distance(turretVisual.position, ringPosition), Is.LessThan(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
+        [Test]
         public void ForwardSpeed_UsesForwardLimit()
         {
             Assert.That(TankMotionMath.TargetSpeed(1f, 5f, 2f), Is.EqualTo(5f));

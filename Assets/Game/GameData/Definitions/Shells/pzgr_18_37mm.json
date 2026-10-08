@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "pzgr_18_37mm",
+  "displayName": "3.7 cm Pzgr.",
+  "damage": 60,
+  "penetration": 42.0,
+  "speed": 13.9,
+  "radius": 0.034,
+  "lifetimeSeconds": 3.0,
+  "maximumRange": 40.0,
+  "ricochetAngle": 70.0,
+  "ricochetSpeedMultiplier": 0.7,
+  "ricochetPenetrationMultiplier": 0.65,
+  "maximumRicochets": 2
+}

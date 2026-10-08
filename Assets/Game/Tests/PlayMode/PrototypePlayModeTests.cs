@@ -293,6 +293,8 @@ namespace LocalTanks.Tests
             Assert.That(Object.FindObjectsByType<TeamMember>().Length, Is.EqualTo(BattleScenario.TeamSize * 2));
             Assert.That(Object.FindObjectsByType<TeamMember>().Count(member =>
                 member.Definition != null && member.Definition.id == "bt_2"), Is.EqualTo(2));
+            Assert.That(Object.FindObjectsByType<TeamMember>().Count(member =>
+                member.Definition != null && member.Definition.id == "leichttraktor"), Is.EqualTo(2));
             BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
             Assert.That(director, Is.Not.Null);
             Assert.That(director.TeamAAlive, Is.EqualTo(BattleScenario.TeamSize));

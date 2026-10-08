@@ -17,7 +17,7 @@
     {"id":"a_player_tiger","tankId":"tiger_ii","team":"TeamA","playerControlled":true,"baseId":"A","spawnSlot":7,"lane":"Center","role":"Assault"},
     {"id":"a_center_pz4","tankId":"panzer_iv","team":"TeamA","playerControlled":false,"baseId":"A","spawnSlot":9,"lane":"Center","role":"Support"},
     {"id":"a_north_ms1","tankId":"ms_1","team":"TeamA","playerControlled":false,"baseId":"A","spawnSlot":10,"lane":"North","role":"Flank"},
-    {"id":"a_north_tiger","tankId":"tiger_ii","team":"TeamA","playerControlled":false,"baseId":"A","spawnSlot":14,"lane":"North","role":"Assault"},
+    {"id":"a_north_leichttraktor","tankId":"leichttraktor","team":"TeamA","playerControlled":false,"baseId":"A","spawnSlot":14,"lane":"North","role":"Flank"},
 
     {"id":"b_south_t34_1","tankId":"t_34_76","team":"TeamB","playerControlled":false,"baseId":"B","spawnSlot":0,"lane":"South","role":"Flank"},
     {"id":"b_south_bt2","tankId":"bt_2","team":"TeamB","playerControlled":false,"baseId":"B","spawnSlot":1,"lane":"South","role":"Flank"},
@@ -25,6 +25,6 @@
     {"id":"b_center_tiger_1","tankId":"tiger_ii","team":"TeamB","playerControlled":false,"baseId":"B","spawnSlot":7,"lane":"Center","role":"Assault"},
     {"id":"b_center_pz4","tankId":"panzer_iv","team":"TeamB","playerControlled":false,"baseId":"B","spawnSlot":9,"lane":"Center","role":"Support"},
     {"id":"b_north_ms1","tankId":"ms_1","team":"TeamB","playerControlled":false,"baseId":"B","spawnSlot":10,"lane":"North","role":"Flank"},
-    {"id":"b_north_tiger","tankId":"tiger_ii","team":"TeamB","playerControlled":false,"baseId":"B","spawnSlot":14,"lane":"North","role":"Assault"}
+    {"id":"b_north_leichttraktor","tankId":"leichttraktor","team":"TeamB","playerControlled":false,"baseId":"B","spawnSlot":14,"lane":"North","role":"Flank"}
   ]
 }

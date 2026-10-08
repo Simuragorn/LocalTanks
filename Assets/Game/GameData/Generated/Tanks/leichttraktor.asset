@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa5fa75625e111249b94a3b56f33e8a2, type: 3}
+  m_Name: leichttraktor
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
+  id: leichttraktor
+  displayName: Leichttraktor (Rheinmetall prototype)
+  vehicleClass: 2
+  maxHitPoints: 280
+  weapon: {fileID: 11400000, guid: c6fcfed09ae467d459bda6a25f053102, type: 2}
+  maxForwardSpeed: 2.16
+  maxReverseSpeed: 0.5
+  acceleration: 0.27
+  groundResistance: 1.45
+  braking: 1.9
+  hullTurnSpeed: 26
+  turretTurnSpeed: 24
+  viewRange: 8.9
+  stationaryConcealment: 0.29
+  movementRevealPenalty: 0.09
+  firingRevealPenalty: 0.11
+  firingRevealDuration: 4.5
+  guaranteedDetectionRange: 1.4
+  armor:
+    front: 14
+    left: 14
+    right: 14
+    rear: 14

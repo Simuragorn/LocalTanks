@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "leichttraktor",
+  "displayName": "Leichttraktor (Rheinmetall prototype)",
+  "vehicleClass": "LightTank",
+  "maxHitPoints": 280,
+  "weaponId": "kwk_l45_37mm",
+  "mobility": {
+    "maxForwardSpeed": 2.16,
+    "maxReverseSpeed": 0.50,
+    "acceleration": 0.27,
+    "groundResistance": 1.45,
+    "braking": 1.90,
+    "hullTurnSpeed": 26.0,
+    "turretTurnSpeed": 24.0
+  },
+  "armor": {
+    "front": 14.0,
+    "left": 14.0,
+    "right": 14.0,
+    "rear": 14.0
+  },
+  "vision": {
+    "viewRange": 8.9,
+    "stationaryConcealment": 0.29,
+    "movementRevealPenalty": 0.09,
+    "firingRevealPenalty": 0.11,
+    "firingRevealDuration": 4.5,
+    "guaranteedDetectionRange": 1.4
+  }
+}
