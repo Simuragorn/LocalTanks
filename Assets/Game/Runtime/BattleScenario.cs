@@ -67,8 +67,11 @@ namespace LocalTanks
 
                 if (string.IsNullOrWhiteSpace(entry.id) || !ids.Add(entry.id))
                     errors.Add($"Scenario entry id '{entry.id}' is empty or duplicated.");
-                if (database == null || database.FindTank(entry.tankId) == null)
+                TankDefinition definition = database?.FindTank(entry.tankId);
+                if (definition == null)
                     errors.Add($"Scenario entry '{entry.id}' references missing tank '{entry.tankId}'.");
+                else if (!definition.availableInGame)
+                    errors.Add($"Scenario entry '{entry.id}' references unavailable tank '{entry.tankId}'.");
                 if (entry.team == TeamId.Neutral)
                     errors.Add($"Scenario entry '{entry.id}' cannot be neutral.");
                 if (entry.playerControlled && entry.team != TeamId.TeamA)
@@ -89,6 +92,16 @@ namespace LocalTanks
 
             foreach (TeamId team in new[] { TeamId.TeamA, TeamId.TeamB })
             {
+                TankNation[] nations = roster
+                    .Where(item => item != null && item.team == team)
+                    .Select(item => database?.FindTank(item.tankId))
+                    .Where(definition => definition != null)
+                    .Select(definition => definition.nation)
+                    .Distinct()
+                    .ToArray();
+                if (nations.Length > 1)
+                    errors.Add($"{team} must contain tanks from exactly one nation.");
+
                 foreach (BattleLane lane in Enum.GetValues(typeof(BattleLane)))
                 {
                     int count = roster.Count(item => item != null && item.team == team && item.lane == lane);

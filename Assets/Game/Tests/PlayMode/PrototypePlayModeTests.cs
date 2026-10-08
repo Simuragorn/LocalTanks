@@ -35,7 +35,7 @@ namespace LocalTanks.Tests
             SceneManager.LoadScene("Battle_TestRange");
             yield return null;
 
-            GameObject player = GameObject.Find("TigerII_Player");
+            GameObject player = GameObject.Find("MS1_Player");
             Assert.That(player, Is.Not.Null);
             Assert.That(Camera.main, Is.Not.Null);
             PolygonCollider2D hullCollider = player.GetComponent<PolygonCollider2D>();
@@ -47,12 +47,17 @@ namespace LocalTanks.Tests
             TestRangeTargetRespawner respawner = Object.FindAnyObjectByType<TestRangeTargetRespawner>();
             Assert.That(selector, Is.Not.Null);
             Assert.That(respawner, Is.Not.Null);
+            Assert.That(selector.AvailableTankCount, Is.EqualTo(2));
             Assert.That(respawner.CurrentTargets.Length, Is.EqualTo(selector.AvailableTankCount));
             Assert.That(respawner.CurrentTargets.Select(target =>
                     target.GetComponent<TankHealth>().Definition.id).Distinct().Count(),
                 Is.EqualTo(selector.AvailableTankCount));
             Assert.That(respawner.CurrentTargets.Any(target =>
                 target.GetComponent<TankHealth>().Definition.id == "ms_1"), Is.True);
+            Assert.That(respawner.CurrentTargets.Any(target =>
+                target.GetComponent<TankHealth>().Definition.id == "leichttraktor"), Is.True);
+            Assert.That(respawner.CurrentTargets.Any(target =>
+                target.GetComponent<TankHealth>().Definition.id == "tiger_ii"), Is.False);
             foreach (GameObject target in respawner.CurrentTargets)
             {
                 Assert.That(target, Is.Not.Null);
@@ -88,11 +93,11 @@ namespace LocalTanks.Tests
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
 
             Assert.That(selector, Is.Not.Null);
-            Assert.That(selector.SelectTank(2), Is.True);
+            Assert.That(selector.SelectTank(1), Is.True);
             yield return null;
 
-            Assert.That(selector.CurrentTankIndex, Is.EqualTo(2));
-            Assert.That(selector.CurrentTank.GetComponent<TankHealth>().Definition.id, Is.EqualTo("t_34_76"));
+            Assert.That(selector.CurrentTankIndex, Is.EqualTo(1));
+            Assert.That(selector.CurrentTank.GetComponent<TankHealth>().Definition.id, Is.EqualTo("leichttraktor"));
             Assert.That(selector.CurrentTank.GetComponent<PlayerTankInput>().enabled, Is.True);
             Assert.That(follow.Target, Is.EqualTo(selector.CurrentTank.transform));
         }
@@ -130,7 +135,7 @@ namespace LocalTanks.Tests
             int playerHitPoints = playerHealth.CurrentHitPoints;
             Vector3 playerPosition = player.transform.position;
 
-            GameObject oldTarget = GameObject.Find("E100_Target");
+            GameObject oldTarget = GameObject.Find("Leichttraktor_Target");
             TankHealth oldHealth = oldTarget.GetComponent<TankHealth>();
             oldHealth.ApplyDamage(oldHealth.MaximumHitPoints);
             oldTarget.transform.position = Vector3.zero;
@@ -138,7 +143,7 @@ namespace LocalTanks.Tests
             respawner.RespawnAllTargets();
             yield return null;
 
-            GameObject newTarget = GameObject.Find("E100_Target");
+            GameObject newTarget = GameObject.Find("Leichttraktor_Target");
             Assert.That(selector.CurrentTank, Is.SameAs(player));
             Assert.That(playerHealth.CurrentHitPoints, Is.EqualTo(playerHitPoints));
             Assert.That(player.transform.position, Is.EqualTo(playerPosition));
@@ -155,7 +160,7 @@ namespace LocalTanks.Tests
             SceneManager.LoadScene("Battle_TestRange");
             yield return null;
 
-            GameObject target = GameObject.Find("E100_Target");
+            GameObject target = GameObject.Find("Leichttraktor_Target");
             float initialAngle = target.GetComponent<Rigidbody2D>().rotation;
             yield return new WaitForFixedUpdate();
             yield return new WaitForFixedUpdate();
@@ -171,7 +176,7 @@ namespace LocalTanks.Tests
             yield return null;
 
             TestRangeTargetRespawner respawner = Object.FindAnyObjectByType<TestRangeTargetRespawner>();
-            GameObject target = GameObject.Find("E100_Target");
+            GameObject target = GameObject.Find("Leichttraktor_Target");
             TankHealth health = target.GetComponent<TankHealth>();
             TankHealthBar healthBar = target.GetComponent<TankHealthBar>();
             health.ApplyDamage(health.MaximumHitPoints / 2);
@@ -187,7 +192,7 @@ namespace LocalTanks.Tests
             respawner.RespawnAllTargets();
             yield return null;
 
-            GameObject respawnedTarget = GameObject.Find("E100_Target");
+            GameObject respawnedTarget = GameObject.Find("Leichttraktor_Target");
             Assert.That(respawnedTarget.GetComponent<TankHealthBar>().HealthRatio, Is.EqualTo(1f));
             Assert.That(ColorsMatch(respawnedTarget.GetComponent<TankHealthBar>().FillColor, TeamPalette.Enemy), Is.True);
             Assert.That(respawnedTarget.GetComponent<RotatingTankDisplay>().IsPaused, Is.True);
@@ -230,7 +235,7 @@ namespace LocalTanks.Tests
                 Assert.That(navigationAgent.HasPath, Is.True, $"{navigationAgent.name} has no initial path");
             }
 
-            GameObject movingAgent = GameObject.Find("NavAgent_T34");
+            GameObject movingAgent = GameObject.Find("NavAgent_Leichttraktor_North");
             Vector3 initialPosition = movingAgent.transform.position;
             for (int frame = 0; frame < 180; frame++)
             {
@@ -292,9 +297,11 @@ namespace LocalTanks.Tests
             Assert.That(Object.FindAnyObjectByType<BattleHudController>(), Is.Not.Null);
             Assert.That(Object.FindObjectsByType<TeamMember>().Length, Is.EqualTo(BattleScenario.TeamSize * 2));
             Assert.That(Object.FindObjectsByType<TeamMember>().Count(member =>
-                member.Definition != null && member.Definition.id == "bt_2"), Is.EqualTo(2));
+                member.Definition != null && member.Definition.id == "ms_1"), Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(Object.FindObjectsByType<TeamMember>().Count(member =>
-                member.Definition != null && member.Definition.id == "leichttraktor"), Is.EqualTo(2));
+                member.Definition != null && member.Definition.id == "leichttraktor"), Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(Object.FindObjectsByType<TeamMember>().Any(member =>
+                member.Definition != null && member.Definition.id == "tiger_ii"), Is.False);
             BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
             Assert.That(director, Is.Not.Null);
             Assert.That(director.TeamAAlive, Is.EqualTo(BattleScenario.TeamSize));
@@ -419,9 +426,9 @@ namespace LocalTanks.Tests
             TeamVisionSystem vision = Object.FindAnyObjectByType<TeamVisionSystem>();
             CombatTankAI shooter = Object.FindObjectsByType<CombatTankAI>()
                 .First(item => item.GetComponent<TeamMember>().Team == TeamId.TeamA &&
-                               item.GetComponent<TankHealth>().Definition.id == "t_34_76");
+                               item.GetComponent<TankHealth>().Definition.id == "ms_1");
             TeamMember target = Object.FindObjectsByType<TeamMember>()
-                .First(item => item.Team == TeamId.TeamB && item.Definition.id == "t_34_76");
+                .First(item => item.Team == TeamId.TeamB && item.Definition.id == "leichttraktor");
 
             foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
             {
@@ -596,7 +603,7 @@ namespace LocalTanks.Tests
             SceneManager.LoadScene("Battle_TestRange");
             yield return null;
 
-            GameObject target = GameObject.Find("TigerII_Target");
+            GameObject target = GameObject.Find("Leichttraktor_Target");
             Assert.That(target, Is.Not.Null);
             TankHealth health = target.GetComponent<TankHealth>();
 

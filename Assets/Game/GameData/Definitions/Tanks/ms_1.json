@@ -3,6 +3,8 @@
   "id": "ms_1",
   "displayName": "MS-1 (45 mm modernization)",
   "vehicleClass": "LightTank",
+  "nation": "USSR",
+  "availableInGame": true,
   "maxHitPoints": 260,
   "weaponId": "gun_20_k_45mm",
   "mobility": {

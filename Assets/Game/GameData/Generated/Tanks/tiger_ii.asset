@@ -15,6 +15,8 @@ MonoBehaviour:
   id: tiger_ii
   displayName: Tiger II
   vehicleClass: 0
+  nation: 0
+  availableInGame: 0
   maxHitPoints: 1600
   weapon: {fileID: 11400000, guid: 217b06bef7fe9b042acc40f8085a571d, type: 2}
   maxForwardSpeed: 1.9

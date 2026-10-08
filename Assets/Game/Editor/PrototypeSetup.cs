@@ -26,42 +26,6 @@ namespace LocalTanks.Editor
                 new Vector2(0.24f, 0.24f), 1.41f, 69.8f,
                 CreateTigerHullOutline()),
             new TankBuildSpec(
-                "E100", "E-100",
-                "Assets/Game/Art/Tanks/E100/Source/E-100_strip2.png",
-                "Assets/Game/GameData/Generated/Tanks/e_100.asset",
-                "Assets/Game/Prefabs/Tanks/E100_Player.prefab",
-                new Rect(22f, 39f, 117f, 227f), new Rect(145f, 33f, 80f, 188f),
-                new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
-                new Vector2(1.01f, 1f), 1.40f, 140f,
-                CreateE100HullOutline()),
-            new TankBuildSpec(
-                "T34", "T-34/76",
-                "Assets/Game/Art/Tanks/T34/Source/T34_strip2.png",
-                "Assets/Game/GameData/Generated/Tanks/t_34_76.asset",
-                "Assets/Game/Prefabs/Tanks/T34_Player.prefab",
-                new Rect(9f, 11f, 127f, 268f), new Rect(153f, 25f, 85f, 197f),
-                new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.63f, 0.65f), 0.95f, 26.5f,
-                CreateT34HullOutline()),
-            new TankBuildSpec(
-                "PzKpfwIV", "Panzer IV",
-                "Assets/Game/Art/Tanks/PzKpfwIV/Source/Pz.Kpfw.IV_strip2.png",
-                "Assets/Game/GameData/Generated/Tanks/panzer_iv.asset",
-                "Assets/Game/Prefabs/Tanks/PzKpfwIV_Player.prefab",
-                new Rect(14f, 17f, 121f, 260f), new Rect(146f, 16f, 89f, 199f),
-                new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.63f, 0.71f), 1.05f, 20f,
-                CreatePanzerIVHullOutline()),
-            new TankBuildSpec(
-                "BT2", "BT-2",
-                "Assets/Game/Art/Tanks/BT2/Source/BT-2_strip2.png",
-                "Assets/Game/GameData/Generated/Tanks/bt_2.asset",
-                "Assets/Game/Prefabs/Tanks/BT2_Player.prefab",
-                new Rect(12f, 16f, 122f, 261f), new Rect(156f, 31f, 74f, 189f),
-                new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
-                new Vector2(0.475f, 0.55f), 0.77f, 11.3f,
-                CreateBT2HullOutline()),
-            new TankBuildSpec(
                 "MS1", "MS-1",
                 "Assets/Game/Art/Tanks/MS1/Source/MS-1_strip2.png",
                 "Assets/Game/GameData/Generated/Tanks/ms_1.asset",
@@ -112,17 +76,23 @@ namespace LocalTanks.Editor
         public static void BuildAll()
         {
             GameObject[] tankPrefabs = BuildCombatAssetsInternal();
+            TankBuildSpec[] availableSpecs = TankSpecs
+                .Where(spec => LoadDefinition(spec).availableInGame)
+                .ToArray();
+            GameObject[] availablePrefabs = availableSpecs
+                .Select(spec => tankPrefabs.Single(prefab => AssetDatabase.GetAssetPath(prefab) == spec.PrefabPath))
+                .ToArray();
 
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
             {
                 CreateTestScene();
             }
 
-            UpgradeTestScene(tankPrefabs);
+            UpgradeTestScene(availableSpecs, availablePrefabs);
             EnsureSceneInBuildSettings();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            Debug.Log($"Local Tanks test range created with {tankPrefabs.Length} selectable tanks: {ScenePath}");
+            Debug.Log($"Local Tanks test range created with {availablePrefabs.Length} selectable tanks: {ScenePath}");
         }
 
         [MenuItem("Local Tanks/Build Combat Assets")]
@@ -324,7 +294,7 @@ namespace LocalTanks.Editor
             EditorSceneManager.SaveScene(scene, ScenePath);
         }
 
-        private static void UpgradeTestScene(GameObject[] tankPrefabs)
+        private static void UpgradeTestScene(TankBuildSpec[] tankSpecs, GameObject[] tankPrefabs)
         {
             Scene scene = SceneManager.GetActiveScene().path == ScenePath
                 ? SceneManager.GetActiveScene()
@@ -334,14 +304,13 @@ namespace LocalTanks.Editor
             MoveObstacle("Wall_Cover", new Vector3(8f, 1f, 0f));
             DestroyNamed("Target");
             DestroyNamed("TigerII_Player");
+            DestroyNamed("MS1_Player");
+            DestroyNamed("Leichttraktor_Player");
             DestroyNamed("PlayerTankSelector");
-            foreach (TankBuildSpec spec in TankSpecs)
-            {
-                DestroyNamed(spec.SpritePrefix + "_Target");
-            }
+            DestroyAllTankTargets(scene);
 
             GameObject player = (GameObject)PrefabUtility.InstantiatePrefab(tankPrefabs[0], scene);
-            player.name = "TigerII_Player";
+            player.name = tankSpecs[0].SpritePrefix + "_Player";
             player.transform.SetPositionAndRotation(new Vector3(0f, -5.5f, 0f), Quaternion.identity);
 
             CameraFollow2D follow = EnsureCamera(player.transform);
@@ -359,7 +328,7 @@ namespace LocalTanks.Editor
             float[] rotationSpeeds = Enumerable.Range(0, tankPrefabs.Length)
                 .Select(index => 7f + index * 1.5f)
                 .ToArray();
-            string[] targetNames = TankSpecs.Select(spec => spec.SpritePrefix + "_Target").ToArray();
+            string[] targetNames = tankSpecs.Select(spec => spec.SpritePrefix + "_Target").ToArray();
             GameObject[] targets = new GameObject[tankPrefabs.Length];
             for (int index = 0; index < tankPrefabs.Length; index++)
             {
@@ -377,7 +346,7 @@ namespace LocalTanks.Editor
             PlayerTankSelector selector = selectorObject.AddComponent<PlayerTankSelector>();
             selector.Configure(
                 tankPrefabs,
-                TankSpecs.Select(spec => spec.DisplayName).ToArray(),
+                tankSpecs.Select(spec => spec.DisplayName).ToArray(),
                 player,
                 0,
                 follow,
@@ -385,6 +354,26 @@ namespace LocalTanks.Editor
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
+        }
+
+        private static void DestroyAllTankTargets(Scene scene)
+        {
+            foreach (GameObject missingPrefab in scene.GetRootGameObjects()
+                         .Where(PrefabUtility.IsPrefabAssetMissing)
+                         .ToArray())
+            {
+                Object.DestroyImmediate(missingPrefab);
+            }
+
+            Transform[] targets = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .Where(item => item.name.EndsWith("_Target", System.StringComparison.Ordinal))
+                .ToArray();
+            foreach (Transform target in targets)
+            {
+                if (target != null)
+                    Object.DestroyImmediate(target.gameObject);
+            }
         }
 
         private static CameraFollow2D EnsureCamera(Transform target)
@@ -495,58 +484,6 @@ namespace LocalTanks.Editor
                 new Vector2(-0.43f, -0.925f), new Vector2(-0.50f, -0.84f),
                 new Vector2(-0.525f, -0.70f), new Vector2(-0.525f, 0.62f),
                 new Vector2(-0.515f, 0.80f), new Vector2(-0.47f, 0.91f)
-            };
-        }
-
-        private static Vector2[] CreateE100HullOutline()
-        {
-            return new[]
-            {
-                new Vector2(-0.46f, 1.125f), new Vector2(0.46f, 1.125f),
-                new Vector2(0.56f, 1.04f), new Vector2(0.58f, 0.86f),
-                new Vector2(0.58f, -0.83f), new Vector2(0.55f, -1.02f),
-                new Vector2(0.46f, -1.105f), new Vector2(0.31f, -1.125f),
-                new Vector2(-0.31f, -1.125f), new Vector2(-0.46f, -1.105f),
-                new Vector2(-0.55f, -1.02f), new Vector2(-0.58f, -0.83f),
-                new Vector2(-0.58f, 0.86f), new Vector2(-0.56f, 1.04f)
-            };
-        }
-
-        private static Vector2[] CreateT34HullOutline()
-        {
-            return new[]
-            {
-                new Vector2(-0.29f, 0.865f), new Vector2(0.29f, 0.865f),
-                new Vector2(0.37f, 0.78f), new Vector2(0.39f, 0.58f),
-                new Vector2(0.39f, -0.63f), new Vector2(0.35f, -0.80f),
-                new Vector2(0.27f, -0.865f), new Vector2(-0.27f, -0.865f),
-                new Vector2(-0.35f, -0.80f), new Vector2(-0.39f, -0.63f),
-                new Vector2(-0.39f, 0.58f), new Vector2(-0.37f, 0.78f)
-            };
-        }
-
-        private static Vector2[] CreatePanzerIVHullOutline()
-        {
-            return new[]
-            {
-                new Vector2(-0.31f, 0.91f), new Vector2(0.31f, 0.91f),
-                new Vector2(0.37f, 0.84f), new Vector2(0.375f, -0.76f),
-                new Vector2(0.34f, -0.88f), new Vector2(0.27f, -0.91f),
-                new Vector2(-0.27f, -0.91f), new Vector2(-0.34f, -0.88f),
-                new Vector2(-0.375f, -0.76f), new Vector2(-0.37f, 0.84f)
-            };
-        }
-
-        private static Vector2[] CreateBT2HullOutline()
-        {
-            return new[]
-            {
-                new Vector2(-0.22f, 0.715f), new Vector2(0.22f, 0.715f),
-                new Vector2(0.28f, 0.68f), new Vector2(0.30f, 0.54f),
-                new Vector2(0.30f, -0.54f), new Vector2(0.28f, -0.67f),
-                new Vector2(0.22f, -0.715f), new Vector2(-0.22f, -0.715f),
-                new Vector2(-0.28f, -0.67f), new Vector2(-0.30f, -0.54f),
-                new Vector2(-0.30f, 0.54f), new Vector2(-0.28f, 0.68f)
             };
         }
 

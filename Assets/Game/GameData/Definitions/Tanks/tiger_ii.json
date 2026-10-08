@@ -3,6 +3,8 @@
   "id": "tiger_ii",
   "displayName": "Tiger II",
   "vehicleClass": "HeavyTank",
+  "nation": "Germany",
+  "availableInGame": false,
   "maxHitPoints": 1600,
   "weaponId": "kwk_43_l71",
   "mobility": {

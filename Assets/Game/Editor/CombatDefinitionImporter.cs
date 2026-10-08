@@ -47,6 +47,8 @@ namespace LocalTanks.Editor
         public string id;
         public string displayName;
         public string vehicleClass;
+        public string nation;
+        public bool availableInGame;
         public int maxHitPoints;
         public string weaponId;
         public MobilityJson mobility;
@@ -142,6 +144,10 @@ namespace LocalTanks.Editor
                 if (!Enum.TryParse(tank.vehicleClass, false, out VehicleClass _))
                 {
                     errors.Add($"Tank '{tank.id}' has unknown vehicleClass '{tank.vehicleClass}'.");
+                }
+                if (!Enum.TryParse(tank.nation, false, out TankNation _))
+                {
+                    errors.Add($"Tank '{tank.id}' has unknown nation '{tank.nation}'.");
                 }
                 if (string.IsNullOrWhiteSpace(tank.weaponId) || !weaponIds.Contains(tank.weaponId))
                 {
@@ -420,6 +426,8 @@ namespace LocalTanks.Editor
             target.id = source.id;
             target.displayName = source.displayName;
             target.vehicleClass = Enum.Parse<VehicleClass>(source.vehicleClass, false);
+            target.nation = Enum.Parse<TankNation>(source.nation, false);
+            target.availableInGame = source.availableInGame;
             target.maxHitPoints = source.maxHitPoints;
             target.weapon = weapon;
             target.maxForwardSpeed = source.mobility.maxForwardSpeed;

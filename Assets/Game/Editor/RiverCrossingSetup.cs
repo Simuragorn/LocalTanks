@@ -40,11 +40,6 @@ namespace LocalTanks.Editor
 
         private static readonly string[] TankPrefabPaths =
         {
-            "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/E100_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/T34_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/PzKpfwIV_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/BT2_Player.prefab",
             "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
             "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab"
         };
@@ -656,19 +651,19 @@ namespace LocalTanks.Editor
             AddTerrainModifier(player, map);
             AddTeamMember(player, TeamId.TeamA, true);
 
-            GameObject north = CreateAgent(prefabs[2], scene, "Route_North_T34", map, teamBBase.GetSpawnPosition(11), teamBRotation, new[]
+            GameObject north = CreateAgent(prefabs[1], scene, "Route_North_Leichttraktor", map, teamBBase.GetSpawnPosition(11), teamBRotation, new[]
             {
                 new Vector2Int(61, 24), new Vector2Int(53, 31), new Vector2Int(35, 35), new Vector2Int(21, 33),
                 new Vector2Int(11, 25), new Vector2Int(21, 33), new Vector2Int(35, 35), new Vector2Int(53, 31)
             });
             AddTeamMember(north, TeamId.TeamB, false);
-            GameObject center = CreateAgent(prefabs[1], scene, "Route_Center_E100", map, teamBBase.GetSpawnPosition(7), teamBRotation, new[]
+            GameObject center = CreateAgent(prefabs[1], scene, "Route_Center_Leichttraktor", map, teamBBase.GetSpawnPosition(7), teamBRotation, new[]
             {
                 new Vector2Int(60, 22), new Vector2Int(48, 22), new Vector2Int(35, 22), new Vector2Int(22, 22),
                 new Vector2Int(11, 22), new Vector2Int(22, 22), new Vector2Int(35, 22), new Vector2Int(48, 22)
             });
             AddTeamMember(center, TeamId.TeamB, false);
-            GameObject south = CreateAgent(prefabs[3], scene, "Route_South_PanzerIV", map, teamBBase.GetSpawnPosition(1), teamBRotation, new[]
+            GameObject south = CreateAgent(prefabs[1], scene, "Route_South_Leichttraktor", map, teamBBase.GetSpawnPosition(1), teamBRotation, new[]
             {
                 new Vector2Int(61, 20), new Vector2Int(54, 14), new Vector2Int(35, 9), new Vector2Int(22, 10),
                 new Vector2Int(11, 19), new Vector2Int(22, 10), new Vector2Int(35, 9), new Vector2Int(54, 14)
@@ -960,8 +955,7 @@ namespace LocalTanks.Editor
                 throw new InvalidOperationException("Build the combat test range before building River Crossing.");
             }
 
-            string[] tankIds =
-                { "tiger_ii", "e_100", "t_34_76", "panzer_iv", "bt_2", "ms_1", "leichttraktor" };
+            string[] tankIds = { "ms_1", "leichttraktor" };
             TankPrefabBinding[] prefabBindings = tankIds.Select((tankId, index) => new TankPrefabBinding
             {
                 tankId = tankId,

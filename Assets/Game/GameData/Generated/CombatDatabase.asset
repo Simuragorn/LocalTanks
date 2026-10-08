@@ -13,26 +13,15 @@ MonoBehaviour:
   m_Name: CombatDatabase
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.CombatDatabase
   tanks:
-  - {fileID: 11400000, guid: 99b0affb790d99f4fba9b91930c2f96d, type: 2}
-  - {fileID: 11400000, guid: fcec270504768e4499b72287c9b5fd74, type: 2}
   - {fileID: 11400000, guid: 65a9256b52bb9f5449b9a1bb4e4ed082, type: 2}
   - {fileID: 11400000, guid: 6061be87a97fc1949b02094991683809, type: 2}
-  - {fileID: 11400000, guid: 4cbec875c7c9faa47a25fbb542ab591e, type: 2}
-  - {fileID: 11400000, guid: a522e001e45b0bf4f9c065432a5fd1bc, type: 2}
   - {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}
   weapons:
-  - {fileID: 11400000, guid: 8677e136429a3ae4483a2c50792c32e9, type: 2}
-  - {fileID: 11400000, guid: 527e0d72279755d4aa0835b43de5b3aa, type: 2}
   - {fileID: 11400000, guid: a95f5012c9e0a1447822fee51debd3f1, type: 2}
-  - {fileID: 11400000, guid: 47911f615fdd21f45b8a4bdfab0e2320, type: 2}
   - {fileID: 11400000, guid: 217b06bef7fe9b042acc40f8085a571d, type: 2}
-  - {fileID: 11400000, guid: bd352bfbc999a63459b33bb217723812, type: 2}
   - {fileID: 11400000, guid: c6fcfed09ae467d459bda6a25f053102, type: 2}
   shells:
   - {fileID: 11400000, guid: 25006d220ec52784f964ab084e6d1872, type: 2}
-  - {fileID: 11400000, guid: e5547b33743a9ee4e853e3647ebb2a1a, type: 2}
-  - {fileID: 11400000, guid: 6a0255f028147214b9d76ea2f0e9eb98, type: 2}
-  - {fileID: 11400000, guid: 7c60976e061f51f408375b70575b473a, type: 2}
+  - {fileID: 11400000, guid: fd3c6976249b755408965c1de752ad3d, type: 2}
   - {fileID: 11400000, guid: a39508f04dbe3f7419f1eb068c336c7d, type: 2}
   - {fileID: 11400000, guid: 74486f7327b383e49b4b22f6d895ce4c, type: 2}
-  - {fileID: 11400000, guid: 6d868fe274c9cc642bcd39c31a83e520, type: 2}

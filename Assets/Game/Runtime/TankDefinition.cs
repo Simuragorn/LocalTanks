@@ -11,11 +11,19 @@ namespace LocalTanks
         Artillery
     }
 
+    public enum TankNation
+    {
+        Germany,
+        USSR
+    }
+
     public sealed class TankDefinition : ScriptableObject
     {
         public string id;
         public string displayName;
         public VehicleClass vehicleClass;
+        public TankNation nation;
+        public bool availableInGame = true;
         [Min(1)] public int maxHitPoints = 1;
         public WeaponDefinition weapon;
 

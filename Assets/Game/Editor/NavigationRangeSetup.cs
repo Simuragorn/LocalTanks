@@ -20,10 +20,8 @@ namespace LocalTanks.Editor
 
         private static readonly string[] TankPrefabPaths =
         {
-            "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/E100_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/T34_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/PzKpfwIV_Player.prefab"
+            "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
+            "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab"
         };
 
         [MenuItem("Local Tanks/Build Navigation Range")]
@@ -326,13 +324,13 @@ namespace LocalTanks.Editor
             AddTerrainModifier(player, map);
 
             CreateAgent(
-                prefabs[2], scene, "NavAgent_T34", map, new Vector2Int(8, 5),
+                prefabs[1], scene, "NavAgent_Leichttraktor_North", map, new Vector2Int(8, 5),
                 new[] { new Vector2Int(31, 18), new Vector2Int(8, 5) });
             CreateAgent(
-                prefabs[3], scene, "NavAgent_PanzerIV", map, new Vector2Int(31, 5),
+                prefabs[0], scene, "NavAgent_MS1_South", map, new Vector2Int(31, 5),
                 new[] { new Vector2Int(8, 18), new Vector2Int(31, 5) });
             CreateAgent(
-                prefabs[1], scene, "NavAgent_E100", map, new Vector2Int(12, 18),
+                prefabs[1], scene, "NavAgent_Leichttraktor_Center", map, new Vector2Int(12, 18),
                 new[] { new Vector2Int(27, 5), new Vector2Int(12, 18) });
         }
 
