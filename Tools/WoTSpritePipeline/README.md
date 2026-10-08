@@ -57,10 +57,13 @@ repeatable. Indices default to the last available module, usually the top
 configuration. A JSON manifest records the exact selected modules and source
 tool versions beside every result.
 
-Intermediate renders use a fixed 128 pixels per model metre. The composed
-source uses 36 pixels per metre, close to the existing hand-prepared tank art.
-Large vehicles increase the square intermediate resolution automatically
-instead of being scaled down, so relative vehicle dimensions remain stable.
+Intermediate renders use a fixed 256 pixels per model metre. The composed
+source uses 108 pixels per metre, which gives Tiger II a 1080-pixel-tall sprite
+sheet and establishes Full HD-class detail for subsequent vehicles. The output
+canvas keeps the natural aspect ratio required by the separated hull and turret
+rather than stretching every vehicle to 1920×1080. Large vehicles increase the
+square intermediate resolution automatically instead of being scaled down, so
+relative vehicle dimensions remain stable.
 
 ## Outputs
 

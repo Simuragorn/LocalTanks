@@ -54,10 +54,10 @@ $config = [ordered]@{
     outputRoot = $relativeOutput
     render = [ordered]@{
         resolution = 1536
-        intermediatePixelsPerMeter = 128
-        outputPixelsPerMeter = 36
-        paddingPixels = 8
-        gapPixels = 8
+        intermediatePixelsPerMeter = 256
+        outputPixelsPerMeter = 108
+        paddingPixels = 24
+        gapPixels = 24
         shadowless = $true
         saveBlend = $true
     }
