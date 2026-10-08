@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "id": "gun_20_k_45mm",
+  "displayName": "45 mm 20-K mod. 1932",
+  "reloadSeconds": 6.0,
+  "shellId": "br_240_45mm"
+}

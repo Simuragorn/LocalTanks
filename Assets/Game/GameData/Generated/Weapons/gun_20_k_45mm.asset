@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f6919c3bb522b84e993b4ddfa24016e, type: 3}
+  m_Name: gun_20_k_45mm
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponDefinition
+  id: gun_20_k_45mm
+  displayName: 45 mm 20-K mod. 1932
+  reloadSeconds: 6
+  shell: {fileID: 11400000, guid: e5547b33743a9ee4e853e3647ebb2a1a, type: 2}

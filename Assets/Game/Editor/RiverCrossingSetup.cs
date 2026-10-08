@@ -44,7 +44,8 @@ namespace LocalTanks.Editor
             "Assets/Game/Prefabs/Tanks/E100_Player.prefab",
             "Assets/Game/Prefabs/Tanks/T34_Player.prefab",
             "Assets/Game/Prefabs/Tanks/PzKpfwIV_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/BT2_Player.prefab"
+            "Assets/Game/Prefabs/Tanks/BT2_Player.prefab",
+            "Assets/Game/Prefabs/Tanks/MS1_Player.prefab"
         };
 
         [InitializeOnLoadMethod]
@@ -958,7 +959,7 @@ namespace LocalTanks.Editor
                 throw new InvalidOperationException("Build the combat test range before building River Crossing.");
             }
 
-            string[] tankIds = { "tiger_ii", "e_100", "t_34_76", "panzer_iv", "bt_2" };
+            string[] tankIds = { "tiger_ii", "e_100", "t_34_76", "panzer_iv", "bt_2", "ms_1" };
             TankPrefabBinding[] prefabBindings = tankIds.Select((tankId, index) => new TankPrefabBinding
             {
                 tankId = tankId,

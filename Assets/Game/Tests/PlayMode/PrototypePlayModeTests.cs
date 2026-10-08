@@ -43,14 +43,22 @@ namespace LocalTanks.Tests
             Assert.That(hullCollider.points.Length, Is.GreaterThanOrEqualTo(12));
             Assert.That(player.GetComponent<BoxCollider2D>(), Is.Null);
 
-            string[] targetNames = { "TigerII_Target", "E100_Target", "T34_Target", "PzKpfwIV_Target" };
-            foreach (string targetName in targetNames)
+            PlayerTankSelector selector = Object.FindAnyObjectByType<PlayerTankSelector>();
+            TestRangeTargetRespawner respawner = Object.FindAnyObjectByType<TestRangeTargetRespawner>();
+            Assert.That(selector, Is.Not.Null);
+            Assert.That(respawner, Is.Not.Null);
+            Assert.That(respawner.CurrentTargets.Length, Is.EqualTo(selector.AvailableTankCount));
+            Assert.That(respawner.CurrentTargets.Select(target =>
+                    target.GetComponent<TankHealth>().Definition.id).Distinct().Count(),
+                Is.EqualTo(selector.AvailableTankCount));
+            Assert.That(respawner.CurrentTargets.Any(target =>
+                target.GetComponent<TankHealth>().Definition.id == "ms_1"), Is.True);
+            foreach (GameObject target in respawner.CurrentTargets)
             {
-                GameObject target = GameObject.Find(targetName);
-                Assert.That(target, Is.Not.Null, targetName);
-                Assert.That(target.GetComponent<RotatingTankDisplay>(), Is.Not.Null, targetName);
-                Assert.That(target.GetComponent<TankHealthBar>(), Is.Not.Null, targetName);
-                Assert.That(target.GetComponent<PolygonCollider2D>().points.Length, Is.GreaterThanOrEqualTo(10), targetName);
+                Assert.That(target, Is.Not.Null);
+                Assert.That(target.GetComponent<RotatingTankDisplay>(), Is.Not.Null, target.name);
+                Assert.That(target.GetComponent<TankHealthBar>(), Is.Not.Null, target.name);
+                Assert.That(target.GetComponent<PolygonCollider2D>().points.Length, Is.GreaterThanOrEqualTo(10), target.name);
             }
         }
 

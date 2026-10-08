@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "ms_1",
+  "displayName": "MS-1 (45 mm modernization)",
+  "vehicleClass": "LightTank",
+  "maxHitPoints": 260,
+  "weaponId": "gun_20_k_45mm",
+  "mobility": {
+    "maxForwardSpeed": 1.45,
+    "maxReverseSpeed": 0.36,
+    "acceleration": 0.24,
+    "groundResistance": 1.55,
+    "braking": 1.9,
+    "hullTurnSpeed": 24.0,
+    "turretTurnSpeed": 20.0
+  },
+  "armor": {
+    "front": 16.0,
+    "left": 16.0,
+    "right": 16.0,
+    "rear": 16.0
+  },
+  "vision": {
+    "viewRange": 8.7,
+    "stationaryConcealment": 0.32,
+    "movementRevealPenalty": 0.09,
+    "firingRevealPenalty": 0.12,
+    "firingRevealDuration": 4.5,
+    "guaranteedDetectionRange": 1.4
+  }
+}

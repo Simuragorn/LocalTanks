@@ -24,6 +24,7 @@ namespace LocalTanks.Tests
             Assert.That(scenario.entries.Select(item => item.tankId).Distinct(),
                 Is.EquivalentTo(database.tanks.Select(item => item.id)));
             Assert.That(scenario.entries.Count(item => item.tankId == "bt_2"), Is.EqualTo(2));
+            Assert.That(scenario.entries.Count(item => item.tankId == "ms_1"), Is.EqualTo(2));
         }
 
         [Test]

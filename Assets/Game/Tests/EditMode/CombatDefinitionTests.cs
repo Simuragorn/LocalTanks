@@ -13,7 +13,7 @@ namespace LocalTanks.Tests
 
             Assert.That(definitions.Tanks.Select(item => item.id), Is.EquivalentTo(new[]
             {
-                "bt_2", "e_100", "panzer_iv", "t_34_76", "tiger_ii"
+                "bt_2", "e_100", "ms_1", "panzer_iv", "t_34_76", "tiger_ii"
             }));
             Assert.That(definitions.Weapons.Select(item => item.id), Does.Contain("kwk_43_l71"));
             Assert.That(definitions.Shells.Select(item => item.id), Does.Contain("pzgr_39_43"));
@@ -28,6 +28,7 @@ namespace LocalTanks.Tests
             TankDefinitionJson t34 = definitions.Tanks.Single(item => item.id == "t_34_76");
             TankDefinitionJson panzer = definitions.Tanks.Single(item => item.id == "panzer_iv");
             TankDefinitionJson bt2 = definitions.Tanks.Single(item => item.id == "bt_2");
+            TankDefinitionJson ms1 = definitions.Tanks.Single(item => item.id == "ms_1");
 
             Assert.That(bt2.mobility.maxForwardSpeed, Is.GreaterThan(panzer.mobility.maxForwardSpeed));
             Assert.That(bt2.mobility.acceleration, Is.GreaterThan(t34.mobility.acceleration));
@@ -42,6 +43,8 @@ namespace LocalTanks.Tests
             Assert.That(tiger.armor.front, Is.GreaterThan(panzer.armor.front));
             Assert.That(panzer.armor.front, Is.GreaterThan(t34.armor.front));
             Assert.That(t34.armor.front, Is.GreaterThan(bt2.armor.front));
+            Assert.That(ms1.armor.front, Is.GreaterThan(bt2.armor.front));
+            Assert.That(bt2.mobility.maxForwardSpeed, Is.GreaterThan(ms1.mobility.maxForwardSpeed));
             Assert.That(e100.vision.stationaryConcealment, Is.LessThan(tiger.vision.stationaryConcealment));
             Assert.That(tiger.vision.stationaryConcealment, Is.LessThan(t34.vision.stationaryConcealment));
             Assert.That(tiger.vision.stationaryConcealment, Is.LessThan(panzer.vision.stationaryConcealment));
@@ -50,7 +53,9 @@ namespace LocalTanks.Tests
             Assert.That(t34.vehicleClass, Is.EqualTo("MediumTank"));
             Assert.That(panzer.vehicleClass, Is.EqualTo("MediumTank"));
             Assert.That(bt2.vehicleClass, Is.EqualTo("LightTank"));
+            Assert.That(ms1.vehicleClass, Is.EqualTo("LightTank"));
             Assert.That(bt2.weaponId, Is.EqualTo("b_3_37mm"));
+            Assert.That(ms1.weaponId, Is.EqualTo("gun_20_k_45mm"));
         }
 
         [Test]

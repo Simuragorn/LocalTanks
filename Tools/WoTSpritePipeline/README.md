@@ -9,6 +9,10 @@ The personal Codex skill `render-wot-tank-sprite` in
 `C:\Users\kamidashi\.codex\skills\` documents and orchestrates the complete
 name-to-sprite workflow, validation gate, recovery rules and Git boundary.
 
+Before importing a vehicle, render mode removes Blender's factory-startup cube,
+camera and light. This is required for small vehicles: otherwise the default
+cube can appear as a large opaque rectangle around the separated tank layers.
+
 ## Local-only boundary
 
 World of Tanks packages, extracted files, Blender scenes, textures, renders and

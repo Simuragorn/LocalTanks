@@ -60,7 +60,16 @@ namespace LocalTanks.Editor
                 new Rect(12f, 16f, 122f, 261f), new Rect(156f, 31f, 74f, 189f),
                 new Vector2(0.5f, 0.75f), new Vector2(0.5f, 0.5f),
                 new Vector2(0.475f, 0.55f), 0.77f, 11.3f,
-                CreateBT2HullOutline())
+                CreateBT2HullOutline()),
+            new TankBuildSpec(
+                "MS1", "MS-1",
+                "Assets/Game/Art/Tanks/MS1/Source/MS-1_strip2.png",
+                "Assets/Game/GameData/Generated/Tanks/ms_1.asset",
+                "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
+                new Rect(24f, 24f, 192f, 476f), new Rect(240f, 117f, 120f, 289f),
+                new Vector2(0.5f, 0.6802735f), new Vector2(0.5f, 0.4236555f),
+                new Vector2(0.24f, 0.24f), 0.45f, 5.5f,
+                CreateMS1HullOutline())
         };
 
         [InitializeOnLoadMethod]
@@ -529,6 +538,21 @@ namespace LocalTanks.Editor
                 new Vector2(0.22f, -0.715f), new Vector2(-0.22f, -0.715f),
                 new Vector2(-0.28f, -0.67f), new Vector2(-0.30f, -0.54f),
                 new Vector2(-0.30f, 0.54f), new Vector2(-0.28f, 0.68f)
+            };
+        }
+
+        private static Vector2[] CreateMS1HullOutline()
+        {
+            return new[]
+            {
+                new Vector2(-0.20f, 0.57f), new Vector2(0.20f, 0.57f),
+                new Vector2(0.23f, 0.52f), new Vector2(0.23f, 0.22f),
+                new Vector2(0.22f, 0.02f), new Vector2(0.21f, -0.20f),
+                new Vector2(0.18f, -0.32f), new Vector2(0.10f, -0.36f),
+                new Vector2(0.10f, -0.56f), new Vector2(-0.10f, -0.56f),
+                new Vector2(-0.10f, -0.36f), new Vector2(-0.18f, -0.32f),
+                new Vector2(-0.21f, -0.20f), new Vector2(-0.22f, 0.02f),
+                new Vector2(-0.23f, 0.22f), new Vector2(-0.23f, 0.52f)
             };
         }
 

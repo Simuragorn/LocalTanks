@@ -15,6 +15,7 @@ namespace LocalTanks
 
         public GameObject CurrentTank => currentTank;
         public int CurrentTankIndex => currentTankIndex;
+        public int AvailableTankCount => tankPrefabs?.Length ?? 0;
         public bool DeveloperFastReloadEnabled => developerFastReload;
 
         public void Configure(

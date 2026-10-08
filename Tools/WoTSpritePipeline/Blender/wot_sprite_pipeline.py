@@ -133,6 +133,12 @@ def search_catalog(entries: list[dict], query: str) -> list[dict]:
     return [item for _, item in ranked[:50]]
 
 
+def clear_factory_scene() -> None:
+    """Remove Blender's startup cube, camera and light before vehicle import."""
+    for obj in list(bpy.data.objects):
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+
 def select_vehicle(module, vehicle: dict, args: argparse.Namespace) -> dict:
     scene = bpy.context.scene
     scene.wot_selected_tier = vehicle["tier"]
@@ -389,6 +395,7 @@ def main() -> None:
         return
 
     vehicle = find_vehicle(catalog, args)
+    clear_factory_scene()
     selected = select_vehicle(module, vehicle, args)
     root = bpy.data.objects.get(vehicle["id"])
     if root is None:
