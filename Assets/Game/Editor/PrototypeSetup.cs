@@ -21,8 +21,8 @@ namespace LocalTanks.Editor
                 "Assets/Game/Art/Tanks/TigerII/Source/Tiger-II_strip2.png",
                 "Assets/Game/GameData/Generated/Tanks/tiger_ii.asset",
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
-                new Rect(8f, 17f, 137f, 263f), new Rect(153f, 13f, 86f, 238f),
-                new Vector2(0.5f, 0.75f), new Vector2(0.78f, 0.73f), 1.30f, 69.8f,
+                new Rect(7f, 32f, 130f, 276f), new Rect(145f, 5f, 108f, 330f),
+                new Vector2(0.5f, 0.76f), new Vector2(0.76f, 0.76f), 1.9f, 69.8f,
                 CreateTigerHullOutline()),
             new TankBuildSpec(
                 "E100", "E-100",

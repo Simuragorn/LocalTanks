@@ -2,6 +2,16 @@
 
 Дата генерации: 2026-10-07. Инструмент: встроенный `image_gen`. Визуальный и композиционный эталон для всех запросов: `Assets/Game/Art/Tanks/BT2/Source/BT-2_strip2.png`.
 
+## Tiger II — точная переработка по референсу, 2026-10-08
+
+В новой версии нейросеть не разделяет и не перерисовывает видимые детали. Прозрачный танк получен отдельным проходом удаления фона, затем исходные пиксели башни, маски и полного ствола вырезаны единой маской. Для скрытой палубы использован только следующий служебный запрос:
+
+```text
+Edit the supplied transparent top-down Tiger II image. This is a narrowly scoped reconstruction pass, not a redesign. Remove only the complete turret assembly, mantlet, and gun barrel, and reconstruct the small hull-deck area that was hidden directly underneath the turret using the adjacent armor plates, camouflage colors, deck texture, and lighting. Keep the hull at exactly the same orientation, placement, scale, silhouette, proportions, color, tracks, engine deck, tools, grilles, hatches, and all other visible details. Keep the background genuinely transparent. Do not rotate, crop, resize, restyle, repaint, simplify, add labels, or invent a different tank. The result is only a donor image for the hidden hull patch; preserve everything outside that patch as closely as possible.
+```
+
+После этого корпус и башенная группа собраны детерминированно с одним общим масштабом; генеративное разделение деталей не применялось.
+
 ## Tiger II
 
 ```text
