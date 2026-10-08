@@ -273,7 +273,7 @@ namespace LocalTanks.Tests
             Assert.That(GameObject.Find("SouthWoodBridge"), Is.Not.Null);
             Assert.That(GameObject.Find("Farmhouse_27_27"), Is.Not.Null);
             Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(3));
-            Assert.That(agents.Length, Is.EqualTo(29));
+            Assert.That(agents.Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             foreach (NavigationAgent navigationAgent in agents)
             {
                 Assert.That(navigationAgent.HasPath || navigationAgent.DestinationReached, Is.True,
@@ -282,26 +282,26 @@ namespace LocalTanks.Tests
             Assert.That(Object.FindAnyObjectByType<TeamVisionSystem>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<BattleRoster>(), Is.Not.Null);
             Assert.That(Object.FindAnyObjectByType<BattleHudController>(), Is.Not.Null);
-            Assert.That(Object.FindObjectsByType<TeamMember>().Length, Is.EqualTo(30));
+            Assert.That(Object.FindObjectsByType<TeamMember>().Length, Is.EqualTo(BattleScenario.TeamSize * 2));
             Assert.That(Object.FindObjectsByType<TeamMember>().Count(member =>
                 member.Definition != null && member.Definition.id == "bt_2"), Is.EqualTo(2));
             BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
             Assert.That(director, Is.Not.Null);
-            Assert.That(director.TeamAAlive, Is.EqualTo(15));
-            Assert.That(director.TeamBAlive, Is.EqualTo(15));
-            Assert.That(Object.FindObjectsByType<CombatTankAI>().Length, Is.EqualTo(29));
+            Assert.That(director.TeamAAlive, Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(director.TeamBAlive, Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(Object.FindObjectsByType<CombatTankAI>().Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             Assert.That(Object.FindObjectsByType<ConcealmentZone>().Length, Is.GreaterThan(0));
             Assert.That(GameObject.Find("VisionBlockers").GetComponent<VisionBlocker>(), Is.Not.Null);
             BattleRoster roster = Object.FindAnyObjectByType<BattleRoster>();
             BattleHudController hud = Object.FindAnyObjectByType<BattleHudController>();
             yield return null;
-            Assert.That(roster.Allies.Count, Is.EqualTo(15));
-            Assert.That(roster.Enemies.Count, Is.EqualTo(15));
-            Assert.That(hud.AllyList.childCount, Is.EqualTo(15));
-            Assert.That(hud.EnemyList.childCount, Is.EqualTo(15));
+            Assert.That(roster.Allies.Count, Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(roster.Enemies.Count, Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(hud.AllyList.childCount, Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(hud.EnemyList.childCount, Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(roster.Allies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
             Assert.That(roster.Enemies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
-            Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(30));
+            Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(BattleScenario.TeamSize * 2));
             CaptureBase[] captureBases = Object.FindObjectsByType<CaptureBase>();
             Assert.That(captureBases.Length, Is.EqualTo(2));
             CaptureBase alliedBase = captureBases.Single(item => item.BaseId == "A");
@@ -387,7 +387,7 @@ namespace LocalTanks.Tests
 
             int moved = agents.Where((item, index) =>
                 item != null && Vector3.Distance(initialPositions[index], item.transform.position) > 0.01f).Count();
-            Assert.That(moved, Is.GreaterThanOrEqualTo(20), "most AI tanks should leave their initial slots");
+            Assert.That(moved, Is.GreaterThanOrEqualTo(9), "most AI tanks should leave their initial slots");
 
             CombatTankAI destroyed = agents.First(item => item != null && item.enabled);
             TankHealth health = destroyed.GetComponent<TankHealth>();

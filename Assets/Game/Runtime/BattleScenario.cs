@@ -27,7 +27,7 @@ namespace LocalTanks
         public TeamId team;
         public bool playerControlled;
         public string baseId;
-        [Range(0, 14)] public int spawnSlot;
+        [Range(0, BattleScenario.SpawnSlotCount - 1)] public int spawnSlot;
         public BattleLane lane;
         public CombatAiRole role;
         public Vector2Int[] routeCells;
@@ -35,6 +35,9 @@ namespace LocalTanks
 
     public sealed class BattleScenario : ScriptableObject
     {
+        public const int TeamSize = 7;
+        public const int SpawnSlotCount = 15;
+
         public string id;
         public string sceneId;
         public BattleScenarioEntry[] entries;
@@ -45,10 +48,10 @@ namespace LocalTanks
             BattleScenarioEntry[] roster = entries ?? Array.Empty<BattleScenarioEntry>();
             if (string.IsNullOrWhiteSpace(id)) errors.Add("Scenario id is empty.");
             if (string.IsNullOrWhiteSpace(sceneId)) errors.Add("Scenario sceneId is empty.");
-            if (roster.Count(item => item != null && item.team == TeamId.TeamA) != 15)
-                errors.Add("Scenario must contain exactly 15 Team A entries.");
-            if (roster.Count(item => item != null && item.team == TeamId.TeamB) != 15)
-                errors.Add("Scenario must contain exactly 15 Team B entries.");
+            if (roster.Count(item => item != null && item.team == TeamId.TeamA) != TeamSize)
+                errors.Add($"Scenario must contain exactly {TeamSize} Team A entries.");
+            if (roster.Count(item => item != null && item.team == TeamId.TeamB) != TeamSize)
+                errors.Add($"Scenario must contain exactly {TeamSize} Team B entries.");
             if (roster.Count(item => item != null && item.playerControlled) != 1)
                 errors.Add("Scenario must contain exactly one player-controlled entry.");
 
@@ -75,7 +78,7 @@ namespace LocalTanks
                 if (entry.team == TeamId.TeamA && entry.baseId != "A" ||
                     entry.team == TeamId.TeamB && entry.baseId != "B")
                     errors.Add($"Scenario entry '{entry.id}' uses the opposing base.");
-                if (entry.spawnSlot < 0 || entry.spawnSlot >= 15)
+                if (entry.spawnSlot < 0 || entry.spawnSlot >= SpawnSlotCount)
                     errors.Add($"Scenario entry '{entry.id}' has invalid spawn slot {entry.spawnSlot}.");
                 string spawnKey = $"{entry.baseId}:{entry.spawnSlot}";
                 if (!spawnKeys.Add(spawnKey))
@@ -89,8 +92,9 @@ namespace LocalTanks
                 foreach (BattleLane lane in Enum.GetValues(typeof(BattleLane)))
                 {
                     int count = roster.Count(item => item != null && item.team == team && item.lane == lane);
-                    if (count != 5)
-                        errors.Add($"{team} lane {lane} must contain exactly 5 entries, found {count}.");
+                    int expectedCount = lane == BattleLane.Center ? 3 : 2;
+                    if (count != expectedCount)
+                        errors.Add($"{team} lane {lane} must contain exactly {expectedCount} entries, found {count}.");
                 }
             }
 

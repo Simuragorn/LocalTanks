@@ -43,68 +43,12 @@ MonoBehaviour:
     - {x: 36, y: 9}
     - {x: 49, y: 10}
     - {x: 60, y: 19}
-  - id: a_south_pz4_1
-    tankId: panzer_iv
-    team: 1
-    playerControlled: 0
-    baseId: A
-    spawnSlot: 2
-    lane: 2
-    role: 1
-    routeCells:
-    - {x: 17, y: 16}
-    - {x: 17, y: 14}
-    - {x: 36, y: 9}
-    - {x: 49, y: 10}
-    - {x: 60, y: 19}
-  - id: a_south_pz4_2
-    tankId: panzer_iv
-    team: 1
-    playerControlled: 0
-    baseId: A
-    spawnSlot: 3
-    lane: 2
-    role: 1
-    routeCells:
-    - {x: 17, y: 16}
-    - {x: 17, y: 14}
-    - {x: 36, y: 9}
-    - {x: 49, y: 10}
-    - {x: 60, y: 19}
-  - id: a_south_tiger
-    tankId: tiger_ii
-    team: 1
-    playerControlled: 0
-    baseId: A
-    spawnSlot: 4
-    lane: 2
-    role: 0
-    routeCells:
-    - {x: 17, y: 16}
-    - {x: 17, y: 14}
-    - {x: 36, y: 9}
-    - {x: 49, y: 10}
-    - {x: 60, y: 19}
-  - id: a_center_e100_1
+  - id: a_center_e100
     tankId: e_100
     team: 1
     playerControlled: 0
     baseId: A
     spawnSlot: 5
-    lane: 1
-    role: 0
-    routeCells:
-    - {x: 17, y: 22}
-    - {x: 23, y: 22}
-    - {x: 36, y: 22}
-    - {x: 49, y: 22}
-    - {x: 60, y: 22}
-  - id: a_center_e100_2
-    tankId: e_100
-    team: 1
-    playerControlled: 0
-    baseId: A
-    spawnSlot: 6
     lane: 1
     role: 0
     routeCells:
@@ -127,22 +71,8 @@ MonoBehaviour:
     - {x: 36, y: 22}
     - {x: 49, y: 22}
     - {x: 60, y: 22}
-  - id: a_center_tiger
-    tankId: tiger_ii
-    team: 1
-    playerControlled: 0
-    baseId: A
-    spawnSlot: 8
-    lane: 1
-    role: 0
-    routeCells:
-    - {x: 17, y: 22}
-    - {x: 23, y: 22}
-    - {x: 36, y: 22}
-    - {x: 49, y: 22}
-    - {x: 60, y: 22}
-  - id: a_center_t34
-    tankId: t_34_76
+  - id: a_center_pz4
+    tankId: panzer_iv
     team: 1
     playerControlled: 0
     baseId: A
@@ -163,48 +93,6 @@ MonoBehaviour:
     spawnSlot: 10
     lane: 0
     role: 2
-    routeCells:
-    - {x: 17, y: 28}
-    - {x: 18, y: 31}
-    - {x: 36, y: 35}
-    - {x: 50, y: 33}
-    - {x: 60, y: 25}
-  - id: a_north_t34_2
-    tankId: t_34_76
-    team: 1
-    playerControlled: 0
-    baseId: A
-    spawnSlot: 11
-    lane: 0
-    role: 2
-    routeCells:
-    - {x: 17, y: 28}
-    - {x: 18, y: 31}
-    - {x: 36, y: 35}
-    - {x: 50, y: 33}
-    - {x: 60, y: 25}
-  - id: a_north_pz4_1
-    tankId: panzer_iv
-    team: 1
-    playerControlled: 0
-    baseId: A
-    spawnSlot: 12
-    lane: 0
-    role: 1
-    routeCells:
-    - {x: 17, y: 28}
-    - {x: 18, y: 31}
-    - {x: 36, y: 35}
-    - {x: 50, y: 33}
-    - {x: 60, y: 25}
-  - id: a_north_pz4_2
-    tankId: panzer_iv
-    team: 1
-    playerControlled: 0
-    baseId: A
-    spawnSlot: 13
-    lane: 0
-    role: 1
     routeCells:
     - {x: 17, y: 28}
     - {x: 18, y: 31}
@@ -253,68 +141,12 @@ MonoBehaviour:
     - {x: 35, y: 9}
     - {x: 22, y: 10}
     - {x: 11, y: 19}
-  - id: b_south_pz4_1
-    tankId: panzer_iv
-    team: 2
-    playerControlled: 0
-    baseId: B
-    spawnSlot: 2
-    lane: 2
-    role: 1
-    routeCells:
-    - {x: 54, y: 16}
-    - {x: 54, y: 14}
-    - {x: 35, y: 9}
-    - {x: 22, y: 10}
-    - {x: 11, y: 19}
-  - id: b_south_pz4_2
-    tankId: panzer_iv
-    team: 2
-    playerControlled: 0
-    baseId: B
-    spawnSlot: 3
-    lane: 2
-    role: 1
-    routeCells:
-    - {x: 54, y: 16}
-    - {x: 54, y: 14}
-    - {x: 35, y: 9}
-    - {x: 22, y: 10}
-    - {x: 11, y: 19}
-  - id: b_south_tiger
-    tankId: tiger_ii
-    team: 2
-    playerControlled: 0
-    baseId: B
-    spawnSlot: 4
-    lane: 2
-    role: 0
-    routeCells:
-    - {x: 54, y: 16}
-    - {x: 54, y: 14}
-    - {x: 35, y: 9}
-    - {x: 22, y: 10}
-    - {x: 11, y: 19}
-  - id: b_center_e100_1
+  - id: b_center_e100
     tankId: e_100
     team: 2
     playerControlled: 0
     baseId: B
     spawnSlot: 5
-    lane: 1
-    role: 0
-    routeCells:
-    - {x: 54, y: 22}
-    - {x: 48, y: 22}
-    - {x: 35, y: 22}
-    - {x: 22, y: 22}
-    - {x: 11, y: 22}
-  - id: b_center_e100_2
-    tankId: e_100
-    team: 2
-    playerControlled: 0
-    baseId: B
-    spawnSlot: 6
     lane: 1
     role: 0
     routeCells:
@@ -337,22 +169,8 @@ MonoBehaviour:
     - {x: 35, y: 22}
     - {x: 22, y: 22}
     - {x: 11, y: 22}
-  - id: b_center_tiger_2
-    tankId: tiger_ii
-    team: 2
-    playerControlled: 0
-    baseId: B
-    spawnSlot: 8
-    lane: 1
-    role: 0
-    routeCells:
-    - {x: 54, y: 22}
-    - {x: 48, y: 22}
-    - {x: 35, y: 22}
-    - {x: 22, y: 22}
-    - {x: 11, y: 22}
-  - id: b_center_t34
-    tankId: t_34_76
+  - id: b_center_pz4
+    tankId: panzer_iv
     team: 2
     playerControlled: 0
     baseId: B
@@ -373,48 +191,6 @@ MonoBehaviour:
     spawnSlot: 10
     lane: 0
     role: 2
-    routeCells:
-    - {x: 54, y: 28}
-    - {x: 53, y: 31}
-    - {x: 35, y: 35}
-    - {x: 21, y: 33}
-    - {x: 11, y: 25}
-  - id: b_north_t34_2
-    tankId: t_34_76
-    team: 2
-    playerControlled: 0
-    baseId: B
-    spawnSlot: 11
-    lane: 0
-    role: 2
-    routeCells:
-    - {x: 54, y: 28}
-    - {x: 53, y: 31}
-    - {x: 35, y: 35}
-    - {x: 21, y: 33}
-    - {x: 11, y: 25}
-  - id: b_north_pz4_1
-    tankId: panzer_iv
-    team: 2
-    playerControlled: 0
-    baseId: B
-    spawnSlot: 12
-    lane: 0
-    role: 1
-    routeCells:
-    - {x: 54, y: 28}
-    - {x: 53, y: 31}
-    - {x: 35, y: 35}
-    - {x: 21, y: 33}
-    - {x: 11, y: 25}
-  - id: b_north_pz4_2
-    tankId: panzer_iv
-    team: 2
-    playerControlled: 0
-    baseId: B
-    spawnSlot: 13
-    lane: 0
-    role: 1
     routeCells:
     - {x: 54, y: 28}
     - {x: 53, y: 31}

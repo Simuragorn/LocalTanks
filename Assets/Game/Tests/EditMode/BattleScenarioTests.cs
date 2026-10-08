@@ -9,15 +9,15 @@ namespace LocalTanks.Tests
     public sealed class BattleScenarioTests
     {
         [Test]
-        public void RiverCrossingScenario_HasValidSymmetricFifteenTankTeams()
+        public void RiverCrossingScenario_HasValidSymmetricSevenTankTeams()
         {
             BattleScenario scenario = BattleScenarioImporter.Reimport();
             CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(
                 CombatDefinitionImporter.DatabasePath);
 
             Assert.That(scenario.Validate(database), Is.Empty);
-            Assert.That(scenario.entries.Count(item => item.team == TeamId.TeamA), Is.EqualTo(15));
-            Assert.That(scenario.entries.Count(item => item.team == TeamId.TeamB), Is.EqualTo(15));
+            Assert.That(scenario.entries.Count(item => item.team == TeamId.TeamA), Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(scenario.entries.Count(item => item.team == TeamId.TeamB), Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(scenario.entries.Count(item => item.playerControlled), Is.EqualTo(1));
             Assert.That(scenario.entries.GroupBy(item => $"{item.baseId}:{item.spawnSlot}")
                 .All(group => group.Count() == 1), Is.True);
@@ -36,14 +36,15 @@ namespace LocalTanks.Tests
             BattleScenario scenario = ScriptableObject.CreateInstance<BattleScenario>();
             scenario.id = "test";
             scenario.sceneId = "test_scene";
-            scenario.entries = Enumerable.Range(0, 30).Select(index => new BattleScenarioEntry
+            int totalTankCount = BattleScenario.TeamSize * 2;
+            scenario.entries = Enumerable.Range(0, totalTankCount).Select(index => new BattleScenarioEntry
             {
                 id = $"tank_{index}",
-                tankId = index == 29 ? "missing" : "known",
-                team = index < 15 ? TeamId.TeamA : TeamId.TeamB,
+                tankId = index == totalTankCount - 1 ? "missing" : "known",
+                team = index < BattleScenario.TeamSize ? TeamId.TeamA : TeamId.TeamB,
                 playerControlled = index == 0,
-                baseId = index < 15 ? "A" : "B",
-                spawnSlot = index == 1 ? 0 : index % 15,
+                baseId = index < BattleScenario.TeamSize ? "A" : "B",
+                spawnSlot = index == 1 ? 0 : index % BattleScenario.SpawnSlotCount,
                 lane = (BattleLane)(index % 3),
                 role = CombatAiRole.Support,
                 routeCells = new[] { Vector2Int.zero, Vector2Int.one }
