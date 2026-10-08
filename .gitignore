@@ -107,3 +107,11 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Local-only WoT reference pipeline. Source packages and every derived asset stay
+# outside version control; only the reproducible tooling is committed.
+/LocalOnly/
+/Assets/LocalOnly/
+/Tools/WoTSpritePipeline/ThirdParty/
+/Tools/WoTSpritePipeline/Local/
+/Tools/WoTSpritePipeline/config.local.json
