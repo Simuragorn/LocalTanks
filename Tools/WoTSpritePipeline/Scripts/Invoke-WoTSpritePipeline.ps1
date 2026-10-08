@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Probe', 'Render')]
+    [ValidateSet('Probe', 'Search', 'Render')]
     [string]$Mode = 'Probe',
+    [string]$Query = '',
     [string]$VehicleId = '',
     [string]$Nation = '',
     [string]$Tier = '',
@@ -37,6 +38,7 @@ $arguments = @(
 )
 
 if ($VehicleId) { $arguments += @('--vehicle-id', $VehicleId) }
+if ($Query) { $arguments += @('--query', $Query) }
 if ($Nation) { $arguments += @('--nation', $Nation) }
 if ($Tier) { $arguments += @('--tier', $Tier) }
 if ($VehicleType) { $arguments += @('--vehicle-type', $VehicleType) }

@@ -18,8 +18,9 @@ from mathutils import Vector
 def arguments() -> argparse.Namespace:
     raw = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=("probe", "render"), required=True)
+    parser.add_argument("--mode", choices=("probe", "search", "render"), required=True)
     parser.add_argument("--config", required=True)
+    parser.add_argument("--query", default="")
     parser.add_argument("--vehicle-id", default="")
     parser.add_argument("--nation", default="")
     parser.add_argument("--tier", default="")
@@ -101,6 +102,35 @@ def find_vehicle(entries: list[dict], args: argparse.Namespace) -> dict:
         candidates = ", ".join(f"{m['nation']}/{m['tier']}/{m['id']}" for m in matches)
         raise RuntimeError(f"Expected one vehicle match, found {len(matches)}: {candidates}")
     return matches[0]
+
+
+def search_catalog(entries: list[dict], query: str) -> list[dict]:
+    normalized_query = "".join(character.lower() if character.isalnum() else " " for character in query)
+    tokens = [token for token in normalized_query.split() if token]
+    if not tokens:
+        raise RuntimeError("Search mode requires a non-empty --query")
+
+    ranked = []
+    for item in entries:
+        searchable = " ".join((item["id"], item["displayName"], item["nation"], item["type"]))
+        normalized = "".join(character.lower() if character.isalnum() else " " for character in searchable)
+        if not all(token in normalized for token in tokens):
+            continue
+        compact_query = "".join(tokens)
+        compact_id = "".join(character.lower() for character in item["id"] if character.isalnum())
+        compact_name = "".join(character.lower() for character in item["displayName"] if character.isalnum())
+        score = 0
+        if compact_query == compact_name:
+            score += 100
+        if compact_query == compact_id:
+            score += 90
+        if compact_id.endswith(compact_query):
+            score += 30
+        if not item["locked"]:
+            score += 10
+        ranked.append((score, item))
+    ranked.sort(key=lambda pair: (-pair[0], pair[1]["nation"], pair[1]["tier"], pair[1]["id"]))
+    return [item for _, item in ranked[:50]]
 
 
 def select_vehicle(module, vehicle: dict, args: argparse.Namespace) -> dict:
@@ -344,6 +374,14 @@ def main() -> None:
         report_path = local_root / "Reports" / "environment.json"
         write_json(report_path, base_report)
         print(f"WOT_PIPELINE_PROBE_OK {report_path}")
+        return
+
+    if args.mode == "search":
+        matches = search_catalog(catalog, args.query)
+        report_path = local_root / "Reports" / "search.json"
+        write_json(report_path, {"query": args.query, "matchCount": len(matches), "matches": matches})
+        print(json.dumps(matches, indent=2, ensure_ascii=False))
+        print(f"WOT_PIPELINE_SEARCH_OK {report_path}")
         return
 
     vehicle = find_vehicle(catalog, args)

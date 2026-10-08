@@ -5,6 +5,10 @@ and produces the two transparent layers used by LocalTanks: hull/chassis and
 turret/gun. Both layers are rendered by the same orthographic camera at the same
 scale. The final `_strip2.png` places the hull on the left and turret on the right.
 
+The personal Codex skill `render-wot-tank-sprite` in
+`C:\Users\kamidashi\.codex\skills\` documents and orchestrates the complete
+name-to-sprite workflow, validation gate, recovery rules and Git boundary.
+
 ## Local-only boundary
 
 World of Tanks packages, extracted files, Blender scenes, textures, renders and
@@ -31,6 +35,13 @@ Environment and vehicle-catalog check:
 
 ```powershell
 & .\Tools\WoTSpritePipeline\Scripts\Invoke-WoTSpritePipeline.ps1 -Mode Probe
+```
+
+Find the internal vehicle ID from an ordinary name:
+
+```powershell
+& .\Tools\WoTSpritePipeline\Scripts\Invoke-WoTSpritePipeline.ps1 `
+  -Mode Search -Query "Tiger II"
 ```
 
 Render a vehicle to local transparent PNG files:
