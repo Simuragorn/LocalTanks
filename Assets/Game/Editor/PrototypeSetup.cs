@@ -18,7 +18,7 @@ namespace LocalTanks.Editor
         {
             new TankBuildSpec(
                 "TigerII", "Tiger II",
-                "Assets/Game/Art/Tanks/TigerII/Source/Tiger-II_strip2.png",
+                "Assets/LocalOnly/WoTGenerated/G16_PzVIB_Tiger_II/G16_PzVIB_Tiger_II_strip2.png",
                 "Assets/Game/GameData/Generated/Tanks/tiger_ii.asset",
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
                 new Rect(24f, 139f, 419f, 802f), new Rect(467f, 24f, 278f, 1031f),
@@ -27,7 +27,7 @@ namespace LocalTanks.Editor
                 CreateTigerHullOutline()),
             new TankBuildSpec(
                 "MS1", "MS-1",
-                "Assets/Game/Art/Tanks/MS1/Source/MS-1_strip2.png",
+                "Assets/LocalOnly/WoTGenerated/R11_MS-1/R11_MS-1_strip2.png",
                 "Assets/Game/GameData/Generated/Tanks/ms_1.asset",
                 "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
                 new Rect(24f, 24f, 192f, 476f), new Rect(240f, 117f, 120f, 289f),
@@ -36,7 +36,7 @@ namespace LocalTanks.Editor
                 CreateMS1HullOutline()),
             new TankBuildSpec(
                 "Leichttraktor", "Leichttraktor",
-                "Assets/Game/Art/Tanks/Leichttraktor/Source/Leichttraktor_strip2.png",
+                "Assets/LocalOnly/WoTGenerated/G12_Ltraktor/G12_Ltraktor_strip2.png",
                 "Assets/Game/GameData/Generated/Tanks/leichttraktor.asset",
                 "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab",
                 new Rect(24f, 24f, 229f, 462f), new Rect(277f, 117f, 158f, 275f),

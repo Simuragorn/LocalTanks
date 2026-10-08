@@ -8,13 +8,25 @@ namespace LocalTanks.Tests
     public sealed class TankPrototypeTests
     {
         [Test]
+        public void TankArt_UsesOnlyCanonicalWoTGeneratedRoot()
+        {
+            Assert.That(AssetDatabase.IsValidFolder("Assets/Game/Art/Tanks"), Is.False);
+            Assert.That(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/LocalOnly/WoTGenerated/G16_PzVIB_Tiger_II/G16_PzVIB_Tiger_II_strip2.png"), Is.Not.Null);
+            Assert.That(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/LocalOnly/WoTGenerated/R11_MS-1/R11_MS-1_strip2.png"), Is.Not.Null);
+            Assert.That(AssetDatabase.LoadAssetAtPath<Texture2D>(
+                "Assets/LocalOnly/WoTGenerated/G12_Ltraktor/G12_Ltraktor_strip2.png"), Is.Not.Null);
+        }
+
+        [Test]
         public void TigerIIPrefab_UsesProjectedTurretRingOnBothLayers()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab");
             Transform turretPivot = prefab.transform.Find("TurretPivot");
             Sprite turretSprite = AssetDatabase
-                .LoadAllAssetsAtPath("Assets/Game/Art/Tanks/TigerII/Source/Tiger-II_strip2.png")
+                .LoadAllAssetsAtPath("Assets/LocalOnly/WoTGenerated/G16_PzVIB_Tiger_II/G16_PzVIB_Tiger_II_strip2.png")
                 .OfType<Sprite>()
                 .Single(sprite => sprite.name == "TigerII_Turret");
             Vector2 normalizedTurretPivot = new Vector2(
@@ -36,7 +48,7 @@ namespace LocalTanks.Tests
             Assert.That(prefab, Is.Not.Null);
             Transform turretPivot = prefab.transform.Find("TurretPivot");
             Sprite turretSprite = AssetDatabase
-                .LoadAllAssetsAtPath("Assets/Game/Art/Tanks/MS1/Source/MS-1_strip2.png")
+                .LoadAllAssetsAtPath("Assets/LocalOnly/WoTGenerated/R11_MS-1/R11_MS-1_strip2.png")
                 .OfType<Sprite>()
                 .Single(sprite => sprite.name == "MS1_Turret");
             Vector2 normalizedTurretPivot = new Vector2(
@@ -84,7 +96,7 @@ namespace LocalTanks.Tests
             Assert.That(prefab, Is.Not.Null);
             Transform turretPivot = prefab.transform.Find("TurretPivot");
             Sprite turretSprite = AssetDatabase
-                .LoadAllAssetsAtPath("Assets/Game/Art/Tanks/Leichttraktor/Source/Leichttraktor_strip2.png")
+                .LoadAllAssetsAtPath("Assets/LocalOnly/WoTGenerated/G12_Ltraktor/G12_Ltraktor_strip2.png")
                 .OfType<Sprite>()
                 .Single(sprite => sprite.name == "Leichttraktor_Turret");
             Vector2 normalizedTurretPivot = new Vector2(

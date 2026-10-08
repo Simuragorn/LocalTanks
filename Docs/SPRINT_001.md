@@ -32,13 +32,13 @@
 
 `C:\UnityProjects\Tanks_Pack\Tiger-II_strip2.png`
 
-Целевой файл внутри проекта:
+Актуальный канонический файл после ADR-026:
 
-`Assets/Game/Art/Tanks/TigerII/Source/Tiger-II_strip2.png`
+`Assets/LocalOnly/WoTGenerated/G16_PzVIB_Tiger_II/G16_PzVIB_Tiger_II_strip2.png`
 
 Требования:
 
-- скопировать исходник, не изменяя оригинал;
+- не создавать отдельную игровую копию;
 - импортировать как Sprite (2D and UI), Sprite Mode `Multiple`;
 - сохранить прозрачность;
 - использовать исходный размер 240×290;

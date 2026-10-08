@@ -92,6 +92,8 @@ JSON является источником истины. `CombatDefinitionImport
 
 ## Воспроизводимость Unity-ассетов
 
+Единственный источник графики техники — `Assets/LocalOnly/WoTGenerated/<vehicle-id>`. В нём рядом хранятся финальный `_strip2.png`, layout, manifest и диагностические изображения. Unity импортирует и нарезает этот спрайт на месте; отдельные копии в `Assets/Game/Art/Tanks` запрещены.
+
 `PrototypeSetup.BuildAll` доступен через меню `Local Tanks > Build Sprint 002 Prototype`. Инструмент через Unity Editor API:
 
 1. настраивает и нарезает исходные текстуры Tiger II, MS-1 и Leichttraktor;

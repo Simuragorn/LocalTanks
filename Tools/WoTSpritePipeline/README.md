@@ -13,12 +13,14 @@ Before importing a vehicle, render mode removes Blender's factory-startup cube,
 camera and light. This is required for small vehicles: otherwise the default
 cube can appear as a large opaque rectangle around the separated tank layers.
 
-## Local-only boundary
+## Canonical vehicle-art location
 
 World of Tanks packages, extracted files, Blender scenes, textures, renders and
 derived sprites are deliberately ignored by Git. They live under `Local/` and
-`Assets/LocalOnly/`. Do not move generated assets into a tracked folder and do
-not publish them without permission from the rights holder.
+`Assets/LocalOnly/`. `Assets/LocalOnly/WoTGenerated/<vehicle id>` is the only
+vehicle-art source used by Unity: gameplay prefabs reference its final sprite
+directly. Do not copy generated sprites into `Assets/Game/Art/Tanks` or another
+folder, and do not publish them without permission from the rights holder.
 
 ## First-time setup
 
@@ -92,5 +94,5 @@ otherwise use a stale camera matrix and produce coordinates that are inside both
 sprites but do not coincide with the visible turret ring.
 
 The pipeline intentionally stops short of registering a generated sprite in
-game data. That integration will be a separate, explicit step so local derived
-assets cannot accidentally enter a commit.
+game data. The integration step references this canonical output in place so
+local derived assets cannot accidentally enter a commit or diverge into copies.
