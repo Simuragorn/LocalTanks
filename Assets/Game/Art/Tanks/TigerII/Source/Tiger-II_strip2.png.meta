@@ -121,10 +121,10 @@ TextureImporter:
       name: TigerII_Hull
       rect:
         serializedVersion: 2
-        x: 11
-        y: 32
-        width: 130
-        height: 276
+        x: 8
+        y: 46
+        width: 140
+        height: 268
       alignment: 9
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -143,12 +143,12 @@ TextureImporter:
       name: TigerII_Turret
       rect:
         serializedVersion: 2
-        x: 149
-        y: 7
-        width: 100
-        height: 326
+        x: 156
+        y: 8
+        width: 93
+        height: 344
       alignment: 9
-      pivot: {x: 0.5, y: 0.76}
+      pivot: {x: 0.5060606, y: 0.5677931}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
