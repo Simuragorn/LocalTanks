@@ -82,6 +82,11 @@ layers. Unity keeps the hull sprite centred for collider alignment and moves its
 `TurretPivot` child to `hull.turretMount`; using the hull centre unconditionally
 causes off-centre turrets to orbit when they rotate.
 
+The Blender view layer is updated explicitly after the orthographic camera is
+configured and before the joint is projected. `world_to_camera_view` may
+otherwise use a stale camera matrix and produce coordinates that are inside both
+sprites but do not coincide with the visible turret ring.
+
 The pipeline intentionally stops short of registering a generated sprite in
 game data. That integration will be a separate, explicit step so local derived
 assets cannot accidentally enter a commit.

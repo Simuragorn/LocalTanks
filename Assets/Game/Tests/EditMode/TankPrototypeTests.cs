@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -7,15 +8,24 @@ namespace LocalTanks.Tests
     public sealed class TankPrototypeTests
     {
         [Test]
-        public void TigerIIPrefab_UsesProjectedTurretRingOnHull()
+        public void TigerIIPrefab_UsesProjectedTurretRingOnBothLayers()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab");
             Transform turretPivot = prefab.transform.Find("TurretPivot");
+            Sprite turretSprite = AssetDatabase
+                .LoadAllAssetsAtPath("Assets/Game/Art/Tanks/TigerII/Source/Tiger-II_strip2.png")
+                .OfType<Sprite>()
+                .Single(sprite => sprite.name == "TigerII_Turret");
+            Vector2 normalizedTurretPivot = new Vector2(
+                turretSprite.pivot.x / turretSprite.rect.width,
+                turretSprite.pivot.y / turretSprite.rect.height);
 
             Assert.That(turretPivot, Is.Not.Null);
-            Assert.That(turretPivot.localPosition.x, Is.EqualTo(0f).Within(0.002f));
-            Assert.That(turretPivot.localPosition.y, Is.EqualTo(0.532f).Within(0.002f));
+            Assert.That(turretPivot.localPosition.x, Is.EqualTo(0.005f).Within(0.002f));
+            Assert.That(turretPivot.localPosition.y, Is.EqualTo(0.019f).Within(0.002f));
+            Assert.That(normalizedTurretPivot.x, Is.EqualTo(0.49857f).Within(0.002f));
+            Assert.That(normalizedTurretPivot.y, Is.EqualTo(0.77531f).Within(0.002f));
         }
 
         [Test]

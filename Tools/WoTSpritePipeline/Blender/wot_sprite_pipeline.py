@@ -296,6 +296,10 @@ def render_layers(root, render_root: Path, config: dict) -> dict:
     # prefab builder. Match that convention so generated sprites are drop-in.
     camera.rotation_euler = (0.0, 0.0, math.pi)
     scene.camera = camera
+    # world_to_camera_view reads the evaluated camera matrix. Newly assigned
+    # transforms are not guaranteed to be visible there until the view layer
+    # has been updated explicitly.
+    bpy.context.view_layer.update()
 
     parts = part_roots(root)
     turret_root = parts.get("Turret")

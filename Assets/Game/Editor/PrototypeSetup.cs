@@ -22,7 +22,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/GameData/Generated/Tanks/tiger_ii.asset",
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
                 new Rect(24f, 139f, 419f, 802f), new Rect(467f, 24f, 278f, 1031f),
-                new Vector2(0.5060606f, 0.5680255f), new Vector2(0.5f, 0.2238099f),
+                new Vector2(0.4985709f, 0.7753074f), new Vector2(0.4950269f, 0.4900504f),
                 new Vector2(0.24f, 0.24f), 1.41f, 69.8f,
                 CreateTigerHullOutline()),
             new TankBuildSpec(
