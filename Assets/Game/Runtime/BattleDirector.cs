@@ -46,6 +46,7 @@ namespace LocalTanks
         public TacticalMapDescriptor TacticalMap => tacticalMap != null ? tacticalMap.descriptor : null;
         public BattleStrategicPlanner StrategicPlanner { get; private set; }
         public BotStrategicCoordinator StrategicCoordinator { get; private set; }
+        public BattleDiagnosticsOverlay DiagnosticsOverlay { get; private set; }
         public BattleScenario Scenario => scenario;
         public CombatDatabase CombatDatabase => combatDatabase;
         public NavigationMap NavigationMap => navigationMap;
@@ -118,6 +119,9 @@ namespace LocalTanks
             StrategicCoordinator = GetComponent<BotStrategicCoordinator>();
             if (StrategicCoordinator == null) StrategicCoordinator = gameObject.AddComponent<BotStrategicCoordinator>();
             StrategicCoordinator.Configure(this, StrategicPlanner);
+            DiagnosticsOverlay = GetComponent<BattleDiagnosticsOverlay>();
+            if (DiagnosticsOverlay == null) DiagnosticsOverlay = gameObject.AddComponent<BattleDiagnosticsOverlay>();
+            DiagnosticsOverlay.Configure(this);
 
             LivingCountsChanged?.Invoke(TeamId.Neutral, TeamAAlive, TeamBAlive);
         }

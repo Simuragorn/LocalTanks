@@ -1,0 +1,33 @@
+using System.Linq;
+using NUnit.Framework;
+
+namespace LocalTanks.Tests
+{
+    public sealed class GameCommandRegistryTests
+    {
+        [Test]
+        public void Registry_HasUniqueIdsAndRequiredDiagnosticsCommands()
+        {
+            GameCommandInfo[] commands = GameCommandRegistry.Commands;
+
+            Assert.That(commands, Is.Not.Empty);
+            Assert.That(commands.Select(item => item.id).Distinct().Count(), Is.EqualTo(commands.Length));
+            Assert.That(commands, Has.All.Matches<GameCommandInfo>(item =>
+                !string.IsNullOrWhiteSpace(item.binding) && !string.IsNullOrWhiteSpace(item.description)));
+            Assert.That(commands.Single(item => item.id == "help").binding, Is.EqualTo("F1"));
+            Assert.That(commands.Single(item => item.id == "map_analysis").binding, Is.EqualTo("F6"));
+            Assert.That(commands.Single(item => item.id == "bot_selection").binding, Does.Contain("Tab"));
+        }
+
+        [Test]
+        public void Commands_ReturnsACopy()
+        {
+            GameCommandInfo[] first = GameCommandRegistry.Commands;
+            GameCommandInfo[] second = GameCommandRegistry.Commands;
+
+            Assert.That(first, Is.Not.SameAs(second));
+            first[0] = null;
+            Assert.That(GameCommandRegistry.Commands[0], Is.Not.Null);
+        }
+    }
+}

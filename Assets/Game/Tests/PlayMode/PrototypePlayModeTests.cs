@@ -328,6 +328,9 @@ namespace LocalTanks.Tests
             Assert.That(director.StrategicPlanner.TeamBPlan.assignments.Length,
                 Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(director.StrategicCoordinator, Is.Not.Null);
+            Assert.That(director.DiagnosticsOverlay, Is.Not.Null);
+            Assert.That(director.DiagnosticsOverlay.HelpVisible, Is.False);
+            Assert.That(director.DiagnosticsOverlay.MapAnalysisVisible, Is.False);
             Assert.That(director.StrategicCoordinator.Brains.Count,
                 Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             Assert.That(director.StrategicCoordinator.Brains,
@@ -335,6 +338,15 @@ namespace LocalTanks.Tests
                     brain.CurrentSnapshot != null && brain.CurrentDecision != null &&
                     brain.RequestState == BotStrategicRequestState.Fallback));
             Assert.That(Object.FindObjectsByType<CombatTankAI>().Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
+            CombatAiDebugOverlay aiOverlay = Object.FindAnyObjectByType<CombatAiDebugOverlay>();
+            Assert.That(aiOverlay, Is.Not.Null);
+            aiOverlay.SetVisible(true);
+            CombatTankAI firstSelected = aiOverlay.Selected;
+            Assert.That(firstSelected, Is.Not.Null);
+            aiOverlay.SelectRelativeBot(1);
+            Assert.That(aiOverlay.Selected, Is.Not.Null.And.Not.SameAs(firstSelected));
+            aiOverlay.SelectRelativeBot(-1);
+            Assert.That(aiOverlay.Selected, Is.SameAs(firstSelected));
             BotIdentityComponent[] identities = Object.FindObjectsByType<BotIdentityComponent>();
             Assert.That(identities.Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             Assert.That(identities.Select(item => item.Identity.nickname)
