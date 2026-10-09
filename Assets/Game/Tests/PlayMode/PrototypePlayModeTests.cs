@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
+using UnityEngine.UIElements;
 
 namespace LocalTanks.Tests
 {
@@ -324,6 +325,18 @@ namespace LocalTanks.Tests
             Assert.That(hud.EnemyList.childCount, Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(roster.Allies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
             Assert.That(roster.Enemies, Has.All.Matches<BattleRosterEntry>(entry => entry.ClassIcon != null));
+            VisualElement[] rosterRows = hud.AllyList.Children()
+                .Concat(hud.EnemyList.Children())
+                .ToArray();
+            Assert.That(rosterRows, Has.All.Matches<VisualElement>(row =>
+                row.Q<Image>(className: "class-icon")?.sprite != null));
+            Assert.That(rosterRows, Has.All.Matches<VisualElement>(row =>
+                row.Q<Label>(className: "tank-name")?.text.Length <= BattleHudController.MaximumTankNameLength));
+            Label truncatedName = rosterRows
+                .Select(row => row.Q<Label>(className: "tank-name"))
+                .First(label => label.tooltip.StartsWith("Leichttraktor"));
+            Assert.That(truncatedName.text, Does.EndWith("…"));
+            Assert.That(truncatedName.tooltip, Does.StartWith("Leichttraktor"));
             Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(BattleScenario.TeamSize * 2));
             CaptureBase[] captureBases = Object.FindObjectsByType<CaptureBase>();
             Assert.That(captureBases.Length, Is.EqualTo(2));

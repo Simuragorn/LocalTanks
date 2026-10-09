@@ -8,6 +8,18 @@ namespace LocalTanks.Tests
     public sealed class TankPrototypeTests
     {
         [Test]
+        public void BattleHudTankName_UsesFixedLimitAndEllipsis()
+        {
+            const string shortName = "Tiger II";
+            const string longName = "Leichttraktor (Rheinmetall prototype)";
+
+            Assert.That(BattleHudController.FormatTankName(shortName), Is.EqualTo(shortName));
+            string shortened = BattleHudController.FormatTankName(longName);
+            Assert.That(shortened.Length, Is.EqualTo(BattleHudController.MaximumTankNameLength));
+            Assert.That(shortened, Does.EndWith("…"));
+        }
+
+        [Test]
         public void TankArt_UsesOnlyCanonicalWoTGeneratedRoot()
         {
             Assert.That(AssetDatabase.IsValidFolder("Assets/Game/Art/Tanks"), Is.False);

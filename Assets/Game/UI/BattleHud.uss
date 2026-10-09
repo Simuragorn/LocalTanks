@@ -86,13 +86,18 @@
 
 .enemy-row { justify-content: flex-end; }
 .tank-icon { width: 34px; height: 34px; margin-left: 4px; margin-right: 4px; }
-.class-icon { width: 20px; height: 20px; margin-left: 2px; margin-right: 2px; }
-.tank-data { flex-grow: 1; }
+.class-icon { width: 15px; height: 15px; margin-left: 3px; margin-right: 3px; flex-shrink: 0; }
+.tank-data { flex-grow: 1; min-width: 0; }
+.tank-title { height: 17px; flex-direction: row; align-items: center; }
+.ally-title { justify-content: flex-start; }
+.enemy-title { justify-content: flex-end; }
 .enemy-row .tank-name { -unity-text-align: upper-right; }
 
 .tank-name {
     font-size: 12px;
     height: 17px;
+    flex-grow: 1;
+    min-width: 0;
     -unity-font-style: bold;
     overflow: hidden;
 }

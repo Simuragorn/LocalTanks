@@ -9,6 +9,8 @@ namespace LocalTanks
     [RequireComponent(typeof(UIDocument))]
     public sealed class BattleHudController : MonoBehaviour
     {
+        public const int MaximumTankNameLength = 20;
+
         [SerializeField] private BattleRoster roster;
         [SerializeField] private StyleSheet styleSheet;
         [SerializeField] private CaptureBase[] captureBases;
@@ -139,8 +141,25 @@ namespace LocalTanks
                     tintColor = entry.TeamColor
                 };
                 classIcon.AddToClassList("class-icon");
-                Label name = new Label(entry.TankName);
+                Label name = new Label(FormatTankName(entry.TankName))
+                {
+                    tooltip = entry.TankName
+                };
                 name.AddToClassList("tank-name");
+                VisualElement title = new VisualElement();
+                title.AddToClassList("tank-title");
+                title.AddToClassList(ally ? "ally-title" : "enemy-title");
+                if (ally)
+                {
+                    title.Add(classIcon);
+                    title.Add(name);
+                }
+                else
+                {
+                    title.Add(name);
+                    title.Add(classIcon);
+                }
+
                 VisualElement data = new VisualElement();
                 data.AddToClassList("tank-data");
                 VisualElement bar = new VisualElement();
@@ -150,12 +169,11 @@ namespace LocalTanks
                 fill.style.backgroundColor = entry.TeamColor;
                 fill.style.width = Length.Percent(entry.IsAlive ? entry.HealthRatio * 100f : 0f);
                 bar.Add(fill);
-                data.Add(name);
+                data.Add(title);
                 data.Add(bar);
 
                 if (ally)
                 {
-                    row.Add(classIcon);
                     row.Add(icon);
                     row.Add(data);
                 }
@@ -163,11 +181,20 @@ namespace LocalTanks
                 {
                     row.Add(data);
                     row.Add(icon);
-                    row.Add(classIcon);
                 }
 
                 container.Add(row);
             }
+        }
+
+        public static string FormatTankName(string tankName)
+        {
+            if (string.IsNullOrEmpty(tankName) || tankName.Length <= MaximumTankNameLength)
+            {
+                return tankName ?? string.Empty;
+            }
+
+            return tankName.Substring(0, MaximumTankNameLength - 1) + "…";
         }
 
         private void RefreshCaptureStatus()
