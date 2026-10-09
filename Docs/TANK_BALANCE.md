@@ -6,11 +6,11 @@
 
 ## Роль, прочность и вооружение
 
-| Техника | Нация | Класс | В игре | HP | Орудие | Перезарядка, с | Урон | Пробитие, мм |
-|---|---|---|:---:|---:|---|---:|---:|---:|
-| Leichttraktor (Rheinmetall prototype) (`leichttraktor`) | Germany | LightTank | да | 280 | 3.7 cm KwK L/45 | 4.5 | 60 | 42 |
-| MS-1 (45 mm modernization) (`ms_1`) | USSR | LightTank | да | 260 | 45 mm 20-K mod. 1932 | 6 | 75 | 43 |
-| Tiger II (`tiger_ii`) | Germany | HeavyTank | нет | 1600 | 8.8 cm KwK 43 L/71 | 8 | 300 | 203 |
+| Техника | Нация | Уровень | Класс | В игре | HP | Орудие | Перезарядка, с | Урон | Пробитие, мм |
+|---|---|---:|---|:---:|---:|---|---:|---:|---:|
+| Leichttraktor (Rheinmetall prototype) (`leichttraktor`) | Germany | 1 | LightTank | да | 280 | 3.7 cm KwK L/45 | 4.5 | 60 | 42 |
+| MS-1 (45 mm modernization) (`ms_1`) | USSR | 1 | LightTank | да | 260 | 45 mm 20-K mod. 1932 | 6 | 75 | 43 |
+| Tiger II (`tiger_ii`) | Germany | 8 | HeavyTank | нет | 1600 | 8.8 cm KwK 43 L/71 | 8 | 300 | 203 |
 
 ## Мобильность и броня
 

@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: MS-1 (45 mm modernization)
   vehicleClass: 2
   nation: 1
+  tier: 1
   availableInGame: 1
   maxHitPoints: 260
   weapon: {fileID: 11400000, guid: a95f5012c9e0a1447822fee51debd3f1, type: 2}

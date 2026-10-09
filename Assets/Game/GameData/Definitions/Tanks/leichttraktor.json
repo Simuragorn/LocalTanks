@@ -4,6 +4,7 @@
   "displayName": "Leichttraktor (Rheinmetall prototype)",
   "vehicleClass": "LightTank",
   "nation": "Germany",
+  "tier": 1,
   "availableInGame": true,
   "maxHitPoints": 280,
   "weaponId": "kwk_l45_37mm",

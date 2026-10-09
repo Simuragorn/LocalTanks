@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Leichttraktor (Rheinmetall prototype)
   vehicleClass: 2
   nation: 0
+  tier: 1
   availableInGame: 1
   maxHitPoints: 280
   weapon: {fileID: 11400000, guid: c6fcfed09ae467d459bda6a25f053102, type: 2}

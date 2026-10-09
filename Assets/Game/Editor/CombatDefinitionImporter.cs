@@ -60,6 +60,7 @@ namespace LocalTanks.Editor
         public string displayName;
         public string vehicleClass;
         public string nation;
+        public int tier;
         public bool availableInGame;
         public int maxHitPoints;
         public string weaponId;
@@ -162,6 +163,7 @@ namespace LocalTanks.Editor
                 {
                     errors.Add($"Tank '{tank.id}' has unknown nation '{tank.nation}'.");
                 }
+                RequireRange(tank.tier, 1, 10, $"Tank '{tank.id}'.tier", errors);
                 if (string.IsNullOrWhiteSpace(tank.weaponId) || !weaponIds.Contains(tank.weaponId))
                 {
                     errors.Add($"Tank '{tank.id}' references missing weapon '{tank.weaponId}'.");
@@ -460,6 +462,7 @@ namespace LocalTanks.Editor
             target.displayName = source.displayName;
             target.vehicleClass = Enum.Parse<VehicleClass>(source.vehicleClass, false);
             target.nation = Enum.Parse<TankNation>(source.nation, false);
+            target.tier = source.tier;
             target.availableInGame = source.availableInGame;
             target.maxHitPoints = source.maxHitPoints;
             target.weapon = weapon;

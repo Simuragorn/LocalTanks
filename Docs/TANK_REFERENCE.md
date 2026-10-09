@@ -24,6 +24,16 @@
 | MS-1 | 5,3–5,5 т; 17,5–22 км/ч; броня до 16 мм; двигатель 35–40 л.с. Серийная машина несла 37-мм пушку, но часть поздних укреплённых огневых точек получила 45-мм 20-К | 260 HP; 1,45 ед/с ≈ 20,2 км/ч; масса 5,5; броня 16/16/16 мм; 45-мм 20-К; перезарядка 6 с; пробитие 43 мм |
 | Leichttraktor | Четыре опытные машины Krupp/Rheinmetall; для Rheinmetall указываются 8,92–8,96 т, 100 л.с., 30–35 км/ч, броня до 14 мм и 3,7-см KwK L/45 | 280 HP; 2,16 ед/с ≈ 30 км/ч; масса 8,96; броня 14/14/14 мм; перезарядка 4,5 с; пробитие 42 мм на короткой дистанции |
 
+## Уровни World of Tanks
+
+| Машина | Уровень | Основание |
+|---|---:|---|
+| MS-1 | I | Официальная Tankopedia WoT EU |
+| Leichttraktor | I | Официальная коллекция Tankopedia WoT EU |
+| Tiger II | VIII | Официальная Tankopedia WoT EU |
+
+Уровень — метаданные игровой версии WoT, а не историческая характеристика. Он хранится отдельно от балансных параметров LocalTanks и автоматически попадает в общую таблицу `Docs/TANK_BALANCE.md`.
+
 Порядок значений брони: лоб / борт / корма. Левая и правая стороны используют одинаковую толщину.
 
 ## Настройки динамики после второго аудита
@@ -81,6 +91,9 @@
 
 ## Основные источники
 
+- World of Tanks EU Tankopedia: [MS-1, уровень I](https://worldoftanks.eu/en/tankopedia/3329-R11_MS-1/).
+- World of Tanks EU Tankopedia: [Tiger II, уровень VIII](https://worldoftanks.eu/en/tankopedia/5137-G16_PzVIB_Tiger_II/).
+- World of Tanks EU Tankopedia: [коллекция с Leichttraktor уровня I](https://worldoftanks.eu/en/tankopedia/collections/low-tier-fun-tanks/).
 - The Tank Museum: [Tiger II](https://tankmuseum.org/tank_collection/tiger-ii?country=all).
 - The Tank Museum: [T-34/76](https://tankmuseum.org/tank-nuts/tank-collection/t-34-76/?tpage=1).
 - The Tank Museum: [Panzer IV](https://tankmuseum.org/tank-nuts/tank-collection/panzer-iv/?country=all).

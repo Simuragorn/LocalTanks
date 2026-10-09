@@ -38,6 +38,9 @@ namespace LocalTanks.Tests
             Assert.That(ms1.nation, Is.EqualTo("USSR"));
             Assert.That(leichttraktor.nation, Is.EqualTo("Germany"));
             Assert.That(tiger.nation, Is.EqualTo("Germany"));
+            Assert.That(ms1.tier, Is.EqualTo(1));
+            Assert.That(leichttraktor.tier, Is.EqualTo(1));
+            Assert.That(tiger.tier, Is.EqualTo(8));
             Assert.That(ms1.availableInGame, Is.True);
             Assert.That(leichttraktor.availableInGame, Is.True);
             Assert.That(tiger.availableInGame, Is.False);
@@ -212,6 +215,21 @@ namespace LocalTanks.Tests
             tank.nation = previous;
 
             Assert.That(errors.Any(error => error.Contains("unknown nation")), Is.True);
+        }
+
+        [TestCase(0)]
+        [TestCase(11)]
+        public void Validator_RejectsTierOutsideSupportedRange(int invalidTier)
+        {
+            CombatDefinitionSet definitions = CombatDefinitionImporter.LoadAndValidate();
+            TankDefinitionJson tank = definitions.Tanks[0];
+            int previous = tank.tier;
+            tank.tier = invalidTier;
+
+            string[] errors = CombatDefinitionValidator.Validate(definitions);
+            tank.tier = previous;
+
+            Assert.That(errors.Any(error => error.Contains(".tier") && error.Contains("between 1 and 10")), Is.True);
         }
     }
 }

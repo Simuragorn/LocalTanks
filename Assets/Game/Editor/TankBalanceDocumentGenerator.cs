@@ -43,13 +43,13 @@ namespace LocalTanks.Editor
             TankDefinitionJson[] tanks = definitions.Tanks.OrderBy(item => item.id, StringComparer.Ordinal).ToArray();
             output.AppendLine("## Роль, прочность и вооружение");
             output.AppendLine();
-            output.AppendLine("| Техника | Нация | Класс | В игре | HP | Орудие | Перезарядка, с | Урон | Пробитие, мм |");
-            output.AppendLine("|---|---|---|:---:|---:|---|---:|---:|---:|");
+            output.AppendLine("| Техника | Нация | Уровень | Класс | В игре | HP | Орудие | Перезарядка, с | Урон | Пробитие, мм |");
+            output.AppendLine("|---|---|---:|---|:---:|---:|---|---:|---:|---:|");
             foreach (TankDefinitionJson tank in tanks)
             {
                 WeaponDefinitionJson weapon = definitions.Weapons.Single(item => item.id == tank.weaponId);
                 ShellDefinitionJson shell = definitions.Shells.Single(item => item.id == weapon.shellId);
-                output.AppendLine($"| {Escape(tank.displayName)} (`{tank.id}`) | {tank.nation} | {tank.vehicleClass} | {(tank.availableInGame ? "да" : "нет")} | {tank.maxHitPoints} | {Escape(weapon.displayName)} | {F(weapon.reloadSeconds)} | {shell.damage} | {F(shell.penetration)} |");
+                output.AppendLine($"| {Escape(tank.displayName)} (`{tank.id}`) | {tank.nation} | {tank.tier} | {tank.vehicleClass} | {(tank.availableInGame ? "да" : "нет")} | {tank.maxHitPoints} | {Escape(weapon.displayName)} | {F(weapon.reloadSeconds)} | {shell.damage} | {F(shell.penetration)} |");
             }
 
             output.AppendLine();

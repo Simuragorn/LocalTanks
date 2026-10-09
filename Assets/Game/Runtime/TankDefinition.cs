@@ -23,6 +23,7 @@ namespace LocalTanks
         public string displayName;
         public VehicleClass vehicleClass;
         public TankNation nation;
+        [Range(1, 10)] public int tier = 1;
         public bool availableInGame = true;
         [Min(1)] public int maxHitPoints = 1;
         public WeaponDefinition weapon;
