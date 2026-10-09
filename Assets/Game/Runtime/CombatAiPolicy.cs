@@ -27,6 +27,8 @@ namespace LocalTanks
     public static class CombatAiPolicy
     {
         public const float LostContactGraceSeconds = 0.9f;
+        public const float TargetLockSeconds = 3f;
+        public const float TargetSwitchScoreAdvantage = 10f;
 
         public static float ScoreTarget(
             float distance,
@@ -70,6 +72,16 @@ namespace LocalTanks
             float repositionExpiresAt)
         {
             return hasRememberedTarget && !destinationReached && currentTime < repositionExpiresAt;
+        }
+
+        public static bool ShouldSwitchVisibleTarget(
+            float currentTime,
+            float targetLockedUntil,
+            float currentScore,
+            float candidateScore)
+        {
+            return currentTime >= targetLockedUntil &&
+                   candidateScore >= currentScore + TargetSwitchScoreAdvantage;
         }
 
         public static float PreferredDistance(TankDefinition definition, CombatAiRole role)

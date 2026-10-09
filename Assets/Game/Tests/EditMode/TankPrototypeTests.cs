@@ -238,6 +238,20 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void NavigationAvoidance_UsesColliderClearanceAndKeepsEscapeDrive()
+        {
+            float touching = NavigationAvoidanceMath.DriveFactor(0f, 1.2f);
+            float close = NavigationAvoidanceMath.DriveFactor(0.35f, 1.2f);
+            float clear = NavigationAvoidanceMath.DriveFactor(1.2f, 1.2f);
+
+            Assert.That(touching, Is.GreaterThan(0f));
+            Assert.That(close, Is.GreaterThan(touching).And.LessThan(clear));
+            Assert.That(clear, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(NavigationAvoidanceMath.TurnStrength(0.1f, 1.2f),
+                Is.GreaterThan(NavigationAvoidanceMath.TurnStrength(1f, 1.2f)));
+        }
+
+        [Test]
         public void ReloadTimer_BecomesReadyAfterDuration()
         {
             ReloadTimer timer = new ReloadTimer();

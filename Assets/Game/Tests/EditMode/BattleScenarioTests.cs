@@ -150,5 +150,13 @@ namespace LocalTanks.Tests
             Assert.That(CombatAiPolicy.ShouldKeepRepositioning(true, true, 2f, 4f), Is.False);
             Assert.That(CombatAiPolicy.ShouldKeepRepositioning(true, false, 4f, 4f), Is.False);
         }
+
+        [Test]
+        public void CombatAiPolicy_SwitchesVisibleTargetOnlyAfterLockAndMeaningfulAdvantage()
+        {
+            Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(2f, 3f, 50f, 100f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(4f, 3f, 50f, 59f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(4f, 3f, 50f, 60f), Is.True);
+        }
     }
 }

@@ -3,6 +3,23 @@ using UnityEngine;
 
 namespace LocalTanks
 {
+    public static class NavigationAvoidanceMath
+    {
+        public static float DriveFactor(float clearance, float avoidanceRadius)
+        {
+            float radius = Mathf.Max(0.1f, avoidanceRadius);
+            float normalized = Mathf.InverseLerp(0.08f, radius, Mathf.Max(0f, clearance));
+            return Mathf.Lerp(0.12f, 1f, normalized);
+        }
+
+        public static float TurnStrength(float clearance, float avoidanceRadius)
+        {
+            float radius = Mathf.Max(0.1f, avoidanceRadius);
+            float normalized = Mathf.InverseLerp(0.08f, radius, Mathf.Max(0f, clearance));
+            return Mathf.Lerp(0.9f, 0.25f, normalized);
+        }
+    }
+
     [RequireComponent(typeof(TankMotor), typeof(Rigidbody2D))]
     public sealed class NavigationAgent : MonoBehaviour
     {
@@ -12,6 +29,9 @@ namespace LocalTanks
         [SerializeField, Min(0)] private int clearanceCells;
         [SerializeField, Min(0.05f)] private float waypointTolerance = 0.3f;
         [SerializeField, Min(0.1f)] private float avoidanceRadius = 1.2f;
+        [SerializeField, Min(0.5f)] private float unstuckDuration = 1.8f;
+        [SerializeField, Min(0.01f)] private float minimumProgressDistance = 0.18f;
+        [SerializeField, Min(1f)] private float minimumProgressTurn = 8f;
         [SerializeField] private bool loopPatrol = true;
 
         private readonly List<Vector2> path = new List<Vector2>();
@@ -22,7 +42,11 @@ namespace LocalTanks
         private bool hasDestination;
         private Vector2 progressSamplePosition;
         private float progressSampleTime;
+        private float progressSampleAngle;
         private float unstuckTime;
+        private float unstuckTurn;
+        private int unstuckAttempt;
+        private bool replanAfterUnstuck;
         private float committedTurn;
         private bool movementPaused;
         private bool destinationReached;
@@ -33,6 +57,7 @@ namespace LocalTanks
         public bool DestinationReached => destinationReached;
         public bool MovementPaused => movementPaused;
         public Vector2 Destination => destination;
+        public bool IsRecoveringFromStall => unstuckTime > 0f;
 
         public void Configure(
             NavigationMap navigationMap,
@@ -50,6 +75,10 @@ namespace LocalTanks
             movementPaused = false;
             progressSamplePosition = transform.position;
             progressSampleTime = Time.time;
+            progressSampleAngle = transform.eulerAngles.z;
+            unstuckAttempt = 0;
+            unstuckTime = 0f;
+            replanAfterUnstuck = false;
             BeginPatrol();
         }
 
@@ -225,6 +254,7 @@ namespace LocalTanks
         private void ApplyLocalAvoidance(ref float drive, ref float turn)
         {
             Collider2D[] nearby = Physics2D.OverlapCircleAll(transform.position, avoidanceRadius);
+            Dictionary<NavigationAgent, float> clearances = new Dictionary<NavigationAgent, float>();
             foreach (Collider2D collider in nearby)
             {
                 NavigationAgent other = collider.GetComponentInParent<NavigationAgent>();
@@ -233,6 +263,14 @@ namespace LocalTanks
                     continue;
                 }
 
+                float clearance = Vector2.Distance(transform.position, collider.ClosestPoint(transform.position));
+                if (!clearances.TryGetValue(other, out float previous) || clearance < previous)
+                    clearances[other] = clearance;
+            }
+
+            foreach (KeyValuePair<NavigationAgent, float> entry in clearances)
+            {
+                NavigationAgent other = entry.Key;
                 Vector2 offset = (Vector2)other.transform.position - (Vector2)transform.position;
                 float distance = offset.magnitude;
                 if (distance <= 0.01f || Vector2.Dot(transform.up, offset.normalized) < 0.15f)
@@ -240,9 +278,11 @@ namespace LocalTanks
                     continue;
                 }
 
-                drive *= Mathf.Clamp01((distance - 0.35f) / Mathf.Max(0.1f, avoidanceRadius - 0.35f));
+                float clearance = entry.Value;
+                drive *= NavigationAvoidanceMath.DriveFactor(clearance, avoidanceRadius);
                 float side = Vector3.Cross(transform.up, offset.normalized).z;
-                turn += side >= 0f ? 0.65f : -0.65f;
+                float avoidanceTurn = NavigationAvoidanceMath.TurnStrength(clearance, avoidanceRadius);
+                turn += side >= 0f ? avoidanceTurn : -avoidanceTurn;
                 turn = Mathf.Clamp(turn, -1f, 1f);
             }
         }
@@ -252,8 +292,16 @@ namespace LocalTanks
             if (unstuckTime > 0f)
             {
                 unstuckTime -= Time.deltaTime;
-                drive = -0.65f;
-                turn = 0.8f;
+                drive = -1f;
+                turn = unstuckTurn;
+                if (unstuckTime <= 0f && replanAfterUnstuck)
+                {
+                    replanAfterUnstuck = false;
+                    RebuildPath();
+                    progressSamplePosition = position;
+                    progressSampleAngle = transform.eulerAngles.z;
+                    progressSampleTime = Time.time;
+                }
                 return;
             }
 
@@ -263,12 +311,21 @@ namespace LocalTanks
             }
 
             float progress = Vector2.Distance(progressSamplePosition, position);
+            float turnProgress = Mathf.Abs(Mathf.DeltaAngle(progressSampleAngle, transform.eulerAngles.z));
             progressSamplePosition = position;
+            progressSampleAngle = transform.eulerAngles.z;
             progressSampleTime = Time.time;
-            if (HasPath && progress < 0.08f)
+            if (HasPath && progress < minimumProgressDistance && turnProgress < minimumProgressTurn)
             {
-                unstuckTime = 0.8f;
-                RebuildPath();
+                unstuckAttempt++;
+                int directionSeed = GetEntityId().GetHashCode() + unstuckAttempt;
+                unstuckTurn = (directionSeed & 1) == 0 ? 0.9f : -0.9f;
+                unstuckTime = Mathf.Min(2.6f, unstuckDuration + (unstuckAttempt - 1) * 0.2f);
+                replanAfterUnstuck = true;
+            }
+            else if (progress >= minimumProgressDistance * 2f)
+            {
+                unstuckAttempt = 0;
             }
         }
     }

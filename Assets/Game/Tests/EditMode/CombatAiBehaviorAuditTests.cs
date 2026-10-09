@@ -1,0 +1,129 @@
+using System.Linq;
+using NUnit.Framework;
+using UnityEngine;
+
+namespace LocalTanks.Tests
+{
+    public sealed class CombatAiBehaviorAuditTests
+    {
+        [Test]
+        public void Auditor_DetectsRapidStateThrashing()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                transitionWindowSeconds = 3f,
+                maximumStateTransitions = 4
+            });
+
+            auditor.Record(Sample(0f, CombatAiState.Advance, Vector2.zero));
+            auditor.Record(Sample(0.4f, CombatAiState.Engage, Vector2.zero));
+            auditor.Record(Sample(0.8f, CombatAiState.Investigate, Vector2.zero));
+            auditor.Record(Sample(1.2f, CombatAiState.Reposition, Vector2.zero));
+            auditor.Record(Sample(1.6f, CombatAiState.Engage, Vector2.zero));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.StateThrashing),
+                Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Auditor_DetectsMovementStallAndNavigationDeadEnd()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                movementWindowSeconds = 2f,
+                minimumMovementDistance = 0.25f,
+                navigationDeadEndSeconds = 0.8f
+            });
+
+            auditor.Record(Sample(0f, CombatAiState.Advance, Vector2.zero));
+            auditor.Record(Sample(1f, CombatAiState.Advance, Vector2.zero));
+            auditor.Record(Sample(3.1f, CombatAiState.Advance, Vector2.zero));
+            auditor.Record(Sample(4f, CombatAiState.Investigate, Vector2.zero, hasPath: false));
+            auditor.Record(Sample(5f, CombatAiState.Investigate, Vector2.zero, hasPath: false));
+
+            Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.MovementStall), Is.True);
+            Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.NavigationDeadEnd), Is.True);
+        }
+
+        [Test]
+        public void Auditor_AcceptsProgressingStableBot()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor();
+            for (int index = 0; index < 40; index++)
+            {
+                auditor.Record(Sample(index * 0.25f, CombatAiState.Advance,
+                    new Vector2(index * 0.08f, 0f)));
+            }
+
+            Assert.That(auditor.Issues, Is.Empty, auditor.BuildReport(10f));
+        }
+
+        [Test]
+        public void Auditor_DetectsCirclingWithoutTranslation()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                circlingWindowSeconds = 3f,
+                circlingRotationDegrees = 120f
+            });
+            for (int index = 0; index <= 8; index++)
+            {
+                auditor.Record(new CombatAiAuditSample(
+                    index * 0.5f, "bot-a", "Тестер", CombatAiState.Advance, Vector2.zero,
+                    true, false, true, false, true, string.Empty, false,
+                    FireBlockReason.NoVisibleTarget, 0, 0, index * 25f));
+            }
+
+            Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.Circling), Is.True);
+        }
+
+        [Test]
+        public void Auditor_TargetChangeRestartsCombatInactivityWindow()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                combatInactivitySeconds = 2f
+            });
+            auditor.Record(CombatSample(0f, "enemy-a"));
+            auditor.Record(CombatSample(1.5f, "enemy-a"));
+            auditor.Record(CombatSample(2f, "enemy-b"));
+            auditor.Record(CombatSample(3f, "enemy-b"));
+
+            Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.CombatInactivity), Is.False);
+
+            auditor.Record(CombatSample(4.1f, "enemy-b"));
+            Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.CombatInactivity), Is.True);
+        }
+
+        private static CombatAiAuditSample Sample(
+            float time,
+            CombatAiState state,
+            Vector2 position,
+            bool hasPath = true)
+        {
+            return new CombatAiAuditSample(
+                time,
+                "bot-a",
+                "Тестер",
+                state,
+                position,
+                true,
+                false,
+                true,
+                false,
+                hasPath,
+                string.Empty,
+                false,
+                FireBlockReason.NoVisibleTarget,
+                0);
+        }
+
+        private static CombatAiAuditSample CombatSample(float time, string targetId)
+        {
+            return new CombatAiAuditSample(
+                time, "bot-a", "Тестер", CombatAiState.Engage, Vector2.zero,
+                true, true, false, false, false, targetId, true,
+                FireBlockReason.Aiming, 0);
+        }
+    }
+}

@@ -10,6 +10,7 @@ namespace LocalTanks
         private const float DecisionInterval = 0.22f;
         private const float AimToleranceDegrees = 4f;
         private const float DestinationRefreshDistance = 0.8f;
+        private const float AimRecoveryDelay = 3f;
 
         [SerializeField] private TeamMember member;
         [SerializeField] private TeamVisionSystem visionSystem;
@@ -42,6 +43,8 @@ namespace LocalTanks
         private Vector2 strategicDestination;
         private TeamMember strategicTarget;
         private TeamMember strategicAlly;
+        private float aimingBlockedSince = -1f;
+        private float targetLockedUntil;
 
         public CombatAiState State { get; private set; } = CombatAiState.Deploy;
         public FireBlockReason CurrentFireBlockReason { get; private set; } = FireBlockReason.NoVisibleTarget;
@@ -109,6 +112,8 @@ namespace LocalTanks
             strategicHasDestination = false;
             strategicTarget = null;
             strategicAlly = null;
+            aimingBlockedSince = -1f;
+            targetLockedUntil = 0f;
             StartCurrentRoutePoint();
         }
 
@@ -152,6 +157,8 @@ namespace LocalTanks
             strategicTarget = null;
             strategicAlly = null;
             lastTargetVisibleTime = float.NegativeInfinity;
+            aimingBlockedSince = -1f;
+            targetLockedUntil = 0f;
             navigation?.ClearDestination();
             motor?.StopImmediately();
             turret?.ClearTarget();
@@ -186,6 +193,11 @@ namespace LocalTanks
             TeamMember selected = IsTargetVisible(strategicTarget) ? strategicTarget : SelectBestVisibleTarget();
             if (selected != null)
             {
+                if (selected != target)
+                {
+                    targetLockedUntil = Time.time + CombatAiPolicy.TargetLockSeconds;
+                    aimingBlockedSince = -1f;
+                }
                 target = selected;
                 lastKnownTargetPosition = selected.transform.position;
                 lastTargetVisibleTime = Time.time;
@@ -244,6 +256,7 @@ namespace LocalTanks
         {
             if ((State != CombatAiState.Engage && State != CombatAiState.Reposition) || !IsTargetVisible(target))
             {
+                aimingBlockedSince = -1f;
                 if (State != CombatAiState.Investigate)
                 {
                     CurrentFireBlockReason = FireBlockReason.NoVisibleTarget;
@@ -286,8 +299,10 @@ namespace LocalTanks
             }
 
             CurrentFireBlockReason = EvaluateFirePermission(target, distance);
+            UpdateAimRecovery();
             if (CurrentFireBlockReason == FireBlockReason.None)
             {
+                aimingBlockedSince = -1f;
                 weapon.TryFire();
             }
             else if ((CurrentFireBlockReason == FireBlockReason.AllyInLine ||
@@ -295,6 +310,26 @@ namespace LocalTanks
                      Time.time >= nextRepositionTime)
             {
                 BeginReposition(targetPosition);
+            }
+        }
+
+        private void UpdateAimRecovery()
+        {
+            if (CurrentFireBlockReason != FireBlockReason.Aiming)
+            {
+                aimingBlockedSince = -1f;
+                return;
+            }
+
+            if (aimingBlockedSince < 0f)
+            {
+                aimingBlockedSince = Time.time;
+                return;
+            }
+
+            if (Time.time - aimingBlockedSince >= AimRecoveryDelay)
+            {
+                navigation?.SetPaused(true);
             }
         }
 
@@ -307,6 +342,8 @@ namespace LocalTanks
 
             TeamMember best = null;
             float bestScore = float.NegativeInfinity;
+            float currentScore = float.NegativeInfinity;
+            bool currentVisible = IsTargetVisible(target);
             foreach (TeamMember candidate in TeamMember.ActiveMembers.ToArray())
             {
                 if (candidate == null || candidate.Team == member.Team || candidate.Team == TeamId.Neutral ||
@@ -332,11 +369,19 @@ namespace LocalTanks
                     lineResult == FireBlockReason.None,
                     candidate == target);
                 if (candidate == strategicTarget) score += 100f;
+                if (candidate == target) currentScore = score;
                 if (score > bestScore)
                 {
                     bestScore = score;
                     best = candidate;
                 }
+            }
+
+            if (currentVisible && best != null && best != target &&
+                !CombatAiPolicy.ShouldSwitchVisibleTarget(
+                    Time.time, targetLockedUntil, currentScore, bestScore))
+            {
+                return target;
             }
 
             return best;
@@ -441,12 +486,36 @@ namespace LocalTanks
             float side = GetEntityId().GetHashCode() % 2 == 0 ? 1f : -1f;
             Vector2 origin = transform.position;
             Vector2 candidate = origin;
+            Vector2 fallbackCandidate = origin;
             bool found = false;
-            float[] offsets = { 2.4f * side, -2.4f * side, 3.6f * side, -3.6f * side };
-            for (int index = 0; index < offsets.Length && !found; index++)
+            bool hasFallback = false;
+            float[] offsets =
             {
-                float backwardOffset = index < 2 ? 0.5f : 0.9f;
+                2.4f * side, -2.4f * side,
+                3.8f * side, -3.8f * side,
+                5.2f * side, -5.2f * side
+            };
+            for (int index = 0; index < offsets.Length; index++)
+            {
+                float backwardOffset = index < 2 ? 0.5f : index < 4 ? 0.9f : 1.2f;
                 candidate = origin + perpendicular * offsets[index] - direction * backwardOffset;
+                if (!navigation.SetDestination(candidate)) continue;
+                if (!hasFallback)
+                {
+                    fallbackCandidate = candidate;
+                    hasFallback = true;
+                }
+
+                if (EvaluateLineOfFireFrom(candidate, target) == FireBlockReason.None)
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found && hasFallback)
+            {
+                candidate = fallbackCandidate;
                 found = navigation.SetDestination(candidate);
             }
 
@@ -463,6 +532,27 @@ namespace LocalTanks
             repositionExpiresAt = Time.time + 3f;
             State = CombatAiState.Reposition;
             navigation.SetPaused(false);
+        }
+
+        private FireBlockReason EvaluateLineOfFireFrom(Vector2 origin, TeamMember candidate)
+        {
+            if (candidate == null) return FireBlockReason.ObstacleInLine;
+            Vector2 destination = candidate.transform.position;
+            Vector2 delta = destination - origin;
+            float distance = delta.magnitude;
+            if (distance <= 0.001f) return FireBlockReason.None;
+
+            foreach (RaycastHit2D hit in Physics2D.RaycastAll(origin, delta / distance, distance + 0.2f))
+            {
+                if (hit.collider == null || hit.collider.isTrigger || BelongsTo(hit.collider.transform, transform))
+                    continue;
+                if (BelongsTo(hit.collider.transform, candidate.transform)) return FireBlockReason.None;
+                TeamMember hitMember = hit.collider.GetComponentInParent<TeamMember>();
+                if (hitMember != null && hitMember.Team == member.Team) return FireBlockReason.AllyInLine;
+                return FireBlockReason.ObstacleInLine;
+            }
+
+            return FireBlockReason.None;
         }
 
         private void ResumeRouteAfterContact()

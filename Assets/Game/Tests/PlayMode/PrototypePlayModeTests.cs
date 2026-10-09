@@ -745,6 +745,44 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator RiverCrossing_SixtySecondBehaviorAuditHasNoSevereAnomalies()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            Assert.That(director, Is.Not.Null);
+            CombatAiAuditSession session = new CombatAiAuditSession(director);
+            float previousScale = Time.timeScale;
+            float startedAt = Time.time;
+            float nextSampleAt = startedAt;
+            const float duration = 60f;
+            try
+            {
+                Time.timeScale = 3f;
+                while (Time.time - startedAt < duration)
+                {
+                    if (Time.time >= nextSampleAt)
+                    {
+                        session.Sample(Time.time - startedAt);
+                        nextSampleAt += 0.2f;
+                    }
+                    yield return null;
+                }
+                session.Sample(duration);
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                session.Dispose();
+            }
+
+            string report = session.Auditor.BuildReport(duration);
+            Debug.Log(report);
+            Assert.That(session.Auditor.Issues, Is.Empty, report);
+        }
+
+        [UnityTest]
         public IEnumerator RiverCrossing_CloseEnemyInsideTurretArc_IsFullyVisible()
         {
             SceneManager.LoadScene("Battle_RiverCrossing");
