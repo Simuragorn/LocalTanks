@@ -277,12 +277,13 @@ namespace LocalTanks.Tests
                 obstacle.AddComponent<BoxCollider2D>().size = Vector2.one;
                 Physics2D.SyncTransforms();
 
-                bool blocked = LineOfFireProbe.IsBlocked(
+                LineOfFireResult result = LineOfFireProbe.Evaluate(
                     owner.transform,
                     new Vector2(1000f, 1001f),
                     new Vector2(1000f, 1005f));
 
-                Assert.That(blocked, Is.True);
+                Assert.That(result.IsBlocked, Is.True);
+                Assert.That(result.BlockPoint.y, Is.EqualTo(1002.5f).Within(0.02f));
             }
             finally
             {
@@ -305,12 +306,13 @@ namespace LocalTanks.Tests
                 target.AddComponent<TankHealth>();
                 Physics2D.SyncTransforms();
 
-                bool blocked = LineOfFireProbe.IsBlocked(
+                LineOfFireResult result = LineOfFireProbe.Evaluate(
                     owner.transform,
                     new Vector2(1100f, 1101f),
                     target.transform.position);
 
-                Assert.That(blocked, Is.False);
+                Assert.That(result.IsBlocked, Is.False);
+                Assert.That(result.BlockPoint, Is.EqualTo((Vector2)target.transform.position));
             }
             finally
             {

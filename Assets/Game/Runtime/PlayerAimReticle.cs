@@ -66,14 +66,21 @@ namespace LocalTanks
             Vector3 cursorWorld3 = worldCamera.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, -worldCamera.transform.position.z));
             Vector2 cursorWorld = cursorWorld3;
             Vector2 lineOrigin = weapon.Muzzle != null ? weapon.Muzzle.position : turret.transform.position;
-            IsLineOfFireBlocked = LineOfFireProbe.IsBlocked(controlledTank, lineOrigin, cursorWorld);
+            LineOfFireResult lineResult = LineOfFireProbe.Evaluate(controlledTank, lineOrigin, cursorWorld);
+            IsLineOfFireBlocked = lineResult.IsBlocked;
             Vector3 muzzleScreen3 = worldCamera.WorldToScreenPoint(lineOrigin);
             Vector2 muzzleGui = new Vector2(muzzleScreen3.x, Screen.height - muzzleScreen3.y);
-            DrawLine(
-                muzzleGui,
-                cursorGui,
-                1.5f,
-                IsLineOfFireBlocked ? BlockedLineColor : ClearLineColor);
+            if (lineResult.IsBlocked)
+            {
+                Vector3 blockScreen3 = worldCamera.WorldToScreenPoint(lineResult.BlockPoint);
+                Vector2 blockGui = new Vector2(blockScreen3.x, Screen.height - blockScreen3.y);
+                DrawLine(muzzleGui, blockGui, 1.5f, ClearLineColor);
+                DrawLine(blockGui, cursorGui, 1.5f, BlockedLineColor);
+            }
+            else
+            {
+                DrawLine(muzzleGui, cursorGui, 1.5f, ClearLineColor);
+            }
             DrawCross(cursorGui);
 
             Vector2 turretPosition = turret.transform.position;

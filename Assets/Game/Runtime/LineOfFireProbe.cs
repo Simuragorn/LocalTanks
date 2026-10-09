@@ -2,17 +2,34 @@ using UnityEngine;
 
 namespace LocalTanks
 {
+    public readonly struct LineOfFireResult
+    {
+        public LineOfFireResult(bool isBlocked, Vector2 blockPoint)
+        {
+            IsBlocked = isBlocked;
+            BlockPoint = blockPoint;
+        }
+
+        public bool IsBlocked { get; }
+        public Vector2 BlockPoint { get; }
+    }
+
     public static class LineOfFireProbe
     {
         private const float MinimumDistance = 0.001f;
 
         public static bool IsBlocked(Transform ownerRoot, Vector2 origin, Vector2 destination)
         {
+            return Evaluate(ownerRoot, origin, destination).IsBlocked;
+        }
+
+        public static LineOfFireResult Evaluate(Transform ownerRoot, Vector2 origin, Vector2 destination)
+        {
             Vector2 delta = destination - origin;
             float distance = delta.magnitude;
             if (distance <= MinimumDistance)
             {
-                return false;
+                return new LineOfFireResult(false, destination);
             }
 
             Transform intendedTank = FindLivingTankAt(destination);
@@ -34,10 +51,11 @@ namespace LocalTanks
 
             if (nearest.collider == null)
             {
-                return false;
+                return new LineOfFireResult(false, destination);
             }
 
-            return intendedTank == null || !BelongsTo(nearest.collider.transform, intendedTank);
+            bool blocked = intendedTank == null || !BelongsTo(nearest.collider.transform, intendedTank);
+            return new LineOfFireResult(blocked, blocked ? nearest.point : destination);
         }
 
         private static Transform FindLivingTankAt(Vector2 point)
