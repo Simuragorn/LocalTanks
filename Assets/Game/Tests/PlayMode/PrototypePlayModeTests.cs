@@ -311,6 +311,12 @@ namespace LocalTanks.Tests
                 member.Definition != null && member.Definition.id == "tiger_ii"), Is.False);
             BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
             Assert.That(director, Is.Not.Null);
+            Assert.That(director.TacticalMap, Is.Not.Null);
+            Assert.That(director.TacticalMap.sceneId, Is.EqualTo("Battle_RiverCrossing"));
+            Assert.That(director.TacticalMap.lanes.Select(lane => lane.id), Is.EqualTo(new[]
+            {
+                "lane_north", "lane_center", "lane_south"
+            }));
             Assert.That(director.TeamAAlive, Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(director.TeamBAlive, Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(Object.FindObjectsByType<CombatTankAI>().Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));

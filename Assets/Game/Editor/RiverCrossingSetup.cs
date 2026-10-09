@@ -71,6 +71,7 @@ namespace LocalTanks.Editor
         {
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             MapSource source = LoadAndValidateSource();
+            TacticalMapDescriptorImporter.Reimport();
             EnsureFolder("Assets/Game/Generated");
             EnsureFolder(GeneratedRoot);
             EnsureFolder(TilesRoot);
@@ -950,6 +951,13 @@ namespace LocalTanks.Editor
                 throw new InvalidOperationException("Combat database was not generated.");
             }
 
+            TacticalMapDescriptorAsset tacticalMap = AssetDatabase.LoadAssetAtPath<TacticalMapDescriptorAsset>(
+                TacticalMapDescriptorImporter.AssetPath);
+            if (tacticalMap == null || tacticalMap.Validate().Length > 0)
+            {
+                throw new InvalidOperationException("Tactical map descriptor was not generated or is invalid.");
+            }
+
             GameObject[] prefabs = TankPrefabPaths.Select(AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
             if (prefabs.Any(prefab => prefab == null))
             {
@@ -988,7 +996,8 @@ namespace LocalTanks.Editor
                 cameraFollow,
                 captureBases,
                 prefabBindings,
-                iconBindings);
+                iconBindings,
+                tacticalMap);
         }
 
         private static GameObject CreateShape(

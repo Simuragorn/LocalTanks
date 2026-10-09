@@ -22,6 +22,7 @@ namespace LocalTanks
     public sealed class BattleDirector : MonoBehaviour
     {
         [SerializeField] private BattleScenario scenario;
+        [SerializeField] private TacticalMapDescriptorAsset tacticalMap;
         [SerializeField] private CombatDatabase combatDatabase;
         [SerializeField] private NavigationMap navigationMap;
         [SerializeField] private TeamVisionSystem visionSystem;
@@ -39,6 +40,7 @@ namespace LocalTanks
 
         public IReadOnlyList<TeamMember> SpawnedMembers => spawnedMembers;
         public TeamMember PlayerMember { get; private set; }
+        public TacticalMapDescriptor TacticalMap => tacticalMap != null ? tacticalMap.descriptor : null;
         public int TeamAAlive { get; private set; }
         public int TeamBAlive { get; private set; }
 
@@ -66,9 +68,11 @@ namespace LocalTanks
             CameraFollow2D follow,
             CaptureBase[] captureBases,
             TankPrefabBinding[] prefabBindings,
-            VehicleClassIconBinding[] iconBindings)
+            VehicleClassIconBinding[] iconBindings,
+            TacticalMapDescriptorAsset tacticalMapDescriptor)
         {
             scenario = battleScenario;
+            tacticalMap = tacticalMapDescriptor;
             combatDatabase = database;
             navigationMap = map;
             visionSystem = teamVision;
@@ -191,6 +195,10 @@ namespace LocalTanks
         private void ValidateConfiguration()
         {
             if (scenario == null) throw new InvalidOperationException("BattleDirector has no scenario.");
+            if (tacticalMap == null || tacticalMap.Validate().Length > 0)
+                throw new InvalidOperationException("BattleDirector has no valid tactical map descriptor.");
+            if (!string.Equals(tacticalMap.descriptor.sceneId, scenario.sceneId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Battle scenario and tactical map descriptor refer to different maps.");
             string[] errors = scenario.Validate(combatDatabase);
             if (errors.Length > 0)
                 throw new InvalidOperationException("Battle scenario is invalid:\n- " + string.Join("\n- ", errors));
