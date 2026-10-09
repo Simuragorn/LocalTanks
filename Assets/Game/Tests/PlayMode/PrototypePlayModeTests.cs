@@ -699,6 +699,52 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator RiverCrossing_CombatAiKeepsTacticalStateDuringBriefContactFlicker()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            TeamVisionSystem vision = Object.FindAnyObjectByType<TeamVisionSystem>();
+            CombatTankAI shooter = Object.FindObjectsByType<CombatTankAI>()
+                .First(item => item.GetComponent<TeamMember>().Team == TeamId.TeamA);
+            TeamMember shooterMember = shooter.GetComponent<TeamMember>();
+            TeamMember target = Object.FindObjectsByType<TeamMember>()
+                .First(item => item.Team == TeamId.TeamB);
+
+            foreach (TeamMember other in TeamMember.ActiveMembers.ToArray())
+            {
+                if (other != shooterMember && other != target) other.enabled = false;
+            }
+            foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
+            {
+                if (ai != shooter) ai.enabled = false;
+            }
+
+            shooter.transform.SetPositionAndRotation(
+                map.CellToWorld(new Vector2Int(30, 22)), Quaternion.Euler(0f, 0f, -90f));
+            target.transform.SetPositionAndRotation(
+                map.CellToWorld(new Vector2Int(34, 22)), Quaternion.Euler(0f, 0f, 90f));
+            shooterMember.VisionDirection.rotation = Quaternion.Euler(0f, 0f, -90f);
+            Physics2D.SyncTransforms();
+            vision.ForceEvaluateAll();
+            yield return new WaitForSeconds(0.35f);
+
+            Assert.That(vision.IsVisibleTo(TeamId.TeamA, target), Is.True);
+            Assert.That(shooter.CurrentTarget, Is.EqualTo(target));
+
+            target.transform.position = new Vector2(100f, 100f);
+            Physics2D.SyncTransforms();
+            vision.ForceEvaluateAll();
+            yield return new WaitForSeconds(0.35f);
+
+            Assert.That(vision.IsVisibleTo(TeamId.TeamA, target), Is.False);
+            Assert.That(shooter.CurrentTarget, Is.EqualTo(target));
+            Assert.That(shooter.State, Is.Not.EqualTo(CombatAiState.Investigate),
+                "A contact flicker shorter than the grace interval must not reset movement into investigation.");
+        }
+
+        [UnityTest]
         public IEnumerator RiverCrossing_CloseEnemyInsideTurretArc_IsFullyVisible()
         {
             SceneManager.LoadScene("Battle_RiverCrossing");

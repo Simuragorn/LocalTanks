@@ -34,6 +34,7 @@ namespace LocalTanks
         private Vector2 repositionDestination;
         private float repositionExpiresAt;
         private float nextRepositionTime;
+        private float lastTargetVisibleTime = float.NegativeInfinity;
         private float defaultPreferredDistance;
         private BotStrategicDecision strategicDecision;
         private float strategicDecisionExpiresAt;
@@ -103,6 +104,7 @@ namespace LocalTanks
             target = null;
             hasRememberedTarget = false;
             investigationDestinationSet = false;
+            lastTargetVisibleTime = float.NegativeInfinity;
             strategicDecision = null;
             strategicHasDestination = false;
             strategicTarget = null;
@@ -149,6 +151,7 @@ namespace LocalTanks
             strategicHasDestination = false;
             strategicTarget = null;
             strategicAlly = null;
+            lastTargetVisibleTime = float.NegativeInfinity;
             navigation?.ClearDestination();
             motor?.StopImmediately();
             turret?.ClearTarget();
@@ -185,6 +188,7 @@ namespace LocalTanks
             {
                 target = selected;
                 lastKnownTargetPosition = selected.transform.position;
+                lastTargetVisibleTime = Time.time;
                 hasRememberedTarget = true;
                 investigationDestinationSet = false;
                 if (State == CombatAiState.Reposition && Time.time < repositionExpiresAt &&
@@ -203,8 +207,24 @@ namespace LocalTanks
                 UpdateMemoryFromContact();
             }
 
+            if (State == CombatAiState.Reposition && navigation != null &&
+                CombatAiPolicy.ShouldKeepRepositioning(
+                    hasRememberedTarget,
+                    navigation.DestinationReached,
+                    Time.time,
+                    repositionExpiresAt))
+            {
+                navigation.SetPaused(false);
+                return;
+            }
+
             if (hasRememberedTarget)
             {
+                if (CombatAiPolicy.ShouldDelayInvestigation(Time.time, lastTargetVisibleTime))
+                {
+                    return;
+                }
+
                 State = CombatAiState.Investigate;
                 BeginOrContinueInvestigation();
             }
@@ -234,6 +254,7 @@ namespace LocalTanks
 
             Vector2 targetPosition = target.transform.position;
             lastKnownTargetPosition = targetPosition;
+            lastTargetVisibleTime = Time.time;
             hasRememberedTarget = true;
             turret?.SetTarget(targetPosition);
 
@@ -384,6 +405,13 @@ namespace LocalTanks
             if (!investigationDestinationSet)
             {
                 investigationDestinationSet = navigation != null && navigation.SetDestination(lastKnownTargetPosition);
+                if (!investigationDestinationSet)
+                {
+                    hasRememberedTarget = false;
+                    target = null;
+                    ResumeRouteAfterContact();
+                    return;
+                }
             }
 
             if (navigation == null || navigation.DestinationReached ||
@@ -412,21 +440,25 @@ namespace LocalTanks
             Vector2 perpendicular = new Vector2(-direction.y, direction.x);
             float side = GetEntityId().GetHashCode() % 2 == 0 ? 1f : -1f;
             Vector2 origin = transform.position;
-            Vector2 candidate = origin + perpendicular * (2.2f * side) - direction * 0.5f;
-            bool found = navigation.SetDestination(candidate);
-            if (!found)
+            Vector2 candidate = origin;
+            bool found = false;
+            float[] offsets = { 2.4f * side, -2.4f * side, 3.6f * side, -3.6f * side };
+            for (int index = 0; index < offsets.Length && !found; index++)
             {
-                candidate = origin - perpendicular * (2.2f * side) - direction * 0.5f;
+                float backwardOffset = index < 2 ? 0.5f : 0.9f;
+                candidate = origin + perpendicular * offsets[index] - direction * backwardOffset;
                 found = navigation.SetDestination(candidate);
             }
 
             nextRepositionTime = Time.time + 1.2f;
             if (!found)
             {
+                navigation.ClearDestination();
                 State = CombatAiState.Engage;
                 return;
             }
 
+            investigationDestinationSet = false;
             repositionDestination = candidate;
             repositionExpiresAt = Time.time + 3f;
             State = CombatAiState.Reposition;

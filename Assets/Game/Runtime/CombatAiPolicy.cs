@@ -26,6 +26,8 @@ namespace LocalTanks
 
     public static class CombatAiPolicy
     {
+        public const float LostContactGraceSeconds = 0.9f;
+
         public static float ScoreTarget(
             float distance,
             float viewRange,
@@ -53,6 +55,21 @@ namespace LocalTanks
             if (visibleTarget) return CombatAiState.Engage;
             if (rememberedTarget) return CombatAiState.Investigate;
             return routeStarted ? CombatAiState.Advance : CombatAiState.Deploy;
+        }
+
+        public static bool ShouldDelayInvestigation(float currentTime, float lastVisibleTime)
+        {
+            return lastVisibleTime > float.NegativeInfinity &&
+                   currentTime - lastVisibleTime < LostContactGraceSeconds;
+        }
+
+        public static bool ShouldKeepRepositioning(
+            bool hasRememberedTarget,
+            bool destinationReached,
+            float currentTime,
+            float repositionExpiresAt)
+        {
+            return hasRememberedTarget && !destinationReached && currentTime < repositionExpiresAt;
         }
 
         public static float PreferredDistance(TankDefinition definition, CombatAiRole role)

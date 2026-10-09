@@ -133,5 +133,22 @@ namespace LocalTanks.Tests
         {
             Assert.That(CombatAiPolicy.ResolveState(alive, visible, remembered, routeStarted), Is.EqualTo(expected));
         }
+
+        [Test]
+        public void CombatAiPolicy_DelaysInvestigationAfterBriefContactLoss()
+        {
+            Assert.That(CombatAiPolicy.ShouldDelayInvestigation(10.5f, 10f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldDelayInvestigation(11f, 10f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldDelayInvestigation(10f, float.NegativeInfinity), Is.False);
+        }
+
+        [Test]
+        public void CombatAiPolicy_CommitsToReachableRepositionUntilArrivalOrTimeout()
+        {
+            Assert.That(CombatAiPolicy.ShouldKeepRepositioning(true, false, 2f, 4f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldKeepRepositioning(false, false, 2f, 4f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldKeepRepositioning(true, true, 2f, 4f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldKeepRepositioning(true, false, 4f, 4f), Is.False);
+        }
     }
 }
