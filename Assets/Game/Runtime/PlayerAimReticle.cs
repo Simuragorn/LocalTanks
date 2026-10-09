@@ -89,7 +89,7 @@ namespace LocalTanks
             Vector3 gunScreen3 = worldCamera.WorldToScreenPoint(gunPoint);
             Vector2 gunGui = new Vector2(gunScreen3.x, Screen.height - gunScreen3.y);
             float radius = CalculateRadiusPixels(turretPosition, gunPoint, aimDistance, dispersion.CurrentDispersionDegrees);
-            Color stateColor = weapon.IsReady ? ReadyColor : ReloadingColor;
+            Color stateColor = Color.Lerp(ReloadingColor, ReadyColor, weapon.ReloadProgress);
             DrawDottedCircle(gunGui, radius, stateColor);
             DrawReloadSegments(gunGui, radius + 8f, weapon.ReloadProgress, stateColor);
         }
