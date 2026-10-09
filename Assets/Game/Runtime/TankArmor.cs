@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace LocalTanks
@@ -8,6 +9,8 @@ namespace LocalTanks
         [SerializeField] private TankDefinition definition;
         [SerializeField] private TankHealth health;
         [SerializeField] private bool logImpacts = true;
+
+        public event Action<TankArmor, ArmorImpactObservation> ImpactResolved;
 
         private void Awake()
         {
@@ -57,6 +60,13 @@ namespace LocalTanks
             {
                 health.ApplyDamage(damage);
             }
+
+            ImpactResolved?.Invoke(this, new ArmorImpactObservation(
+                -projectileDirection,
+                result.Outcome,
+                result.Zone,
+                result.Outcome == ImpactOutcome.Penetrated ? damage : 0,
+                Time.time));
 
             if (logImpacts)
             {

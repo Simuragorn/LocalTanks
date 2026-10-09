@@ -51,7 +51,8 @@ namespace LocalTanks
             FireBlockReason fireBlockReason,
             int shotsFired,
             int shotsWithoutVisibleTarget = 0,
-            float headingDegrees = 0f)
+            float headingDegrees = 0f,
+            bool defensiveMovement = false)
         {
             Time = time;
             BotId = botId ?? string.Empty;
@@ -69,6 +70,7 @@ namespace LocalTanks
             ShotsFired = Mathf.Max(0, shotsFired);
             ShotsWithoutVisibleTarget = Mathf.Max(0, shotsWithoutVisibleTarget);
             HeadingDegrees = headingDegrees;
+            DefensiveMovement = defensiveMovement;
         }
 
         public float Time { get; }
@@ -87,6 +89,7 @@ namespace LocalTanks
         public int ShotsFired { get; }
         public int ShotsWithoutVisibleTarget { get; }
         public float HeadingDegrees { get; }
+        public bool DefensiveMovement { get; }
     }
 
     public sealed class CombatAiAuditIssue
@@ -318,8 +321,13 @@ namespace LocalTanks
                     "Weapon fired without a visible current target at the moment of the shot.");
             }
 
+            bool progressingReposition = sample.State == CombatAiState.Reposition &&
+                                         sample.HasDestination && !sample.DestinationReached &&
+                                         sample.HasNavigationPath;
             bool combatExpected = sample.TargetVisible &&
                                   sample.FireBlockReason != FireBlockReason.OutOfRange &&
+                                  !sample.DefensiveMovement &&
+                                  !progressingReposition &&
                                   (sample.State == CombatAiState.Engage || sample.State == CombatAiState.Reposition);
             if (!combatExpected || fired || targetChanged)
             {
@@ -483,7 +491,9 @@ namespace LocalTanks
                     bot.CurrentFireBlockReason,
                     shotCounts.TryGetValue(bot, out int shots) ? shots : 0,
                     invalidShotCounts.TryGetValue(bot, out int invalidShots) ? invalidShots : 0,
-                    bot.transform.eulerAngles.z));
+                    bot.transform.eulerAngles.z,
+                    bot.TacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
+                    bot.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover));
             }
         }
 

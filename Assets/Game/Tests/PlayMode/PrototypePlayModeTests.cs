@@ -666,6 +666,12 @@ namespace LocalTanks.Tests
             {
                 if (ai != shooter) ai.enabled = false;
             }
+            NavigationAgent targetNavigation = target.GetComponent<NavigationAgent>();
+            if (targetNavigation != null) targetNavigation.enabled = false;
+            TankMotor targetMotor = target.GetComponent<TankMotor>();
+            if (targetMotor != null) targetMotor.enabled = false;
+            Rigidbody2D targetBody = target.GetComponent<Rigidbody2D>();
+            if (targetBody != null) targetBody.linearVelocity = Vector2.zero;
 
             TeamMember shooterMember = shooter.GetComponent<TeamMember>();
             shooter.transform.SetPositionAndRotation(map.CellToWorld(new Vector2Int(30, 22)), Quaternion.Euler(0f, 0f, -90f));
@@ -742,6 +748,217 @@ namespace LocalTanks.Tests
             Assert.That(shooter.CurrentTarget, Is.EqualTo(target));
             Assert.That(shooter.State, Is.Not.EqualTo(CombatAiState.Investigate),
                 "A contact flicker shorter than the grace interval must not reset movement into investigation.");
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_CombatAiRoutesAroundProjectileBlockingObstacleToFire()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            TeamVisionSystem vision = Object.FindAnyObjectByType<TeamVisionSystem>();
+            CombatTankAI shooter = Object.FindObjectsByType<CombatTankAI>()
+                .First(item => item.GetComponent<TeamMember>().Team == TeamId.TeamA);
+            TeamMember shooterMember = shooter.GetComponent<TeamMember>();
+            TeamMember target = Object.FindObjectsByType<TeamMember>()
+                .First(item => item.Team == TeamId.TeamB);
+            foreach (TeamMember other in TeamMember.ActiveMembers.ToArray())
+            {
+                if (other != shooterMember && other != target) other.enabled = false;
+            }
+            foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
+            {
+                if (ai != shooter) ai.enabled = false;
+            }
+
+            Vector2Int shooterCell = new Vector2Int(25, 22);
+            Vector2Int targetCell = new Vector2Int(33, 22);
+            Vector2Int[] blockedCells =
+            {
+                new Vector2Int(29, 21),
+                new Vector2Int(29, 22),
+                new Vector2Int(29, 23)
+            };
+            GameObject obstacle = new GameObject("TestProjectileOnlyObstacle");
+            obstacle.transform.position = map.CellToWorld(new Vector2Int(29, 22));
+            BoxCollider2D obstacleCollider = obstacle.AddComponent<BoxCollider2D>();
+            obstacleCollider.size = new Vector2(map.CellSize, map.CellSize * 3f);
+            foreach (Vector2Int cell in blockedCells) map.SetBlocked(cell, true);
+
+            float previousScale = Time.timeScale;
+            bool fired = false;
+            try
+            {
+                shooter.transform.SetPositionAndRotation(
+                    map.CellToWorld(shooterCell), Quaternion.Euler(0f, 0f, -90f));
+                target.transform.SetPositionAndRotation(
+                    map.CellToWorld(targetCell), Quaternion.Euler(0f, 0f, 90f));
+                shooterMember.VisionDirection.rotation = Quaternion.Euler(0f, 0f, -90f);
+                Physics2D.SyncTransforms();
+                vision.ForceEvaluateAll();
+
+                WeaponController weapon = shooter.GetComponent<WeaponController>();
+                weapon.Fired += _ => fired = true;
+                Time.timeScale = 3f;
+                float timeout = Time.time + 15f;
+                while (!fired && Time.time < timeout)
+                {
+                    yield return null;
+                }
+
+                Assert.That(vision.IsVisibleTo(TeamId.TeamA, target), Is.True,
+                    "The test obstacle blocks projectiles, not team vision.");
+                Assert.That(fired, Is.True,
+                    $"AI did not route around obstacle; state={shooter.State}, " +
+                    $"block={shooter.CurrentFireBlockReason}, planner={shooter.LastTacticalPositionResult}");
+                Assert.That(shooter.LastTacticalPositionResult,
+                    Is.EqualTo("Прострел получен").Or.Contains("Объезд"));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                foreach (Vector2Int cell in blockedCells) map.SetBlocked(cell, false);
+                Object.Destroy(obstacle);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_CombatAiTurnsDerivedArmorAngleTowardVisibleThreat()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            TeamVisionSystem vision = Object.FindAnyObjectByType<TeamVisionSystem>();
+            CombatTankAI shooter = Object.FindObjectsByType<CombatTankAI>()
+                .First(item => item.GetComponent<TeamMember>().Team == TeamId.TeamA);
+            TeamMember shooterMember = shooter.GetComponent<TeamMember>();
+            TeamMember target = Object.FindObjectsByType<TeamMember>()
+                .First(item => item.Team == TeamId.TeamB);
+            foreach (TeamMember other in TeamMember.ActiveMembers.ToArray())
+            {
+                if (other != shooterMember && other != target) other.enabled = false;
+            }
+            foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
+            {
+                if (ai != shooter) ai.enabled = false;
+            }
+            NavigationAgent targetNavigation = target.GetComponent<NavigationAgent>();
+            if (targetNavigation != null) targetNavigation.enabled = false;
+            TankMotor targetMotor = target.GetComponent<TankMotor>();
+            if (targetMotor != null) targetMotor.enabled = false;
+            Rigidbody2D targetBody = target.GetComponent<Rigidbody2D>();
+            if (targetBody != null) targetBody.linearVelocity = Vector2.zero;
+
+            shooter.transform.SetPositionAndRotation(
+                map.CellToWorld(new Vector2Int(30, 22)), Quaternion.identity);
+            target.transform.SetPositionAndRotation(
+                map.CellToWorld(new Vector2Int(34, 22)), Quaternion.Euler(0f, 0f, 90f));
+            shooterMember.VisionDirection.rotation = Quaternion.Euler(0f, 0f, -90f);
+            Physics2D.SyncTransforms();
+            vision.ForceEvaluateAll();
+
+            yield return new WaitForSeconds(4.2f);
+
+            Vector2 towardTarget = ((Vector2)target.transform.position -
+                                    (Vector2)shooter.transform.position).normalized;
+            float hullOffset = Mathf.Abs(Vector2.SignedAngle(shooter.transform.up, towardTarget));
+            Assert.That(shooter.ArmorProfileUsage.CanAngle, Is.True);
+            Assert.That(shooter.GetComponent<NavigationAgent>().HasFacingDirection, Is.True);
+            Assert.That(hullOffset,
+                Is.EqualTo(shooter.ArmorProfileUsage.SafeAngleDegrees).Within(6f),
+                $"state={shooter.State}; hull={shooter.transform.up}; target={towardTarget}; " +
+                $"facing={shooter.GetComponent<NavigationAgent>().FacingDirection}; " +
+                $"block={shooter.CurrentFireBlockReason}");
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_PenetratedLightTankFindsPhysicalCoverFromThreatDirection()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            CombatTankAI bot = Object.FindObjectsByType<CombatTankAI>()
+                .First(item => item.GetComponent<TeamMember>().Team == TeamId.TeamA);
+            TeamMember botMember = bot.GetComponent<TeamMember>();
+            foreach (TeamMember other in TeamMember.ActiveMembers.ToArray())
+            {
+                if (other != botMember) other.enabled = false;
+            }
+            foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
+            {
+                if (ai != bot) ai.enabled = false;
+            }
+            foreach (NavigationAgent otherNavigation in Object.FindObjectsByType<NavigationAgent>())
+            {
+                if (otherNavigation.gameObject != bot.gameObject) otherNavigation.enabled = false;
+            }
+            foreach (TankMotor otherMotor in Object.FindObjectsByType<TankMotor>())
+            {
+                if (otherMotor.gameObject != bot.gameObject) otherMotor.enabled = false;
+            }
+
+            Vector2Int botCell = new Vector2Int(29, 22);
+            Vector2Int[] blockedCells =
+            {
+                new Vector2Int(27, 21),
+                new Vector2Int(27, 22),
+                new Vector2Int(27, 23)
+            };
+            GameObject obstacle = new GameObject("TestTacticalCover");
+            obstacle.transform.position = map.CellToWorld(new Vector2Int(27, 22));
+            obstacle.AddComponent<BoxCollider2D>().size = new Vector2(map.CellSize, map.CellSize * 3f);
+            foreach (Vector2Int cell in blockedCells) map.SetBlocked(cell, true);
+
+            float previousScale = Time.timeScale;
+            bool reachedCover = false;
+            try
+            {
+                bot.transform.SetPositionAndRotation(map.CellToWorld(botCell), Quaternion.identity);
+                Rigidbody2D body = bot.GetComponent<Rigidbody2D>();
+                body.linearVelocity = Vector2.zero;
+                Physics2D.SyncTransforms();
+
+                TankArmor tankArmor = bot.GetComponent<TankArmor>();
+                tankArmor.ResolveImpact(
+                    Vector2.left,
+                    bot.transform.position,
+                    Vector2.right,
+                    penetration: 999f,
+                    speed: 10f,
+                    damage: 1,
+                    ricochetAngle: 70f,
+                    ricochetSpeedMultiplier: 0.7f,
+                    ricochetPenetrationMultiplier: 0.65f,
+                    remainingRicochets: 1);
+
+                Time.timeScale = 3f;
+                float timeout = Time.time + 30f;
+                while (!reachedCover && Time.time < timeout)
+                {
+                    reachedCover = bot.LastTacticalPositionResult.Contains("Укрытие достигнуто");
+                    yield return null;
+                }
+
+                Assert.That(bot.HasCoverPosition, Is.True, bot.LastTacticalPositionResult);
+                Assert.That(reachedCover, Is.True, bot.LastTacticalPositionResult);
+                LineOfFireAssessment protection = CombatLineOfFire.Evaluate(
+                    bot.transform,
+                    botMember.Team,
+                    bot.CoverPosition + Vector2.right * botMember.Definition.viewRange,
+                    bot.CoverPosition,
+                    null);
+                Assert.That(protection.BlockType,
+                    Is.EqualTo(LineOfFireBlockType.HardObstacle));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                foreach (Vector2Int cell in blockedCells) map.SetBlocked(cell, false);
+                Object.Destroy(obstacle);
+            }
         }
 
         [UnityTest]

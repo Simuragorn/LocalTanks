@@ -50,6 +50,9 @@ namespace LocalTanks
         private float committedTurn;
         private bool movementPaused;
         private bool destinationReached;
+        private bool hasFacingDirection;
+        private Vector2 facingDirection;
+        private int activeClearanceCells;
 
         public IReadOnlyList<Vector2> CurrentPath => path;
         public bool HasPath => pathIndex < path.Count;
@@ -58,6 +61,10 @@ namespace LocalTanks
         public bool MovementPaused => movementPaused;
         public Vector2 Destination => destination;
         public bool IsRecoveringFromStall => unstuckTime > 0f;
+        public NavigationMap Map => map;
+        public int ClearanceCells => clearanceCells;
+        public bool HasFacingDirection => hasFacingDirection;
+        public Vector2 FacingDirection => facingDirection;
 
         public void Configure(
             NavigationMap navigationMap,
@@ -70,6 +77,7 @@ namespace LocalTanks
             motor = tankMotor;
             patrolPoints = waypoints;
             clearanceCells = Mathf.Max(0, clearance);
+            activeClearanceCells = clearanceCells;
             loopPatrol = loop;
             destinationReached = false;
             movementPaused = false;
@@ -79,21 +87,46 @@ namespace LocalTanks
             unstuckAttempt = 0;
             unstuckTime = 0f;
             replanAfterUnstuck = false;
+            hasFacingDirection = false;
             BeginPatrol();
         }
 
         public bool SetDestination(Vector2 worldDestination)
         {
+            return SetDestination(worldDestination, clearanceCells);
+        }
+
+        public bool SetDestination(Vector2 worldDestination, int minimumClearanceCells)
+        {
             destination = worldDestination;
             hasDestination = true;
             destinationReached = false;
+            hasFacingDirection = false;
+            activeClearanceCells = Mathf.Max(clearanceCells, minimumClearanceCells);
             return RebuildPath();
+        }
+
+        public void SetFacingDirection(Vector2 worldDirection)
+        {
+            if (worldDirection.sqrMagnitude <= 0.0001f)
+            {
+                hasFacingDirection = false;
+                return;
+            }
+
+            facingDirection = worldDirection.normalized;
+            hasFacingDirection = true;
+        }
+
+        public void ClearFacingDirection()
+        {
+            hasFacingDirection = false;
         }
 
         public void SetPaused(bool paused)
         {
             movementPaused = paused;
-            if (paused && motor != null)
+            if (paused && motor != null && !hasFacingDirection)
             {
                 motor.SetInput(0f, 0f);
             }
@@ -133,7 +166,18 @@ namespace LocalTanks
 
             if (movementPaused)
             {
-                motor.SetInput(0f, 0f);
+                if (hasFacingDirection)
+                {
+                    float facingAngle = Vector2.SignedAngle(transform.up, facingDirection);
+                    float facingTurn = Mathf.Abs(facingAngle) <= 2f
+                        ? 0f
+                        : TankMotionMath.PathFollowingInput(facingAngle).y;
+                    motor.SetInput(0f, facingTurn);
+                }
+                else
+                {
+                    motor.SetInput(0f, 0f);
+                }
                 return;
             }
 
@@ -241,7 +285,7 @@ namespace LocalTanks
                 return false;
             }
 
-            path.AddRange(map.FindWorldPath(transform.position, destination, clearanceCells));
+            path.AddRange(map.FindWorldPath(transform.position, destination, activeClearanceCells));
             plannedMapVersion = map.Version;
             if (path.Count > 1)
             {

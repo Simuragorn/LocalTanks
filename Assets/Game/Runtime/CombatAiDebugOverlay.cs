@@ -55,6 +55,34 @@ namespace LocalTanks
                 {
                     Debug.DrawLine(selected.transform.position, selected.LastKnownTargetPosition, Color.magenta);
                 }
+
+                if (selected.HasFiringPositionSolution)
+                {
+                    Vector2 firingPosition = selected.FiringPositionSolution.Position;
+                    Debug.DrawLine(selected.transform.position, firingPosition, Color.cyan);
+                    Debug.DrawLine(firingPosition + Vector2.left * 0.3f,
+                        firingPosition + Vector2.right * 0.3f, Color.cyan);
+                    Debug.DrawLine(firingPosition + Vector2.down * 0.3f,
+                        firingPosition + Vector2.up * 0.3f, Color.cyan);
+                }
+
+                LineOfFireAssessment lineOfFire = selected.CurrentLineOfFire;
+                if (!lineOfFire.IsClear && lineOfFire.Blocker != null)
+                {
+                    Debug.DrawLine(selected.transform.position, lineOfFire.BlockPoint, Color.red);
+                }
+
+                if (selected.HasCoverPosition)
+                {
+                    Debug.DrawLine(selected.transform.position, selected.CoverPosition,
+                        new Color(0.35f, 0.75f, 1f));
+                }
+
+                if (selected.PrimaryThreatDirection.sqrMagnitude > 0.001f)
+                {
+                    Debug.DrawRay(selected.transform.position,
+                        selected.PrimaryThreatDirection.normalized * 2f, new Color(1f, 0.45f, 0.2f));
+                }
             }
         }
 
@@ -191,6 +219,18 @@ namespace LocalTanks
                   $"Контакты: {snapshot?.knownTargetIds?.Length ?? 0}; союзники: {snapshot?.allyIds?.Length ?? 0}\n" +
                   $"Снимок: {(snapshot?.snapshotHash?.Length >= 8 ? snapshot.snapshotHash.Substring(0, 8) : "—")}"
                 : "Стратегическое решение не назначено";
+            LineOfFireAssessment lineOfFire = ai.CurrentLineOfFire;
+            string blocker = lineOfFire.IsClear
+                ? "нет"
+                : $"{lineOfFire.BlockType}: {lineOfFire.BlockerName} ({lineOfFire.Distance:0.0} м)";
+            string firingPosition = ai.HasFiringPositionSolution
+                ? $"{ai.FiringPositionSolution.Position.x:0.0}, {ai.FiringPositionSolution.Position.y:0.0}; " +
+                  $"путь {ai.FiringPositionSolution.PathLength:0.0} м; оценка {ai.FiringPositionSolution.Score:0.0}"
+                : "—";
+            ArmorUseProfile armor = ai.ArmorProfileUsage;
+            string cover = ai.HasCoverPosition
+                ? $"{ai.CoverPosition.x:0.0}, {ai.CoverPosition.y:0.0}"
+                : "—";
 
             return "<b>ЛИЧНОСТЬ</b>\n" + temperament + "\n\n" +
                    "<b>ТЕКУЩАЯ ТАКТИКА</b>\n" +
@@ -200,7 +240,16 @@ namespace LocalTanks
                    $"Последняя позиция: {memory}\n" +
                    $"Перестроение: {reposition}\n" +
                    $"Желаемая дистанция: {ai.PreferredDistance:0.0}\n" +
-                   $"Огонь: {ai.CurrentFireBlockReason}\n\n" +
+                   $"Огонь: {ai.CurrentFireBlockReason}\n" +
+                   $"Препятствие: {blocker}\n" +
+                   $"Огневая позиция: {firingPosition}\n" +
+                   $"Тактический манёвр: {ai.TacticalMovementPurpose}\n" +
+                   $"Укрытие: {cover}\n" +
+                   $"Угрозы: {ai.ActiveThreatCount}; направление " +
+                   $"{ai.PrimaryThreatDirection.x:0.00}, {ai.PrimaryThreatDirection.y:0.00}\n" +
+                   $"Броня лоб/борт/корма: {armor.FrontArmor:0}/{armor.WeakestSideArmor:0}/{armor.RearArmor:0} мм\n" +
+                   $"Безопасный доворот: {armor.SafeAngleDegrees:0.0}°\n" +
+                   $"Результат планировщика: {ai.LastTacticalPositionResult}\n\n" +
                    "<b>СТРАТЕГИЧЕСКОЕ РЕШЕНИЕ</b>\n" + strategic;
         }
 

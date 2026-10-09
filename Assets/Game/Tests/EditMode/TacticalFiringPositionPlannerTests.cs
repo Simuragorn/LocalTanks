@@ -1,0 +1,279 @@
+using NUnit.Framework;
+using UnityEngine;
+
+namespace LocalTanks.Tests
+{
+    public sealed class TacticalFiringPositionPlannerTests
+    {
+        [Test]
+        public void LineOfFireAssessment_IdentifiesConcreteHardObstacle()
+        {
+            GameObject owner = new GameObject("TacticalLineOwner");
+            GameObject obstacle = new GameObject("TacticalHardObstacle");
+            GameObject target = new GameObject("TacticalLineTarget");
+            try
+            {
+                owner.transform.position = new Vector2(1200f, 1200f);
+                owner.AddComponent<BoxCollider2D>().size = Vector2.one;
+                obstacle.transform.position = new Vector2(1200f, 1203f);
+                BoxCollider2D obstacleCollider = obstacle.AddComponent<BoxCollider2D>();
+                obstacleCollider.size = Vector2.one;
+                target.transform.position = new Vector2(1200f, 1206f);
+                target.AddComponent<BoxCollider2D>().size = Vector2.one;
+                Physics2D.SyncTransforms();
+
+                LineOfFireAssessment result = CombatLineOfFire.Evaluate(
+                    owner.transform,
+                    TeamId.TeamA,
+                    new Vector2(1200f, 1201f),
+                    target.transform.position,
+                    target.transform);
+
+                Assert.That(result.IsClear, Is.False);
+                Assert.That(result.Reason, Is.EqualTo(FireBlockReason.ObstacleInLine));
+                Assert.That(result.BlockType, Is.EqualTo(LineOfFireBlockType.HardObstacle));
+                Assert.That(result.Blocker, Is.EqualTo(obstacleCollider));
+                Assert.That(result.BlockPoint.y, Is.EqualTo(1202.5f).Within(0.02f));
+                Assert.That(result.CanBeDestroyed, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(obstacle);
+                Object.DestroyImmediate(target);
+            }
+        }
+
+        [Test]
+        public void LineOfFireAssessment_RecognizesDestructibleObstacle()
+        {
+            GameObject owner = new GameObject("TacticalLineOwner");
+            GameObject obstacle = new GameObject("TacticalDestructibleObstacle");
+            GameObject target = new GameObject("TacticalLineTarget");
+            try
+            {
+                owner.transform.position = new Vector2(1300f, 1300f);
+                obstacle.transform.position = new Vector2(1300f, 1303f);
+                BoxCollider2D obstacleCollider = obstacle.AddComponent<BoxCollider2D>();
+                DestructibleObstacle destructible = obstacle.AddComponent<DestructibleObstacle>();
+                destructible.Configure(null, System.Array.Empty<Vector2Int>(), 100);
+                target.transform.position = new Vector2(1300f, 1306f);
+                target.AddComponent<BoxCollider2D>();
+                Physics2D.SyncTransforms();
+
+                LineOfFireAssessment result = CombatLineOfFire.Evaluate(
+                    owner.transform,
+                    TeamId.TeamA,
+                    new Vector2(1300f, 1301f),
+                    target.transform.position,
+                    target.transform);
+
+                Assert.That(result.Blocker, Is.EqualTo(obstacleCollider));
+                Assert.That(result.BlockType, Is.EqualTo(LineOfFireBlockType.DestructibleObstacle));
+                Assert.That(result.CanBeDestroyed, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(obstacle);
+                Object.DestroyImmediate(target);
+            }
+        }
+
+        [Test]
+        public void Planner_FindsReachablePositionAroundBlockedLine()
+        {
+            NavigationMap map = CreateMap(12, 12, (x, y) => x == 5 && y >= 3 && y <= 7);
+            try
+            {
+                Vector2 origin = map.CellToWorld(new Vector2Int(1, 5));
+                Vector2 target = map.CellToWorld(new Vector2Int(9, 5));
+
+                bool found = TacticalFiringPositionPlanner.TryFind(
+                    map,
+                    origin,
+                    target,
+                    preferredDistance: 6f,
+                    maximumFiringDistance: 12f,
+                    clearanceCells: 0,
+                    maximumSearchDistance: 10f,
+                    candidate => candidate.y >= 8.5f,
+                    null,
+                    out TacticalFiringPositionSolution solution);
+
+                Assert.That(found, Is.True);
+                Assert.That(solution.Position.y, Is.GreaterThanOrEqualTo(8.5f));
+                Assert.That(solution.PathLength, Is.GreaterThan(Vector2.Distance(origin, solution.Position) - 0.01f));
+                Assert.That(solution.EvaluatedCandidates, Is.GreaterThan(0));
+            }
+            finally
+            {
+                Object.DestroyImmediate(map.gameObject);
+            }
+        }
+
+        [Test]
+        public void Planner_DoesNotRepeatExcludedFailedCell()
+        {
+            NavigationMap map = CreateMap(10, 10, (_, _) => false);
+            try
+            {
+                Vector2 origin = map.CellToWorld(new Vector2Int(1, 4));
+                Vector2 target = map.CellToWorld(new Vector2Int(8, 4));
+                Assert.That(TacticalFiringPositionPlanner.TryFind(
+                    map, origin, target, 5f, 10f, 0, 7f,
+                    _ => true, null, out TacticalFiringPositionSolution first), Is.True);
+
+                Assert.That(TacticalFiringPositionPlanner.TryFind(
+                    map, origin, target, 5f, 10f, 0, 7f,
+                    _ => true, cell => cell == first.Cell,
+                    out TacticalFiringPositionSolution second), Is.True);
+
+                Assert.That(second.Cell, Is.Not.EqualTo(first.Cell));
+            }
+            finally
+            {
+                Object.DestroyImmediate(map.gameObject);
+            }
+        }
+
+        [Test]
+        public void Planner_RejectsClearPositionWhenNoPathExists()
+        {
+            NavigationMap map = CreateMap(10, 10, (x, _) => x == 4);
+            try
+            {
+                Vector2 origin = map.CellToWorld(new Vector2Int(1, 4));
+                Vector2 target = map.CellToWorld(new Vector2Int(8, 4));
+                bool found = TacticalFiringPositionPlanner.TryFind(
+                    map,
+                    origin,
+                    target,
+                    preferredDistance: 4f,
+                    maximumFiringDistance: 10f,
+                    clearanceCells: 0,
+                    maximumSearchDistance: 9f,
+                    candidate => candidate.x > 4.5f,
+                    null,
+                    out _);
+
+                Assert.That(found, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(map.gameObject);
+            }
+        }
+
+        [Test]
+        public void ArmorUseProfile_DerivesUsefulAngleFromActualFrontAndSideArmor()
+        {
+            TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
+            try
+            {
+                definition.vehicleClass = VehicleClass.HeavyTank;
+                definition.armor = new ArmorProfile(150f, 80f, 80f, 80f);
+
+                ArmorUseProfile profile = ArmorUseProfile.From(definition);
+
+                Assert.That(profile.CanAngle, Is.True);
+                Assert.That(profile.SafeAngleDegrees, Is.EqualTo(28.1f).Within(0.2f));
+                Assert.That(profile.EffectiveProtection(profile.SafeAngleDegrees),
+                    Is.GreaterThan(profile.EffectiveProtection(0f)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(definition);
+            }
+        }
+
+        [Test]
+        public void ArmorUseProfile_RejectsAnglingWithVeryWeakSideArmor()
+        {
+            TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
+            try
+            {
+                definition.vehicleClass = VehicleClass.HeavyTank;
+                definition.armor = new ArmorProfile(150f, 20f, 20f, 20f);
+
+                ArmorUseProfile profile = ArmorUseProfile.From(definition);
+
+                Assert.That(profile.CanAngle, Is.False);
+                Assert.That(profile.SafeAngleDegrees, Is.Zero);
+                Assert.That(profile.DesiredForward(Vector2.right, 1), Is.EqualTo(Vector2.right));
+            }
+            finally
+            {
+                Object.DestroyImmediate(definition);
+            }
+        }
+
+        [Test]
+        public void ThreatMemory_UsesRecentSevereObservationsWithoutRevealingShooter()
+        {
+            ThreatMemory memory = new ThreatMemory();
+            memory.Record(new ArmorImpactObservation(
+                Vector2.up, ImpactOutcome.Blocked, ArmorZone.Front, 0, 0f));
+            memory.Record(new ArmorImpactObservation(
+                Vector2.right, ImpactOutcome.Penetrated, ArmorZone.Left, 40, 8f));
+
+            Assert.That(memory.TryGetPrimaryDirection(9f, out Vector2 direction), Is.True);
+            Assert.That(direction.x, Is.GreaterThan(direction.y));
+            Assert.That(memory.ActiveCount(19.1f), Is.Zero);
+        }
+
+        [Test]
+        public void CoverPlanner_FindsReachableProtectedCell()
+        {
+            NavigationMap map = CreateMap(12, 10, (x, y) => x == 5 && y >= 2 && y <= 7);
+            try
+            {
+                Vector2 origin = map.CellToWorld(new Vector2Int(7, 5));
+                bool found = TacticalCoverPlanner.TryFind(
+                    map,
+                    origin,
+                    clearanceCells: 0,
+                    maximumSearchDistance: 5f,
+                    candidate => candidate.x > 5.5f && candidate.y <= 7.5f,
+                    _ => true,
+                    out TacticalCoverSolution solution);
+
+                Assert.That(found, Is.True);
+                Assert.That(solution.Position.x, Is.GreaterThan(5.5f));
+                Assert.That(solution.PathLength, Is.GreaterThan(0f));
+                Assert.That(solution.EvaluatedCandidates, Is.GreaterThan(0));
+            }
+            finally
+            {
+                Object.DestroyImmediate(map.gameObject);
+            }
+        }
+
+        private static NavigationMap CreateMap(int width, int height, System.Func<int, int, bool> blockedAt)
+        {
+            int count = width * height;
+            TerrainKind[] terrain = new TerrainKind[count];
+            float[] costs = new float[count];
+            float[] speeds = new float[count];
+            float[] accelerations = new float[count];
+            bool[] blocked = new bool[count];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    int index = y * width + x;
+                    bool isBlocked = blockedAt(x, y);
+                    terrain[index] = isBlocked ? TerrainKind.Blocked : TerrainKind.Grass;
+                    costs[index] = 1f;
+                    speeds[index] = 1f;
+                    accelerations[index] = 1f;
+                    blocked[index] = isBlocked;
+                }
+            }
+
+            NavigationMap map = new GameObject("TacticalPlannerMap").AddComponent<NavigationMap>();
+            map.Configure(width, height, 1f, Vector2.zero, terrain, costs, speeds, accelerations, blocked);
+            return map;
+        }
+    }
+}

@@ -95,6 +95,40 @@ namespace LocalTanks.Tests
             Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.CombatInactivity), Is.True);
         }
 
+        [Test]
+        public void Auditor_TracksProgressingRepositionThroughMovementRulesInsteadOfCombatTimer()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                combatInactivitySeconds = 2f,
+                movementWindowSeconds = 10f
+            });
+            for (int index = 0; index < 5; index++)
+            {
+                auditor.Record(new CombatAiAuditSample(
+                    index,
+                    "bot-a",
+                    "Тестер",
+                    CombatAiState.Reposition,
+                    new Vector2(index * 0.2f, 0f),
+                    true,
+                    false,
+                    true,
+                    false,
+                    true,
+                    "enemy-a",
+                    true,
+                    FireBlockReason.ObstacleInLine,
+                    0));
+            }
+
+            Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.CombatInactivity), Is.False);
+
+            auditor.Record(CombatSample(4.1f, "enemy-a"));
+            auditor.Record(CombatSample(6.2f, "enemy-a"));
+            Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.CombatInactivity), Is.True);
+        }
+
         private static CombatAiAuditSample Sample(
             float time,
             CombatAiState state,
