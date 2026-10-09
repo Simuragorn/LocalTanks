@@ -1,0 +1,11 @@
+{
+  "provider": "Ollama",
+  "autoStart": true,
+  "baseUrl": "http://127.0.0.1:11434",
+  "model": "qwen3:8b",
+  "relativeExecutablePath": "LocalData/Ollama/ollama.exe",
+  "relativeModelPath": "LocalData/OllamaModels",
+  "startupTimeoutSeconds": 45,
+  "requestTimeoutSeconds": 30,
+  "keepAlive": "10m"
+}
