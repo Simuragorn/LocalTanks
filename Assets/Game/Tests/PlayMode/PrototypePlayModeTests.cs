@@ -319,6 +319,14 @@ namespace LocalTanks.Tests
             }));
             Assert.That(director.TeamAAlive, Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(director.TeamBAlive, Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(director.StrategicPlanner, Is.Not.Null);
+            Assert.That(director.StrategicPlanner.HasUsablePlans, Is.True);
+            Assert.That(director.StrategicPlanner.MapAnalysis.lanes.Select(lane => lane.laneId),
+                Is.EquivalentTo(director.TacticalMap.lanes.Select(lane => lane.id)));
+            Assert.That(director.StrategicPlanner.TeamAPlan.assignments.Length,
+                Is.EqualTo(BattleScenario.TeamSize - 1));
+            Assert.That(director.StrategicPlanner.TeamBPlan.assignments.Length,
+                Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(Object.FindObjectsByType<CombatTankAI>().Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             BotIdentityComponent[] identities = Object.FindObjectsByType<BotIdentityComponent>();
             Assert.That(identities.Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
@@ -412,6 +420,80 @@ namespace LocalTanks.Tests
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
             Assert.That(follow.Target, Is.EqualTo(playerMember.transform));
             Assert.That(follow.MaximumZoom, Is.EqualTo(22f));
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_FakeLlmCreatesMapAnalysisAndIndependentTeamPlans()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            BattleStrategicPlanner planner = director.StrategicPlanner;
+            Assert.That(planner.State, Is.EqualTo(StrategicPlanningState.FallbackReady));
+            FakeLocalLlmProvider provider = new FakeLocalLlmProvider();
+            provider.Enqueue(LocalLlmResponse.Success(
+                MapStrategicAnalysisSchema.ToJson(planner.MapAnalysis), 11));
+            provider.Enqueue(LocalLlmResponse.Success(
+                TeamBattlePlanSchema.ToJson(planner.TeamAPlan), 12));
+            provider.Enqueue(LocalLlmResponse.Success(
+                TeamBattlePlanSchema.ToJson(planner.TeamBPlan), 13));
+
+            planner.RunWithProvider(provider);
+            for (int frame = 0; frame < 30 && !planner.RemotePlanningFinished; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(planner.State, Is.EqualTo(StrategicPlanningState.Ready));
+            Assert.That(provider.Requests.Select(item => item.purpose), Is.EqualTo(new[]
+            {
+                $"map-analysis:{director.TacticalMap.mapId}:{director.TacticalMap.sourceHash}",
+                "team-plan:river_crossing_battle:TeamA",
+                "team-plan:river_crossing_battle:TeamB"
+            }));
+            Assert.That(planner.Diagnostics.mapAnalysisFromLlm, Is.True);
+            Assert.That(planner.Diagnostics.teamAPlanFromLlm, Is.True);
+            Assert.That(planner.Diagnostics.teamBPlanFromLlm, Is.True);
+            Assert.That(planner.Diagnostics.mapDurationMilliseconds, Is.EqualTo(11));
+            Assert.That(planner.Diagnostics.teamADurationMilliseconds, Is.EqualTo(12));
+            Assert.That(planner.Diagnostics.teamBDurationMilliseconds, Is.EqualTo(13));
+            Assert.That(planner.TeamAPlan.teamId, Is.EqualTo("TeamA"));
+            Assert.That(planner.TeamBPlan.teamId, Is.EqualTo("TeamB"));
+            Assert.That(planner.TeamAPlan, Is.Not.SameAs(planner.TeamBPlan));
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_InvalidLlmResponsesKeepEveryDeterministicFallback()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            BattleStrategicPlanner planner = Object.FindAnyObjectByType<BattleDirector>().StrategicPlanner;
+            MapStrategicAnalysis fallbackMap = planner.MapAnalysis;
+            TeamBattlePlan fallbackA = planner.TeamAPlan;
+            TeamBattlePlan fallbackB = planner.TeamBPlan;
+            FakeLocalLlmProvider provider = new FakeLocalLlmProvider();
+            provider.Enqueue(LocalLlmResponse.Success("{\"schemaVersion\":1,\"mapId\":\"invented\"}"));
+            provider.Enqueue(LocalLlmResponse.Failure("team A timeout"));
+            provider.Enqueue(LocalLlmResponse.Failure("team B malformed response"));
+
+            planner.RunWithProvider(provider);
+            for (int frame = 0; frame < 30 && !planner.RemotePlanningFinished; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(planner.State, Is.EqualTo(StrategicPlanningState.PartialFallback));
+            Assert.That(planner.MapAnalysis, Is.SameAs(fallbackMap));
+            Assert.That(planner.TeamAPlan, Is.SameAs(fallbackA));
+            Assert.That(planner.TeamBPlan, Is.SameAs(fallbackB));
+            Assert.That(planner.Diagnostics.mapAnalysisFromLlm, Is.False);
+            Assert.That(planner.Diagnostics.teamAPlanFromLlm, Is.False);
+            Assert.That(planner.Diagnostics.teamBPlanFromLlm, Is.False);
+            Assert.That(planner.Diagnostics.mapError, Is.Not.Empty);
+            Assert.That(planner.Diagnostics.teamAError, Does.Contain("timeout"));
+            Assert.That(planner.Diagnostics.teamBError, Does.Contain("malformed"));
         }
 
         private static bool ColorsMatch(Color actual, Color expected)

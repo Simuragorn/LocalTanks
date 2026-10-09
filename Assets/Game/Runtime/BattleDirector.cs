@@ -42,6 +42,7 @@ namespace LocalTanks
         public IReadOnlyList<TeamMember> SpawnedMembers => spawnedMembers;
         public TeamMember PlayerMember { get; private set; }
         public TacticalMapDescriptor TacticalMap => tacticalMap != null ? tacticalMap.descriptor : null;
+        public BattleStrategicPlanner StrategicPlanner { get; private set; }
         public int TeamAAlive { get; private set; }
         public int TeamBAlive { get; private set; }
         public IReadOnlyDictionary<string, BotIdentity> BotIdentities => botIdentities;
@@ -102,6 +103,10 @@ namespace LocalTanks
             {
                 Spawn(entries[index], index);
             }
+
+            StrategicPlanner = GetComponent<BattleStrategicPlanner>();
+            if (StrategicPlanner == null) StrategicPlanner = gameObject.AddComponent<BattleStrategicPlanner>();
+            StrategicPlanner.Configure(TacticalMap, scenario, combatDatabase, botIdentities);
 
             LivingCountsChanged?.Invoke(TeamId.Neutral, TeamAAlive, TeamBAlive);
         }
