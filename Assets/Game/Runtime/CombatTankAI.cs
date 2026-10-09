@@ -18,6 +18,7 @@ namespace LocalTanks
         [SerializeField] private TurretAiming turret;
         [SerializeField] private WeaponController weapon;
         [SerializeField] private TankHealth health;
+        [SerializeField] private BotIdentityComponent identity;
         [SerializeField] private BattleLane lane;
         [SerializeField] private CombatAiRole role;
 
@@ -43,6 +44,7 @@ namespace LocalTanks
         public Vector2 RepositionDestination => repositionDestination;
         public BattleLane Lane => lane;
         public CombatAiRole Role => role;
+        public BotIdentity Identity => identity != null ? identity.Identity : null;
 
         private void Awake()
         {
@@ -464,6 +466,7 @@ namespace LocalTanks
             if (turret == null) turret = GetComponentInChildren<TurretAiming>(true);
             if (weapon == null) weapon = GetComponent<WeaponController>();
             if (health == null) health = GetComponent<TankHealth>();
+            if (identity == null) identity = GetComponent<BotIdentityComponent>();
         }
 
         private void OnDestroyed(TankHealth destroyedHealth)

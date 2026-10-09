@@ -67,9 +67,19 @@ namespace LocalTanks
             string reposition = selected.State == CombatAiState.Reposition
                 ? $"{selected.RepositionDestination.x:0.0}, {selected.RepositionDestination.y:0.0}"
                 : "—";
+            BotIdentity identity = selected.Identity;
+            BotPersonalityProfile personality = identity?.personality;
+            string botName = identity != null ? identity.nickname : selected.name;
+            string temperament = personality != null
+                ? $"{personality.DominantTrait}\n" +
+                  $"Агр/ост/дисц: {personality.aggression:0.00} / {personality.caution:0.00} / {personality.discipline:0.00}\n" +
+                  $"Иниц/ком/терп: {personality.initiative:0.00} / {personality.teamwork:0.00} / {personality.patience:0.00}\n" +
+                  $"Общ/юмор/пом: {personality.sociability:0.00} / {personality.humor:0.00} / {personality.helpfulness:0.00}"
+                : "Профиль не назначен";
             GUI.Box(
-                new Rect(Screen.width - 312f, 118f, 300f, 168f),
-                $"ИИ: {selected.name}\n" +
+                new Rect(Screen.width - 332f, 118f, 320f, 252f),
+                $"ИИ: {botName}\n" +
+                $"Темперамент: {temperament}\n" +
                 $"Состояние: {selected.State}\n" +
                 $"Линия / роль: {selected.Lane} / {selected.Role}\n" +
                 $"Цель: {targetName}\n" +

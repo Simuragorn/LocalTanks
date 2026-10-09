@@ -33,6 +33,7 @@ namespace LocalTanks
 
         private readonly List<TeamMember> spawnedMembers = new List<TeamMember>();
         private readonly Dictionary<TankHealth, TeamId> trackedHealth = new Dictionary<TankHealth, TeamId>();
+        private readonly Dictionary<string, BotIdentity> botIdentities = new Dictionary<string, BotIdentity>(StringComparer.Ordinal);
         private bool spawned;
 
         public event Action<TeamMember> TankSpawned;
@@ -43,6 +44,7 @@ namespace LocalTanks
         public TacticalMapDescriptor TacticalMap => tacticalMap != null ? tacticalMap.descriptor : null;
         public int TeamAAlive { get; private set; }
         public int TeamBAlive { get; private set; }
+        public IReadOnlyDictionary<string, BotIdentity> BotIdentities => botIdentities;
 
         private void Start()
         {
@@ -95,6 +97,7 @@ namespace LocalTanks
                 .OrderBy(item => item.team)
                 .ThenBy(item => item.spawnSlot)
                 .ToArray();
+            BuildBotIdentities(entries);
             for (int index = 0; index < entries.Length; index++)
             {
                 Spawn(entries[index], index);
@@ -144,6 +147,12 @@ namespace LocalTanks
                 TankHealthBar healthBar = tank.GetComponent<TankHealthBar>();
                 if (healthBar == null) healthBar = tank.AddComponent<TankHealthBar>();
                 healthBar.Configure(1.45f, entry.team == TeamId.TeamA);
+                BotIdentityComponent botIdentity = tank.GetComponent<BotIdentityComponent>();
+                if (botIdentity == null) botIdentity = tank.AddComponent<BotIdentityComponent>();
+                botIdentity.Configure(botIdentities[entry.id]);
+                BotIdentityPresenter identityPresenter = tank.GetComponent<BotIdentityPresenter>();
+                if (identityPresenter == null) identityPresenter = tank.AddComponent<BotIdentityPresenter>();
+                identityPresenter.Configure();
 
                 NavigationAgent navigation = tank.GetComponent<NavigationAgent>();
                 if (navigation == null) navigation = tank.AddComponent<NavigationAgent>();
@@ -160,6 +169,8 @@ namespace LocalTanks
                     decisionIndex * 0.031f);
             }
 
+            visibility.RefreshVisuals();
+
             spawnedMembers.Add(member);
             if (entry.team == TeamId.TeamA) TeamAAlive++;
             if (entry.team == TeamId.TeamB) TeamBAlive++;
@@ -170,6 +181,32 @@ namespace LocalTanks
             }
 
             TankSpawned?.Invoke(member);
+        }
+
+        private void BuildBotIdentities(IEnumerable<BattleScenarioEntry> entries)
+        {
+            BotProfileContext[] contexts = entries
+                .Where(entry => entry != null && !entry.playerControlled)
+                .Select(entry =>
+                {
+                    TankDefinition definition = combatDatabase.FindTank(entry.tankId);
+                    return new BotProfileContext
+                    {
+                        entityId = entry.id,
+                        team = entry.team.ToString(),
+                        tankId = entry.tankId,
+                        vehicleClass = definition != null ? definition.vehicleClass.ToString() : string.Empty,
+                        nation = definition != null ? definition.nation.ToString() : string.Empty,
+                        lane = entry.lane.ToString(),
+                        role = entry.role.ToString()
+                    };
+                })
+                .ToArray();
+            botIdentities.Clear();
+            foreach (BotIdentity identity in BotPersonalityGenerator.GenerateRoster(scenario.id, contexts))
+            {
+                botIdentities.Add(identity.entityId, identity);
+            }
         }
 
         private void OnTankDestroyed(TankHealth health)

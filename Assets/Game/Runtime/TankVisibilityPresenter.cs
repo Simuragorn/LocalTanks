@@ -50,6 +50,35 @@ namespace LocalTanks
             }
         }
 
+        public void RefreshVisuals()
+        {
+            RestoreOriginalAlphas();
+            CacheVisuals();
+            SetVisible(IsVisible);
+        }
+
+        private void RestoreOriginalAlphas()
+        {
+            if (renderers == null || originalAlphas == null)
+            {
+                return;
+            }
+
+            int count = Mathf.Min(renderers.Length, originalAlphas.Length);
+            for (int index = 0; index < count; index++)
+            {
+                SpriteRenderer renderer = renderers[index];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                Color color = renderer.color;
+                color.a = originalAlphas[index];
+                renderer.color = color;
+            }
+        }
+
         private void CacheVisuals()
         {
             renderers = GetComponentsInChildren<SpriteRenderer>(true);

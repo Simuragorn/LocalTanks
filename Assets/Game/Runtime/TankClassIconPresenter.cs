@@ -21,12 +21,16 @@ namespace LocalTanks
         [SerializeField, Min(0f)] private float worldOffset = 1.65f;
         [SerializeField] private SpriteRenderer iconRenderer;
 
+        private TankHealth health;
+        private TankVisibilityPresenter visibility;
+
         public Sprite Icon => icon;
         public Color TeamColor => TeamPalette.ForRelation(allied);
 
         private void Awake()
         {
             EnsureIconRenderer();
+            ResolveStateReferences();
         }
 
         private void LateUpdate()
@@ -36,9 +40,20 @@ namespace LocalTanks
                 return;
             }
 
+            ResolveStateReferences();
+            iconRenderer.enabled = health != null && !health.IsDestroyed &&
+                                   (visibility == null || visibility.IsVisible);
+            if (!iconRenderer.enabled) return;
+
             iconRenderer.transform.SetPositionAndRotation(
                 transform.position + Vector3.up * worldOffset,
                 Quaternion.identity);
+        }
+
+        private void ResolveStateReferences()
+        {
+            if (health == null) health = GetComponent<TankHealth>();
+            if (visibility == null) visibility = GetComponent<TankVisibilityPresenter>();
         }
 
         public void Configure(Sprite classIcon, bool isAllied, float offset)

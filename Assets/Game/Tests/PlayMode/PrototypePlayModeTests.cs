@@ -320,6 +320,15 @@ namespace LocalTanks.Tests
             Assert.That(director.TeamAAlive, Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(director.TeamBAlive, Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(Object.FindObjectsByType<CombatTankAI>().Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
+            BotIdentityComponent[] identities = Object.FindObjectsByType<BotIdentityComponent>();
+            Assert.That(identities.Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
+            Assert.That(identities.Select(item => item.Identity.nickname)
+                .Distinct(System.StringComparer.OrdinalIgnoreCase).Count(), Is.EqualTo(identities.Length));
+            Assert.That(identities, Has.All.Matches<BotIdentityComponent>(item =>
+                item.Identity.personality != null && !string.IsNullOrWhiteSpace(item.Identity.personality.DominantTrait)));
+            Assert.That(Object.FindObjectsByType<BotIdentityPresenter>().Length,
+                Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
+            Assert.That(director.PlayerMember.GetComponent<BotIdentityComponent>(), Is.Null);
             Assert.That(Object.FindObjectsByType<ConcealmentZone>().Length, Is.GreaterThan(0));
             Assert.That(GameObject.Find("VisionBlockers").GetComponent<VisionBlocker>(), Is.Not.Null);
             BattleRoster roster = Object.FindAnyObjectByType<BattleRoster>();
@@ -439,6 +448,8 @@ namespace LocalTanks.Tests
             Assert.That(destroyed.State, Is.EqualTo(CombatAiState.Destroyed));
             Assert.That(destroyed.GetComponent<NavigationAgent>().enabled, Is.False);
             Assert.That(destroyed.GetComponent<WeaponController>().enabled, Is.False);
+            Assert.That(destroyed.GetComponent<BotIdentityPresenter>().ShouldRender, Is.False);
+            Assert.That(destroyed.transform.Find("ClassIcon").GetComponent<SpriteRenderer>().enabled, Is.False);
         }
 
         [UnityTest]

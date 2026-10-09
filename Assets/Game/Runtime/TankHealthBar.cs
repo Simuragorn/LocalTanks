@@ -45,7 +45,7 @@ namespace LocalTanks
         private void OnGUI()
         {
             Camera camera = Camera.main;
-            if (camera == null || health == null)
+            if (camera == null || health == null || health.IsDestroyed)
             {
                 return;
             }
