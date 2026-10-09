@@ -22,6 +22,15 @@
     "right": 16.0,
     "rear": 16.0
   },
+  "gunHandling": {
+    "minimumDispersionDegrees": 0.0,
+    "maximumDispersionDegrees": 2.8,
+    "aimingTimeSeconds": 2.2,
+    "movementDispersionDegrees": 1.6,
+    "hullTraverseDispersionDegrees": 1.2,
+    "turretTraverseDispersionDegrees": 0.45,
+    "shotDispersionDegrees": 1.2
+  },
   "vision": {
     "viewRange": 8.7,
     "stationaryConcealment": 0.32,

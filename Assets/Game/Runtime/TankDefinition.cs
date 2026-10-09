@@ -38,6 +38,15 @@ namespace LocalTanks
         [Header("Turret")]
         [Min(0f)] public float turretTurnSpeed;
 
+        [Header("Gun handling")]
+        [Min(0f)] public float minimumDispersionDegrees;
+        [Min(0f)] public float maximumDispersionDegrees = 2f;
+        [Min(0.01f)] public float aimingTimeSeconds = 2f;
+        [Min(0f)] public float movementDispersionDegrees = 1f;
+        [Min(0f)] public float hullTraverseDispersionDegrees = 1f;
+        [Min(0f)] public float turretTraverseDispersionDegrees = 0.35f;
+        [Min(0f)] public float shotDispersionDegrees = 1f;
+
         [Header("Vision")]
         [Min(0f)] public float viewRange;
         [Range(0f, 1f)] public float stationaryConcealment;

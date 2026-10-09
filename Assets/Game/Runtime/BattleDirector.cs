@@ -132,6 +132,7 @@ namespace LocalTanks
                 if (input != null) input.enabled = true;
                 PlayerMember = member;
                 cameraFollow?.Configure(tank.transform);
+                cameraFollow?.GetComponent<PlayerAimReticle>()?.Configure(tank.transform);
             }
             else
             {

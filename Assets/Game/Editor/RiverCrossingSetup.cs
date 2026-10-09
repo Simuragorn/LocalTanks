@@ -933,6 +933,7 @@ namespace LocalTanks.Editor
             follow.ConfigureZoomRange(5f, 22f, 1.5f);
             follow.SetZoom(13f, true);
             cameraObject.AddComponent<NavigationDebugOverlay>().Configure(map);
+            cameraObject.AddComponent<PlayerAimReticle>();
             return follow;
         }
 

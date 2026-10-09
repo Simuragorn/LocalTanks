@@ -135,6 +135,7 @@ GameObject:
   - component: {fileID: 3920106303397966198}
   - component: {fileID: 7294076012409569639}
   - component: {fileID: 6598801164163643703}
+  - component: {fileID: 6352784290395649106}
   - component: {fileID: 3325340310409873891}
   - component: {fileID: 1271144910613082445}
   - component: {fileID: 1009099874877684003}
@@ -267,6 +268,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankMotor
   config: {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}
+--- !u!114 &6352784290395649106
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5542802717953612855}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3448ad1c023eb8349a28a60a005768de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.GunDispersionController
+  config: {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}
+  motor: {fileID: 6598801164163643703}
+  turret: {fileID: 710693342537775573}
 --- !u!114 &3325340310409873891
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -282,6 +298,7 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: eae46a90e4f90444cb92e8cef13f6e96, type: 2}
   projectilePrefab: {fileID: 6266017310525627264, guid: b2f589a05d276434bbcdf20f79526a87, type: 3}
   muzzle: {fileID: 7589511858242689961}
+  dispersion: {fileID: 6352784290395649106}
   reloadOverrideSeconds: 0
 --- !u!114 &1271144910613082445
 MonoBehaviour:

@@ -41,6 +41,18 @@ namespace LocalTanks.Editor
     }
 
     [Serializable]
+    public sealed class GunHandlingJson
+    {
+        public float minimumDispersionDegrees;
+        public float maximumDispersionDegrees;
+        public float aimingTimeSeconds;
+        public float movementDispersionDegrees;
+        public float hullTraverseDispersionDegrees;
+        public float turretTraverseDispersionDegrees;
+        public float shotDispersionDegrees;
+    }
+
+    [Serializable]
     public sealed class TankDefinitionJson
     {
         public int schemaVersion;
@@ -54,6 +66,7 @@ namespace LocalTanks.Editor
         public MobilityJson mobility;
         public ArmorJson armor;
         public VisionJson vision;
+        public GunHandlingJson gunHandling;
     }
 
     [Serializable]
@@ -198,6 +211,25 @@ namespace LocalTanks.Editor
                         errors.Add($"Tank '{tank.id}'.vision.guaranteedDetectionRange cannot exceed viewRange.");
                     }
                 }
+
+                if (tank.gunHandling == null)
+                {
+                    errors.Add($"Tank '{tank.id}' is missing gunHandling.");
+                }
+                else
+                {
+                    RequireNonNegative(tank.gunHandling.minimumDispersionDegrees, $"Tank '{tank.id}'.gunHandling.minimumDispersionDegrees", errors);
+                    RequirePositive(tank.gunHandling.maximumDispersionDegrees, $"Tank '{tank.id}'.gunHandling.maximumDispersionDegrees", errors);
+                    RequirePositive(tank.gunHandling.aimingTimeSeconds, $"Tank '{tank.id}'.gunHandling.aimingTimeSeconds", errors);
+                    RequireNonNegative(tank.gunHandling.movementDispersionDegrees, $"Tank '{tank.id}'.gunHandling.movementDispersionDegrees", errors);
+                    RequireNonNegative(tank.gunHandling.hullTraverseDispersionDegrees, $"Tank '{tank.id}'.gunHandling.hullTraverseDispersionDegrees", errors);
+                    RequireNonNegative(tank.gunHandling.turretTraverseDispersionDegrees, $"Tank '{tank.id}'.gunHandling.turretTraverseDispersionDegrees", errors);
+                    RequireNonNegative(tank.gunHandling.shotDispersionDegrees, $"Tank '{tank.id}'.gunHandling.shotDispersionDegrees", errors);
+                    if (tank.gunHandling.maximumDispersionDegrees < tank.gunHandling.minimumDispersionDegrees)
+                    {
+                        errors.Add($"Tank '{tank.id}'.gunHandling.maximumDispersionDegrees cannot be below minimumDispersionDegrees.");
+                    }
+                }
             }
 
             return errors.ToArray();
@@ -328,6 +360,7 @@ namespace LocalTanks.Editor
             database.tanks = tanks.Values.ToArray();
             EditorUtility.SetDirty(database);
             AssetDatabase.SaveAssets();
+            TankBalanceDocumentGenerator.Write(source);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             Debug.Log($"Local Tanks: imported {tanks.Count} tank(s), {weapons.Count} weapon(s), and {shells.Count} shell(s).");
         }
@@ -437,6 +470,13 @@ namespace LocalTanks.Editor
             target.braking = source.mobility.braking;
             target.hullTurnSpeed = source.mobility.hullTurnSpeed;
             target.turretTurnSpeed = source.mobility.turretTurnSpeed;
+            target.minimumDispersionDegrees = source.gunHandling.minimumDispersionDegrees;
+            target.maximumDispersionDegrees = source.gunHandling.maximumDispersionDegrees;
+            target.aimingTimeSeconds = source.gunHandling.aimingTimeSeconds;
+            target.movementDispersionDegrees = source.gunHandling.movementDispersionDegrees;
+            target.hullTraverseDispersionDegrees = source.gunHandling.hullTraverseDispersionDegrees;
+            target.turretTraverseDispersionDegrees = source.gunHandling.turretTraverseDispersionDegrees;
+            target.shotDispersionDegrees = source.gunHandling.shotDispersionDegrees;
             target.viewRange = source.vision.viewRange;
             target.stationaryConcealment = source.vision.stationaryConcealment;
             target.movementRevealPenalty = source.vision.movementRevealPenalty;

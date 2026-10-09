@@ -26,12 +26,14 @@ namespace LocalTanks
         private void Awake()
         {
             InitializeCamera();
+            EnsureAimReticle().Configure(target);
         }
 
         public void Configure(Transform newTarget)
         {
             target = newTarget;
             InitializeCamera();
+            EnsureAimReticle().Configure(newTarget);
         }
 
         public void ConfigureZoomRange(float minimum, float maximum, float step = 1f)
@@ -104,6 +106,13 @@ namespace LocalTanks
                 maximumZoom = Mathf.Max(minimumZoom, maximumZoom);
                 targetZoom = Mathf.Clamp(cameraComponent.orthographicSize, minimumZoom, maximumZoom);
             }
+        }
+
+        private PlayerAimReticle EnsureAimReticle()
+        {
+            PlayerAimReticle reticle = GetComponent<PlayerAimReticle>();
+            if (reticle == null) reticle = gameObject.AddComponent<PlayerAimReticle>();
+            return reticle;
         }
     }
 }

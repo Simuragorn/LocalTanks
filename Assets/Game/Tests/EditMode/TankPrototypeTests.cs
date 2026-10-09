@@ -237,6 +237,34 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void GunDispersion_RecoversToPerfectAccuracyAfterAimingTime()
+        {
+            float result = GunDispersionMath.Step(2.8f, 0f, 0f, 2.8f, 2.2f, 2.2f);
+
+            Assert.That(result, Is.Zero.Within(0.0001f));
+        }
+
+        [Test]
+        public void GunDispersion_TurretMovementHasSmallerPenaltyThanHullMovement()
+        {
+            float hull = GunDispersionMath.CalculateTarget(0f, 3f, 0f, 1f, 0f, 1.5f, 1.2f, 0.4f);
+            float turret = GunDispersionMath.CalculateTarget(0f, 3f, 0f, 0f, 1f, 1.5f, 1.2f, 0.4f);
+
+            Assert.That(turret, Is.LessThan(hull));
+        }
+
+        [Test]
+        public void GunDispersion_SampledShotStaysInsideCurrentCone()
+        {
+            for (int sequence = 0; sequence < 100; sequence++)
+            {
+                Assert.That(Mathf.Abs(GunDispersionMath.SampleOffsetDegrees(2.5f, sequence)), Is.LessThanOrEqualTo(2.5f));
+            }
+
+            Assert.That(GunDispersionMath.SampleOffsetDegrees(0f, 3), Is.Zero);
+        }
+
+        [Test]
         public void Projectile_ExpiresAfterLifetime()
         {
             ProjectileTravelBudget budget = new ProjectileTravelBudget();

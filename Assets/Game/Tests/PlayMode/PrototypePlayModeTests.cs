@@ -42,6 +42,10 @@ namespace LocalTanks.Tests
             Assert.That(hullCollider, Is.Not.Null);
             Assert.That(hullCollider.points.Length, Is.GreaterThanOrEqualTo(12));
             Assert.That(player.GetComponent<BoxCollider2D>(), Is.Null);
+            Assert.That(player.GetComponent<GunDispersionController>(), Is.Not.Null);
+            PlayerAimReticle reticle = Camera.main.GetComponent<PlayerAimReticle>();
+            Assert.That(reticle, Is.Not.Null);
+            Assert.That(reticle.ControlledTank, Is.EqualTo(player.transform));
 
             PlayerTankSelector selector = Object.FindAnyObjectByType<PlayerTankSelector>();
             TestRangeTargetRespawner respawner = Object.FindAnyObjectByType<TestRangeTargetRespawner>();
@@ -100,6 +104,8 @@ namespace LocalTanks.Tests
             Assert.That(selector.CurrentTank.GetComponent<TankHealth>().Definition.id, Is.EqualTo("leichttraktor"));
             Assert.That(selector.CurrentTank.GetComponent<PlayerTankInput>().enabled, Is.True);
             Assert.That(follow.Target, Is.EqualTo(selector.CurrentTank.transform));
+            Assert.That(Camera.main.GetComponent<PlayerAimReticle>().ControlledTank,
+                Is.EqualTo(selector.CurrentTank.transform));
         }
 
         [UnityTest]

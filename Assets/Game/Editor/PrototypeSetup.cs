@@ -260,8 +260,10 @@ namespace LocalTanks.Editor
 
                 TankMotor motor = root.AddComponent<TankMotor>();
                 motor.Configure(definition);
+                GunDispersionController dispersion = root.AddComponent<GunDispersionController>();
+                dispersion.Configure(definition, motor, aiming);
                 WeaponController weapon = root.AddComponent<WeaponController>();
-                weapon.Configure(definition, projectilePrefab, muzzle.transform);
+                weapon.Configure(definition, projectilePrefab, muzzle.transform, dispersion);
                 PlayerTankInput input = root.AddComponent<PlayerTankInput>();
                 input.Configure(motor, aiming, weapon);
                 TankHealth health = root.AddComponent<TankHealth>();
@@ -395,6 +397,9 @@ namespace LocalTanks.Editor
             CameraFollow2D follow = camera.GetComponent<CameraFollow2D>();
             if (follow == null) follow = camera.gameObject.AddComponent<CameraFollow2D>();
             follow.Configure(target);
+            PlayerAimReticle reticle = camera.GetComponent<PlayerAimReticle>();
+            if (reticle == null) reticle = camera.gameObject.AddComponent<PlayerAimReticle>();
+            reticle.Configure(target);
             return follow;
         }
 

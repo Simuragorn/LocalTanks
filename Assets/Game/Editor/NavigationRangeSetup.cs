@@ -391,6 +391,7 @@ namespace LocalTanks.Editor
             CameraFollow2D follow = cameraObject.AddComponent<CameraFollow2D>();
             follow.Configure(player.transform);
             follow.SetZoom(10f, true);
+            cameraObject.AddComponent<PlayerAimReticle>().Configure(player.transform);
 
             NavigationDebugOverlay overlay = cameraObject.AddComponent<NavigationDebugOverlay>();
             overlay.Configure(map);

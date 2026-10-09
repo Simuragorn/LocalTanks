@@ -10,6 +10,7 @@ namespace LocalTanks
         [SerializeField] private GameObject currentTank;
         [SerializeField] private int currentTankIndex;
         [SerializeField] private CameraFollow2D cameraFollow;
+        [SerializeField] private PlayerAimReticle aimReticle;
         [SerializeField] private TestRangeTargetRespawner targetRespawner;
         [SerializeField] private bool developerFastReload;
 
@@ -31,7 +32,9 @@ namespace LocalTanks
             currentTank = initialTank;
             currentTankIndex = initialIndex;
             cameraFollow = follow;
+            aimReticle = follow != null ? follow.GetComponent<PlayerAimReticle>() : null;
             targetRespawner = respawner;
+            aimReticle?.Configure(currentTank != null ? currentTank.transform : null);
             ApplyDeveloperReload();
         }
 
@@ -93,6 +96,7 @@ namespace LocalTanks
             currentTank.name = $"Player_{GetTankName(index).Replace(' ', '_').Replace('/', '_')}";
             currentTankIndex = index;
             cameraFollow?.Configure(currentTank.transform);
+            aimReticle?.Configure(currentTank.transform);
             ApplyDeveloperReload();
 
             if (previousTank != null)

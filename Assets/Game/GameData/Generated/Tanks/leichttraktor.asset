@@ -26,6 +26,13 @@ MonoBehaviour:
   braking: 1.9
   hullTurnSpeed: 26
   turretTurnSpeed: 24
+  minimumDispersionDegrees: 0
+  maximumDispersionDegrees: 2.5
+  aimingTimeSeconds: 1.9
+  movementDispersionDegrees: 1.45
+  hullTraverseDispersionDegrees: 1
+  turretTraverseDispersionDegrees: 0.4
+  shotDispersionDegrees: 1
   viewRange: 8.9
   stationaryConcealment: 0.29
   movementRevealPenalty: 0.09

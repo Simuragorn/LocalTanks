@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using LocalTanks.Editor;
 using NUnit.Framework;
@@ -40,6 +41,21 @@ namespace LocalTanks.Tests
             Assert.That(ms1.availableInGame, Is.True);
             Assert.That(leichttraktor.availableInGame, Is.True);
             Assert.That(tiger.availableInGame, Is.False);
+            Assert.That(ms1.gunHandling.turretTraverseDispersionDegrees,
+                Is.LessThan(ms1.gunHandling.hullTraverseDispersionDegrees));
+            Assert.That(leichttraktor.gunHandling.turretTraverseDispersionDegrees,
+                Is.LessThan(leichttraktor.gunHandling.movementDispersionDegrees));
+        }
+
+        [Test]
+        public void TankBalanceDocument_MatchesCurrentJsonDefinitions()
+        {
+            CombatDefinitionSet definitions = CombatDefinitionImporter.LoadAndValidate();
+            string expected = TankBalanceDocumentGenerator.GenerateMarkdown(definitions);
+            string actual = File.ReadAllText(Path.GetFullPath(TankBalanceDocumentGenerator.DocumentPath));
+
+            Assert.That(TankBalanceDocumentGenerator.Normalize(actual),
+                Is.EqualTo(TankBalanceDocumentGenerator.Normalize(expected)));
         }
 
         [Test]

@@ -8,6 +8,7 @@ namespace LocalTanks
         [SerializeField] private TankDefinition config;
         [SerializeField] private Projectile2D projectilePrefab;
         [SerializeField] private Transform muzzle;
+        [SerializeField] private GunDispersionController dispersion;
         [SerializeField, Min(0f)] private float reloadOverrideSeconds;
 
         private readonly ReloadTimer reloadTimer = new ReloadTimer();
@@ -17,6 +18,10 @@ namespace LocalTanks
 
         public bool IsReady => reloadTimer.IsReady;
         public Transform Muzzle => muzzle;
+        public float RemainingReloadSeconds => reloadTimer.Remaining;
+        public float ReloadProgress => IsReady || EffectiveReloadSeconds <= 0f
+            ? 1f
+            : 1f - Mathf.Clamp01(reloadTimer.Remaining / EffectiveReloadSeconds);
         public float EffectiveReloadSeconds => reloadOverrideSeconds > 0f
             ? reloadOverrideSeconds
             : config != null && config.weapon != null
@@ -26,16 +31,19 @@ namespace LocalTanks
         public void Configure(
             TankDefinition newConfig,
             Projectile2D newProjectilePrefab,
-            Transform newMuzzle)
+            Transform newMuzzle,
+            GunDispersionController newDispersion = null)
         {
             config = newConfig;
             projectilePrefab = newProjectilePrefab;
             muzzle = newMuzzle;
+            dispersion = newDispersion != null ? newDispersion : GetComponent<GunDispersionController>();
             ResolveProjectileOwner();
         }
 
         private void Awake()
         {
+            if (dispersion == null) dispersion = GetComponent<GunDispersionController>();
             ResolveProjectileOwner();
         }
 
@@ -62,9 +70,13 @@ namespace LocalTanks
                 return false;
             }
 
+            Vector2 shotDirection = dispersion != null
+                ? dispersion.ApplyToDirection(muzzle.up)
+                : (Vector2)muzzle.up;
             Projectile2D projectile = Instantiate(projectilePrefab, muzzle.position, muzzle.rotation);
+            projectile.transform.up = shotDirection;
             projectile.Initialize(
-                muzzle.up,
+                shotDirection,
                 shell,
                 projectileOwnerRoot != null ? projectileOwnerRoot : transform);
             reloadTimer.Start(EffectiveReloadSeconds);
