@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ms_1
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
   id: ms_1
-  displayName: MS-1 (45 mm modernization)
+  displayName: MS-1
   vehicleClass: 2
   nation: 1
   tier: 1

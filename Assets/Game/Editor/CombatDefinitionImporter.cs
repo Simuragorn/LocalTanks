@@ -154,6 +154,11 @@ namespace LocalTanks.Editor
             foreach (TankDefinitionJson tank in definitions.Tanks)
             {
                 ValidateCommon(tank.schemaVersion, tank.id, tank.displayName, "Tank", allIds, errors);
+                if (HasParentheticalSuffix(tank.displayName))
+                {
+                    errors.Add(
+                        $"Tank '{tank.id}'.displayName must contain only the main player-facing designation without a parenthetical variant suffix.");
+                }
                 RequirePositive(tank.maxHitPoints, $"Tank '{tank.id}'.maxHitPoints", errors);
                 if (!Enum.TryParse(tank.vehicleClass, false, out VehicleClass _))
                 {
@@ -283,6 +288,18 @@ namespace LocalTanks.Editor
             }
 
             return true;
+        }
+
+        private static bool HasParentheticalSuffix(string displayName)
+        {
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                return false;
+            }
+
+            string trimmed = displayName.TrimEnd();
+            return trimmed.EndsWith(")", StringComparison.Ordinal) &&
+                   trimmed.LastIndexOf(" (", StringComparison.Ordinal) >= 0;
         }
 
         private static void RequirePositive(float value, string field, List<string> errors)

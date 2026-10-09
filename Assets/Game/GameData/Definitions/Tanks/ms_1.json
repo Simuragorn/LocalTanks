@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "ms_1",
-  "displayName": "MS-1 (45 mm modernization)",
+  "displayName": "MS-1",
   "vehicleClass": "LightTank",
   "nation": "USSR",
   "tier": 1,

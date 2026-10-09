@@ -44,6 +44,9 @@ namespace LocalTanks.Tests
             Assert.That(ms1.availableInGame, Is.True);
             Assert.That(leichttraktor.availableInGame, Is.True);
             Assert.That(tiger.availableInGame, Is.False);
+            Assert.That(ms1.displayName, Is.EqualTo("MS-1"));
+            Assert.That(leichttraktor.displayName, Is.EqualTo("Leichttraktor"));
+            Assert.That(definitions.Tanks.All(item => !item.displayName.Contains(" (")), Is.True);
             Assert.That(ms1.gunHandling.turretTraverseDispersionDegrees,
                 Is.LessThan(ms1.gunHandling.hullTraverseDispersionDegrees));
             Assert.That(leichttraktor.gunHandling.turretTraverseDispersionDegrees,
@@ -215,6 +218,21 @@ namespace LocalTanks.Tests
             tank.nation = previous;
 
             Assert.That(errors.Any(error => error.Contains("unknown nation")), Is.True);
+        }
+
+        [Test]
+        public void Validator_RejectsParentheticalTankNameSuffix()
+        {
+            CombatDefinitionSet definitions = CombatDefinitionImporter.LoadAndValidate();
+            TankDefinitionJson tank = definitions.Tanks[0];
+            string previous = tank.displayName;
+            tank.displayName = previous + " (prototype modification)";
+
+            string[] errors = CombatDefinitionValidator.Validate(definitions);
+            tank.displayName = previous;
+
+            Assert.That(errors.Any(error =>
+                error.Contains("displayName") && error.Contains("without a parenthetical variant suffix")), Is.True);
         }
 
         [TestCase(0)]

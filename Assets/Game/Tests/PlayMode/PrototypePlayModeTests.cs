@@ -382,11 +382,11 @@ namespace LocalTanks.Tests
                 row.Q<Image>(className: "class-icon")?.sprite != null));
             Assert.That(rosterRows, Has.All.Matches<VisualElement>(row =>
                 row.Q<Label>(className: "tank-name")?.text.Length <= BattleHudController.MaximumTankNameLength));
-            Label truncatedName = rosterRows
+            Label shortName = rosterRows
                 .Select(row => row.Q<Label>(className: "tank-name"))
-                .First(label => label.tooltip.StartsWith("Leichttraktor"));
-            Assert.That(truncatedName.text, Does.EndWith("…"));
-            Assert.That(truncatedName.tooltip, Does.StartWith("Leichttraktor"));
+                .First(label => label.tooltip == "Leichttraktor");
+            Assert.That(shortName.text, Is.EqualTo("Leichttraktor"));
+            Assert.That(shortName.tooltip, Is.EqualTo("Leichttraktor"));
             Assert.That(Object.FindObjectsByType<TankClassIconPresenter>().Length, Is.EqualTo(BattleScenario.TeamSize * 2));
             CaptureBase[] captureBases = Object.FindObjectsByType<CaptureBase>();
             Assert.That(captureBases.Length, Is.EqualTo(2));

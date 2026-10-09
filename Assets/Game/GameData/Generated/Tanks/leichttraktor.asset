@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: leichttraktor
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
   id: leichttraktor
-  displayName: Leichttraktor (Rheinmetall prototype)
+  displayName: Leichttraktor
   vehicleClass: 2
   nation: 0
   tier: 1
