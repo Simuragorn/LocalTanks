@@ -331,6 +331,14 @@ namespace LocalTanks.Tests
             Assert.That(director.DiagnosticsOverlay, Is.Not.Null);
             Assert.That(director.DiagnosticsOverlay.HelpVisible, Is.False);
             Assert.That(director.DiagnosticsOverlay.MapAnalysisVisible, Is.False);
+            director.DiagnosticsOverlay.ToggleHelp();
+            Assert.That(director.DiagnosticsOverlay.HelpVisible, Is.True);
+            Assert.That(BattleDiagnosticsOverlay.AnyModalVisible, Is.True);
+            director.DiagnosticsOverlay.ToggleMapAnalysis();
+            Assert.That(director.DiagnosticsOverlay.HelpVisible, Is.False);
+            Assert.That(director.DiagnosticsOverlay.MapAnalysisVisible, Is.True);
+            director.DiagnosticsOverlay.CloseTopWindow();
+            Assert.That(BattleDiagnosticsOverlay.AnyModalVisible, Is.False);
             Assert.That(director.StrategicCoordinator.Brains.Count,
                 Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             Assert.That(director.StrategicCoordinator.Brains,

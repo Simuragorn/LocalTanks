@@ -12,10 +12,16 @@ namespace LocalTanks
         [SerializeField] private bool helpVisible;
         [SerializeField] private bool mapAnalysisVisible;
 
+        private Vector2 helpScroll;
         private Vector2 mapScroll;
+        private GUIStyle panelStyle;
         private GUIStyle titleStyle;
+        private GUIStyle sectionStyle;
         private GUIStyle bodyStyle;
+        private GUIStyle keyStyle;
+        private GUIStyle footerStyle;
 
+        public static bool AnyModalVisible { get; private set; }
         public bool HelpVisible => helpVisible;
         public bool MapAnalysisVisible => mapAnalysisVisible;
 
@@ -28,18 +34,30 @@ namespace LocalTanks
         {
             helpVisible = !helpVisible;
             if (helpVisible) mapAnalysisVisible = false;
+            RefreshModalState();
         }
 
         public void ToggleMapAnalysis()
         {
             mapAnalysisVisible = !mapAnalysisVisible;
             if (mapAnalysisVisible) helpVisible = false;
+            RefreshModalState();
         }
 
         public void CloseTopWindow()
         {
             if (helpVisible) helpVisible = false;
             else if (mapAnalysisVisible) mapAnalysisVisible = false;
+            RefreshModalState();
+        }
+
+        private void OnEnable() => RefreshModalState();
+
+        private void OnDisable()
+        {
+            helpVisible = false;
+            mapAnalysisVisible = false;
+            AnyModalVisible = false;
         }
 
         private void Update()
@@ -64,6 +82,13 @@ namespace LocalTanks
         private void OnGUI()
         {
             EnsureStyles();
+            if (!helpVisible && !mapAnalysisVisible) return;
+
+            GUI.depth = -100;
+            Color previousColor = GUI.color;
+            GUI.color = new Color(0.025f, 0.035f, 0.03f, 0.86f);
+            GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), Texture2D.whiteTexture);
+            GUI.color = previousColor;
             if (helpVisible) DrawHelp();
             else if (mapAnalysisVisible) DrawMapAnalysis();
         }
@@ -71,32 +96,53 @@ namespace LocalTanks
         private void DrawHelp()
         {
             Rect panel = CenteredPanel(760f, 650f);
-            GUI.Box(panel, GUIContent.none);
+            GUI.Box(panel, GUIContent.none, panelStyle);
             GUI.Label(new Rect(panel.x + 24f, panel.y + 18f, panel.width - 48f, 34f), "Справка по управлению", titleStyle);
 
-            float y = panel.y + 62f;
+            Rect viewport = new Rect(panel.x + 18f, panel.y + 60f, panel.width - 36f, panel.height - 104f);
+            float contentWidth = Mathf.Max(280f, viewport.width - 24f);
+            float keyWidth = Mathf.Clamp(contentWidth * 0.28f, 100f, 185f);
+            float descriptionWidth = contentWidth - keyWidth - 18f;
+            float contentHeight = CalculateHelpHeight(keyWidth, descriptionWidth);
+            helpScroll = GUI.BeginScrollView(viewport, helpScroll,
+                new Rect(0f, 0f, contentWidth, Mathf.Max(viewport.height, contentHeight)));
+
+            float y = 4f;
+            int rowIndex = 0;
             foreach (GameCommandGroup group in Enum.GetValues(typeof(GameCommandGroup)))
             {
                 GameCommandInfo[] commands = GameCommandRegistry.Commands.Where(item => item.group == group).ToArray();
-                GUI.Label(new Rect(panel.x + 24f, y, panel.width - 48f, 26f), GroupName(group), titleStyle);
-                y += 30f;
+                GUI.Label(new Rect(6f, y, contentWidth - 12f, 28f), GroupName(group), sectionStyle);
+                y += 32f;
                 foreach (GameCommandInfo command in commands)
                 {
-                    GUI.Label(new Rect(panel.x + 34f, y, 180f, 24f), command.binding, bodyStyle);
-                    GUI.Label(new Rect(panel.x + 215f, y, panel.width - 250f, 24f), command.description, bodyStyle);
-                    y += 27f;
+                    float keyHeight = keyStyle.CalcHeight(new GUIContent(command.binding), keyWidth);
+                    float descriptionHeight = bodyStyle.CalcHeight(new GUIContent(command.description), descriptionWidth);
+                    float rowHeight = Mathf.Max(26f, Mathf.Max(keyHeight, descriptionHeight)) + 8f;
+                    if (rowIndex % 2 == 0)
+                    {
+                        Color old = GUI.color;
+                        GUI.color = new Color(0.18f, 0.22f, 0.18f, 0.35f);
+                        GUI.DrawTexture(new Rect(2f, y - 2f, contentWidth - 8f, rowHeight), Texture2D.whiteTexture);
+                        GUI.color = old;
+                    }
+                    GUI.Label(new Rect(10f, y + 2f, keyWidth, rowHeight - 4f), command.binding, keyStyle);
+                    GUI.Label(new Rect(10f + keyWidth + 14f, y + 2f, descriptionWidth, rowHeight - 4f), command.description, bodyStyle);
+                    y += rowHeight;
+                    rowIndex++;
                 }
-                y += 8f;
+                y += 10f;
             }
+            GUI.EndScrollView();
 
             GUI.Label(new Rect(panel.x + 24f, panel.yMax - 36f, panel.width - 48f, 24f),
-                "F1 или Esc — закрыть", bodyStyle);
+                "F1 или Esc — закрыть", footerStyle);
         }
 
         private void DrawMapAnalysis()
         {
             Rect panel = CenteredPanel(980f, 760f);
-            GUI.Box(panel, GUIContent.none);
+            GUI.Box(panel, GUIContent.none, panelStyle);
             BattleStrategicPlanner planner = director != null ? director.StrategicPlanner : null;
             GUI.Label(new Rect(panel.x + 24f, panel.y + 18f, panel.width - 48f, 34f),
                 "Стратегическая оценка карты", titleStyle);
@@ -116,7 +162,24 @@ namespace LocalTanks
             GUI.Label(new Rect(8f, 4f, viewport.width - 38f, contentHeight - 8f), text, bodyStyle);
             GUI.EndScrollView();
             GUI.Label(new Rect(panel.x + 24f, panel.yMax - 34f, panel.width - 48f, 24f),
-                "F6 или Esc — закрыть", bodyStyle);
+                "F6 или Esc — закрыть", footerStyle);
+        }
+
+        private float CalculateHelpHeight(float keyWidth, float descriptionWidth)
+        {
+            float height = 4f;
+            foreach (GameCommandGroup group in Enum.GetValues(typeof(GameCommandGroup)))
+            {
+                height += 32f;
+                foreach (GameCommandInfo command in GameCommandRegistry.Commands.Where(item => item.group == group))
+                {
+                    float keyHeight = keyStyle.CalcHeight(new GUIContent(command.binding), keyWidth);
+                    float descriptionHeight = bodyStyle.CalcHeight(new GUIContent(command.description), descriptionWidth);
+                    height += Mathf.Max(26f, Mathf.Max(keyHeight, descriptionHeight)) + 8f;
+                }
+                height += 10f;
+            }
+            return height + 4f;
         }
 
         private static string BuildMapAnalysisText(BattleStrategicPlanner planner)
@@ -191,22 +254,46 @@ namespace LocalTanks
             return new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
         }
 
+        private void RefreshModalState()
+        {
+            AnyModalVisible = isActiveAndEnabled && (helpVisible || mapAnalysisVisible);
+        }
+
         private void EnsureStyles()
         {
             if (titleStyle != null) return;
+            panelStyle = new GUIStyle(GUI.skin.window)
+            {
+                padding = new RectOffset(18, 18, 18, 18)
+            };
             titleStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 18,
+                fontSize = 20,
                 fontStyle = FontStyle.Bold,
                 wordWrap = true,
                 normal = { textColor = new Color(0.88f, 0.9f, 0.84f) }
             };
+            sectionStyle = new GUIStyle(titleStyle)
+            {
+                fontSize = 16,
+                normal = { textColor = new Color(0.58f, 0.76f, 0.54f) }
+            };
             bodyStyle = new GUIStyle(GUI.skin.label)
             {
-                fontSize = 15,
+                fontSize = 14,
                 wordWrap = true,
                 richText = false,
                 normal = { textColor = new Color(0.82f, 0.84f, 0.78f) }
+            };
+            keyStyle = new GUIStyle(bodyStyle)
+            {
+                fontStyle = FontStyle.Bold,
+                normal = { textColor = new Color(0.66f, 0.83f, 0.61f) }
+            };
+            footerStyle = new GUIStyle(bodyStyle)
+            {
+                alignment = TextAnchor.MiddleRight,
+                normal = { textColor = new Color(0.62f, 0.66f, 0.6f) }
             };
         }
     }

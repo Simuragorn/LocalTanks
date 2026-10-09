@@ -6,6 +6,8 @@ namespace LocalTanks
     {
         private void OnGUI()
         {
+            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
+
             GUI.Box(
                 new Rect(12f, 12f, 390f, 144f),
                 "Карта «Переправа»\n" +

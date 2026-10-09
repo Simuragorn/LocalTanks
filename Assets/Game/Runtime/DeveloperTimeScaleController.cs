@@ -44,6 +44,8 @@ namespace LocalTanks
 
         private void OnGUI()
         {
+            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
+
             Rect button = new Rect(Screen.width - 262f, 84f, 250f, 28f);
             string label = IsAccelerated
                 ? "Вернуть скорость ×1 (F5)"

@@ -42,6 +42,8 @@ namespace LocalTanks
 
         private void OnGUI()
         {
+            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
+
             const float width = 250f;
             Rect button = new Rect(Screen.width - width - 12f, 12f, width, 28f);
             if (GUI.Button(button, visible ? "Скрыть навигацию (F2)" : "Показать навигацию (F2)"))

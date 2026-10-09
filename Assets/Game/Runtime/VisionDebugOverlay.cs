@@ -46,6 +46,8 @@ namespace LocalTanks
 
         private void OnGUI()
         {
+            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
+
             if (!visible || visionSystem == null)
             {
                 return;
