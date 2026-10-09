@@ -76,8 +76,18 @@ namespace LocalTanks
                   $"Иниц/ком/терп: {personality.initiative:0.00} / {personality.teamwork:0.00} / {personality.patience:0.00}\n" +
                   $"Общ/юмор/пом: {personality.sociability:0.00} / {personality.humor:0.00} / {personality.helpfulness:0.00}"
                 : "Профиль не назначен";
+            BotStrategicBrain brain = selected.GetComponent<BotStrategicBrain>();
+            BotKnowledgeSnapshot snapshot = brain?.CurrentSnapshot;
+            BotStrategicDecision decision = brain?.CurrentDecision;
+            string strategic = decision != null
+                ? $"{decision.intent} ({(brain.DecisionFromLlm ? "LLM" : "fallback")})\n" +
+                  $"Причина: {decision.explanation}\n" +
+                  $"Запрос: {brain.RequestState}, {brain.LastTrigger}\n" +
+                  $"Контакты: {snapshot?.knownTargetIds?.Length ?? 0}, союзники: {snapshot?.allyIds?.Length ?? 0}\n" +
+                  $"Снимок: {(snapshot?.snapshotHash?.Length >= 8 ? snapshot.snapshotHash.Substring(0, 8) : "—")}"
+                : "Стратегическое решение не назначено";
             GUI.Box(
-                new Rect(Screen.width - 332f, 118f, 320f, 252f),
+                new Rect(Screen.width - 372f, 118f, 360f, 350f),
                 $"ИИ: {botName}\n" +
                 $"Темперамент: {temperament}\n" +
                 $"Состояние: {selected.State}\n" +
@@ -86,7 +96,8 @@ namespace LocalTanks
                 $"Последняя позиция: {memory}\n" +
                 $"Перестроение: {reposition}\n" +
                 $"Дистанция: {selected.PreferredDistance:0.0}\n" +
-                $"Огонь: {selected.CurrentFireBlockReason}");
+                $"Огонь: {selected.CurrentFireBlockReason}\n" +
+                $"Стратегия: {strategic}");
         }
     }
 }

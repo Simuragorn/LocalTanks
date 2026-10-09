@@ -3,15 +3,6 @@ using UnityEngine;
 
 namespace LocalTanks
 {
-    [Serializable]
-    public sealed class BotMentalState
-    {
-        [Range(0f, 1f)] public float morale = 0.65f;
-        [Range(0f, 1f)] public float stress = 0.1f;
-        [Range(0f, 1f)] public float boredom = 0.05f;
-        [Range(0f, 1f)] public float planConfidence = 0.7f;
-    }
-
     public sealed class BotIdentityComponent : MonoBehaviour
     {
         [SerializeField] private BotIdentity identity;

@@ -327,6 +327,13 @@ namespace LocalTanks.Tests
                 Is.EqualTo(BattleScenario.TeamSize - 1));
             Assert.That(director.StrategicPlanner.TeamBPlan.assignments.Length,
                 Is.EqualTo(BattleScenario.TeamSize));
+            Assert.That(director.StrategicCoordinator, Is.Not.Null);
+            Assert.That(director.StrategicCoordinator.Brains.Count,
+                Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
+            Assert.That(director.StrategicCoordinator.Brains,
+                Has.All.Matches<BotStrategicBrain>(brain =>
+                    brain.CurrentSnapshot != null && brain.CurrentDecision != null &&
+                    brain.RequestState == BotStrategicRequestState.Fallback));
             Assert.That(Object.FindObjectsByType<CombatTankAI>().Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             BotIdentityComponent[] identities = Object.FindObjectsByType<BotIdentityComponent>();
             Assert.That(identities.Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
@@ -494,6 +501,93 @@ namespace LocalTanks.Tests
             Assert.That(planner.Diagnostics.mapError, Is.Not.Empty);
             Assert.That(planner.Diagnostics.teamAError, Does.Contain("timeout"));
             Assert.That(planner.Diagnostics.teamBError, Does.Contain("malformed"));
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_StrategicCoordinatorQueuesAndAppliesThirteenValidDecisions()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            BotStrategicCoordinator coordinator = director.StrategicCoordinator;
+            FakeLocalLlmProvider provider = new FakeLocalLlmProvider();
+            foreach (BotStrategicBrain brain in coordinator.Brains)
+            {
+                BotStrategicDecision decision = new BotStrategicDecision
+                {
+                    requestId = $"{director.Scenario.id}:{brain.BotId}:0001",
+                    botId = brain.BotId,
+                    intent = BotStrategicIntentType.Wait,
+                    laneId = string.Empty,
+                    zoneId = string.Empty,
+                    targetId = string.Empty,
+                    allyId = string.Empty,
+                    desiredDistance = brain.TacticalAi.PreferredDistance,
+                    urgency = 0.4f,
+                    durationSeconds = 10f,
+                    explanation = "Жду развития боя по командному плану.",
+                    message = string.Empty,
+                    chatChannel = BotChatChannel.None
+                };
+                provider.Enqueue(LocalLlmResponse.Success(BotStrategicDecisionSchema.ToJson(decision), 5));
+            }
+
+            coordinator.RunInitialDecisionsWithProvider(provider);
+            for (int frame = 0; frame < 90 && !coordinator.InitialDecisionsFinished; frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(coordinator.InitialDecisionsFinished, Is.True);
+            Assert.That(coordinator.State, Is.EqualTo(BotStrategicCoordinatorState.Complete));
+            Assert.That(provider.Requests.Count, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
+            Assert.That(provider.Requests, Has.All.Matches<LocalLlmRequest>(request =>
+                request.purpose.StartsWith("bot-decision:river_crossing_battle:")));
+            Assert.That(coordinator.Brains, Has.All.Matches<BotStrategicBrain>(brain =>
+                brain.DecisionFromLlm && brain.RequestState == BotStrategicRequestState.Applied &&
+                brain.CurrentDecision.intent == BotStrategicIntentType.Wait &&
+                brain.TacticalAi.StrategicDecision == brain.CurrentDecision));
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_RememberedEnemyNeverLeaksCurrentPositionOrHitPoints()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            BotStrategicBrain brain = director.StrategicCoordinator.Brains
+                .First(item => item.GetComponent<TeamMember>().Team == TeamId.TeamA);
+            TeamMember observer = brain.GetComponent<TeamMember>();
+            TeamMember enemy = director.SpawnedMembers.First(item => item.Team == TeamId.TeamB && item.IsAlive);
+            Vector2 visiblePosition = (Vector2)observer.transform.position + (Vector2)observer.VisionDirection.up * 1.8f;
+            enemy.transform.position = visiblePosition;
+            Physics2D.SyncTransforms();
+            director.VisionSystem.ForceEvaluateAll();
+            Assert.That(director.VisionSystem.IsVisibleTo(TeamId.TeamA, enemy), Is.True);
+
+            enemy.transform.position = visiblePosition + new Vector2(100f, 100f);
+            Physics2D.SyncTransforms();
+            director.VisionSystem.ForceEvaluateAll();
+            Assert.That(director.VisionSystem.IsVisibleTo(TeamId.TeamA, enemy), Is.False);
+            Assert.That(director.VisionSystem.TryGetContact(TeamId.TeamA, enemy, out VisionContact contact), Is.True);
+            Assert.That(contact.HasMemory, Is.True);
+
+            enemy.transform.position = visiblePosition + new Vector2(-80f, 120f);
+            Physics2D.SyncTransforms();
+            BotKnowledgeSnapshot snapshot = BotKnowledgeSnapshotBuilder.Build(
+                "memory-audit", director, brain.TacticalAi, director.StrategicPlanner, Time.time);
+            BotEnemyKnowledge remembered = snapshot.enemies.Single(item => item.memberId == director.GetEntityId(enemy));
+
+            Assert.That(remembered.contactState, Is.EqualTo(BotContactState.Remembered));
+            Assert.That(remembered.positionIsCurrent, Is.False);
+            Assert.That(remembered.currentHitPoints, Is.EqualTo(-1));
+            Assert.That(remembered.positionX, Is.EqualTo(visiblePosition.x).Within(0.05f));
+            Assert.That(remembered.positionY, Is.EqualTo(visiblePosition.y).Within(0.05f));
+            Assert.That(new Vector2(remembered.positionX, remembered.positionY),
+                Is.Not.EqualTo((Vector2)enemy.transform.position));
+            Assert.That(BotKnowledgeSnapshotValidator.Validate(snapshot), Is.Empty);
         }
 
         private static bool ColorsMatch(Color actual, Color expected)

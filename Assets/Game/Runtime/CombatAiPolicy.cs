@@ -9,6 +9,7 @@ namespace LocalTanks
         Engage,
         Investigate,
         Reposition,
+        Hold,
         Destroyed
     }
 

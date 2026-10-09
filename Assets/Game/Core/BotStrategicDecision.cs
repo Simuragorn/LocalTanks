@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LocalTanks
@@ -77,6 +78,8 @@ namespace LocalTanks
         public string[] knownZoneIds;
         public string[] knownTargetIds;
         public string[] allyIds;
+        public BotStrategicIntentType[] allowedIntents;
+        public bool allowChat = true;
         public float maximumDesiredDistance = 100f;
     }
 
@@ -105,6 +108,20 @@ namespace LocalTanks
             "\"required\":[\"schemaVersion\",\"requestId\",\"botId\",\"intent\",\"laneId\",\"zoneId\",\"targetId\",\"allyId\",\"desiredDistance\",\"urgency\",\"durationSeconds\",\"explanation\",\"message\",\"chatChannel\"]" +
             "}";
 
+        public static string BuildJsonSchema(IEnumerable<BotStrategicIntentType> allowedIntents)
+        {
+            BotStrategicIntentType[] intents = (allowedIntents ?? Array.Empty<BotStrategicIntentType>())
+                .Where(item => item != BotStrategicIntentType.None)
+                .Distinct()
+                .OrderBy(item => item.ToString(), StringComparer.Ordinal)
+                .ToArray();
+            if (intents.Length == 0) throw new ArgumentException("At least one strategic intent is required.", nameof(allowedIntents));
+            string intentValues = string.Join(",", intents.Select(item => $"\"{item}\""));
+            return Json.Replace(
+                "\"AdvanceLane\",\"HoldZone\",\"ScoutLane\",\"SupportAlly\",\"DefendBase\",\"Reposition\",\"HuntKnownTarget\",\"TakeCover\",\"AngleArmor\",\"WithdrawUnderFire\",\"BreakCrossfire\",\"PressAttack\",\"Retreat\",\"Wait\"",
+                intentValues);
+        }
+
         public static bool TryParse(string json, out BotStrategicDecision decision, out string error)
         {
             decision = null;
@@ -126,8 +143,10 @@ namespace LocalTanks
                 return false;
             }
 
-            if (raw == null || !Enum.TryParse(raw.intent, false, out BotStrategicIntentType intent) ||
+            if (raw == null || !Enum.GetNames(typeof(BotStrategicIntentType)).Contains(raw.intent) ||
+                !Enum.TryParse(raw.intent, false, out BotStrategicIntentType intent) ||
                 intent == BotStrategicIntentType.None ||
+                !Enum.GetNames(typeof(BotChatChannel)).Contains(raw.chatChannel) ||
                 !Enum.TryParse(raw.chatChannel, false, out BotChatChannel chatChannel))
             {
                 error = "Decision contains an unknown intent or chat channel.";
@@ -152,6 +171,28 @@ namespace LocalTanks
                 chatChannel = chatChannel
             };
             return true;
+        }
+
+        public static string ToJson(BotStrategicDecision decision)
+        {
+            if (decision == null) throw new ArgumentNullException(nameof(decision));
+            return JsonUtility.ToJson(new BotStrategicDecisionJson
+            {
+                schemaVersion = decision.schemaVersion,
+                requestId = decision.requestId,
+                botId = decision.botId,
+                intent = decision.intent.ToString(),
+                laneId = decision.laneId ?? string.Empty,
+                zoneId = decision.zoneId ?? string.Empty,
+                targetId = decision.targetId ?? string.Empty,
+                allyId = decision.allyId ?? string.Empty,
+                desiredDistance = decision.desiredDistance,
+                urgency = decision.urgency,
+                durationSeconds = decision.durationSeconds,
+                explanation = decision.explanation ?? string.Empty,
+                message = decision.message ?? string.Empty,
+                chatChannel = decision.chatChannel.ToString()
+            });
         }
     }
 
@@ -180,6 +221,14 @@ namespace LocalTanks
                 errors.Add("Decision botId does not match the active bot.");
             if (decision.intent == BotStrategicIntentType.None || !Enum.IsDefined(typeof(BotStrategicIntentType), decision.intent))
                 errors.Add("Decision intent is unknown.");
+            if (context.allowedIntents != null && context.allowedIntents.Length > 0 &&
+                !context.allowedIntents.Contains(decision.intent))
+                errors.Add($"Decision intent '{decision.intent}' is not available to the current tactical adapter.");
+            if (!Enum.IsDefined(typeof(BotChatChannel), decision.chatChannel))
+                errors.Add("Decision chat channel is unknown.");
+            if (!context.allowChat &&
+                (decision.chatChannel != BotChatChannel.None || !string.IsNullOrWhiteSpace(decision.message)))
+                errors.Add("Decision chat output is disabled until the battle chat is available.");
             if (decision.urgency < 0f || decision.urgency > 1f) errors.Add("Decision urgency is outside 0..1.");
             if (decision.durationSeconds < 1f || decision.durationSeconds > 60f)
                 errors.Add("Decision duration is outside 1..60 seconds.");
@@ -200,7 +249,8 @@ namespace LocalTanks
             ValidateReference(errors, "lane", decision.laneId, context.knownLaneIds, laneRequired);
             ValidateReference(errors, "zone", decision.zoneId, context.knownZoneIds, zoneRequired);
             ValidateReference(errors, "target", decision.targetId, context.knownTargetIds,
-                decision.intent == BotStrategicIntentType.HuntKnownTarget);
+                decision.intent == BotStrategicIntentType.HuntKnownTarget ||
+                decision.intent == BotStrategicIntentType.PressAttack);
             ValidateReference(errors, "ally", decision.allyId, context.allyIds,
                 decision.intent == BotStrategicIntentType.SupportAlly);
             return errors.ToArray();
@@ -231,6 +281,43 @@ namespace LocalTanks
             }
 
             return false;
+        }
+    }
+
+    public static class BotStrategicFallback
+    {
+        public static BotStrategicDecision Create(BotKnowledgeSnapshot snapshot)
+        {
+            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+            string task = snapshot.plan?.assignedTask ?? string.Empty;
+            string lane = snapshot.plan?.assignedLaneId ?? string.Empty;
+            BotStrategicIntentType intent;
+            if (string.Equals(task, TeamPlanTask.Reserve.ToString(), StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(lane))
+                intent = BotStrategicIntentType.Wait;
+            else if (string.Equals(task, TeamPlanTask.Scout.ToString(), StringComparison.Ordinal))
+                intent = BotStrategicIntentType.ScoutLane;
+            else
+                intent = BotStrategicIntentType.AdvanceLane;
+
+            float aggression = snapshot.identity?.personality?.aggression ?? 0.5f;
+            float discipline = snapshot.identity?.personality?.discipline ?? 0.5f;
+            return new BotStrategicDecision
+            {
+                requestId = snapshot.snapshotId,
+                botId = snapshot.botId,
+                intent = intent,
+                laneId = intent == BotStrategicIntentType.Wait ? string.Empty : lane,
+                zoneId = string.Empty,
+                targetId = string.Empty,
+                allyId = string.Empty,
+                desiredDistance = Mathf.Max(0f, snapshot.self?.preferredDistance ?? 0f),
+                urgency = Mathf.Clamp01(0.35f + aggression * 0.35f + discipline * 0.15f),
+                durationSeconds = 60f,
+                explanation = "Безопасное детерминированное решение из командного плана.",
+                message = string.Empty,
+                chatChannel = BotChatChannel.None
+            };
         }
     }
 }

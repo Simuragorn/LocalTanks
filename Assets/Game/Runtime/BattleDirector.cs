@@ -34,6 +34,8 @@ namespace LocalTanks
         private readonly List<TeamMember> spawnedMembers = new List<TeamMember>();
         private readonly Dictionary<TankHealth, TeamId> trackedHealth = new Dictionary<TankHealth, TeamId>();
         private readonly Dictionary<string, BotIdentity> botIdentities = new Dictionary<string, BotIdentity>(StringComparer.Ordinal);
+        private readonly Dictionary<string, TeamMember> membersByEntityId = new Dictionary<string, TeamMember>(StringComparer.Ordinal);
+        private readonly Dictionary<TeamMember, string> entityIdsByMember = new Dictionary<TeamMember, string>();
         private bool spawned;
 
         public event Action<TeamMember> TankSpawned;
@@ -43,6 +45,12 @@ namespace LocalTanks
         public TeamMember PlayerMember { get; private set; }
         public TacticalMapDescriptor TacticalMap => tacticalMap != null ? tacticalMap.descriptor : null;
         public BattleStrategicPlanner StrategicPlanner { get; private set; }
+        public BotStrategicCoordinator StrategicCoordinator { get; private set; }
+        public BattleScenario Scenario => scenario;
+        public CombatDatabase CombatDatabase => combatDatabase;
+        public NavigationMap NavigationMap => navigationMap;
+        public TeamVisionSystem VisionSystem => visionSystem;
+        public IReadOnlyList<CaptureBase> Bases => bases ?? Array.Empty<CaptureBase>();
         public int TeamAAlive { get; private set; }
         public int TeamBAlive { get; private set; }
         public IReadOnlyDictionary<string, BotIdentity> BotIdentities => botIdentities;
@@ -107,6 +115,9 @@ namespace LocalTanks
             StrategicPlanner = GetComponent<BattleStrategicPlanner>();
             if (StrategicPlanner == null) StrategicPlanner = gameObject.AddComponent<BattleStrategicPlanner>();
             StrategicPlanner.Configure(TacticalMap, scenario, combatDatabase, botIdentities);
+            StrategicCoordinator = GetComponent<BotStrategicCoordinator>();
+            if (StrategicCoordinator == null) StrategicCoordinator = gameObject.AddComponent<BotStrategicCoordinator>();
+            StrategicCoordinator.Configure(this, StrategicPlanner);
 
             LivingCountsChanged?.Invoke(TeamId.Neutral, TeamAAlive, TeamBAlive);
         }
@@ -138,6 +149,8 @@ namespace LocalTanks
             TeamMember member = tank.GetComponent<TeamMember>();
             if (member == null) member = tank.AddComponent<TeamMember>();
             member.Configure(entry.team, entry.playerControlled);
+            membersByEntityId.Add(entry.id, member);
+            entityIdsByMember.Add(member, entry.id);
 
             if (entry.playerControlled)
             {
@@ -212,6 +225,20 @@ namespace LocalTanks
             {
                 botIdentities.Add(identity.entityId, identity);
             }
+        }
+
+        public string GetEntityId(TeamMember member)
+        {
+            return member != null && entityIdsByMember.TryGetValue(member, out string entityId)
+                ? entityId
+                : string.Empty;
+        }
+
+        public TeamMember FindMember(string entityId)
+        {
+            return !string.IsNullOrWhiteSpace(entityId) && membersByEntityId.TryGetValue(entityId, out TeamMember member)
+                ? member
+                : null;
         }
 
         private void OnTankDestroyed(TankHealth health)

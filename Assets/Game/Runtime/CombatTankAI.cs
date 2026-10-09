@@ -34,6 +34,13 @@ namespace LocalTanks
         private Vector2 repositionDestination;
         private float repositionExpiresAt;
         private float nextRepositionTime;
+        private float defaultPreferredDistance;
+        private BotStrategicDecision strategicDecision;
+        private float strategicDecisionExpiresAt;
+        private bool strategicHasDestination;
+        private Vector2 strategicDestination;
+        private TeamMember strategicTarget;
+        private TeamMember strategicAlly;
 
         public CombatAiState State { get; private set; } = CombatAiState.Deploy;
         public FireBlockReason CurrentFireBlockReason { get; private set; } = FireBlockReason.NoVisibleTarget;
@@ -45,6 +52,8 @@ namespace LocalTanks
         public BattleLane Lane => lane;
         public CombatAiRole Role => role;
         public BotIdentity Identity => identity != null ? identity.Identity : null;
+        public BotStrategicDecision StrategicDecision => strategicDecision;
+        public bool HasActiveStrategicDecision => strategicDecision != null && Time.time < strategicDecisionExpiresAt;
 
         private void Awake()
         {
@@ -87,13 +96,47 @@ namespace LocalTanks
             routePoints = tacticalRoute ?? Array.Empty<Vector2>();
             routeIndex = 0;
             routeComplete = false;
-            preferredDistance = CombatAiPolicy.PreferredDistance(member != null ? member.Definition : null, role);
+            defaultPreferredDistance = CombatAiPolicy.PreferredDistance(member != null ? member.Definition : null, role);
+            preferredDistance = defaultPreferredDistance;
             nextDecisionTime = Time.time + Mathf.Repeat(decisionPhase, DecisionInterval);
             State = CombatAiState.Deploy;
             target = null;
             hasRememberedTarget = false;
             investigationDestinationSet = false;
+            strategicDecision = null;
+            strategicHasDestination = false;
+            strategicTarget = null;
+            strategicAlly = null;
             StartCurrentRoutePoint();
+        }
+
+        public void ApplyStrategicDecision(
+            BotStrategicDecision decision,
+            bool hasDestination,
+            Vector2 resolvedDestination,
+            TeamMember preferredTarget,
+            TeamMember allyToSupport)
+        {
+            if (decision == null || health == null || health.IsDestroyed) return;
+            strategicDecision = decision;
+            strategicDecisionExpiresAt = Time.time + Mathf.Clamp(decision.durationSeconds, 1f, 60f);
+            strategicHasDestination = hasDestination;
+            strategicDestination = resolvedDestination;
+            strategicTarget = preferredTarget;
+            strategicAlly = allyToSupport;
+            preferredDistance = decision.desiredDistance > 0f
+                ? decision.desiredDistance
+                : defaultPreferredDistance;
+            if (strategicHasDestination && navigation != null)
+            {
+                navigation.SetPaused(false);
+                navigation.SetDestination(strategicDestination);
+            }
+            else if (decision.intent == BotStrategicIntentType.Wait)
+            {
+                navigation?.SetPaused(true);
+                State = CombatAiState.Hold;
+            }
         }
 
         public void HandleDestroyed()
@@ -102,6 +145,10 @@ namespace LocalTanks
             CurrentFireBlockReason = FireBlockReason.NoVisibleTarget;
             target = null;
             hasRememberedTarget = false;
+            strategicDecision = null;
+            strategicHasDestination = false;
+            strategicTarget = null;
+            strategicAlly = null;
             navigation?.ClearDestination();
             motor?.StopImmediately();
             turret?.ClearTarget();
@@ -126,13 +173,14 @@ namespace LocalTanks
 
         private void Think()
         {
+            RefreshStrategicDecision();
             bool targetVisible = IsTargetVisible(target);
             if (!targetVisible)
             {
                 UpdateMemoryFromContact();
             }
 
-            TeamMember selected = SelectBestVisibleTarget();
+            TeamMember selected = IsTargetVisible(strategicTarget) ? strategicTarget : SelectBestVisibleTarget();
             if (selected != null)
             {
                 target = selected;
@@ -155,14 +203,19 @@ namespace LocalTanks
                 UpdateMemoryFromContact();
             }
 
-            bool routeStarted = routeIndex > 0;
-            State = CombatAiPolicy.ResolveState(true, false, hasRememberedTarget, routeStarted);
-            if (State == CombatAiState.Investigate)
+            if (hasRememberedTarget)
             {
+                State = CombatAiState.Investigate;
                 BeginOrContinueInvestigation();
+            }
+            else if (ExecuteStrategicDirective())
+            {
+                return;
             }
             else
             {
+                bool routeStarted = routeIndex > 0;
+                State = CombatAiPolicy.ResolveState(true, false, false, routeStarted);
                 ContinueRoute();
             }
         }
@@ -257,6 +310,7 @@ namespace LocalTanks
                     aimError,
                     lineResult == FireBlockReason.None,
                     candidate == target);
+                if (candidate == strategicTarget) score += 100f;
                 if (score > bestScore)
                 {
                     bestScore = score;
@@ -382,6 +436,63 @@ namespace LocalTanks
         private void ResumeRouteAfterContact()
         {
             State = routeIndex > 0 ? CombatAiState.Advance : CombatAiState.Deploy;
+            StartCurrentRoutePoint();
+        }
+
+        private bool ExecuteStrategicDirective()
+        {
+            if (!HasActiveStrategicDecision) return false;
+            if (strategicDecision.intent == BotStrategicIntentType.Wait)
+            {
+                navigation?.SetPaused(true);
+                State = CombatAiState.Hold;
+                return true;
+            }
+
+            if (strategicDecision.intent == BotStrategicIntentType.SupportAlly &&
+                strategicAlly != null && strategicAlly.IsAlive)
+            {
+                Vector2 allyPosition = strategicAlly.transform.position;
+                float distance = Vector2.Distance(transform.position, allyPosition);
+                if (distance <= 3.5f)
+                {
+                    navigation?.SetPaused(true);
+                    State = CombatAiState.Hold;
+                }
+                else
+                {
+                    navigation?.SetPaused(false);
+                    if (navigation != null &&
+                        (!navigation.HasDestination || Vector2.Distance(navigation.Destination, allyPosition) > 1.2f))
+                        navigation.SetDestination(allyPosition);
+                    State = CombatAiState.Advance;
+                }
+                return true;
+            }
+
+            if (strategicHasDestination)
+            {
+                navigation?.SetPaused(false);
+                if (navigation != null &&
+                    (!navigation.HasDestination || Vector2.Distance(navigation.Destination, strategicDestination) > DestinationRefreshDistance))
+                    navigation.SetDestination(strategicDestination);
+                State = strategicDecision.intent == BotStrategicIntentType.HuntKnownTarget
+                    ? CombatAiState.Investigate
+                    : CombatAiState.Advance;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void RefreshStrategicDecision()
+        {
+            if (strategicDecision == null || Time.time < strategicDecisionExpiresAt) return;
+            strategicDecision = null;
+            strategicHasDestination = false;
+            strategicTarget = null;
+            strategicAlly = null;
+            preferredDistance = defaultPreferredDistance;
             StartCurrentRoutePoint();
         }
 
