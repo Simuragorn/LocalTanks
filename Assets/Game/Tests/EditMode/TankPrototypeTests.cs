@@ -265,6 +265,61 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void LineOfFireProbe_DetectsObstacleBetweenMuzzleAndCursor()
+        {
+            GameObject owner = new GameObject("LineProbeOwner");
+            GameObject obstacle = new GameObject("LineProbeObstacle");
+            try
+            {
+                owner.transform.position = new Vector2(1000f, 1000f);
+                owner.AddComponent<BoxCollider2D>().size = Vector2.one;
+                obstacle.transform.position = new Vector2(1000f, 1003f);
+                obstacle.AddComponent<BoxCollider2D>().size = Vector2.one;
+                Physics2D.SyncTransforms();
+
+                bool blocked = LineOfFireProbe.IsBlocked(
+                    owner.transform,
+                    new Vector2(1000f, 1001f),
+                    new Vector2(1000f, 1005f));
+
+                Assert.That(blocked, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(obstacle);
+            }
+        }
+
+        [Test]
+        public void LineOfFireProbe_AllowsTankSelectedByCursor()
+        {
+            GameObject owner = new GameObject("LineProbeOwner");
+            GameObject target = new GameObject("LineProbeTarget");
+            try
+            {
+                owner.transform.position = new Vector2(1100f, 1100f);
+                owner.AddComponent<BoxCollider2D>().size = Vector2.one;
+                target.transform.position = new Vector2(1100f, 1104f);
+                target.AddComponent<BoxCollider2D>().size = Vector2.one;
+                target.AddComponent<TankHealth>();
+                Physics2D.SyncTransforms();
+
+                bool blocked = LineOfFireProbe.IsBlocked(
+                    owner.transform,
+                    new Vector2(1100f, 1101f),
+                    target.transform.position);
+
+                Assert.That(blocked, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(target);
+            }
+        }
+
+        [Test]
         public void Projectile_ExpiresAfterLifetime()
         {
             ProjectileTravelBudget budget = new ProjectileTravelBudget();

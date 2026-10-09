@@ -11,6 +11,8 @@ namespace LocalTanks
         private static readonly Color ReadyColor = new Color(0.28f, 0.72f, 0.39f, 0.92f);
         private static readonly Color ReloadingColor = new Color(0.78f, 0.28f, 0.25f, 0.92f);
         private static readonly Color CursorColor = new Color(0.86f, 0.89f, 0.82f, 0.9f);
+        private static readonly Color ClearLineColor = new Color(0.28f, 0.72f, 0.39f, 0.72f);
+        private static readonly Color BlockedLineColor = new Color(0.78f, 0.28f, 0.25f, 0.82f);
 
         [SerializeField] private Transform controlledTank;
         [SerializeField] private TurretAiming turret;
@@ -20,6 +22,7 @@ namespace LocalTanks
         private Camera worldCamera;
 
         public Transform ControlledTank => controlledTank;
+        public bool IsLineOfFireBlocked { get; private set; }
 
         public void Configure(Transform tank)
         {
@@ -60,11 +63,21 @@ namespace LocalTanks
             if (worldCamera == null) worldCamera = GetComponent<Camera>();
             Vector2 mouseScreen = mouse.position.ReadValue();
             Vector2 cursorGui = new Vector2(mouseScreen.x, Screen.height - mouseScreen.y);
+            Vector3 cursorWorld3 = worldCamera.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, -worldCamera.transform.position.z));
+            Vector2 cursorWorld = cursorWorld3;
+            Vector2 lineOrigin = weapon.Muzzle != null ? weapon.Muzzle.position : turret.transform.position;
+            IsLineOfFireBlocked = LineOfFireProbe.IsBlocked(controlledTank, lineOrigin, cursorWorld);
+            Vector3 muzzleScreen3 = worldCamera.WorldToScreenPoint(lineOrigin);
+            Vector2 muzzleGui = new Vector2(muzzleScreen3.x, Screen.height - muzzleScreen3.y);
+            DrawLine(
+                muzzleGui,
+                cursorGui,
+                1.5f,
+                IsLineOfFireBlocked ? BlockedLineColor : ClearLineColor);
             DrawCross(cursorGui);
 
-            Vector3 cursorWorld3 = worldCamera.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, -worldCamera.transform.position.z));
             Vector2 turretPosition = turret.transform.position;
-            float aimDistance = Mathf.Max(1f, Vector2.Distance(turretPosition, cursorWorld3));
+            float aimDistance = Mathf.Max(1f, Vector2.Distance(turretPosition, cursorWorld));
             Vector2 gunPoint = turretPosition + (Vector2)turret.transform.up * aimDistance;
             Vector3 gunScreen3 = worldCamera.WorldToScreenPoint(gunPoint);
             Vector2 gunGui = new Vector2(gunScreen3.x, Screen.height - gunScreen3.y);
