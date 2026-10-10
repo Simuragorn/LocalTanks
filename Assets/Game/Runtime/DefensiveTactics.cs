@@ -9,7 +9,121 @@ namespace LocalTanks
         None,
         GainFiringLine,
         MoveToCover,
-        ReturnToCover
+        HoldCover,
+        PeekToFire,
+        ReturnToCover,
+        DefensiveRetreat
+    }
+
+    public enum TacticalDecisionPriority
+    {
+        None = 0,
+        StrategicMovement = 10,
+        GainFiringLine = 20,
+        UseCover = 30,
+        SurviveCrossfire = 40
+    }
+
+    public static class TacticalDecisionArbiter
+    {
+        public static bool ShouldReplace(
+            TacticalMovementPurpose currentPurpose,
+            TacticalDecisionPriority currentPriority,
+            float currentExpiresAt,
+            TacticalMovementPurpose requestedPurpose,
+            TacticalDecisionPriority requestedPriority,
+            float time)
+        {
+            if (requestedPurpose == TacticalMovementPurpose.None) return true;
+            if (currentPurpose == TacticalMovementPurpose.None || time >= currentExpiresAt) return true;
+            if (requestedPurpose == currentPurpose) return true;
+            return requestedPriority >= currentPriority;
+        }
+    }
+
+    public readonly struct TacticalBehaviorProfile
+    {
+        public TacticalBehaviorProfile(
+            float coverPreference,
+            float peekReloadThreshold,
+            float minimumCoverHoldSeconds,
+            float maximumCoverHoldSeconds,
+            float coverSearchDistance)
+        {
+            CoverPreference = Mathf.Clamp01(coverPreference);
+            PeekReloadThreshold = Mathf.Clamp01(peekReloadThreshold);
+            MinimumCoverHoldSeconds = Mathf.Max(0.2f, minimumCoverHoldSeconds);
+            MaximumCoverHoldSeconds = Mathf.Max(MinimumCoverHoldSeconds, maximumCoverHoldSeconds);
+            CoverSearchDistance = Mathf.Max(2f, coverSearchDistance);
+        }
+
+        public float CoverPreference { get; }
+        public float PeekReloadThreshold { get; }
+        public float MinimumCoverHoldSeconds { get; }
+        public float MaximumCoverHoldSeconds { get; }
+        public float CoverSearchDistance { get; }
+
+        public static TacticalBehaviorProfile From(
+            TankDefinition definition,
+            BotPersonalityProfile personality)
+        {
+            float classCover = 0.55f;
+            float classReload = 0.82f;
+            float searchDistance = 5.5f;
+            if (definition != null)
+            {
+                switch (definition.vehicleClass)
+                {
+                    case VehicleClass.LightTank:
+                        classCover = 0.72f;
+                        classReload = 0.9f;
+                        searchDistance = 7f;
+                        break;
+                    case VehicleClass.MediumTank:
+                        classCover = 0.62f;
+                        classReload = 0.86f;
+                        searchDistance = 6.5f;
+                        break;
+                    case VehicleClass.HeavyTank:
+                        classCover = 0.4f;
+                        classReload = 0.72f;
+                        searchDistance = 5.5f;
+                        break;
+                    case VehicleClass.TankDestroyer:
+                        classCover = 0.8f;
+                        classReload = 0.94f;
+                        searchDistance = 7.5f;
+                        break;
+                    case VehicleClass.Artillery:
+                        classCover = 0.9f;
+                        classReload = 0.97f;
+                        searchDistance = 8f;
+                        break;
+                }
+            }
+
+            float caution = personality?.caution ?? 0.5f;
+            float aggression = personality?.aggression ?? 0.5f;
+            float patience = personality?.patience ?? 0.5f;
+            float coverPreference = classCover + (caution - aggression) * 0.22f;
+            float reloadThreshold = classReload + caution * 0.05f - aggression * 0.04f;
+            float minimumHold = Mathf.Lerp(0.45f, 1.2f, patience);
+            float maximumHold = Mathf.Lerp(2.5f, 5f, Mathf.Max(caution, patience));
+            return new TacticalBehaviorProfile(
+                coverPreference,
+                reloadThreshold,
+                minimumHold,
+                maximumHold,
+                searchDistance);
+        }
+
+        public bool ShouldSeekCoverWhileReloading(float reloadProgress, bool exposed, bool crossfire)
+        {
+            if (!exposed) return false;
+            if (crossfire) return true;
+            float triggerProgress = Mathf.Lerp(0.28f, 0.7f, CoverPreference);
+            return reloadProgress < triggerProgress;
+        }
     }
 
     public readonly struct ArmorUseProfile
@@ -115,6 +229,37 @@ namespace LocalTanks
         public float Time { get; }
     }
 
+    public readonly struct ThreatSector
+    {
+        public ThreatSector(Vector2 direction, float weight, float mostRecentTime)
+        {
+            Direction = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.up;
+            Weight = Mathf.Max(0f, weight);
+            MostRecentTime = mostRecentTime;
+        }
+
+        public Vector2 Direction { get; }
+        public float Weight { get; }
+        public float MostRecentTime { get; }
+    }
+
+    public readonly struct ThreatAnalysis
+    {
+        public ThreatAnalysis(ThreatSector[] sectors, float crossfireAngle)
+        {
+            Sectors = sectors ?? Array.Empty<ThreatSector>();
+            CrossfireAngle = Mathf.Max(0f, crossfireAngle);
+        }
+
+        public ThreatSector[] Sectors { get; }
+        public int SectorCount => Sectors?.Length ?? 0;
+        public bool HasThreat => SectorCount > 0;
+        public Vector2 PrimaryDirection => HasThreat ? Sectors[0].Direction : Vector2.zero;
+        public Vector2 SecondaryDirection => SectorCount > 1 ? Sectors[1].Direction : Vector2.zero;
+        public float CrossfireAngle { get; }
+        public bool IsCrossfire => SectorCount > 1 && CrossfireAngle >= 55f;
+    }
+
     public sealed class ThreatMemory
     {
         public const float ObservationLifetime = 10f;
@@ -134,28 +279,55 @@ namespace LocalTanks
 
         public bool TryGetPrimaryDirection(float time, out Vector2 direction)
         {
+            ThreatAnalysis analysis = Analyze(time, null);
+            direction = analysis.PrimaryDirection;
+            return analysis.HasThreat;
+        }
+
+        public ThreatAnalysis Analyze(float time, IReadOnlyList<Vector2> visibleThreatDirections)
+        {
             RemoveExpired(time);
-            direction = Vector2.zero;
-            float totalWeight = 0f;
+            List<ThreatSector> sectors = new List<ThreatSector>();
             for (int index = 0; index < observations.Count; index++)
             {
                 ArmorImpactObservation observation = observations[index];
                 float age = Mathf.Max(0f, time - observation.Time);
                 float severity = observation.Outcome == ImpactOutcome.Penetrated ? 1.5f : 1f;
-                float weight = severity * Mathf.Clamp01(1f - age / ObservationLifetime);
-                direction += observation.ThreatDirection * weight;
-                totalWeight += weight;
+                float damageWeight = 1f + Mathf.Min(1f, observation.Damage / 100f);
+                float weight = severity * damageWeight * Mathf.Clamp01(1f - age / ObservationLifetime);
+                AddToSector(sectors, observation.ThreatDirection, weight, observation.Time);
             }
 
-            if (totalWeight <= 0.001f || direction.sqrMagnitude <= 0.01f)
+            if (visibleThreatDirections != null)
             {
-                if (observations.Count == 0) return false;
-                direction = observations[observations.Count - 1].ThreatDirection;
-                return true;
+                for (int index = 0; index < visibleThreatDirections.Count; index++)
+                {
+                    Vector2 direction = visibleThreatDirections[index];
+                    if (direction.sqrMagnitude > 0.0001f)
+                    {
+                        AddToSector(sectors, direction, 1.1f, time);
+                    }
+                }
             }
 
-            direction.Normalize();
-            return true;
+            sectors.Sort((left, right) =>
+            {
+                int byWeight = right.Weight.CompareTo(left.Weight);
+                if (byWeight != 0) return byWeight;
+                return right.MostRecentTime.CompareTo(left.MostRecentTime);
+            });
+            float crossfireAngle = 0f;
+            for (int left = 0; left < sectors.Count; left++)
+            {
+                for (int right = left + 1; right < sectors.Count; right++)
+                {
+                    crossfireAngle = Mathf.Max(
+                        crossfireAngle,
+                        Mathf.Abs(Vector2.SignedAngle(sectors[left].Direction, sectors[right].Direction)));
+                }
+            }
+
+            return new ThreatAnalysis(sectors.ToArray(), crossfireAngle);
         }
 
         public void Clear()
@@ -167,6 +339,29 @@ namespace LocalTanks
         {
             observations.RemoveAll(item => time - item.Time > ObservationLifetime);
         }
+
+        private static void AddToSector(
+            List<ThreatSector> sectors,
+            Vector2 direction,
+            float weight,
+            float time)
+        {
+            Vector2 normalized = direction.normalized;
+            for (int index = 0; index < sectors.Count; index++)
+            {
+                ThreatSector current = sectors[index];
+                if (Mathf.Abs(Vector2.SignedAngle(current.Direction, normalized)) > 32f) continue;
+                float combinedWeight = current.Weight + weight;
+                Vector2 combined = current.Direction * current.Weight + normalized * weight;
+                sectors[index] = new ThreatSector(
+                    combined.sqrMagnitude > 0.0001f ? combined.normalized : current.Direction,
+                    combinedWeight,
+                    Mathf.Max(current.MostRecentTime, time));
+                return;
+            }
+
+            sectors.Add(new ThreatSector(normalized, weight, time));
+        }
     }
 
     public readonly struct TacticalCoverSolution
@@ -177,12 +372,39 @@ namespace LocalTanks
             float score,
             float pathLength,
             int evaluatedCandidates)
+            : this(
+                cell,
+                position,
+                score,
+                pathLength,
+                evaluatedCandidates,
+                default,
+                position,
+                0f,
+                false)
+        {
+        }
+
+        public TacticalCoverSolution(
+            Vector2Int cell,
+            Vector2 position,
+            float score,
+            float pathLength,
+            int evaluatedCandidates,
+            Vector2Int firingCell,
+            Vector2 firingPosition,
+            float firingPathLength,
+            bool hasFiringPosition)
         {
             Cell = cell;
             Position = position;
             Score = score;
             PathLength = pathLength;
             EvaluatedCandidates = evaluatedCandidates;
+            FiringCell = firingCell;
+            FiringPosition = firingPosition;
+            FiringPathLength = firingPathLength;
+            HasFiringPosition = hasFiringPosition;
         }
 
         public Vector2Int Cell { get; }
@@ -190,6 +412,10 @@ namespace LocalTanks
         public float Score { get; }
         public float PathLength { get; }
         public int EvaluatedCandidates { get; }
+        public Vector2Int FiringCell { get; }
+        public Vector2 FiringPosition { get; }
+        public float FiringPathLength { get; }
+        public bool HasFiringPosition { get; }
     }
 
     public static class TacticalCoverPlanner
@@ -203,6 +429,29 @@ namespace LocalTanks
             Func<Vector2, bool> isAvailable,
             out TacticalCoverSolution solution)
         {
+            return TryFindPair(
+                map,
+                origin,
+                clearanceCells,
+                maximumSearchDistance,
+                map != null ? map.CellSize * 3f : 3f,
+                isProtected,
+                isAvailable,
+                null,
+                out solution);
+        }
+
+        public static bool TryFindPair(
+            NavigationMap map,
+            Vector2 origin,
+            int clearanceCells,
+            float maximumSearchDistance,
+            float maximumPeekDistance,
+            Func<Vector2, bool> isProtected,
+            Func<Vector2, bool> isAvailable,
+            Func<Vector2, bool> canFireFrom,
+            out TacticalCoverSolution solution)
+        {
             solution = default;
             if (map == null || isProtected == null) return false;
 
@@ -214,6 +463,10 @@ namespace LocalTanks
             Vector2Int bestCell = default;
             Vector2 bestPosition = default;
             float bestPathLength = 0f;
+            Vector2Int bestFiringCell = default;
+            Vector2 bestFiringPosition = default;
+            float bestFiringPathLength = 0f;
+            bool bestHasFiringPosition = false;
             int evaluated = 0;
 
             for (int y = originCell.y - radius; y <= originCell.y + radius; y++)
@@ -232,7 +485,18 @@ namespace LocalTanks
                     if (path == null || path.Count < 2) continue;
                     float pathLength = CalculatePathLength(path);
                     float detour = Mathf.Max(0f, pathLength - directDistance);
-                    float score = pathLength * 1.4f + detour;
+                    bool hasFiringPosition = TryFindFiringPoint(
+                        map,
+                        candidate,
+                        clearanceCells,
+                        maximumPeekDistance,
+                        isAvailable,
+                        canFireFrom,
+                        out Vector2Int firingCell,
+                        out Vector2 firingPosition,
+                        out float firingPathLength);
+                    if (canFireFrom != null && !hasFiringPosition) continue;
+                    float score = pathLength * 1.4f + detour + firingPathLength * 0.75f;
                     if (!found || score < bestScore - 0.001f ||
                         Mathf.Approximately(score, bestScore) && IsEarlier(cell, bestCell))
                     {
@@ -241,6 +505,10 @@ namespace LocalTanks
                         bestCell = cell;
                         bestPosition = candidate;
                         bestPathLength = pathLength;
+                        bestFiringCell = firingCell;
+                        bestFiringPosition = firingPosition;
+                        bestFiringPathLength = firingPathLength;
+                        bestHasFiringPosition = hasFiringPosition;
                     }
                 }
             }
@@ -251,8 +519,67 @@ namespace LocalTanks
                 bestPosition,
                 bestScore,
                 bestPathLength,
-                evaluated);
+                evaluated,
+                bestFiringCell,
+                bestFiringPosition,
+                bestFiringPathLength,
+                bestHasFiringPosition);
             return true;
+        }
+
+        private static bool TryFindFiringPoint(
+            NavigationMap map,
+            Vector2 shelter,
+            int clearanceCells,
+            float maximumPeekDistance,
+            Func<Vector2, bool> isAvailable,
+            Func<Vector2, bool> canFireFrom,
+            out Vector2Int firingCell,
+            out Vector2 firingPosition,
+            out float firingPathLength)
+        {
+            firingCell = default;
+            firingPosition = shelter;
+            firingPathLength = 0f;
+            if (canFireFrom == null) return false;
+
+            int radius = Mathf.Max(1, Mathf.CeilToInt(maximumPeekDistance / map.CellSize));
+            Vector2Int shelterCell = map.WorldToCell(shelter);
+            bool found = false;
+            float bestScore = float.PositiveInfinity;
+            for (int y = shelterCell.y - radius; y <= shelterCell.y + radius; y++)
+            {
+                for (int x = shelterCell.x - radius; x <= shelterCell.x + radius; x++)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    if (!map.Contains(cell) || map.IsBlocked(cell) || cell == shelterCell) continue;
+                    Vector2 candidate = map.CellToWorld(cell);
+                    float directDistance = Vector2.Distance(shelter, candidate);
+                    if (directDistance < map.CellSize * 1.5f ||
+                        directDistance > maximumPeekDistance ||
+                        isAvailable != null && !isAvailable(candidate) ||
+                        !canFireFrom(candidate))
+                    {
+                        continue;
+                    }
+
+                    List<Vector2> path = map.FindWorldPath(shelter, candidate, clearanceCells);
+                    if (path == null || path.Count < 2) continue;
+                    float pathLength = CalculatePathLength(path);
+                    float score = pathLength + Mathf.Max(0f, pathLength - directDistance) * 2f;
+                    if (!found || score < bestScore - 0.001f ||
+                        Mathf.Approximately(score, bestScore) && IsEarlier(cell, firingCell))
+                    {
+                        found = true;
+                        bestScore = score;
+                        firingCell = cell;
+                        firingPosition = candidate;
+                        firingPathLength = pathLength;
+                    }
+                }
+            }
+
+            return found;
         }
 
         private static float CalculatePathLength(IReadOnlyList<Vector2> path)
@@ -269,6 +596,62 @@ namespace LocalTanks
         private static bool IsEarlier(Vector2Int candidate, Vector2Int current)
         {
             return candidate.y < current.y || candidate.y == current.y && candidate.x < current.x;
+        }
+    }
+
+    public static class TacticalCoverReservations
+    {
+        private sealed class Reservation
+        {
+            public string OwnerId;
+            public float ExpiresAt;
+        }
+
+        private static readonly Dictionary<Vector2Int, Reservation> Reservations =
+            new Dictionary<Vector2Int, Reservation>();
+
+        public static bool IsAvailable(Vector2Int cell, string ownerId, float time)
+        {
+            RemoveExpired(time);
+            return !Reservations.TryGetValue(cell, out Reservation reservation) ||
+                   string.Equals(reservation.OwnerId, ownerId, StringComparison.Ordinal);
+        }
+
+        public static bool TryReserve(Vector2Int cell, string ownerId, float time, float duration)
+        {
+            if (string.IsNullOrWhiteSpace(ownerId) || !IsAvailable(cell, ownerId, time)) return false;
+            Reservations[cell] = new Reservation
+            {
+                OwnerId = ownerId,
+                ExpiresAt = time + Mathf.Max(1f, duration)
+            };
+            return true;
+        }
+
+        public static void Release(string ownerId)
+        {
+            if (string.IsNullOrWhiteSpace(ownerId)) return;
+            List<Vector2Int> owned = new List<Vector2Int>();
+            foreach (KeyValuePair<Vector2Int, Reservation> pair in Reservations)
+            {
+                if (string.Equals(pair.Value.OwnerId, ownerId, StringComparison.Ordinal)) owned.Add(pair.Key);
+            }
+            foreach (Vector2Int cell in owned) Reservations.Remove(cell);
+        }
+
+        public static void Clear()
+        {
+            Reservations.Clear();
+        }
+
+        private static void RemoveExpired(float time)
+        {
+            List<Vector2Int> expired = new List<Vector2Int>();
+            foreach (KeyValuePair<Vector2Int, Reservation> pair in Reservations)
+            {
+                if (pair.Value.ExpiresAt <= time) expired.Add(pair.Key);
+            }
+            foreach (Vector2Int cell in expired) Reservations.Remove(cell);
         }
     }
 }

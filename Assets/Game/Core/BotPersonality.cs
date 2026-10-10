@@ -78,17 +78,30 @@ namespace LocalTanks
     {
         public const int MaximumNicknameLength = 18;
 
-        private static readonly string[] AggressiveNames = { "Натиск", "Клык", "Таран", "Штурм" };
-        private static readonly string[] CautiousNames = { "Тень", "Дозор", "Щит", "Барсук" };
-        private static readonly string[] DisciplinedNames = { "Вектор", "Капрал", "Строй", "Устав" };
-        private static readonly string[] InitiativeNames = { "Искра", "Рывок", "Вольт", "Азимут" };
-        private static readonly string[] TeamNames = { "Звено", "Маяк", "Опора", "Напарник" };
-        private static readonly string[] PatientNames = { "Филин", "Часовой", "Кремень", "Ожидание" };
-        private static readonly string[] SocialNames = { "Радио", "Голос", "Сигнал", "Беседник" };
-        private static readonly string[] HumorNames = { "Бублик", "Тостер", "Шутник", "Улыбка" };
-        private static readonly string[] ResentfulNames = { "Колючий", "Память", "Счёты", "Хмурый" };
-        private static readonly string[] HelpfulNames = { "Буксир", "Доктор", "Резерв", "Спасатель" };
-        private static readonly string[] DefiantNames = { "Вольный", "Бунтарь", "Самоход", "Упрямец" };
+        private static readonly string[] AggressiveNames =
+            { "Zloy", "Kaban", "Volk", "Taran", "Berserk", "Nagibator" };
+        private static readonly string[] CautiousNames =
+            { "Stalker", "Tihiy", "Lesnik", "Sibiryak", "Bober", "Filin" };
+        private static readonly string[] DisciplinedNames =
+            { "Starshina", "Kapral", "Komandir", "Tankist", "Sanych", "Veteran" };
+        private static readonly string[] InitiativeNames =
+            { "Dimon", "Vovan", "Sanya", "Kolyan", "Dron", "Vitek" };
+        private static readonly string[] TeamNames =
+            { "Batya", "Brat", "Naparnik", "Serega", "Ruslan", "Maxon" };
+        private static readonly string[] PatientNames =
+            { "DedMazai", "Kremen", "Sever", "Ural", "Taezhnik", "Chasovoy" };
+        private static readonly string[] SocialNames =
+            { "Sanek", "Leha", "Mihalych", "Petrovich", "Andryuha", "Slavik" };
+        private static readonly string[] HumorNames =
+            { "Bublik", "Kote", "Pivovar", "Barmaley", "Pelmen", "Baton" };
+        private static readonly string[] ResentfulNames =
+            { "Hmuriy", "Kolyuchiy", "Zlopamyat", "Grumpy", "Obida", "Yazva" };
+        private static readonly string[] HelpfulNames =
+            { "Buksir", "Doktor", "Spasatel", "Dobryak", "Sanitar", "Podmoga" };
+        private static readonly string[] DefiantNames =
+            { "Buntar", "Upryamiy", "Volniy", "Ataman", "Brodyaga", "SamPoSebe" };
+        private static readonly string[] Suffixes =
+            { "RUS", "BY", "KZ", "UA", "Pro", "Top", "Old", "Live" };
 
         public static BotIdentity[] GenerateRoster(string battleId, IEnumerable<BotProfileContext> contexts)
         {
@@ -229,8 +242,18 @@ namespace LocalTanks
             uint value = unchecked((uint)seed);
             string first = firstParts[value % firstParts.Length];
             string second = classParts[(value >> 8) % classParts.Length];
+            string suffix = Suffixes[(value >> 12) % Suffixes.Length];
             string number = ((value >> 16) % 90 + 10).ToString();
-            return TrimNickname($"{first}-{second}{number}");
+            string year = ((value >> 20) % 30 + 70).ToString();
+            switch ((value >> 28) % 6)
+            {
+                case 0: return TrimNickname($"{first}{number}");
+                case 1: return TrimNickname($"{first}_{suffix}");
+                case 2: return TrimNickname($"xX_{first}_Xx");
+                case 3: return TrimNickname($"{first}{year}");
+                case 4: return TrimNickname($"{first}_{second}");
+                default: return TrimNickname($"Real_{first}{number[1]}");
+            }
         }
 
         private static string[] DominantNameSet(BotPersonalityProfile profile)
@@ -256,11 +279,11 @@ namespace LocalTanks
         {
             switch (vehicleClass)
             {
-                case "HeavyTank": return new[] { "Броня", "Бастион", "Кувалда" };
-                case "MediumTank": return new[] { "Манёвр", "Фланг", "Баланс" };
-                case "TankDestroyer": return new[] { "Засада", "Прицел", "Куст" };
-                case "Artillery": return new[] { "Гром", "Навес", "Дальний" };
-                default: return new[] { "Ветер", "Разведка", "След" };
+                case "HeavyTank": return new[] { "Heavy", "Stal", "Bronya" };
+                case "MediumTank": return new[] { "Flang", "Manevr", "CT" };
+                case "TankDestroyer": return new[] { "Sniper", "Kust", "PT" };
+                case "Artillery": return new[] { "Arta", "Grom", "SPG" };
+                default: return new[] { "Scout", "Veter", "LT" };
             }
         }
 

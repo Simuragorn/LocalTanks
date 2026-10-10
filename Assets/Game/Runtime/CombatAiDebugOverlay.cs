@@ -13,6 +13,7 @@ namespace LocalTanks
         private Vector2 detailsScroll;
         private GUIStyle headerStyle;
         private GUIStyle detailsStyle;
+        private TankDebugSelectionOutline activeOutline;
 
         public bool Visible => visible;
         public CombatTankAI Selected => selected;
@@ -22,8 +23,7 @@ namespace LocalTanks
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null && keyboard.f4Key.wasPressedThisFrame)
             {
-                visible = !visible;
-                if (visible) SelectNearestBot();
+                SetVisible(!visible);
             }
 
             if (!visible)
@@ -78,10 +78,29 @@ namespace LocalTanks
                         new Color(0.35f, 0.75f, 1f));
                 }
 
+                if (selected.HasCoverFiringPosition)
+                {
+                    Debug.DrawLine(selected.CoverPosition, selected.CoverFiringPosition,
+                        new Color(0.35f, 1f, 0.65f));
+                    Debug.DrawLine(selected.CoverFiringPosition + Vector2.left * 0.25f,
+                        selected.CoverFiringPosition + Vector2.right * 0.25f,
+                        new Color(0.35f, 1f, 0.65f));
+                    Debug.DrawLine(selected.CoverFiringPosition + Vector2.down * 0.25f,
+                        selected.CoverFiringPosition + Vector2.up * 0.25f,
+                        new Color(0.35f, 1f, 0.65f));
+                }
+
                 if (selected.PrimaryThreatDirection.sqrMagnitude > 0.001f)
                 {
                     Debug.DrawRay(selected.transform.position,
                         selected.PrimaryThreatDirection.normalized * 2f, new Color(1f, 0.45f, 0.2f));
+                }
+
+                if (selected.SecondaryThreatDirection.sqrMagnitude > 0.001f)
+                {
+                    Debug.DrawRay(selected.transform.position,
+                        selected.SecondaryThreatDirection.normalized * 1.7f,
+                        new Color(1f, 0.75f, 0.2f));
                 }
             }
         }
@@ -90,6 +109,7 @@ namespace LocalTanks
         {
             visible = value;
             if (visible) SelectNearestBot();
+            else ApplySelectionOutline(null);
         }
 
         public void SelectRelativeBot(int direction)
@@ -97,7 +117,7 @@ namespace LocalTanks
             List<CombatTankAI> bots = GetLivingBots();
             if (bots.Count == 0)
             {
-                selected = null;
+                SetSelected(null);
                 selectedIndex = -1;
                 return;
             }
@@ -106,7 +126,7 @@ namespace LocalTanks
             if (current < 0) current = selectedIndex >= 0 ? Mathf.Min(selectedIndex, bots.Count - 1) : 0;
             int step = direction < 0 ? -1 : 1;
             selectedIndex = (current + step + bots.Count) % bots.Count;
-            selected = bots[selectedIndex];
+            SetSelected(bots[selectedIndex]);
         }
 
         private void SelectNearestBot()
@@ -114,7 +134,7 @@ namespace LocalTanks
             List<CombatTankAI> bots = GetLivingBots();
             if (bots.Count == 0)
             {
-                selected = null;
+                SetSelected(null);
                 selectedIndex = -1;
                 return;
             }
@@ -122,8 +142,36 @@ namespace LocalTanks
             TeamMember player = TeamMember.ActiveMembers.FirstOrDefault(item =>
                 item != null && item.IsPlayerControlled && item.IsAlive);
             Vector2 origin = player != null ? player.transform.position : Vector2.zero;
-            selected = bots.OrderBy(item => Vector2.SqrMagnitude((Vector2)item.transform.position - origin)).First();
+            SetSelected(bots.OrderBy(item =>
+                Vector2.SqrMagnitude((Vector2)item.transform.position - origin)).First());
             selectedIndex = bots.IndexOf(selected);
+        }
+
+        private void SetSelected(CombatTankAI value)
+        {
+            if (selected == value)
+            {
+                ApplySelectionOutline(visible ? selected : null);
+                return;
+            }
+
+            selected = value;
+            ApplySelectionOutline(visible ? selected : null);
+        }
+
+        private void ApplySelectionOutline(CombatTankAI value)
+        {
+            if (activeOutline != null) activeOutline.SetVisible(false);
+            activeOutline = null;
+            if (value == null) return;
+            activeOutline = value.GetComponent<TankDebugSelectionOutline>();
+            if (activeOutline == null) activeOutline = value.gameObject.AddComponent<TankDebugSelectionOutline>();
+            activeOutline.SetVisible(true);
+        }
+
+        private void OnDisable()
+        {
+            ApplySelectionOutline(null);
         }
 
         private static List<CombatTankAI> GetLivingBots()
@@ -231,6 +279,10 @@ namespace LocalTanks
             string cover = ai.HasCoverPosition
                 ? $"{ai.CoverPosition.x:0.0}, {ai.CoverPosition.y:0.0}"
                 : "—";
+            string coverFire = ai.HasCoverFiringPosition
+                ? $"{ai.CoverFiringPosition.x:0.0}, {ai.CoverFiringPosition.y:0.0}"
+                : "—";
+            TacticalBehaviorProfile behavior = ai.TacticalBehavior;
 
             return "<b>ЛИЧНОСТЬ</b>\n" + temperament + "\n\n" +
                    "<b>ТЕКУЩАЯ ТАКТИКА</b>\n" +
@@ -243,12 +295,16 @@ namespace LocalTanks
                    $"Огонь: {ai.CurrentFireBlockReason}\n" +
                    $"Препятствие: {blocker}\n" +
                    $"Огневая позиция: {firingPosition}\n" +
-                   $"Тактический манёвр: {ai.TacticalMovementPurpose}\n" +
+                   $"Тактическая задача: {ai.TacticalMovementPurpose} / {ai.TacticalDecisionPriority}\n" +
+                   $"Причина задачи: {ai.TacticalDecisionReason}\n" +
                    $"Укрытие: {cover}\n" +
-                   $"Угрозы: {ai.ActiveThreatCount}; направление " +
+                   $"Огневая точка укрытия: {coverFire}\n" +
+                   $"Угрозы: {ai.ActiveThreatCount} наблюдений / {ai.ActiveThreatSectorCount} секторов; направление " +
                    $"{ai.PrimaryThreatDirection.x:0.00}, {ai.PrimaryThreatDirection.y:0.00}\n" +
+                   $"Перекрёстный огонь: {(ai.IsUnderCrossfire ? $"да, {ai.CrossfireAngle:0}°" : "нет")}\n" +
                    $"Броня лоб/борт/корма: {armor.FrontArmor:0}/{armor.WeakestSideArmor:0}/{armor.RearArmor:0} мм\n" +
                    $"Безопасный доворот: {armor.SafeAngleDegrees:0.0}°\n" +
+                   $"Профиль укрытия / готовность к выезду: {behavior.CoverPreference:0.00} / {behavior.PeekReloadThreshold:0.00}\n" +
                    $"Результат планировщика: {ai.LastTacticalPositionResult}\n\n" +
                    "<b>СТРАТЕГИЧЕСКОЕ РЕШЕНИЕ</b>\n" + strategic;
         }

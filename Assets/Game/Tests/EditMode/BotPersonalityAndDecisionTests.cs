@@ -22,6 +22,8 @@ namespace LocalTanks.Tests
                 item.nickname.Length > 0 && item.nickname.Length <= BotPersonalityGenerator.MaximumNicknameLength));
             Assert.That(first, Has.All.Matches<BotIdentity>(item => item.nickname.All(character =>
                 char.IsLetterOrDigit(character) || character == '-' || character == '_')));
+            Assert.That(first, Has.All.Matches<BotIdentity>(item => item.nickname.All(character =>
+                character <= 127)), "Ники ботов должны состоять только из латиницы, цифр и ASCII-разделителей.");
         }
 
         [Test]

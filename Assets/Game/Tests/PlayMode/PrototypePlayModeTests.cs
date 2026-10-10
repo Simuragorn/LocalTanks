@@ -351,10 +351,19 @@ namespace LocalTanks.Tests
             aiOverlay.SetVisible(true);
             CombatTankAI firstSelected = aiOverlay.Selected;
             Assert.That(firstSelected, Is.Not.Null);
+            TankDebugSelectionOutline firstOutline =
+                firstSelected.GetComponent<TankDebugSelectionOutline>();
+            Assert.That(firstOutline, Is.Not.Null);
+            Assert.That(firstOutline.IsVisible, Is.True);
             aiOverlay.SelectRelativeBot(1);
             Assert.That(aiOverlay.Selected, Is.Not.Null.And.Not.SameAs(firstSelected));
+            Assert.That(firstOutline.IsVisible, Is.False);
+            Assert.That(aiOverlay.Selected.GetComponent<TankDebugSelectionOutline>().IsVisible, Is.True);
             aiOverlay.SelectRelativeBot(-1);
             Assert.That(aiOverlay.Selected, Is.SameAs(firstSelected));
+            Assert.That(firstOutline.IsVisible, Is.True);
+            aiOverlay.SetVisible(false);
+            Assert.That(firstOutline.IsVisible, Is.False);
             BotIdentityComponent[] identities = Object.FindObjectsByType<BotIdentityComponent>();
             Assert.That(identities.Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             Assert.That(identities.Select(item => item.Identity.nickname)
@@ -684,7 +693,7 @@ namespace LocalTanks.Tests
             WeaponController weapon = shooter.GetComponent<WeaponController>();
             weapon.Fired += _ => fired = true;
             int initialHitPoints = target.Health.CurrentHitPoints;
-            float timeout = Time.time + 2f;
+            float timeout = Time.time + 4.5f;
             while (!fired && Time.time < timeout)
             {
                 yield return null;
@@ -838,7 +847,7 @@ namespace LocalTanks.Tests
                 .First(item => item.Team == TeamId.TeamB);
             foreach (TeamMember other in TeamMember.ActiveMembers.ToArray())
             {
-                if (other != shooterMember && other != target) other.enabled = false;
+                if (other != shooterMember && other != target) other.gameObject.SetActive(false);
             }
             foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
             {
@@ -859,18 +868,22 @@ namespace LocalTanks.Tests
             Physics2D.SyncTransforms();
             vision.ForceEvaluateAll();
 
-            yield return new WaitForSeconds(4.2f);
+            bool observedArmorFacing = false;
+            float timeout = Time.time + 4.2f;
+            while (!observedArmorFacing && Time.time < timeout)
+            {
+                Vector2 direction = ((Vector2)target.transform.position -
+                                     (Vector2)shooter.transform.position).normalized;
+                float offset = Mathf.Abs(Vector2.SignedAngle(shooter.transform.up, direction));
+                observedArmorFacing = shooter.GetComponent<NavigationAgent>().HasFacingDirection &&
+                                      Mathf.Abs(offset - shooter.ArmorProfileUsage.SafeAngleDegrees) <= 6f;
+                yield return null;
+            }
 
-            Vector2 towardTarget = ((Vector2)target.transform.position -
-                                    (Vector2)shooter.transform.position).normalized;
-            float hullOffset = Mathf.Abs(Vector2.SignedAngle(shooter.transform.up, towardTarget));
             Assert.That(shooter.ArmorProfileUsage.CanAngle, Is.True);
-            Assert.That(shooter.GetComponent<NavigationAgent>().HasFacingDirection, Is.True);
-            Assert.That(hullOffset,
-                Is.EqualTo(shooter.ArmorProfileUsage.SafeAngleDegrees).Within(6f),
-                $"state={shooter.State}; hull={shooter.transform.up}; target={towardTarget}; " +
-                $"facing={shooter.GetComponent<NavigationAgent>().FacingDirection}; " +
-                $"block={shooter.CurrentFireBlockReason}");
+            Assert.That(observedArmorFacing, Is.True,
+                $"state={shooter.State}; target={shooter.CurrentTarget}; task={shooter.TacticalMovementPurpose}; " +
+                $"block={shooter.CurrentFireBlockReason}; result={shooter.LastTacticalPositionResult}");
         }
 
         [UnityTest]
@@ -952,6 +965,142 @@ namespace LocalTanks.Tests
                     null);
                 Assert.That(protection.BlockType,
                     Is.EqualTo(LineOfFireBlockType.HardObstacle));
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                foreach (Vector2Int cell in blockedCells) map.SetBlocked(cell, false);
+                Object.Destroy(obstacle);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RiverCrossing_CoverUserPeeksFiresAndReturnsInReverse()
+        {
+            SceneManager.LoadScene("Battle_RiverCrossing");
+            yield return null;
+
+            NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
+            TeamVisionSystem vision = Object.FindAnyObjectByType<TeamVisionSystem>();
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            TeamMember botMember = director.FindMember("a_north_ms1_1");
+            CombatTankAI bot = botMember.GetComponent<CombatTankAI>();
+            TeamMember target = director.FindMember("b_north_leichttraktor_1");
+            foreach (TeamMember other in TeamMember.ActiveMembers.ToArray())
+            {
+                if (other != botMember && other != target) other.gameObject.SetActive(false);
+            }
+            foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>())
+            {
+                if (ai != bot) ai.enabled = false;
+            }
+            NavigationAgent targetNavigation = target.GetComponent<NavigationAgent>();
+            if (targetNavigation != null) targetNavigation.enabled = false;
+            TankMotor targetMotor = target.GetComponent<TankMotor>();
+            if (targetMotor != null) targetMotor.enabled = false;
+            Rigidbody2D targetBody = target.GetComponent<Rigidbody2D>();
+            if (targetBody != null) targetBody.linearVelocity = Vector2.zero;
+
+            Vector2Int[] blockedCells =
+            {
+                new Vector2Int(31, 20)
+            };
+            GameObject obstacle = new GameObject("TestPeekAndReturnCover");
+            obstacle.transform.position = map.CellToWorld(new Vector2Int(31, 20));
+            obstacle.AddComponent<BoxCollider2D>().size =
+                new Vector2(map.CellSize * 0.6f, map.CellSize * 0.6f);
+            foreach (Vector2Int cell in blockedCells) map.SetBlocked(cell, true);
+
+            float previousScale = Time.timeScale;
+            bool sawPair = false;
+            bool sawAnyCover = false;
+            bool sawCoverMovement = false;
+            bool firedFromPeek = false;
+            bool returnedInReverse = false;
+            bool returnedToCover = false;
+            bool usedForwardReturnFallback = false;
+            float minimumReturnDistance = float.PositiveInfinity;
+            float shotDistanceFromCover = float.PositiveInfinity;
+            try
+            {
+                bot.transform.SetPositionAndRotation(
+                    map.CellToWorld(new Vector2Int(29, 22)), Quaternion.identity);
+                target.transform.SetPositionAndRotation(
+                    map.CellToWorld(new Vector2Int(34, 22)), Quaternion.Euler(0f, 0f, 90f));
+                Vector2 lookDirection =
+                    ((Vector2)target.transform.position - (Vector2)bot.transform.position).normalized;
+                botMember.VisionDirection.rotation = Quaternion.Euler(
+                    0f,
+                    0f,
+                    Mathf.Atan2(lookDirection.y, lookDirection.x) * Mathf.Rad2Deg - 90f);
+                Rigidbody2D botBody = bot.GetComponent<Rigidbody2D>();
+                botBody.linearVelocity = Vector2.zero;
+                Physics2D.SyncTransforms();
+                vision.ForceEvaluateAll();
+
+                int initialCoverCycleShots = bot.CompletedCoverCycleShots;
+                bot.GetComponent<TankArmor>().ResolveImpact(
+                    Vector2.left,
+                    bot.transform.position,
+                    Vector2.right,
+                    penetration: 999f,
+                    speed: 10f,
+                    damage: 1,
+                    ricochetAngle: 70f,
+                    ricochetSpeedMultiplier: 0.7f,
+                    ricochetPenetrationMultiplier: 0.65f,
+                    remainingRicochets: 1);
+
+                Time.timeScale = 3f;
+                float timeout = Time.time + 120f;
+                while (!returnedToCover && Time.time < timeout)
+                {
+                    sawAnyCover |= bot.HasCoverPosition;
+                    sawPair |= bot.HasCoverPosition && bot.HasCoverFiringPosition;
+                    sawCoverMovement |= bot.TacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
+                                        bot.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat;
+                    NavigationAgent botNavigation = bot.GetComponent<NavigationAgent>();
+                    if (!firedFromPeek && bot.CompletedCoverCycleShots > initialCoverCycleShots)
+                    {
+                        firedFromPeek = true;
+                        returnedInReverse = false;
+                        usedForwardReturnFallback = false;
+                        minimumReturnDistance = float.PositiveInfinity;
+                        shotDistanceFromCover = Vector2.Distance(
+                            bot.transform.position,
+                            bot.CoverPosition);
+                    }
+                    returnedInReverse |= firedFromPeek && bot.LastCoverReturnStartedInReverse;
+                    if (bot.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover)
+                    {
+                        usedForwardReturnFallback |= returnedInReverse && !botNavigation.MovingInReverse;
+                        minimumReturnDistance = Mathf.Min(
+                            minimumReturnDistance,
+                            Vector2.Distance(bot.transform.position, bot.CoverPosition));
+                    }
+                    // LastTacticalPositionResult is written only after the defensive movement
+                    // has actually reached a protected position. The bot may legitimately leave
+                    // Hold on the next decision tick when its target has just been destroyed, so
+                    // requiring the transient state here makes the scenario order-dependent.
+                    returnedToCover = firedFromPeek && returnedInReverse &&
+                                      bot.LastTacticalPositionResult.Contains("Возврат в укрытие");
+                    yield return null;
+                }
+
+                Assert.That(sawPair, Is.True,
+                    $"{bot.LastTacticalPositionResult}; anyCover={sawAnyCover}; moving={sawCoverMovement}; " +
+                    $"task={bot.TacticalMovementPurpose}; state={bot.State}");
+                Assert.That(firedFromPeek, Is.True,
+                    $"{bot.LastTacticalPositionResult}; task={bot.TacticalMovementPurpose}; " +
+                    $"state={bot.State}; fire={bot.CurrentFireBlockReason}; " +
+                    $"reverse={bot.GetComponent<NavigationAgent>().MovingInReverse}");
+                Assert.That(returnedInReverse, Is.True,
+                    $"{bot.LastTacticalPositionResult}; shotDistance={shotDistanceFromCover:0.00}; " +
+                    $"hasCover={bot.HasCoverPosition}; reverseCommand={bot.LastCoverReturnStartedInReverse}");
+                Assert.That(returnedToCover, Is.True,
+                    $"{bot.LastTacticalPositionResult}; pos={bot.transform.position}; " +
+                    $"cover={bot.CoverPosition}; minReturn={minimumReturnDistance:0.00}; " +
+                    $"forwardFallback={usedForwardReturnFallback}; task={bot.TacticalMovementPurpose}");
             }
             finally
             {

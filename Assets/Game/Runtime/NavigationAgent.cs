@@ -45,6 +45,7 @@ namespace LocalTanks
         private float progressSampleAngle;
         private float unstuckTime;
         private float unstuckTurn;
+        private float unstuckDrive;
         private int unstuckAttempt;
         private bool replanAfterUnstuck;
         private float committedTurn;
@@ -53,6 +54,7 @@ namespace LocalTanks
         private bool hasFacingDirection;
         private Vector2 facingDirection;
         private int activeClearanceCells;
+        private bool movingInReverse;
 
         public IReadOnlyList<Vector2> CurrentPath => path;
         public bool HasPath => pathIndex < path.Count;
@@ -65,6 +67,7 @@ namespace LocalTanks
         public int ClearanceCells => clearanceCells;
         public bool HasFacingDirection => hasFacingDirection;
         public Vector2 FacingDirection => facingDirection;
+        public bool MovingInReverse => movingInReverse;
 
         public void Configure(
             NavigationMap navigationMap,
@@ -88,6 +91,7 @@ namespace LocalTanks
             unstuckTime = 0f;
             replanAfterUnstuck = false;
             hasFacingDirection = false;
+            movingInReverse = false;
             BeginPatrol();
         }
 
@@ -98,10 +102,16 @@ namespace LocalTanks
 
         public bool SetDestination(Vector2 worldDestination, int minimumClearanceCells)
         {
+            return SetDestination(worldDestination, minimumClearanceCells, false);
+        }
+
+        public bool SetDestination(Vector2 worldDestination, int minimumClearanceCells, bool reverse)
+        {
             destination = worldDestination;
             hasDestination = true;
             destinationReached = false;
             hasFacingDirection = false;
+            movingInReverse = reverse;
             activeClearanceCells = Mathf.Max(clearanceCells, minimumClearanceCells);
             return RebuildPath();
         }
@@ -138,6 +148,7 @@ namespace LocalTanks
             pathIndex = 0;
             hasDestination = false;
             destinationReached = false;
+            movingInReverse = false;
             motor?.SetInput(0f, 0f);
         }
 
@@ -213,13 +224,15 @@ namespace LocalTanks
             }
 
             Vector2 desiredDirection = (path[pathIndex] - position).normalized;
-            float angle = Vector2.SignedAngle(transform.up, desiredDirection);
+            Vector2 movementForward = movingInReverse ? -(Vector2)transform.up : (Vector2)transform.up;
+            float angle = Vector2.SignedAngle(movementForward, desiredDirection);
             Vector2 pathInput = TankMotionMath.PathFollowingInput(angle);
-            float drive = pathInput.x;
-            float turn = ResolveCommittedTurn(angle, pathInput.y);
+            float drive = movingInReverse ? -pathInput.x : pathInput.x;
+            float requestedTurn = movingInReverse ? -pathInput.y : pathInput.y;
+            float turn = ResolveCommittedTurn(angle, requestedTurn);
 
-            ApplyLocalAvoidance(ref drive, ref turn);
-            ApplyUnstuck(ref drive, ref turn, position);
+            ApplyLocalAvoidance(ref drive, ref turn, movementForward, movingInReverse);
+            ApplyUnstuck(ref drive, ref turn, position, movingInReverse);
             motor.SetInput(drive, turn);
         }
 
@@ -295,7 +308,11 @@ namespace LocalTanks
             return HasPath;
         }
 
-        private void ApplyLocalAvoidance(ref float drive, ref float turn)
+        private void ApplyLocalAvoidance(
+            ref float drive,
+            ref float turn,
+            Vector2 movementForward,
+            bool reverse)
         {
             Collider2D[] nearby = Physics2D.OverlapCircleAll(transform.position, avoidanceRadius);
             Dictionary<NavigationAgent, float> clearances = new Dictionary<NavigationAgent, float>();
@@ -317,30 +334,38 @@ namespace LocalTanks
                 NavigationAgent other = entry.Key;
                 Vector2 offset = (Vector2)other.transform.position - (Vector2)transform.position;
                 float distance = offset.magnitude;
-                if (distance <= 0.01f || Vector2.Dot(transform.up, offset.normalized) < 0.15f)
+                if (distance <= 0.01f || Vector2.Dot(movementForward, offset.normalized) < 0.15f)
                 {
                     continue;
                 }
 
                 float clearance = entry.Value;
                 drive *= NavigationAvoidanceMath.DriveFactor(clearance, avoidanceRadius);
-                float side = Vector3.Cross(transform.up, offset.normalized).z;
+                float side = Vector3.Cross(movementForward, offset.normalized).z;
                 float avoidanceTurn = NavigationAvoidanceMath.TurnStrength(clearance, avoidanceRadius);
-                turn += side >= 0f ? avoidanceTurn : -avoidanceTurn;
+                float steeringSign = reverse ? -1f : 1f;
+                turn += (side >= 0f ? avoidanceTurn : -avoidanceTurn) * steeringSign;
                 turn = Mathf.Clamp(turn, -1f, 1f);
             }
         }
 
-        private void ApplyUnstuck(ref float drive, ref float turn, Vector2 position)
+        private void ApplyUnstuck(ref float drive, ref float turn, Vector2 position, bool reverse)
         {
             if (unstuckTime > 0f)
             {
                 unstuckTime -= Time.deltaTime;
-                drive = -1f;
+                drive = unstuckDrive;
                 turn = unstuckTurn;
                 if (unstuckTime <= 0f && replanAfterUnstuck)
                 {
                     replanAfterUnstuck = false;
+                    if (movingInReverse && unstuckAttempt >= 2)
+                    {
+                        // A reverse retreat is tactically preferable, but repeatedly wedging the
+                        // hull against a cover corner is worse than briefly exposing the side.
+                        // Keep the same destination and finish the route forwards.
+                        movingInReverse = false;
+                    }
                     RebuildPath();
                     progressSamplePosition = position;
                     progressSampleAngle = transform.eulerAngles.z;
@@ -364,7 +389,10 @@ namespace LocalTanks
                 unstuckAttempt++;
                 int directionSeed = GetEntityId().GetHashCode() + unstuckAttempt;
                 unstuckTurn = (directionSeed & 1) == 0 ? 0.9f : -0.9f;
-                unstuckTime = Mathf.Min(2.6f, unstuckDuration + (unstuckAttempt - 1) * 0.2f);
+                float routeDrive = reverse ? -1f : 1f;
+                unstuckDrive = (unstuckAttempt & 1) == 1 ? -routeDrive : routeDrive;
+                unstuckTime = Mathf.Min(3.2f,
+                    Mathf.Max(2.4f, unstuckDuration + (unstuckAttempt - 1) * 0.25f));
                 replanAfterUnstuck = true;
             }
             else if (progress >= minimumProgressDistance * 2f)

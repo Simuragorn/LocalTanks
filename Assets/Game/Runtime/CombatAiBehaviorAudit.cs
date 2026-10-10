@@ -52,7 +52,8 @@ namespace LocalTanks
             int shotsFired,
             int shotsWithoutVisibleTarget = 0,
             float headingDegrees = 0f,
-            bool defensiveMovement = false)
+            bool defensiveMovement = false,
+            bool recoveringFromStall = false)
         {
             Time = time;
             BotId = botId ?? string.Empty;
@@ -71,6 +72,7 @@ namespace LocalTanks
             ShotsWithoutVisibleTarget = Mathf.Max(0, shotsWithoutVisibleTarget);
             HeadingDegrees = headingDegrees;
             DefensiveMovement = defensiveMovement;
+            RecoveringFromStall = recoveringFromStall;
         }
 
         public float Time { get; }
@@ -90,6 +92,7 @@ namespace LocalTanks
         public int ShotsWithoutVisibleTarget { get; }
         public float HeadingDegrees { get; }
         public bool DefensiveMovement { get; }
+        public bool RecoveringFromStall { get; }
     }
 
     public sealed class CombatAiAuditIssue
@@ -356,7 +359,8 @@ namespace LocalTanks
 
         private static bool MovementExpected(CombatAiAuditSample sample)
         {
-            return MovementState(sample.State) && !sample.MovementPaused && sample.HasDestination &&
+            return MovementState(sample.State) && !sample.MovementPaused && !sample.RecoveringFromStall &&
+                   sample.HasDestination &&
                    !sample.DestinationReached && sample.HasNavigationPath;
         }
 
@@ -493,7 +497,10 @@ namespace LocalTanks
                     invalidShotCounts.TryGetValue(bot, out int invalidShots) ? invalidShots : 0,
                     bot.transform.eulerAngles.z,
                     bot.TacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
-                    bot.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover));
+                    bot.TacticalMovementPurpose == TacticalMovementPurpose.PeekToFire ||
+                    bot.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
+                    bot.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat,
+                    navigation != null && navigation.IsRecoveringFromStall));
             }
         }
 

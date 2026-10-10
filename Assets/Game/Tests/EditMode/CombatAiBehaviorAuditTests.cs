@@ -59,6 +59,29 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void Auditor_DoesNotReportStallWhileAgentExecutesRecoveryManeuver()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                movementWindowSeconds = 2f,
+                minimumMovementDistance = 0.25f
+            });
+            auditor.Record(Sample(0f, CombatAiState.Engage, Vector2.zero));
+            auditor.Record(new CombatAiAuditSample(
+                1f, "bot-a", "Tester", CombatAiState.Engage, Vector2.zero,
+                true, false, true, false, true, "enemy-a", true,
+                FireBlockReason.Aiming, 0, 0, 0f, false, true));
+            auditor.Record(new CombatAiAuditSample(
+                3.2f, "bot-a", "Tester", CombatAiState.Engage, new Vector2(0.1f, 0f),
+                true, false, true, false, true, "enemy-a", true,
+                FireBlockReason.Aiming, 0, 0, 5f, false, true));
+            auditor.Record(Sample(3.4f, CombatAiState.Engage, new Vector2(0.35f, 0f)));
+
+            Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.MovementStall),
+                Is.False);
+        }
+
+        [Test]
         public void Auditor_DetectsCirclingWithoutTranslation()
         {
             CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
