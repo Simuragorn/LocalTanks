@@ -5,6 +5,12 @@ using UnityEngine;
 
 namespace LocalTanks
 {
+    public enum BattleScenarioKind
+    {
+        StandardBattle,
+        AiDuelLab
+    }
+
     public enum BattleLane
     {
         North,
@@ -40,7 +46,11 @@ namespace LocalTanks
 
         public string id;
         public string sceneId;
+        public BattleScenarioKind kind;
         public BattleScenarioEntry[] entries;
+
+        public int ExpectedTeamSize => kind == BattleScenarioKind.AiDuelLab ? 1 : TeamSize;
+        public int RequiredPlayerCount => kind == BattleScenarioKind.AiDuelLab ? 0 : 1;
 
         public string[] Validate(CombatDatabase database)
         {
@@ -48,12 +58,12 @@ namespace LocalTanks
             BattleScenarioEntry[] roster = entries ?? Array.Empty<BattleScenarioEntry>();
             if (string.IsNullOrWhiteSpace(id)) errors.Add("Scenario id is empty.");
             if (string.IsNullOrWhiteSpace(sceneId)) errors.Add("Scenario sceneId is empty.");
-            if (roster.Count(item => item != null && item.team == TeamId.TeamA) != TeamSize)
-                errors.Add($"Scenario must contain exactly {TeamSize} Team A entries.");
-            if (roster.Count(item => item != null && item.team == TeamId.TeamB) != TeamSize)
-                errors.Add($"Scenario must contain exactly {TeamSize} Team B entries.");
-            if (roster.Count(item => item != null && item.playerControlled) != 1)
-                errors.Add("Scenario must contain exactly one player-controlled entry.");
+            if (roster.Count(item => item != null && item.team == TeamId.TeamA) != ExpectedTeamSize)
+                errors.Add($"Scenario must contain exactly {ExpectedTeamSize} Team A entries.");
+            if (roster.Count(item => item != null && item.team == TeamId.TeamB) != ExpectedTeamSize)
+                errors.Add($"Scenario must contain exactly {ExpectedTeamSize} Team B entries.");
+            if (roster.Count(item => item != null && item.playerControlled) != RequiredPlayerCount)
+                errors.Add($"Scenario must contain exactly {RequiredPlayerCount} player-controlled entries.");
 
             HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
             HashSet<string> spawnKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -101,6 +111,11 @@ namespace LocalTanks
                     .ToArray();
                 if (nations.Length > 1)
                     errors.Add($"{team} must contain tanks from exactly one nation.");
+
+                if (kind == BattleScenarioKind.AiDuelLab)
+                {
+                    continue;
+                }
 
                 foreach (BattleLane lane in Enum.GetValues(typeof(BattleLane)))
                 {

@@ -33,6 +33,26 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void AiDuelLabScenarioAndCases_AreValidAndContainOnlyTwoBots()
+        {
+            BattleScenario scenario = BattleScenarioImporter.ReimportDuelLab();
+            AiDuelLabCatalog catalog = AiDuelLabCatalogImporter.Reimport();
+            CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(
+                CombatDefinitionImporter.DatabasePath);
+
+            Assert.That(scenario.kind, Is.EqualTo(BattleScenarioKind.AiDuelLab));
+            Assert.That(scenario.Validate(database), Is.Empty);
+            Assert.That(scenario.entries, Has.Length.EqualTo(2));
+            Assert.That(scenario.entries.Count(item => item.team == TeamId.TeamA), Is.EqualTo(1));
+            Assert.That(scenario.entries.Count(item => item.team == TeamId.TeamB), Is.EqualTo(1));
+            Assert.That(scenario.entries.Any(item => item.playerControlled), Is.False);
+            Assert.That(catalog.Validate(), Is.Empty);
+            Assert.That(catalog.cases.Select(item => item.id),
+                Is.EquivalentTo(new[] { "open_center", "north_cover", "south_cover" }));
+            Assert.That(catalog.cases.Select(item => item.seed).Distinct().Count(), Is.EqualTo(3));
+        }
+
+        [Test]
         public void ScenarioValidator_RejectsDuplicatedSpawnAndUnknownTank()
         {
             CombatDatabase database = ScriptableObject.CreateInstance<CombatDatabase>();

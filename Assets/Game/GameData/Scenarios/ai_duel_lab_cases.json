@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "open_center",
+      "displayName": "Открытая дуэль",
+      "description": "Проверка наведения, дистанции боя и ориентации корпуса без укрытий.",
+      "seed": 1701,
+      "durationSeconds": 45.0,
+      "teamAStart": {"x":29,"y":23},
+      "teamAHeading": -90.0,
+      "teamARoute": [{"x":29,"y":23},{"x":32,"y":23}],
+      "teamBStart": {"x":42,"y":23},
+      "teamBHeading": 90.0,
+      "teamBRoute": [{"x":42,"y":23},{"x":39,"y":23}]
+    },
+    {
+      "id": "north_cover",
+      "displayName": "Укрытия северного пути",
+      "description": "Проверка фиксации укрытия и объезда зданий вместо дребезга между боем и поиском позиции.",
+      "seed": 1702,
+      "durationSeconds": 60.0,
+      "teamAStart": {"x":23,"y":27},
+      "teamAHeading": -90.0,
+      "teamARoute": [{"x":23,"y":27},{"x":23,"y":31},{"x":31,"y":34},{"x":38,"y":34}],
+      "teamBStart": {"x":48,"y":27},
+      "teamBHeading": 90.0,
+      "teamBRoute": [{"x":48,"y":27},{"x":48,"y":31},{"x":40,"y":34},{"x":37,"y":34}]
+    },
+    {
+      "id": "south_cover",
+      "displayName": "Укрытия южного пути",
+      "description": "Проверка движения вокруг препятствий, контролируемого отхода и положения лба к угрозе.",
+      "seed": 1703,
+      "durationSeconds": 60.0,
+      "teamAStart": {"x":24,"y":17},
+      "teamAHeading": -90.0,
+      "teamARoute": [{"x":24,"y":17},{"x":24,"y":13},{"x":31,"y":10},{"x":37,"y":10}],
+      "teamBStart": {"x":49,"y":17},
+      "teamBHeading": 90.0,
+      "teamBRoute": [{"x":49,"y":17},{"x":49,"y":13},{"x":41,"y":10},{"x":38,"y":10}]
+    }
+  ]
+}

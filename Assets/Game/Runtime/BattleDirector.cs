@@ -56,6 +56,14 @@ namespace LocalTanks
         public int TeamBAlive { get; private set; }
         public IReadOnlyDictionary<string, BotIdentity> BotIdentities => botIdentities;
 
+        public void OverrideScenario(BattleScenario battleScenario)
+        {
+            if (spawned) throw new InvalidOperationException("Cannot replace a scenario after tanks were spawned.");
+            scenario = battleScenario != null
+                ? battleScenario
+                : throw new ArgumentNullException(nameof(battleScenario));
+        }
+
         private void Start()
         {
             SpawnAll();
@@ -113,12 +121,15 @@ namespace LocalTanks
                 Spawn(entries[index], index);
             }
 
-            StrategicPlanner = GetComponent<BattleStrategicPlanner>();
-            if (StrategicPlanner == null) StrategicPlanner = gameObject.AddComponent<BattleStrategicPlanner>();
-            StrategicPlanner.Configure(TacticalMap, scenario, combatDatabase, botIdentities);
-            StrategicCoordinator = GetComponent<BotStrategicCoordinator>();
-            if (StrategicCoordinator == null) StrategicCoordinator = gameObject.AddComponent<BotStrategicCoordinator>();
-            StrategicCoordinator.Configure(this, StrategicPlanner);
+            if (scenario.kind != BattleScenarioKind.AiDuelLab)
+            {
+                StrategicPlanner = GetComponent<BattleStrategicPlanner>();
+                if (StrategicPlanner == null) StrategicPlanner = gameObject.AddComponent<BattleStrategicPlanner>();
+                StrategicPlanner.Configure(TacticalMap, scenario, combatDatabase, botIdentities);
+                StrategicCoordinator = GetComponent<BotStrategicCoordinator>();
+                if (StrategicCoordinator == null) StrategicCoordinator = gameObject.AddComponent<BotStrategicCoordinator>();
+                StrategicCoordinator.Configure(this, StrategicPlanner);
+            }
             DiagnosticsOverlay = GetComponent<BattleDiagnosticsOverlay>();
             if (DiagnosticsOverlay == null) DiagnosticsOverlay = gameObject.AddComponent<BattleDiagnosticsOverlay>();
             DiagnosticsOverlay.Configure(this);

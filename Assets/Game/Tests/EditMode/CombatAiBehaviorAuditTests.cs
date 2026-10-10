@@ -152,6 +152,42 @@ namespace LocalTanks.Tests
             Assert.That(auditor.Issues.Any(item => item.Kind == CombatAiAuditIssueKind.CombatInactivity), Is.True);
         }
 
+        [Test]
+        public void Auditor_DetectsCoverCombatTaskThrashing()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                tacticalTransitionWindowSeconds = 4f,
+                maximumTacticalTaskTransitions = 4
+            });
+
+            auditor.Record(TacticalSample(0f, TacticalMovementPurpose.None));
+            auditor.Record(TacticalSample(0.5f, TacticalMovementPurpose.MoveToCover));
+            auditor.Record(TacticalSample(1f, TacticalMovementPurpose.None));
+            auditor.Record(TacticalSample(1.5f, TacticalMovementPurpose.MoveToCover));
+            auditor.Record(TacticalSample(2f, TacticalMovementPurpose.None));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.TacticalTaskThrashing),
+                Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Auditor_DetectsSustainedRearExposureWhileMovingTowardVisibleFight()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                rearExposureAngleDegrees = 110f,
+                rearExposureSeconds = 2f
+            });
+
+            auditor.Record(RearExposureSample(0f, 155f));
+            auditor.Record(RearExposureSample(1f, 150f));
+            auditor.Record(RearExposureSample(3.1f, 145f));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.RearExposedToVisibleTarget),
+                Is.EqualTo(1));
+        }
+
         private static CombatAiAuditSample Sample(
             float time,
             CombatAiState state,
@@ -181,6 +217,23 @@ namespace LocalTanks.Tests
                 time, "bot-a", "Тестер", CombatAiState.Engage, Vector2.zero,
                 true, true, false, false, false, targetId, true,
                 FireBlockReason.Aiming, 0);
+        }
+
+        private static CombatAiAuditSample TacticalSample(float time, TacticalMovementPurpose purpose)
+        {
+            return new CombatAiAuditSample(
+                time, "bot-a", "Тестер", CombatAiState.Engage, new Vector2(time, 0f),
+                true, false, true, false, true, "enemy-a", true,
+                FireBlockReason.Aiming, 0, 0, 0f, false, false, purpose);
+        }
+
+        private static CombatAiAuditSample RearExposureSample(float time, float angle)
+        {
+            return new CombatAiAuditSample(
+                time, "bot-a", "Тестер", CombatAiState.Engage, new Vector2(time, 0f),
+                true, false, true, false, true, "enemy-a", true,
+                FireBlockReason.Aiming, 0, 0, 180f, false, false,
+                TacticalMovementPurpose.None, angle, false);
         }
     }
 }

@@ -17,6 +17,7 @@ namespace LocalTanks.Editor
     {
         private const string SourcePath = "Assets/Game/GameData/Maps/river_crossing.json";
         private const string ScenePath = "Assets/Game/Scenes/Battle_RiverCrossing.unity";
+        private const string DuelScenePath = "Assets/Game/Scenes/Battle_AiDuelLab.unity";
         private const string AtlasPath = "Assets/Game/Art/Environment/RiverCrossing/environment_atlas.png";
         private const string GeneratedRoot = "Assets/Game/Generated/RiverCrossing";
         private const string TilesRoot = GeneratedRoot + "/Tiles";
@@ -82,6 +83,8 @@ namespace LocalTanks.Editor
             GenerateVehicleClassIcons();
             CaptureRules captureRules = GetOrCreateCaptureRules();
             BattleScenario battleScenario = BattleScenarioImporter.Reimport();
+            BattleScenarioImporter.ReimportDuelLab();
+            AiDuelLabCatalogImporter.Reimport();
 
             Scene previousScene = SceneManager.GetActiveScene();
             bool preservePreviousScene = previousScene.IsValid() && previousScene.isLoaded &&
@@ -109,6 +112,7 @@ namespace LocalTanks.Editor
 
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, ScenePath);
+                BuildAiDuelLabScene(scene);
                 EnsureSceneInBuildSettings();
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
@@ -126,6 +130,45 @@ namespace LocalTanks.Editor
                     EditorSceneManager.CloseScene(scene, true);
                 }
             }
+        }
+
+        private static void BuildAiDuelLabScene(Scene sourceScene)
+        {
+            EditorSceneManager.SaveScene(sourceScene, DuelScenePath, true);
+            Scene duelScene = EditorSceneManager.OpenScene(DuelScenePath, OpenSceneMode.Additive);
+            try
+            {
+                BattleScenario duelScenario = AssetDatabase.LoadAssetAtPath<BattleScenario>(
+                    BattleScenarioImporter.DuelAssetPath);
+                AiDuelLabCatalog duelCatalog = AssetDatabase.LoadAssetAtPath<AiDuelLabCatalog>(
+                    AiDuelLabCatalogImporter.AssetPath);
+                if (duelScenario == null || duelCatalog == null)
+                    throw new InvalidOperationException("AI Duel Lab data assets were not generated.");
+                BattleDirector director = FindInScene<BattleDirector>(duelScene);
+                if (director == null) throw new InvalidOperationException("Copied AI Duel Lab scene has no BattleDirector.");
+                director.OverrideScenario(duelScenario);
+
+                RiverCrossingInstructions instructions = FindInScene<RiverCrossingInstructions>(duelScene);
+                if (instructions != null) UnityEngine.Object.DestroyImmediate(instructions.gameObject);
+                GameObject controllerObject = new GameObject("AiDuelLabController");
+                SceneManager.MoveGameObjectToScene(controllerObject, duelScene);
+                controllerObject.AddComponent<AiDuelLabController>().Configure(director, duelCatalog);
+
+                EditorSceneManager.MarkSceneDirty(duelScene);
+                EditorSceneManager.SaveScene(duelScene, DuelScenePath);
+            }
+            finally
+            {
+                if (duelScene.IsValid() && duelScene.isLoaded)
+                    EditorSceneManager.CloseScene(duelScene, true);
+            }
+        }
+
+        private static T FindInScene<T>(Scene scene) where T : Component
+        {
+            return scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<T>(true))
+                .FirstOrDefault();
         }
 
         [MenuItem("Local Tanks/Capture River Crossing Preview")]
@@ -1112,9 +1155,10 @@ namespace LocalTanks.Editor
         private static void EnsureSceneInBuildSettings()
         {
             List<EditorBuildSettingsScene> scenes = EditorBuildSettings.scenes.ToList();
-            if (scenes.All(item => item.path != ScenePath))
+            foreach (string path in new[] { ScenePath, DuelScenePath })
             {
-                scenes.Add(new EditorBuildSettingsScene(ScenePath, true));
+                if (scenes.All(item => item.path != path))
+                    scenes.Add(new EditorBuildSettingsScene(path, true));
             }
 
             EditorBuildSettings.scenes = scenes.ToArray();

@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.BattleScenario
   id: river_crossing_battle
   sceneId: Battle_RiverCrossing
+  kind: 0
   entries:
   - id: a_south_ms1_1
     tankId: ms_1

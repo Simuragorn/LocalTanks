@@ -14,7 +14,9 @@ namespace LocalTanks
         Circling,
         NavigationDeadEnd,
         CombatInactivity,
-        FiredWithoutVisibleTarget
+        FiredWithoutVisibleTarget,
+        TacticalTaskThrashing,
+        RearExposedToVisibleTarget
     }
 
     [Serializable]
@@ -23,6 +25,8 @@ namespace LocalTanks
         [Min(1f)] public float transitionWindowSeconds = 5f;
         [Min(2)] public int maximumStateTransitions = 8;
         [Min(2)] public int maximumTargetChanges = 6;
+        [Min(2)] public int maximumTacticalTaskTransitions = 4;
+        [Min(1f)] public float tacticalTransitionWindowSeconds = 6f;
         [Min(1f)] public float movementWindowSeconds = 6f;
         [Min(0.01f)] public float minimumMovementDistance = 0.25f;
         [Min(1f)] public float minimumUsefulTurnDegrees = 18f;
@@ -30,6 +34,8 @@ namespace LocalTanks
         [Min(45f)] public float circlingRotationDegrees = 180f;
         [Min(0.1f)] public float navigationDeadEndSeconds = 1.25f;
         [Min(1f)] public float combatInactivitySeconds = 15f;
+        [Range(90f, 180f)] public float rearExposureAngleDegrees = 115f;
+        [Min(0.5f)] public float rearExposureSeconds = 2.5f;
         [Min(0.1f)] public float duplicateIssueCooldownSeconds = 6f;
     }
 
@@ -53,7 +59,10 @@ namespace LocalTanks
             int shotsWithoutVisibleTarget = 0,
             float headingDegrees = 0f,
             bool defensiveMovement = false,
-            bool recoveringFromStall = false)
+            bool recoveringFromStall = false,
+            TacticalMovementPurpose tacticalMovementPurpose = TacticalMovementPurpose.None,
+            float targetRelativeAngleDegrees = 0f,
+            bool movingInReverse = false)
         {
             Time = time;
             BotId = botId ?? string.Empty;
@@ -73,6 +82,9 @@ namespace LocalTanks
             HeadingDegrees = headingDegrees;
             DefensiveMovement = defensiveMovement;
             RecoveringFromStall = recoveringFromStall;
+            TacticalMovementPurpose = tacticalMovementPurpose;
+            TargetRelativeAngleDegrees = Mathf.Abs(targetRelativeAngleDegrees);
+            MovingInReverse = movingInReverse;
         }
 
         public float Time { get; }
@@ -93,6 +105,9 @@ namespace LocalTanks
         public float HeadingDegrees { get; }
         public bool DefensiveMovement { get; }
         public bool RecoveringFromStall { get; }
+        public TacticalMovementPurpose TacticalMovementPurpose { get; }
+        public float TargetRelativeAngleDegrees { get; }
+        public bool MovingInReverse { get; }
     }
 
     public sealed class CombatAiAuditIssue
@@ -148,10 +163,12 @@ namespace LocalTanks
 
             TrackStateChanges(track, sample);
             TrackTargetChanges(track, sample);
+            TrackTacticalTaskChanges(track, sample);
             TrackMovement(track, sample);
             TrackCircling(track, sample);
             TrackNavigationDeadEnd(track, sample);
             TrackCombatActivity(track, sample);
+            TrackRearExposure(track, sample);
             track.TotalDistance += Vector2.Distance(track.LastSample.Position, sample.Position);
             track.LastSample = sample;
         }
@@ -180,7 +197,8 @@ namespace LocalTanks
                 BotTrack track = item.Value;
                 report.AppendLine($"- {track.LastSample.Nickname} ({item.Key}): state={track.LastSample.State}, " +
                                   $"distance={track.TotalDistance:0.0} m, shots={track.LastSample.ShotsFired}, " +
-                                  $"state changes={track.TotalStateChanges}, target changes={track.TotalTargetChanges}.");
+                                  $"state changes={track.TotalStateChanges}, target changes={track.TotalTargetChanges}, " +
+                                  $"tactical task changes={track.TotalTacticalTaskChanges}.");
             }
             return report.ToString();
         }
@@ -217,6 +235,27 @@ namespace LocalTanks
                 Emit(track, sample, CombatAiAuditIssueKind.TargetThrashing,
                     $"{track.TargetChanges.Count} target changes in {rules.transitionWindowSeconds:0.#} s: {sequence}.");
                 track.TargetChanges.Clear();
+            }
+        }
+
+        private void TrackTacticalTaskChanges(BotTrack track, CombatAiAuditSample sample)
+        {
+            TacticalMovementPurpose previous = track.LastSample.TacticalMovementPurpose;
+            TacticalMovementPurpose current = sample.TacticalMovementPurpose;
+            if (current != previous && IsCoverTask(current) != IsCoverTask(previous))
+            {
+                track.TacticalTaskChanges.Enqueue(new TimedValue<TacticalMovementPurpose>(sample.Time, current));
+                track.TotalTacticalTaskChanges++;
+            }
+            Trim(track.TacticalTaskChanges, sample.Time - rules.tacticalTransitionWindowSeconds);
+            if (track.TacticalTaskChanges.Count >= rules.maximumTacticalTaskTransitions)
+            {
+                string sequence = string.Join(" → ", track.TacticalTaskChanges.Select(item =>
+                    item.Value == TacticalMovementPurpose.None ? "Combat" : item.Value.ToString()));
+                Emit(track, sample, CombatAiAuditIssueKind.TacticalTaskThrashing,
+                    $"{track.TacticalTaskChanges.Count} cover/combat task transitions in " +
+                    $"{rules.tacticalTransitionWindowSeconds:0.#} s: {sequence}.");
+                track.TacticalTaskChanges.Clear();
             }
         }
 
@@ -349,6 +388,30 @@ namespace LocalTanks
             }
         }
 
+        private void TrackRearExposure(BotTrack track, CombatAiAuditSample sample)
+        {
+            bool exposed = sample.TargetVisible && !string.IsNullOrWhiteSpace(sample.TargetId) &&
+                           MovementExpected(sample) &&
+                           sample.TargetRelativeAngleDegrees >= rules.rearExposureAngleDegrees;
+            if (!exposed)
+            {
+                track.RearExposureSince = -1f;
+                return;
+            }
+
+            if (track.RearExposureSince < 0f)
+            {
+                track.RearExposureSince = sample.Time;
+                return;
+            }
+            if (sample.Time - track.RearExposureSince < rules.rearExposureSeconds) return;
+            Emit(track, sample, CombatAiAuditIssueKind.RearExposedToVisibleTarget,
+                $"Hull rear remained toward visible target '{sample.TargetId}' for " +
+                $"{sample.Time - track.RearExposureSince:0.0} s while moving; angle=" +
+                $"{sample.TargetRelativeAngleDegrees:0}°, reverse={sample.MovingInReverse}.");
+            track.RearExposureSince = sample.Time;
+        }
+
         private void Emit(BotTrack track, CombatAiAuditSample sample, CombatAiAuditIssueKind kind, string details)
         {
             if (track.LastIssueTimes.TryGetValue(kind, out float previous) &&
@@ -369,6 +432,15 @@ namespace LocalTanks
             return state == CombatAiState.Deploy || state == CombatAiState.Advance ||
                    state == CombatAiState.Engage || state == CombatAiState.Investigate ||
                    state == CombatAiState.Reposition;
+        }
+
+        private static bool IsCoverTask(TacticalMovementPurpose purpose)
+        {
+            return purpose == TacticalMovementPurpose.MoveToCover ||
+                   purpose == TacticalMovementPurpose.HoldCover ||
+                   purpose == TacticalMovementPurpose.PeekToFire ||
+                   purpose == TacticalMovementPurpose.ReturnToCover ||
+                   purpose == TacticalMovementPurpose.DefensiveRetreat;
         }
 
         private static void Trim<T>(Queue<TimedValue<T>> values, float minimumTime)
@@ -401,6 +473,8 @@ namespace LocalTanks
             public CombatAiAuditSample LastSample;
             public readonly Queue<TimedValue<CombatAiState>> StateChanges = new Queue<TimedValue<CombatAiState>>();
             public readonly Queue<TimedValue<string>> TargetChanges = new Queue<TimedValue<string>>();
+            public readonly Queue<TimedValue<TacticalMovementPurpose>> TacticalTaskChanges =
+                new Queue<TimedValue<TacticalMovementPurpose>>();
             public readonly Dictionary<CombatAiAuditIssueKind, float> LastIssueTimes =
                 new Dictionary<CombatAiAuditIssueKind, float>();
             public float MovementExpectedSince = -1f;
@@ -408,6 +482,7 @@ namespace LocalTanks
             public float MovementAnchorHeading;
             public float NavigationDeadEndSince = -1f;
             public float CombatInactiveSince = -1f;
+            public float RearExposureSince = -1f;
             public float RotationWindowSince = -1f;
             public Vector2 RotationAnchorPosition;
             public float LastHeading;
@@ -415,6 +490,7 @@ namespace LocalTanks
             public float TotalDistance;
             public int TotalStateChanges;
             public int TotalTargetChanges;
+            public int TotalTacticalTaskChanges;
 
             public void ResetTransient(CombatAiAuditSample sample)
             {
@@ -422,9 +498,11 @@ namespace LocalTanks
                 LastSample = sample;
                 StateChanges.Clear();
                 TargetChanges.Clear();
+                TacticalTaskChanges.Clear();
                 MovementExpectedSince = -1f;
                 NavigationDeadEndSince = -1f;
                 CombatInactiveSince = -1f;
+                RearExposureSince = -1f;
                 ResetRotationWindow(sample);
             }
 
@@ -479,6 +557,12 @@ namespace LocalTanks
                 string targetId = target != null ? director.GetEntityId(target) : string.Empty;
                 bool targetVisible = target != null && member != null &&
                                      director.VisionSystem.IsVisibleTo(member.Team, target);
+                Vector2 targetDirection = target != null
+                    ? (Vector2)target.transform.position - (Vector2)bot.transform.position
+                    : Vector2.zero;
+                float targetRelativeAngle = targetDirection.sqrMagnitude > 0.0001f
+                    ? Mathf.Abs(Vector2.SignedAngle(bot.transform.up, targetDirection))
+                    : 0f;
                 Auditor.Record(new CombatAiAuditSample(
                     time,
                     botId,
@@ -500,7 +584,10 @@ namespace LocalTanks
                     bot.TacticalMovementPurpose == TacticalMovementPurpose.PeekToFire ||
                     bot.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
                     bot.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat,
-                    navigation != null && navigation.IsRecoveringFromStall));
+                    navigation != null && navigation.IsRecoveringFromStall,
+                    bot.TacticalMovementPurpose,
+                    targetRelativeAngle,
+                    navigation != null && navigation.MovingInReverse));
             }
         }
 

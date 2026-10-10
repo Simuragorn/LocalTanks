@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "ai_duel_lab_battle",
+  "sceneId": "Battle_RiverCrossing",
+  "kind": "AiDuelLab",
+  "routes": [
+    { "team": "TeamA", "lane": "Center", "points": [{"x":17,"y":22},{"x":25,"y":22},{"x":31,"y":22}] },
+    { "team": "TeamB", "lane": "Center", "points": [{"x":54,"y":22},{"x":46,"y":22},{"x":40,"y":22}] }
+  ],
+  "entries": [
+    {"id":"duel_a_ms1","tankId":"ms_1","team":"TeamA","playerControlled":false,"baseId":"A","spawnSlot":7,"lane":"Center","role":"Assault"},
+    {"id":"duel_b_leichttraktor","tankId":"leichttraktor","team":"TeamB","playerControlled":false,"baseId":"B","spawnSlot":7,"lane":"Center","role":"Assault"}
+  ]
+}

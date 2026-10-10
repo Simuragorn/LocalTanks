@@ -42,6 +42,7 @@ namespace LocalTanks.Editor
         public int schemaVersion;
         public string id;
         public string sceneId;
+        public string kind;
         public ScenarioRouteJson[] routes;
         public ScenarioEntryJson[] entries;
     }
@@ -50,11 +51,24 @@ namespace LocalTanks.Editor
     {
         public const string SourcePath = "Assets/Game/GameData/Scenarios/river_crossing_battle.json";
         public const string AssetPath = "Assets/Game/GameData/Generated/Scenarios/river_crossing_battle.asset";
+        public const string DuelSourcePath = "Assets/Game/GameData/Scenarios/ai_duel_lab_battle.json";
+        public const string DuelAssetPath = "Assets/Game/GameData/Generated/Scenarios/ai_duel_lab_battle.asset";
 
         [MenuItem("Local Tanks/Data/Reimport Battle Scenario")]
         public static BattleScenario Reimport()
         {
-            BattleScenarioJson source = LoadSource();
+            return Reimport(SourcePath, AssetPath);
+        }
+
+        [MenuItem("Local Tanks/Data/Reimport AI Duel Lab Scenario")]
+        public static BattleScenario ReimportDuelLab()
+        {
+            return Reimport(DuelSourcePath, DuelAssetPath);
+        }
+
+        private static BattleScenario Reimport(string sourcePath, string assetPath)
+        {
+            BattleScenarioJson source = LoadSource(sourcePath);
             CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(CombatDefinitionImporter.DatabasePath);
             if (database == null)
             {
@@ -63,16 +77,17 @@ namespace LocalTanks.Editor
             }
 
             EnsureFolder("Assets/Game/GameData/Generated/Scenarios");
-            BattleScenario asset = AssetDatabase.LoadAssetAtPath<BattleScenario>(AssetPath);
+            BattleScenario asset = AssetDatabase.LoadAssetAtPath<BattleScenario>(assetPath);
             if (asset == null)
             {
                 asset = ScriptableObject.CreateInstance<BattleScenario>();
-                AssetDatabase.CreateAsset(asset, AssetPath);
+                AssetDatabase.CreateAsset(asset, assetPath);
             }
 
             Dictionary<string, Vector2Int[]> routes = BuildRoutes(source.routes);
             asset.id = source.id;
             asset.sceneId = source.sceneId;
+            asset.kind = ParseKind(source.kind, source.id);
             asset.entries = (source.entries ?? Array.Empty<ScenarioEntryJson>())
                 .Select(item => ConvertEntry(item, routes))
                 .ToArray();
@@ -96,14 +111,26 @@ namespace LocalTanks.Editor
 
         public static BattleScenarioJson LoadSource()
         {
-            string path = Path.GetFullPath(SourcePath);
+            return LoadSource(SourcePath);
+        }
+
+        private static BattleScenarioJson LoadSource(string sourcePath)
+        {
+            string path = Path.GetFullPath(sourcePath);
             if (!File.Exists(path))
-                throw new FileNotFoundException("Battle scenario JSON was not found.", SourcePath);
+                throw new FileNotFoundException("Battle scenario JSON was not found.", sourcePath);
             BattleScenarioJson source = JsonUtility.FromJson<BattleScenarioJson>(File.ReadAllText(path));
             if (source == null || source.schemaVersion != 1 || string.IsNullOrWhiteSpace(source.id) ||
                 string.IsNullOrWhiteSpace(source.sceneId))
                 throw new InvalidDataException("Battle scenario header is invalid.");
             return source;
+        }
+
+        private static BattleScenarioKind ParseKind(string value, string scenarioId)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return BattleScenarioKind.StandardBattle;
+            if (Enum.TryParse(value, false, out BattleScenarioKind kind)) return kind;
+            throw new InvalidDataException($"Scenario '{scenarioId}' has unknown kind '{value}'.");
         }
 
         private static BattleScenarioEntry ConvertEntry(
@@ -178,13 +205,18 @@ namespace LocalTanks.Editor
             string[] movedFromAssetPaths)
         {
             if (scheduled || !importedAssets.Concat(deletedAssets).Concat(movedAssets).Concat(movedFromAssetPaths)
-                    .Any(path => path == BattleScenarioImporter.SourcePath))
+                    .Any(path => path == BattleScenarioImporter.SourcePath ||
+                                 path == BattleScenarioImporter.DuelSourcePath))
                 return;
             scheduled = true;
             EditorApplication.delayCall += () =>
             {
                 scheduled = false;
-                try { BattleScenarioImporter.Reimport(); }
+                try
+                {
+                    BattleScenarioImporter.Reimport();
+                    BattleScenarioImporter.ReimportDuelLab();
+                }
                 catch (Exception exception) { Debug.LogException(exception); }
             };
         }
