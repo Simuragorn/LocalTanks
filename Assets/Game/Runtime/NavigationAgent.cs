@@ -245,7 +245,7 @@ namespace LocalTanks
                 {
                     committedTurn = Mathf.Abs(requestedTurn) > 0.01f
                         ? Mathf.Sign(requestedTurn)
-                        : (GetEntityId().GetHashCode() & 1) == 0 ? 1f : -1f;
+                        : (StableDecisionSeed() & 1) == 0 ? 1f : -1f;
                 }
 
                 return committedTurn;
@@ -387,7 +387,7 @@ namespace LocalTanks
             if (HasPath && progress < minimumProgressDistance && turnProgress < minimumProgressTurn)
             {
                 unstuckAttempt++;
-                int directionSeed = GetEntityId().GetHashCode() + unstuckAttempt;
+                int directionSeed = StableDecisionSeed() + unstuckAttempt;
                 unstuckTurn = (directionSeed & 1) == 0 ? 0.9f : -0.9f;
                 float routeDrive = reverse ? -1f : 1f;
                 unstuckDrive = (unstuckAttempt & 1) == 1 ? -routeDrive : routeDrive;
@@ -399,6 +399,14 @@ namespace LocalTanks
             {
                 unstuckAttempt = 0;
             }
+        }
+
+        private int StableDecisionSeed()
+        {
+            BotIdentityComponent identity = GetComponent<BotIdentityComponent>();
+            string entityId = identity?.Identity?.entityId;
+            return BotPersonalityGenerator.StableSeed(
+                string.IsNullOrWhiteSpace(entityId) ? gameObject.name : entityId);
         }
     }
 }

@@ -234,7 +234,9 @@ namespace LocalTanks
             switch (kind)
             {
                 case CombatAiAuditIssueKind.TacticalTaskThrashing: return "мечется между боем и укрытием";
+                case CombatAiAuditIssueKind.FiringLineThrashing: return "повторяет поиск прострела";
                 case CombatAiAuditIssueKind.RearExposedToVisibleTarget: return "долго держит корму к противнику";
+                case CombatAiAuditIssueKind.ReverseWithoutRetreatTask: return "продолжает ехать назад после отмены отхода";
                 case CombatAiAuditIssueKind.MovementStall: return "не движется при активном маршруте";
                 case CombatAiAuditIssueKind.Circling: return "кружит на месте";
                 case CombatAiAuditIssueKind.CombatInactivity: return "не атакует доступную цель";

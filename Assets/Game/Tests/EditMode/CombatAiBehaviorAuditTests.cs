@@ -172,7 +172,25 @@ namespace LocalTanks.Tests
         }
 
         [Test]
-        public void Auditor_DetectsSustainedRearExposureWhileMovingTowardVisibleFight()
+        public void Auditor_DetectsRepeatedFiringLineCancellation()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                firingLineTransitionWindowSeconds = 3f,
+                maximumFiringLineTransitions = 3
+            });
+
+            auditor.Record(TacticalSample(0f, TacticalMovementPurpose.None));
+            auditor.Record(TacticalSample(0.4f, TacticalMovementPurpose.GainFiringLine));
+            auditor.Record(TacticalSample(0.8f, TacticalMovementPurpose.None));
+            auditor.Record(TacticalSample(1.2f, TacticalMovementPurpose.GainFiringLine));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.FiringLineThrashing),
+                Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Auditor_DetectsSustainedRearExposureAcrossCombatStateChanges()
         {
             CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
             {
@@ -181,10 +199,27 @@ namespace LocalTanks.Tests
             });
 
             auditor.Record(RearExposureSample(0f, 155f));
-            auditor.Record(RearExposureSample(1f, 150f));
-            auditor.Record(RearExposureSample(3.1f, 145f));
+            auditor.Record(RearExposureSample(1f, 150f, CombatAiState.Reposition));
+            auditor.Record(RearExposureSample(3.1f, 145f, CombatAiState.Engage));
 
             Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.RearExposedToVisibleTarget),
+                Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Auditor_DetectsReverseModeThatOutlivesRetreatTask()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                reverseWithoutRetreatSeconds = 1f
+            });
+
+            auditor.Record(ReverseSample(0f, TacticalMovementPurpose.DefensiveRetreat));
+            auditor.Record(ReverseSample(0.2f, TacticalMovementPurpose.None));
+            auditor.Record(ReverseSample(1.3f, TacticalMovementPurpose.None));
+            auditor.Record(ReverseSample(8f, TacticalMovementPurpose.None));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.ReverseWithoutRetreatTask),
                 Is.EqualTo(1));
         }
 
@@ -227,13 +262,25 @@ namespace LocalTanks.Tests
                 FireBlockReason.Aiming, 0, 0, 0f, false, false, purpose);
         }
 
-        private static CombatAiAuditSample RearExposureSample(float time, float angle)
+        private static CombatAiAuditSample RearExposureSample(
+            float time,
+            float angle,
+            CombatAiState state = CombatAiState.Engage)
         {
             return new CombatAiAuditSample(
-                time, "bot-a", "Тестер", CombatAiState.Engage, new Vector2(time, 0f),
+                time, "bot-a", "Тестер", state, new Vector2(time, 0f),
                 true, false, true, false, true, "enemy-a", true,
                 FireBlockReason.Aiming, 0, 0, 180f, false, false,
                 TacticalMovementPurpose.None, angle, false);
+        }
+
+        private static CombatAiAuditSample ReverseSample(float time, TacticalMovementPurpose purpose)
+        {
+            return new CombatAiAuditSample(
+                time, "bot-a", "Тестер", CombatAiState.Advance, new Vector2(time, 0f),
+                true, false, true, false, true, string.Empty, false,
+                FireBlockReason.NoVisibleTarget, 0, 0, 180f, false, false,
+                purpose, 0f, true);
         }
     }
 }

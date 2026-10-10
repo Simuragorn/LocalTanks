@@ -1226,9 +1226,16 @@ namespace LocalTanks
             float positiveTurn = Mathf.Abs(Vector2.SignedAngle(transform.up, positive));
             float negativeTurn = Mathf.Abs(Vector2.SignedAngle(transform.up, negative));
             Vector2 desired = Mathf.Approximately(positiveTurn, negativeTurn)
-                ? (GetEntityId().GetHashCode() & 1) == 0 ? positive : negative
+                ? (StableDecisionSeed() & 1) == 0 ? positive : negative
                 : positiveTurn < negativeTurn ? positive : negative;
             navigation.SetFacingDirection(desired);
+        }
+
+        private int StableDecisionSeed()
+        {
+            string entityId = identity?.Identity?.entityId;
+            return BotPersonalityGenerator.StableSeed(
+                string.IsNullOrWhiteSpace(entityId) ? gameObject.name : entityId);
         }
 
         private void OnImpactResolved(TankArmor source, ArmorImpactObservation observation)

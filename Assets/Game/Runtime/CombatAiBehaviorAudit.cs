@@ -16,7 +16,9 @@ namespace LocalTanks
         CombatInactivity,
         FiredWithoutVisibleTarget,
         TacticalTaskThrashing,
-        RearExposedToVisibleTarget
+        FiringLineThrashing,
+        RearExposedToVisibleTarget,
+        ReverseWithoutRetreatTask
     }
 
     [Serializable]
@@ -27,6 +29,8 @@ namespace LocalTanks
         [Min(2)] public int maximumTargetChanges = 6;
         [Min(2)] public int maximumTacticalTaskTransitions = 4;
         [Min(1f)] public float tacticalTransitionWindowSeconds = 6f;
+        [Min(2)] public int maximumFiringLineTransitions = 3;
+        [Min(1f)] public float firingLineTransitionWindowSeconds = 4f;
         [Min(1f)] public float movementWindowSeconds = 6f;
         [Min(0.01f)] public float minimumMovementDistance = 0.25f;
         [Min(1f)] public float minimumUsefulTurnDegrees = 18f;
@@ -36,6 +40,7 @@ namespace LocalTanks
         [Min(1f)] public float combatInactivitySeconds = 15f;
         [Range(90f, 180f)] public float rearExposureAngleDegrees = 115f;
         [Min(0.5f)] public float rearExposureSeconds = 2.5f;
+        [Min(0.25f)] public float reverseWithoutRetreatSeconds = 1f;
         [Min(0.1f)] public float duplicateIssueCooldownSeconds = 6f;
     }
 
@@ -161,14 +166,18 @@ namespace LocalTanks
                 return;
             }
 
+            AccumulateMetrics(track, sample);
+            TrackTransition(track, sample);
             TrackStateChanges(track, sample);
             TrackTargetChanges(track, sample);
             TrackTacticalTaskChanges(track, sample);
+            TrackFiringLineChanges(track, sample);
             TrackMovement(track, sample);
             TrackCircling(track, sample);
             TrackNavigationDeadEnd(track, sample);
             TrackCombatActivity(track, sample);
             TrackRearExposure(track, sample);
+            TrackReverseWithoutRetreatTask(track, sample);
             track.TotalDistance += Vector2.Distance(track.LastSample.Position, sample.Position);
             track.LastSample = sample;
         }
@@ -198,9 +207,96 @@ namespace LocalTanks
                 report.AppendLine($"- {track.LastSample.Nickname} ({item.Key}): state={track.LastSample.State}, " +
                                   $"distance={track.TotalDistance:0.0} m, shots={track.LastSample.ShotsFired}, " +
                                   $"state changes={track.TotalStateChanges}, target changes={track.TotalTargetChanges}, " +
-                                  $"tactical task changes={track.TotalTacticalTaskChanges}.");
+                                  $"cover/combat changes={track.TotalTacticalTaskChanges}, " +
+                                  $"firing-line changes={track.TotalFiringLineChanges}.");
+                report.AppendLine($"  exposure: visible={track.VisibleTargetSeconds:0.0}s, " +
+                                  $"rear-facing={track.RearFacingVisibleSeconds:0.0}s, " +
+                                  $"reverse={track.ReverseSeconds:0.0}s.");
+                report.AppendLine($"  states: {FormatDurations(track.StateDurations)}");
+                report.AppendLine($"  tasks: {FormatDurations(track.TacticalTaskDurations)}");
+                report.AppendLine($"  fire blocks: {FormatDurations(track.FireBlockDurations)}");
             }
             return report.ToString();
+        }
+
+        public string BuildTransitionReport()
+        {
+            StringBuilder report = new StringBuilder("# Combat AI transition trace\n\n");
+            TransitionRecord[] transitions = tracks.Values
+                .SelectMany(track => track.Transitions)
+                .OrderBy(item => item.Time)
+                .ThenBy(item => item.BotId, StringComparer.Ordinal)
+                .ToArray();
+            if (transitions.Length == 0)
+            {
+                report.AppendLine("No state, task, target, visibility or reverse-mode transitions recorded.");
+                return report.ToString();
+            }
+
+            foreach (TransitionRecord item in transitions)
+                report.AppendLine($"- {item.Time:0.0}s {item.Nickname} ({item.BotId}): {item.Details}");
+            return report.ToString();
+        }
+
+        private void AccumulateMetrics(BotTrack track, CombatAiAuditSample sample)
+        {
+            float delta = Mathf.Clamp(sample.Time - track.LastSample.Time, 0f, 1f);
+            AddDuration(track.StateDurations, track.LastSample.State, delta);
+            AddDuration(track.TacticalTaskDurations, track.LastSample.TacticalMovementPurpose, delta);
+            AddDuration(track.FireBlockDurations, track.LastSample.FireBlockReason, delta);
+            if (track.LastSample.TargetVisible) track.VisibleTargetSeconds += delta;
+            if (track.LastSample.TargetVisible &&
+                track.LastSample.TargetRelativeAngleDegrees >= rules.rearExposureAngleDegrees)
+            {
+                track.RearFacingVisibleSeconds += delta;
+            }
+            if (track.LastSample.MovingInReverse) track.ReverseSeconds += delta;
+        }
+
+        private static void TrackTransition(BotTrack track, CombatAiAuditSample sample)
+        {
+            List<string> changes = new List<string>();
+            CombatAiAuditSample previous = track.LastSample;
+            if (sample.State != previous.State) changes.Add($"state {previous.State}→{sample.State}");
+            if (sample.TacticalMovementPurpose != previous.TacticalMovementPurpose)
+                changes.Add($"task {previous.TacticalMovementPurpose}→{sample.TacticalMovementPurpose}");
+            if (!string.Equals(sample.TargetId, previous.TargetId, StringComparison.Ordinal))
+                changes.Add($"target {DisplayTarget(previous.TargetId)}→{DisplayTarget(sample.TargetId)}");
+            if (sample.TargetVisible != previous.TargetVisible)
+                changes.Add($"visible {previous.TargetVisible}→{sample.TargetVisible}");
+            if (sample.MovingInReverse != previous.MovingInReverse)
+                changes.Add($"reverse {previous.MovingInReverse}→{sample.MovingInReverse}");
+            if (changes.Count == 0) return;
+            changes.Add($"fire={sample.FireBlockReason}");
+            changes.Add($"angle={sample.TargetRelativeAngleDegrees:0}°");
+            changes.Add($"pos=({sample.Position.x:0.0},{sample.Position.y:0.0})");
+            track.Transitions.Add(new TransitionRecord(
+                sample.Time,
+                sample.BotId,
+                sample.Nickname,
+                string.Join("; ", changes)));
+        }
+
+        private static string DisplayTarget(string targetId)
+        {
+            return string.IsNullOrWhiteSpace(targetId) ? "none" : targetId;
+        }
+
+        private static void AddDuration<T>(Dictionary<T, float> durations, T key, float delta)
+        {
+            durations.TryGetValue(key, out float current);
+            durations[key] = current + delta;
+        }
+
+        private static string FormatDurations<T>(IReadOnlyDictionary<T, float> durations)
+        {
+            string[] values = durations
+                .Where(item => item.Value >= 0.05f)
+                .OrderByDescending(item => item.Value)
+                .ThenBy(item => item.Key.ToString(), StringComparer.Ordinal)
+                .Select(item => $"{item.Key}={item.Value:0.0}s")
+                .ToArray();
+            return values.Length > 0 ? string.Join(", ", values) : "none";
         }
 
         private void TrackStateChanges(BotTrack track, CombatAiAuditSample sample)
@@ -256,6 +352,27 @@ namespace LocalTanks
                     $"{track.TacticalTaskChanges.Count} cover/combat task transitions in " +
                     $"{rules.tacticalTransitionWindowSeconds:0.#} s: {sequence}.");
                 track.TacticalTaskChanges.Clear();
+            }
+        }
+
+        private void TrackFiringLineChanges(BotTrack track, CombatAiAuditSample sample)
+        {
+            TacticalMovementPurpose previous = track.LastSample.TacticalMovementPurpose;
+            TacticalMovementPurpose current = sample.TacticalMovementPurpose;
+            if (IsFiringLineTask(current) != IsFiringLineTask(previous))
+            {
+                track.FiringLineChanges.Enqueue(new TimedValue<TacticalMovementPurpose>(sample.Time, current));
+                track.TotalFiringLineChanges++;
+            }
+            Trim(track.FiringLineChanges, sample.Time - rules.firingLineTransitionWindowSeconds);
+            if (track.FiringLineChanges.Count >= rules.maximumFiringLineTransitions)
+            {
+                string sequence = string.Join(" → ", track.FiringLineChanges.Select(item =>
+                    item.Value == TacticalMovementPurpose.GainFiringLine ? "GainFiringLine" : "Combat"));
+                Emit(track, sample, CombatAiAuditIssueKind.FiringLineThrashing,
+                    $"{track.FiringLineChanges.Count} firing-line/combat transitions in " +
+                    $"{rules.firingLineTransitionWindowSeconds:0.#} s: {sequence}.");
+                track.FiringLineChanges.Clear();
             }
         }
 
@@ -391,7 +508,6 @@ namespace LocalTanks
         private void TrackRearExposure(BotTrack track, CombatAiAuditSample sample)
         {
             bool exposed = sample.TargetVisible && !string.IsNullOrWhiteSpace(sample.TargetId) &&
-                           MovementExpected(sample) &&
                            sample.TargetRelativeAngleDegrees >= rules.rearExposureAngleDegrees;
             if (!exposed)
             {
@@ -407,9 +523,36 @@ namespace LocalTanks
             if (sample.Time - track.RearExposureSince < rules.rearExposureSeconds) return;
             Emit(track, sample, CombatAiAuditIssueKind.RearExposedToVisibleTarget,
                 $"Hull rear remained toward visible target '{sample.TargetId}' for " +
-                $"{sample.Time - track.RearExposureSince:0.0} s while moving; angle=" +
-                $"{sample.TargetRelativeAngleDegrees:0}°, reverse={sample.MovingInReverse}.");
+                $"{sample.Time - track.RearExposureSince:0.0} s; angle=" +
+                $"{sample.TargetRelativeAngleDegrees:0}°, state={sample.State}, " +
+                $"task={sample.TacticalMovementPurpose}, reverse={sample.MovingInReverse}.");
             track.RearExposureSince = sample.Time;
+        }
+
+        private void TrackReverseWithoutRetreatTask(BotTrack track, CombatAiAuditSample sample)
+        {
+            bool reverseTask = sample.TacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
+                               sample.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
+                               sample.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat;
+            bool staleReverse = sample.MovingInReverse && !reverseTask;
+            if (!staleReverse)
+            {
+                track.ReverseWithoutRetreatSince = -1f;
+                track.ReverseWithoutRetreatReported = false;
+                return;
+            }
+
+            if (track.ReverseWithoutRetreatReported) return;
+            if (track.ReverseWithoutRetreatSince < 0f)
+            {
+                track.ReverseWithoutRetreatSince = sample.Time;
+                return;
+            }
+            if (sample.Time - track.ReverseWithoutRetreatSince < rules.reverseWithoutRetreatSeconds) return;
+            Emit(track, sample, CombatAiAuditIssueKind.ReverseWithoutRetreatTask,
+                $"Navigation remained in reverse for {sample.Time - track.ReverseWithoutRetreatSince:0.0} s " +
+                $"without a retreat-capable task; state={sample.State}, task={sample.TacticalMovementPurpose}.");
+            track.ReverseWithoutRetreatReported = true;
         }
 
         private void Emit(BotTrack track, CombatAiAuditSample sample, CombatAiAuditIssueKind kind, string details)
@@ -443,6 +586,11 @@ namespace LocalTanks
                    purpose == TacticalMovementPurpose.DefensiveRetreat;
         }
 
+        private static bool IsFiringLineTask(TacticalMovementPurpose purpose)
+        {
+            return purpose == TacticalMovementPurpose.GainFiringLine;
+        }
+
         private static void Trim<T>(Queue<TimedValue<T>> values, float minimumTime)
         {
             while (values.Count > 0 && values.Peek().Time < minimumTime) values.Dequeue();
@@ -460,6 +608,22 @@ namespace LocalTanks
             public T Value { get; }
         }
 
+        private readonly struct TransitionRecord
+        {
+            public TransitionRecord(float time, string botId, string nickname, string details)
+            {
+                Time = time;
+                BotId = botId;
+                Nickname = nickname;
+                Details = details;
+            }
+
+            public float Time { get; }
+            public string BotId { get; }
+            public string Nickname { get; }
+            public string Details { get; }
+        }
+
         private sealed class BotTrack
         {
             public BotTrack(CombatAiAuditSample sample)
@@ -475,22 +639,37 @@ namespace LocalTanks
             public readonly Queue<TimedValue<string>> TargetChanges = new Queue<TimedValue<string>>();
             public readonly Queue<TimedValue<TacticalMovementPurpose>> TacticalTaskChanges =
                 new Queue<TimedValue<TacticalMovementPurpose>>();
+            public readonly Queue<TimedValue<TacticalMovementPurpose>> FiringLineChanges =
+                new Queue<TimedValue<TacticalMovementPurpose>>();
             public readonly Dictionary<CombatAiAuditIssueKind, float> LastIssueTimes =
                 new Dictionary<CombatAiAuditIssueKind, float>();
+            public readonly Dictionary<CombatAiState, float> StateDurations =
+                new Dictionary<CombatAiState, float>();
+            public readonly Dictionary<TacticalMovementPurpose, float> TacticalTaskDurations =
+                new Dictionary<TacticalMovementPurpose, float>();
+            public readonly Dictionary<FireBlockReason, float> FireBlockDurations =
+                new Dictionary<FireBlockReason, float>();
+            public readonly List<TransitionRecord> Transitions = new List<TransitionRecord>();
             public float MovementExpectedSince = -1f;
             public Vector2 MovementAnchorPosition;
             public float MovementAnchorHeading;
             public float NavigationDeadEndSince = -1f;
             public float CombatInactiveSince = -1f;
             public float RearExposureSince = -1f;
+            public float ReverseWithoutRetreatSince = -1f;
+            public bool ReverseWithoutRetreatReported;
             public float RotationWindowSince = -1f;
             public Vector2 RotationAnchorPosition;
             public float LastHeading;
             public float AccumulatedRotation;
             public float TotalDistance;
+            public float VisibleTargetSeconds;
+            public float RearFacingVisibleSeconds;
+            public float ReverseSeconds;
             public int TotalStateChanges;
             public int TotalTargetChanges;
             public int TotalTacticalTaskChanges;
+            public int TotalFiringLineChanges;
 
             public void ResetTransient(CombatAiAuditSample sample)
             {
@@ -499,10 +678,13 @@ namespace LocalTanks
                 StateChanges.Clear();
                 TargetChanges.Clear();
                 TacticalTaskChanges.Clear();
+                FiringLineChanges.Clear();
                 MovementExpectedSince = -1f;
                 NavigationDeadEndSince = -1f;
                 CombatInactiveSince = -1f;
                 RearExposureSince = -1f;
+                ReverseWithoutRetreatSince = -1f;
+                ReverseWithoutRetreatReported = false;
                 ResetRotationWindow(sample);
             }
 
