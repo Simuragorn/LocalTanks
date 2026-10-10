@@ -25,6 +25,7 @@ namespace LocalTanks
         public void Configure(TankDefinition newDefinition)
         {
             definition = newDefinition;
+            state = null;
             InitializeState();
         }
 

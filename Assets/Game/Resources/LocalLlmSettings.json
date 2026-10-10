@@ -7,5 +7,13 @@
   "relativeModelPath": "LocalData/OllamaModels",
   "startupTimeoutSeconds": 45,
   "requestTimeoutSeconds": 30,
-  "keepAlive": "10m"
+  "keepAlive": "10m",
+  "gpuLayerCount": 0,
+  "cpuThreadCount": 4,
+  "contextTokens": 4096,
+  "maxOutputTokens": 320,
+  "requestInitialBotDecisions": false,
+  "enableDynamicBotDecisions": true,
+  "requestOnContactChanges": false,
+  "dynamicDecisionCooldownSeconds": 45.0
 }

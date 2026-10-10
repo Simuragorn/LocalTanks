@@ -170,8 +170,13 @@ namespace LocalTanks
                    "\"think\":false," +
                    "\"format\":" + schema + "," +
                    "\"keep_alive\":" + Quote(settings.keepAlive) + "," +
-                   "\"options\":{\"temperature\":" +
-                   Mathf.Clamp(request.temperature, 0f, 2f).ToString("0.###", CultureInfo.InvariantCulture) + "}" +
+                   "\"options\":{" +
+                   "\"temperature\":" +
+                   Mathf.Clamp(request.temperature, 0f, 2f).ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                   "\"num_gpu\":" + Math.Max(0, settings.gpuLayerCount) + "," +
+                   "\"num_thread\":" + Math.Max(1, settings.cpuThreadCount) + "," +
+                   "\"num_ctx\":" + Math.Max(512, settings.contextTokens) + "," +
+                   "\"num_predict\":" + Math.Max(32, settings.maxOutputTokens) + "}" +
                    "}";
         }
 

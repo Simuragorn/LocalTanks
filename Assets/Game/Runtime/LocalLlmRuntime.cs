@@ -130,7 +130,10 @@ namespace LocalTanks
                 startInfo.EnvironmentVariables["OLLAMA_HOST"] = new Uri(Settings.baseUrl).Authority;
                 startInfo.EnvironmentVariables["OLLAMA_MODELS"] = modelPath;
                 startInfo.EnvironmentVariables["OLLAMA_KEEP_ALIVE"] = Settings.keepAlive;
+                startInfo.EnvironmentVariables["OLLAMA_NUM_PARALLEL"] = "1";
+                startInfo.EnvironmentVariables["OLLAMA_MAX_LOADED_MODELS"] = "1";
                 ownedProcess = Process.Start(startInfo);
+                TryLowerProcessPriority(ownedProcess);
             }
             catch (Exception exception)
             {
@@ -290,6 +293,19 @@ namespace LocalTanks
             }
 
             process.WaitForExit(2000);
+        }
+
+        private static void TryLowerProcessPriority(Process process)
+        {
+            if (process == null) return;
+            try
+            {
+                process.PriorityClass = ProcessPriorityClass.BelowNormal;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"Could not lower Ollama process priority: {exception.Message}");
+            }
         }
     }
 }

@@ -15,6 +15,10 @@ namespace LocalTanks.Tests
             Assert.That(settings.baseUrl, Does.StartWith("http://127.0.0.1"));
             Assert.That(settings.model, Is.EqualTo("qwen3:8b"));
             Assert.That(settings.relativeExecutablePath, Does.StartWith("LocalData/"));
+            Assert.That(settings.gpuLayerCount, Is.Zero);
+            Assert.That(settings.cpuThreadCount, Is.EqualTo(4));
+            Assert.That(settings.requestInitialBotDecisions, Is.False);
+            Assert.That(settings.requestOnContactChanges, Is.False);
         }
 
         [Test]
@@ -49,7 +53,36 @@ namespace LocalTanks.Tests
             Assert.That(json, Does.Contain("\\\"Резкий\\\""));
             Assert.That(json, Does.Contain("Выбери путь.\\nТолько JSON."));
             Assert.That(json, Does.Contain("\"temperature\":0.35"));
+            Assert.That(json, Does.Contain("\"num_gpu\":0"));
+            Assert.That(json, Does.Contain("\"num_thread\":4"));
+            Assert.That(json, Does.Contain("\"num_ctx\":4096"));
+            Assert.That(json, Does.Contain("\"num_predict\":320"));
             Assert.That(json, Does.Contain("\"think\":false"));
+        }
+
+        [Test]
+        public void RuntimePolicy_SkipsRedundantInitialPerBotRequests()
+        {
+            LocalLlmSettings settings = new LocalLlmSettings { requestInitialBotDecisions = false };
+
+            Assert.That(LocalLlmRequestPolicy.ShouldRunInitialBotRequests(settings), Is.False);
+            settings.requestInitialBotDecisions = true;
+            Assert.That(LocalLlmRequestPolicy.ShouldRunInitialBotRequests(settings), Is.True);
+        }
+
+        [Test]
+        public void RuntimePolicy_DropsContactNoiseAndRequestsDuringCooldown()
+        {
+            LocalLlmSettings settings = new LocalLlmSettings
+            {
+                enableDynamicBotDecisions = true,
+                requestOnContactChanges = false
+            };
+
+            Assert.That(LocalLlmRequestPolicy.CanQueueDynamic(settings, "contact-spotted", 100f, 0f, false), Is.False);
+            Assert.That(LocalLlmRequestPolicy.CanQueueDynamic(settings, "significant-damage", 100f, 120f, false), Is.False);
+            Assert.That(LocalLlmRequestPolicy.CanQueueDynamic(settings, "significant-damage", 130f, 120f, true), Is.False);
+            Assert.That(LocalLlmRequestPolicy.CanQueueDynamic(settings, "significant-damage", 130f, 120f, false), Is.True);
         }
 
         [Test]
@@ -82,10 +115,15 @@ namespace LocalTanks.Tests
                 relativeModelPath = string.Empty,
                 startupTimeoutSeconds = 0,
                 requestTimeoutSeconds = 0,
-                keepAlive = string.Empty
+                keepAlive = string.Empty,
+                gpuLayerCount = -1,
+                cpuThreadCount = 0,
+                contextTokens = 0,
+                maxOutputTokens = 0,
+                dynamicDecisionCooldownSeconds = 0f
             };
 
-            Assert.That(settings.Validate(), Has.Length.EqualTo(8));
+            Assert.That(settings.Validate(), Has.Length.EqualTo(13));
         }
     }
 }

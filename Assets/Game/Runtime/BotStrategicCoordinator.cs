@@ -42,6 +42,7 @@ namespace LocalTanks
         private bool processing;
         private bool initialBatchStarted;
         private int initialCompleted;
+        private float nextAllowedDynamicRequestRealtime;
 
         public BotStrategicCoordinatorState State { get; private set; } = BotStrategicCoordinatorState.FallbackReady;
         public IReadOnlyList<BotStrategicBrain> Brains => brains;
@@ -96,8 +97,27 @@ namespace LocalTanks
             if (brain == null || provider == null || !brain.isActiveAndEnabled ||
                 brain.GetComponent<TankHealth>()?.IsDestroyed == true) return;
             if (queuedBotIds.Contains(brain.BotId) || brain.RequestState == BotStrategicRequestState.Requesting) return;
-            if (!string.Equals(trigger, "initial-plan", StringComparison.Ordinal) &&
-                Time.time - brain.LastRequestGameTime < 15f) return;
+            bool initialRequest = string.Equals(trigger, "initial-plan", StringComparison.Ordinal);
+            if (!initialRequest)
+            {
+                if (!initialBatchStarted) return;
+                LocalLlmSettings settings = observedRuntime?.Settings;
+                bool requestAlreadyActive = processing || queue.Count > 0;
+                if (!LocalLlmRequestPolicy.CanQueueDynamic(
+                        settings,
+                        trigger,
+                        Time.realtimeSinceStartup,
+                        nextAllowedDynamicRequestRealtime,
+                        requestAlreadyActive))
+                {
+                    return;
+                }
+
+                float cooldown = settings != null
+                    ? Mathf.Max(5f, settings.dynamicDecisionCooldownSeconds)
+                    : 15f;
+                nextAllowedDynamicRequestRealtime = Time.realtimeSinceStartup + cooldown;
+            }
             queuedBotIds.Add(brain.BotId);
             triggers[brain.BotId] = trigger ?? "event";
             queue.Enqueue(brain);
@@ -339,6 +359,16 @@ namespace LocalTanks
             if (!planner.RemotePlanningFinished)
             {
                 State = BotStrategicCoordinatorState.WaitingForTeamPlans;
+                return;
+            }
+            LocalLlmSettings settings = observedRuntime?.Settings;
+            if (!LocalLlmRequestPolicy.ShouldRunInitialBotRequests(settings))
+            {
+                initialBatchStarted = true;
+                initialCompleted = brains.Count;
+                nextAllowedDynamicRequestRealtime = Time.realtimeSinceStartup +
+                    Mathf.Max(5f, settings.dynamicDecisionCooldownSeconds);
+                State = BotStrategicCoordinatorState.Complete;
                 return;
             }
             StartInitialBatch();

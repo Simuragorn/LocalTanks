@@ -459,6 +459,33 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void TankHealth_ReconfigureCreatesFreshStateForNewDefinition()
+        {
+            GameObject tank = new GameObject("ReconfiguredHealthTest");
+            TankDefinition first = ScriptableObject.CreateInstance<TankDefinition>();
+            TankDefinition second = ScriptableObject.CreateInstance<TankDefinition>();
+            first.maxHitPoints = 100;
+            second.maxHitPoints = 10000;
+            try
+            {
+                TankHealth health = tank.AddComponent<TankHealth>();
+                health.Configure(first);
+                health.ApplyDamage(75);
+                health.Configure(second);
+
+                Assert.That(health.MaximumHitPoints, Is.EqualTo(10000));
+                Assert.That(health.CurrentHitPoints, Is.EqualTo(10000));
+                Assert.That(health.IsDestroyed, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(tank);
+                Object.DestroyImmediate(first);
+                Object.DestroyImmediate(second);
+            }
+        }
+
+        [Test]
         public void WeightedAStar_AvoidsBlockedCells()
         {
             NavigationGridModel grid = new NavigationGridModel(5, 3);

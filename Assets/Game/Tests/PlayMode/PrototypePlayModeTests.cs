@@ -681,7 +681,6 @@ namespace LocalTanks.Tests
             if (targetMotor != null) targetMotor.enabled = false;
             Rigidbody2D targetBody = target.GetComponent<Rigidbody2D>();
             if (targetBody != null) targetBody.linearVelocity = Vector2.zero;
-
             TeamMember shooterMember = shooter.GetComponent<TeamMember>();
             shooter.transform.SetPositionAndRotation(map.CellToWorld(new Vector2Int(30, 22)), Quaternion.Euler(0f, 0f, -90f));
             target.transform.SetPositionAndRotation(map.CellToWorld(new Vector2Int(34, 22)), Quaternion.Euler(0f, 0f, 90f));
@@ -1000,6 +999,9 @@ namespace LocalTanks.Tests
             if (targetMotor != null) targetMotor.enabled = false;
             Rigidbody2D targetBody = target.GetComponent<Rigidbody2D>();
             if (targetBody != null) targetBody.linearVelocity = Vector2.zero;
+            TankDefinition durableTargetDefinition = Object.Instantiate(target.Definition);
+            durableTargetDefinition.maxHitPoints = 10000;
+            target.GetComponent<TankHealth>().Configure(durableTargetDefinition);
 
             Vector2Int[] blockedCells =
             {
@@ -1107,6 +1109,7 @@ namespace LocalTanks.Tests
                 Time.timeScale = previousScale;
                 foreach (Vector2Int cell in blockedCells) map.SetBlocked(cell, false);
                 Object.Destroy(obstacle);
+                Object.Destroy(durableTargetDefinition);
             }
         }
 
