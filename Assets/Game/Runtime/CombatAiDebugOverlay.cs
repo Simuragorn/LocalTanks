@@ -205,35 +205,28 @@ namespace LocalTanks
                 return;
             }
 
-            string targetName = selected.CurrentTarget != null ? selected.CurrentTarget.name : "—";
-            string memory = selected.HasRememberedTarget
-                ? $"{selected.LastKnownTargetPosition.x:0.0}, {selected.LastKnownTargetPosition.y:0.0}"
-                : "—";
-            string reposition = selected.State == CombatAiState.Reposition
-                ? $"{selected.RepositionDestination.x:0.0}, {selected.RepositionDestination.y:0.0}"
-                : "—";
             BotIdentity identity = selected.Identity;
             BotPersonalityProfile personality = identity?.personality;
             string botName = identity != null ? identity.nickname : selected.name;
+            TeamMember member = selected.GetComponent<TeamMember>();
+            string tankName = member?.Definition != null ? member.Definition.displayName : "неизвестная машина";
             BotStrategicBrain brain = selected.GetComponent<BotStrategicBrain>();
-            BotKnowledgeSnapshot snapshot = brain?.CurrentSnapshot;
             BotStrategicDecision decision = brain?.CurrentDecision;
             EnsureStyles();
-            float width = Mathf.Min(430f, Screen.width - 24f);
+            float width = Mathf.Min(390f, Screen.width - 24f);
             float top = 118f;
-            float height = Mathf.Clamp(Screen.height - top - 12f, 220f, 620f);
+            float height = Mathf.Clamp(Screen.height - top - 12f, 240f, 450f);
             Rect panel = new Rect(Screen.width - width - 12f, top, width, height);
             GUI.Box(panel, GUIContent.none);
 
             List<CombatTankAI> livingBots = GetLivingBots();
             int number = Mathf.Max(0, livingBots.IndexOf(selected)) + 1;
             GUI.Label(new Rect(panel.x + 16f, panel.y + 12f, panel.width - 32f, 30f),
-                $"{botName}   {number}/{livingBots.Count}", headerStyle);
+                $"{botName} · {tankName}   {number}/{livingBots.Count}", headerStyle);
             GUI.Label(new Rect(panel.x + 16f, panel.y + 40f, panel.width - 32f, 22f),
                 "Tab — следующий   Shift+Tab — предыдущий", detailsStyle);
 
-            string details = BuildDetailsText(selected, personality, brain, snapshot, decision,
-                targetName, memory, reposition);
+            string details = BuildDetailsText(selected, personality, brain, decision);
             Rect viewport = new Rect(panel.x + 10f, panel.y + 68f, panel.width - 20f, panel.height - 78f);
             float contentWidth = viewport.width - 22f;
             float contentHeight = Mathf.Max(viewport.height,
@@ -248,65 +241,126 @@ namespace LocalTanks
             CombatTankAI ai,
             BotPersonalityProfile personality,
             BotStrategicBrain brain,
-            BotKnowledgeSnapshot snapshot,
-            BotStrategicDecision decision,
-            string targetName,
-            string memory,
-            string reposition)
+            BotStrategicDecision decision)
         {
             string temperament = personality != null
-                ? $"{personality.DominantTrait}\n" +
-                  $"Агрессия / осторожность / дисциплина: {personality.aggression:0.00} / {personality.caution:0.00} / {personality.discipline:0.00}\n" +
-                  $"Инициатива / командность / терпение: {personality.initiative:0.00} / {personality.teamwork:0.00} / {personality.patience:0.00}\n" +
-                  $"Общительность / юмор / помощь: {personality.sociability:0.00} / {personality.humor:0.00} / {personality.helpfulness:0.00}"
-                : "Профиль не назначен";
+                ? personality.DominantTrait
+                : "не определён";
             string strategic = decision != null
-                ? $"{decision.intent} ({(brain.DecisionFromLlm ? "LLM" : "fallback")})\n" +
-                  $"Причина: {decision.explanation}\n" +
-                  $"Запрос: {brain.RequestState}, {brain.LastTrigger}\n" +
-                  $"Контакты: {snapshot?.knownTargetIds?.Length ?? 0}; союзники: {snapshot?.allyIds?.Length ?? 0}\n" +
-                  $"Снимок: {(snapshot?.snapshotHash?.Length >= 8 ? snapshot.snapshotHash.Substring(0, 8) : "—")}"
-                : "Стратегическое решение не назначено";
-            LineOfFireAssessment lineOfFire = ai.CurrentLineOfFire;
-            string blocker = lineOfFire.IsClear
-                ? "нет"
-                : $"{lineOfFire.BlockType}: {lineOfFire.BlockerName} ({lineOfFire.Distance:0.0} м)";
-            string firingPosition = ai.HasFiringPositionSolution
-                ? $"{ai.FiringPositionSolution.Position.x:0.0}, {ai.FiringPositionSolution.Position.y:0.0}; " +
-                  $"путь {ai.FiringPositionSolution.PathLength:0.0} м; оценка {ai.FiringPositionSolution.Score:0.0}"
-                : "—";
-            ArmorUseProfile armor = ai.ArmorProfileUsage;
-            string cover = ai.HasCoverPosition
-                ? $"{ai.CoverPosition.x:0.0}, {ai.CoverPosition.y:0.0}"
-                : "—";
-            string coverFire = ai.HasCoverFiringPosition
-                ? $"{ai.CoverFiringPosition.x:0.0}, {ai.CoverFiringPosition.y:0.0}"
-                : "—";
-            TacticalBehaviorProfile behavior = ai.TacticalBehavior;
+                ? $"{DescribeIntent(decision.intent)} · " +
+                  $"{(brain != null && brain.DecisionFromLlm ? "локальная модель" : "базовый план")}" +
+                  (string.IsNullOrWhiteSpace(decision.explanation) ? string.Empty : $"\nПочему: {decision.explanation}")
+                : "Следует базовому плану боя";
+            string tacticalReason = ai.TacticalMovementPurpose != TacticalMovementPurpose.None &&
+                                    !string.IsNullOrWhiteSpace(ai.TacticalDecisionReason)
+                ? $"\nПочему: {ai.TacticalDecisionReason}"
+                : string.Empty;
 
-            return "<b>ЛИЧНОСТЬ</b>\n" + temperament + "\n\n" +
-                   "<b>ТЕКУЩАЯ ТАКТИКА</b>\n" +
-                   $"Состояние: {ai.State}\n" +
-                   $"Линия / роль: {ai.Lane} / {ai.Role}\n" +
-                   $"Цель: {targetName}\n" +
-                   $"Последняя позиция: {memory}\n" +
-                   $"Перестроение: {reposition}\n" +
-                   $"Желаемая дистанция: {ai.PreferredDistance:0.0}\n" +
-                   $"Огонь: {ai.CurrentFireBlockReason}\n" +
-                   $"Препятствие: {blocker}\n" +
-                   $"Огневая позиция: {firingPosition}\n" +
-                   $"Тактическая задача: {ai.TacticalMovementPurpose} / {ai.TacticalDecisionPriority}\n" +
-                   $"Причина задачи: {ai.TacticalDecisionReason}\n" +
-                   $"Укрытие: {cover}\n" +
-                   $"Огневая точка укрытия: {coverFire}\n" +
-                   $"Угрозы: {ai.ActiveThreatCount} наблюдений / {ai.ActiveThreatSectorCount} секторов; направление " +
-                   $"{ai.PrimaryThreatDirection.x:0.00}, {ai.PrimaryThreatDirection.y:0.00}\n" +
-                   $"Перекрёстный огонь: {(ai.IsUnderCrossfire ? $"да, {ai.CrossfireAngle:0}°" : "нет")}\n" +
-                   $"Броня лоб/борт/корма: {armor.FrontArmor:0}/{armor.WeakestSideArmor:0}/{armor.RearArmor:0} мм\n" +
-                   $"Безопасный доворот: {armor.SafeAngleDegrees:0.0}°\n" +
-                   $"Профиль укрытия / готовность к выезду: {behavior.CoverPreference:0.00} / {behavior.PeekReloadThreshold:0.00}\n" +
-                   $"Результат планировщика: {ai.LastTacticalPositionResult}\n\n" +
-                   "<b>СТРАТЕГИЧЕСКОЕ РЕШЕНИЕ</b>\n" + strategic;
+            return "<b>КТО ЭТО</b>\n" +
+                   $"Характер: {temperament}\n" +
+                   $"Роль: {DescribeRole(ai.Role)}, направление — {DescribeLane(ai.Lane)}\n\n" +
+                   "<b>ПЛАН</b>\n" + strategic + "\n\n" +
+                   "<b>ЧТО ДЕЛАЕТ СЕЙЧАС</b>\n" +
+                   $"Действие: {DescribeAction(ai)}{tacticalReason}\n" +
+                   $"Цель: {DescribeTarget(ai.CurrentTarget)}\n" +
+                   $"Орудие: {DescribeFireState(ai.CurrentFireBlockReason)}\n" +
+                   $"Угроза: {DescribeThreat(ai)}";
+        }
+
+        private static string DescribeTarget(TeamMember target)
+        {
+            if (target == null) return "нет видимой цели";
+            BotIdentityComponent identity = target.GetComponent<BotIdentityComponent>();
+            string tank = target.Definition != null ? target.Definition.displayName : "машина";
+            if (target.IsPlayerControlled) return $"игрок ({tank})";
+            return identity?.Identity != null ? $"{identity.Identity.nickname} ({tank})" : tank;
+        }
+
+        private static string DescribeAction(CombatTankAI ai)
+        {
+            switch (ai.TacticalMovementPurpose)
+            {
+                case TacticalMovementPurpose.GainFiringLine: return "объезжает препятствие для выстрела";
+                case TacticalMovementPurpose.MoveToCover: return "едет в укрытие";
+                case TacticalMovementPurpose.HoldCover: return "ждёт в укрытии";
+                case TacticalMovementPurpose.PeekToFire: return "выезжает из укрытия для выстрела";
+                case TacticalMovementPurpose.ReturnToCover: return "возвращается в укрытие";
+                case TacticalMovementPurpose.DefensiveRetreat: return "отступает под защиту укрытия";
+            }
+
+            switch (ai.State)
+            {
+                case CombatAiState.Deploy: return "занимает исходную позицию";
+                case CombatAiState.Advance: return "движется по своему направлению";
+                case CombatAiState.Engage: return "ведёт бой";
+                case CombatAiState.Investigate: return "ищет потерянного противника";
+                case CombatAiState.Reposition: return "меняет позицию";
+                case CombatAiState.Hold: return "удерживает позицию";
+                default: return "уничтожен";
+            }
+        }
+
+        private static string DescribeFireState(FireBlockReason reason)
+        {
+            switch (reason)
+            {
+                case FireBlockReason.None: return "готово к выстрелу";
+                case FireBlockReason.NoVisibleTarget: return "нет видимой цели";
+                case FireBlockReason.OutOfRange: return "цель вне дальности";
+                case FireBlockReason.Aiming: return "наводится";
+                case FireBlockReason.Reloading: return "перезаряжается";
+                case FireBlockReason.AllyInLine: return "линия огня перекрыта союзником";
+                default: return "линия огня перекрыта препятствием";
+            }
+        }
+
+        private static string DescribeThreat(CombatTankAI ai)
+        {
+            if (ai.ActiveThreatSectorCount <= 0) return "не обнаружена";
+            if (ai.IsUnderCrossfire) return "перекрёстный огонь — старается подставить лоб";
+            return "одно основное направление — использует выгодный угол брони";
+        }
+
+        private static string DescribeIntent(BotStrategicIntentType intent)
+        {
+            switch (intent)
+            {
+                case BotStrategicIntentType.AdvanceLane: return "продвигается по направлению";
+                case BotStrategicIntentType.HoldZone: return "удерживает позицию";
+                case BotStrategicIntentType.ScoutLane: return "разведывает направление";
+                case BotStrategicIntentType.SupportAlly: return "помогает союзнику";
+                case BotStrategicIntentType.DefendBase: return "защищает базу";
+                case BotStrategicIntentType.Reposition: return "меняет позицию";
+                case BotStrategicIntentType.HuntKnownTarget: return "ищет известную цель";
+                case BotStrategicIntentType.TakeCover: return "ищет укрытие";
+                case BotStrategicIntentType.AngleArmor: return "занимает выгодный угол брони";
+                case BotStrategicIntentType.WithdrawUnderFire: return "отходит под огнём";
+                case BotStrategicIntentType.BreakCrossfire: return "выходит из перекрёстного огня";
+                case BotStrategicIntentType.PressAttack: return "усиливает атаку";
+                case BotStrategicIntentType.Retreat: return "отступает";
+                case BotStrategicIntentType.Wait: return "ожидает";
+                default: return "следует командному плану";
+            }
+        }
+
+        private static string DescribeRole(CombatAiRole role)
+        {
+            switch (role)
+            {
+                case CombatAiRole.Assault: return "штурм";
+                case CombatAiRole.Support: return "поддержка";
+                default: return "фланг";
+            }
+        }
+
+        private static string DescribeLane(BattleLane lane)
+        {
+            switch (lane)
+            {
+                case BattleLane.North: return "север";
+                case BattleLane.Center: return "центр";
+                default: return "юг";
+            }
         }
 
         private void EnsureStyles()
