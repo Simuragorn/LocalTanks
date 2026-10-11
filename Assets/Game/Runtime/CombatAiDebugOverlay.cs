@@ -176,7 +176,7 @@ namespace LocalTanks
 
         private static List<CombatTankAI> GetLivingBots()
         {
-            return FindObjectsByType<CombatTankAI>(FindObjectsSortMode.None)
+            return FindObjectsByType<CombatTankAI>()
                 .Where(item => item != null && item.isActiveAndEnabled && IsAlive(item))
                 .OrderBy(item => item.GetComponent<TeamMember>()?.Team ?? TeamId.Neutral)
                 .ThenBy(item => item.Identity?.nickname ?? item.name, System.StringComparer.Ordinal)

@@ -190,6 +190,43 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void Auditor_DoesNotJoinFiringLineTransitionsAcrossTargetChange()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                firingLineTransitionWindowSeconds = 4f,
+                maximumFiringLineTransitions = 3
+            });
+
+            auditor.Record(TacticalSample(0f, TacticalMovementPurpose.GainFiringLine));
+            auditor.Record(TacticalSample(1f, TacticalMovementPurpose.None));
+            auditor.Record(TacticalSample(1.2f, TacticalMovementPurpose.GainFiringLine, "enemy-b"));
+            auditor.Record(TacticalSample(1.4f, TacticalMovementPurpose.None, "enemy-b"));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.FiringLineThrashing),
+                Is.Zero);
+        }
+
+        [Test]
+        public void Auditor_DoesNotTreatCoverPreemptionAsFiringLineThrashing()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                firingLineTransitionWindowSeconds = 4f,
+                maximumFiringLineTransitions = 4
+            });
+
+            auditor.Record(TacticalSample(0f, TacticalMovementPurpose.None));
+            auditor.Record(TacticalSample(0.5f, TacticalMovementPurpose.GainFiringLine));
+            auditor.Record(TacticalSample(1f, TacticalMovementPurpose.None));
+            auditor.Record(TacticalSample(1.5f, TacticalMovementPurpose.GainFiringLine));
+            auditor.Record(TacticalSample(2f, TacticalMovementPurpose.MoveToCover));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.FiringLineThrashing),
+                Is.Zero);
+        }
+
+        [Test]
         public void Auditor_DetectsSustainedRearExposureAcrossCombatStateChanges()
         {
             CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
@@ -207,6 +244,22 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void Auditor_DoesNotReportRearExposureWhileBotStopsToAlignHull()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                rearExposureAngleDegrees = 110f,
+                rearExposureSeconds = 2f
+            });
+
+            auditor.Record(RearExposureSample(0f, 155f, movementPaused: true));
+            auditor.Record(RearExposureSample(3f, 145f, movementPaused: true));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.RearExposedToVisibleTarget),
+                Is.Zero);
+        }
+
+        [Test]
         public void Auditor_DetectsReverseModeThatOutlivesRetreatTask()
         {
             CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
@@ -221,6 +274,21 @@ namespace LocalTanks.Tests
 
             Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.ReverseWithoutRetreatTask),
                 Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Auditor_AllowsShortReverseFiringLineManeuver()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                reverseWithoutRetreatSeconds = 1f
+            });
+
+            auditor.Record(ReverseSample(0f, TacticalMovementPurpose.GainFiringLine));
+            auditor.Record(ReverseSample(1.5f, TacticalMovementPurpose.GainFiringLine));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.ReverseWithoutRetreatTask),
+                Is.Zero);
         }
 
         private static CombatAiAuditSample Sample(
@@ -254,24 +322,28 @@ namespace LocalTanks.Tests
                 FireBlockReason.Aiming, 0);
         }
 
-        private static CombatAiAuditSample TacticalSample(float time, TacticalMovementPurpose purpose)
+        private static CombatAiAuditSample TacticalSample(
+            float time,
+            TacticalMovementPurpose purpose,
+            string targetId = "enemy-a")
         {
             return new CombatAiAuditSample(
                 time, "bot-a", "Тестер", CombatAiState.Engage, new Vector2(time, 0f),
-                true, false, true, false, true, "enemy-a", true,
+                true, false, true, false, true, targetId, true,
                 FireBlockReason.Aiming, 0, 0, 0f, false, false, purpose);
         }
 
         private static CombatAiAuditSample RearExposureSample(
             float time,
             float angle,
-            CombatAiState state = CombatAiState.Engage)
+            CombatAiState state = CombatAiState.Engage,
+            bool movementPaused = false)
         {
             return new CombatAiAuditSample(
                 time, "bot-a", "Тестер", state, new Vector2(time, 0f),
-                true, false, true, false, true, "enemy-a", true,
+                true, movementPaused, true, false, true, "enemy-a", true,
                 FireBlockReason.Aiming, 0, 0, 180f, false, false,
-                TacticalMovementPurpose.None, angle, false);
+                TacticalMovementPurpose.None, angle, false, 1f);
         }
 
         private static CombatAiAuditSample ReverseSample(float time, TacticalMovementPurpose purpose)

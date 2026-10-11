@@ -166,6 +166,43 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void FiringPositionPlanner_PenalizesLongRearExposingRouteAndAllowsShortReverse()
+        {
+            Vector2[] longRearRoute =
+            {
+                Vector2.zero,
+                Vector2.down * 4f,
+                Vector2.down * 8f
+            };
+            Vector2 threatDirection = Vector2.up;
+
+            Assert.That(TacticalFiringPositionPlanner.ThreatExposurePenalty(
+                longRearRoute, threatDirection, 6f), Is.GreaterThan(0f));
+
+            TacticalFiringPositionSolution shortRearSolution = new TacticalFiringPositionSolution(
+                Vector2Int.zero,
+                Vector2.down * 4f,
+                0f,
+                4f,
+                6f,
+                1,
+                Vector2.down);
+            TacticalFiringPositionSolution longRearSolution = new TacticalFiringPositionSolution(
+                Vector2Int.zero,
+                Vector2.down * 8f,
+                0f,
+                8f,
+                6f,
+                1,
+                Vector2.down);
+
+            Assert.That(TacticalFiringPositionPlanner.ShouldApproachInReverse(
+                shortRearSolution, threatDirection, 2f, 6f), Is.True);
+            Assert.That(TacticalFiringPositionPlanner.ShouldApproachInReverse(
+                longRearSolution, threatDirection, 2f, 6f), Is.False);
+        }
+
+        [Test]
         public void ArmorUseProfile_DerivesUsefulAngleFromActualFrontAndSideArmor()
         {
             TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
@@ -260,8 +297,10 @@ namespace LocalTanks.Tests
 
                 Assert.That(lightProfile.CoverPreference, Is.GreaterThan(heavyProfile.CoverPreference));
                 Assert.That(lightProfile.PeekReloadThreshold, Is.GreaterThan(heavyProfile.PeekReloadThreshold));
-                Assert.That(lightProfile.ShouldSeekCoverWhileReloading(0.1f, true, false), Is.True);
-                Assert.That(heavyProfile.ShouldSeekCoverWhileReloading(0.9f, true, false), Is.False);
+                Assert.That(lightProfile.ShouldSeekCoverWhileReloading(0.1f, true, false, false, 1f), Is.False);
+                Assert.That(lightProfile.ShouldSeekCoverWhileReloading(0.1f, true, false, true, 1f), Is.True);
+                Assert.That(lightProfile.ShouldSeekCoverWhileReloading(0.1f, true, true, false, 1f), Is.True);
+                Assert.That(heavyProfile.ShouldSeekCoverWhileReloading(0.9f, true, false, true, 1f), Is.False);
             }
             finally
             {
@@ -287,6 +326,16 @@ namespace LocalTanks.Tests
                 TacticalMovementPurpose.HoldCover,
                 TacticalDecisionPriority.UseCover,
                 time: 5f), Is.True);
+        }
+
+        [Test]
+        public void TacticalDecisionArbiter_FiresReadyClearShotBeforeNonCriticalCover()
+        {
+            Assert.That(TacticalDecisionArbiter.ShouldFireBeforeCover(true, true, true, false, 0.8f), Is.True);
+            Assert.That(TacticalDecisionArbiter.ShouldFireBeforeCover(true, true, true, true, 0.8f), Is.False);
+            Assert.That(TacticalDecisionArbiter.ShouldFireBeforeCover(true, true, true, false, 0.2f), Is.False);
+            Assert.That(TacticalDecisionArbiter.ShouldFireBeforeCover(false, true, true, false, 0.8f), Is.False);
+            Assert.That(TacticalDecisionArbiter.ShouldFireBeforeCover(true, true, false, false, 0.8f), Is.False);
         }
 
         [Test]
@@ -344,6 +393,48 @@ namespace LocalTanks.Tests
             {
                 Object.DestroyImmediate(map.gameObject);
             }
+        }
+
+        [Test]
+        public void CoverPlanner_PenalizesLongRoutesThatInitiallyExposeRearArmor()
+        {
+            Vector2[] longRetreat =
+            {
+                Vector2.zero,
+                Vector2.down * 4f,
+                Vector2.down * 8f
+            };
+            Vector2[] shortRetreat =
+            {
+                Vector2.zero,
+                Vector2.down * 2f,
+                Vector2.down * 4f
+            };
+
+            Assert.That(TacticalCoverPlanner.ThreatExposurePenalty(longRetreat, Vector2.up, 6f),
+                Is.GreaterThan(10f));
+            Assert.That(TacticalCoverPlanner.ThreatExposurePenalty(shortRetreat, Vector2.up, 6f),
+                Is.EqualTo(0f));
+            Assert.That(TacticalCoverPlanner.ThreatExposurePenalty(longRetreat, Vector2.down, 6f),
+                Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void CoverPlanner_UsesReverseOnlyForShortRouteAwayFromThreat()
+        {
+            TacticalCoverSolution shortRetreat = new TacticalCoverSolution(
+                new Vector2Int(1, 1), Vector2.down * 4f, 1f, 4f, 1,
+                default, Vector2.zero, 0f, false, Vector2.down);
+            TacticalCoverSolution longRetreat = new TacticalCoverSolution(
+                new Vector2Int(1, 1), Vector2.down * 8f, 1f, 8f, 1,
+                default, Vector2.zero, 0f, false, Vector2.down);
+
+            Assert.That(TacticalCoverPlanner.ShouldApproachInReverse(
+                shortRetreat, Vector2.up, 1f, 6f), Is.True);
+            Assert.That(TacticalCoverPlanner.ShouldApproachInReverse(
+                longRetreat, Vector2.up, 1f, 6f), Is.False);
+            Assert.That(TacticalCoverPlanner.ShouldApproachInReverse(
+                shortRetreat, Vector2.down, 1f, 6f), Is.False);
         }
 
         [Test]

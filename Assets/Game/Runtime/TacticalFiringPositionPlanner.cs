@@ -132,7 +132,8 @@ namespace LocalTanks
             float score,
             float pathLength,
             float targetDistance,
-            int evaluatedCandidates)
+            int evaluatedCandidates,
+            Vector2 initialPathDirection)
         {
             Cell = cell;
             Position = position;
@@ -140,6 +141,7 @@ namespace LocalTanks
             PathLength = pathLength;
             TargetDistance = targetDistance;
             EvaluatedCandidates = evaluatedCandidates;
+            InitialPathDirection = initialPathDirection;
         }
 
         public Vector2Int Cell { get; }
@@ -148,6 +150,7 @@ namespace LocalTanks
         public float PathLength { get; }
         public float TargetDistance { get; }
         public int EvaluatedCandidates { get; }
+        public Vector2 InitialPathDirection { get; }
     }
 
     public static class TacticalFiringPositionPlanner
@@ -166,6 +169,33 @@ namespace LocalTanks
             Func<Vector2Int, bool> isExcluded,
             out TacticalFiringPositionSolution solution)
         {
+            return TryFind(
+                map,
+                origin,
+                target,
+                preferredDistance,
+                maximumFiringDistance,
+                clearanceCells,
+                maximumSearchDistance,
+                hasClearLine,
+                isExcluded,
+                null,
+                out solution);
+        }
+
+        public static bool TryFind(
+            NavigationMap map,
+            Vector2 origin,
+            Vector2 target,
+            float preferredDistance,
+            float maximumFiringDistance,
+            int clearanceCells,
+            float maximumSearchDistance,
+            Func<Vector2, bool> hasClearLine,
+            Func<Vector2Int, bool> isExcluded,
+            Func<IReadOnlyList<Vector2>, float> pathScoreAdjustment,
+            out TacticalFiringPositionSolution solution)
+        {
             solution = default;
             if (map == null || hasClearLine == null || maximumFiringDistance <= 0f)
             {
@@ -182,6 +212,7 @@ namespace LocalTanks
             Vector2 bestPosition = default;
             float bestPathLength = 0f;
             float bestTargetDistance = 0f;
+            Vector2 bestInitialPathDirection = Vector2.zero;
 
             for (int y = originCell.y - searchCells; y <= originCell.y + searchCells; y++)
             {
@@ -222,7 +253,10 @@ namespace LocalTanks
                     float pathLength = CalculatePathLength(path);
                     float distanceError = Mathf.Abs(targetDistance - Mathf.Max(map.CellSize, preferredDistance));
                     float detour = Mathf.Max(0f, pathLength - movementDistance);
-                    float score = pathLength * 1.6f + distanceError * 0.7f + detour * 0.9f;
+                    float pathAdjustment = pathScoreAdjustment != null
+                        ? Mathf.Max(0f, pathScoreAdjustment(path))
+                        : 0f;
+                    float score = pathLength * 1.6f + distanceError * 0.7f + detour * 0.9f + pathAdjustment;
                     if (!found || score < bestScore - 0.001f ||
                         Mathf.Approximately(score, bestScore) && IsEarlier(cell, bestCell))
                     {
@@ -232,6 +266,7 @@ namespace LocalTanks
                         bestPosition = candidate;
                         bestPathLength = pathLength;
                         bestTargetDistance = targetDistance;
+                        bestInitialPathDirection = FirstPathDirection(path);
                     }
                 }
             }
@@ -247,8 +282,42 @@ namespace LocalTanks
                 bestScore,
                 bestPathLength,
                 bestTargetDistance,
-                evaluated);
+                evaluated,
+                bestInitialPathDirection);
             return true;
+        }
+
+        public static float ThreatExposurePenalty(
+            IReadOnlyList<Vector2> path,
+            Vector2 threatDirection,
+            float maximumReversePathLength)
+        {
+            if (path == null || path.Count < 2 || threatDirection.sqrMagnitude <= 0.0001f) return 0f;
+            float pathLength = CalculatePathLength(path);
+            if (pathLength <= Mathf.Max(0f, maximumReversePathLength)) return 0f;
+            Vector2 initialDirection = FirstPathDirection(path);
+            if (initialDirection.sqrMagnitude <= 0.0001f) return 0f;
+            float rearAngle = Mathf.Abs(Vector2.SignedAngle(initialDirection, threatDirection.normalized));
+            return Mathf.InverseLerp(100f, 180f, rearAngle) * 18f;
+        }
+
+        public static bool ShouldApproachInReverse(
+            TacticalFiringPositionSolution solution,
+            Vector2 threatDirection,
+            float maximumReverseSpeed,
+            float maximumReversePathLength)
+        {
+            if (maximumReverseSpeed <= 0.05f || solution.PathLength > maximumReversePathLength ||
+                solution.InitialPathDirection.sqrMagnitude <= 0.0001f ||
+                threatDirection.sqrMagnitude <= 0.0001f)
+            {
+                return false;
+            }
+
+            float rearAngle = Mathf.Abs(Vector2.SignedAngle(
+                solution.InitialPathDirection,
+                threatDirection.normalized));
+            return rearAngle >= 100f;
         }
 
         private static float CalculatePathLength(IReadOnlyList<Vector2> path)
@@ -260,6 +329,19 @@ namespace LocalTanks
             }
 
             return length;
+        }
+
+        private static Vector2 FirstPathDirection(IReadOnlyList<Vector2> path)
+        {
+            if (path == null || path.Count < 2) return Vector2.zero;
+            Vector2 origin = path[0];
+            for (int index = 1; index < path.Count; index++)
+            {
+                Vector2 direction = path[index] - origin;
+                if (direction.sqrMagnitude > 0.0001f) return direction.normalized;
+            }
+
+            return Vector2.zero;
         }
 
         private static bool IsEarlier(Vector2Int candidate, Vector2Int current)

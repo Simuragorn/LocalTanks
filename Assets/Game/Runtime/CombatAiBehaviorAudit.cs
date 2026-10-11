@@ -67,7 +67,8 @@ namespace LocalTanks
             bool recoveringFromStall = false,
             TacticalMovementPurpose tacticalMovementPurpose = TacticalMovementPurpose.None,
             float targetRelativeAngleDegrees = 0f,
-            bool movingInReverse = false)
+            bool movingInReverse = false,
+            float currentSpeed = 0f)
         {
             Time = time;
             BotId = botId ?? string.Empty;
@@ -90,6 +91,7 @@ namespace LocalTanks
             TacticalMovementPurpose = tacticalMovementPurpose;
             TargetRelativeAngleDegrees = Mathf.Abs(targetRelativeAngleDegrees);
             MovingInReverse = movingInReverse;
+            CurrentSpeed = currentSpeed;
         }
 
         public float Time { get; }
@@ -113,6 +115,7 @@ namespace LocalTanks
         public TacticalMovementPurpose TacticalMovementPurpose { get; }
         public float TargetRelativeAngleDegrees { get; }
         public bool MovingInReverse { get; }
+        public float CurrentSpeed { get; }
     }
 
     public sealed class CombatAiAuditIssue
@@ -322,6 +325,9 @@ namespace LocalTanks
             {
                 track.TargetChanges.Enqueue(new TimedValue<string>(sample.Time, sample.TargetId));
                 track.TotalTargetChanges++;
+                // A maneuver cancelled because the selected enemy changed is not oscillation
+                // around one blocked line of fire. Start a fresh diagnostic window for the new target.
+                track.FiringLineChanges.Clear();
             }
             Trim(track.TargetChanges, sample.Time - rules.transitionWindowSeconds);
             if (track.TargetChanges.Count >= rules.maximumTargetChanges)
@@ -359,6 +365,15 @@ namespace LocalTanks
         {
             TacticalMovementPurpose previous = track.LastSample.TacticalMovementPurpose;
             TacticalMovementPurpose current = sample.TacticalMovementPurpose;
+            if ((IsFiringLineTask(previous) || IsFiringLineTask(current)) &&
+                previous != TacticalMovementPurpose.None &&
+                current != TacticalMovementPurpose.None)
+            {
+                // A higher-priority cover task replacing GainFiringLine is arbitration,
+                // not a cancel/retry loop around the same firing obstruction.
+                track.FiringLineChanges.Clear();
+                return;
+            }
             if (IsFiringLineTask(current) != IsFiringLineTask(previous))
             {
                 track.FiringLineChanges.Enqueue(new TimedValue<TacticalMovementPurpose>(sample.Time, current));
@@ -508,6 +523,8 @@ namespace LocalTanks
         private void TrackRearExposure(BotTrack track, CombatAiAuditSample sample)
         {
             bool exposed = sample.TargetVisible && !string.IsNullOrWhiteSpace(sample.TargetId) &&
+                           !sample.MovementPaused &&
+                           Mathf.Abs(sample.CurrentSpeed) > 0.35f &&
                            sample.TargetRelativeAngleDegrees >= rules.rearExposureAngleDegrees;
             if (!exposed)
             {
@@ -525,7 +542,8 @@ namespace LocalTanks
                 $"Hull rear remained toward visible target '{sample.TargetId}' for " +
                 $"{sample.Time - track.RearExposureSince:0.0} s; angle=" +
                 $"{sample.TargetRelativeAngleDegrees:0}°, state={sample.State}, " +
-                $"task={sample.TacticalMovementPurpose}, reverse={sample.MovingInReverse}.");
+                $"task={sample.TacticalMovementPurpose}, reverse={sample.MovingInReverse}, " +
+                $"speed={sample.CurrentSpeed:0.00} m/s.");
             track.RearExposureSince = sample.Time;
         }
 
@@ -533,7 +551,8 @@ namespace LocalTanks
         {
             bool reverseTask = sample.TacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
                                sample.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
-                               sample.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat;
+                               sample.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat ||
+                               sample.TacticalMovementPurpose == TacticalMovementPurpose.GainFiringLine;
             bool staleReverse = sample.MovingInReverse && !reverseTask;
             if (!staleReverse)
             {
@@ -551,7 +570,7 @@ namespace LocalTanks
             if (sample.Time - track.ReverseWithoutRetreatSince < rules.reverseWithoutRetreatSeconds) return;
             Emit(track, sample, CombatAiAuditIssueKind.ReverseWithoutRetreatTask,
                 $"Navigation remained in reverse for {sample.Time - track.ReverseWithoutRetreatSince:0.0} s " +
-                $"without a retreat-capable task; state={sample.State}, task={sample.TacticalMovementPurpose}.");
+                $"without a reverse-capable task; state={sample.State}, task={sample.TacticalMovementPurpose}.");
             track.ReverseWithoutRetreatReported = true;
         }
 
@@ -710,7 +729,7 @@ namespace LocalTanks
         {
             director = battleDirector ?? throw new ArgumentNullException(nameof(battleDirector));
             Auditor = new CombatAiBehaviorAuditor(rules);
-            bots = UnityEngine.Object.FindObjectsByType<CombatTankAI>(FindObjectsSortMode.None)
+            bots = UnityEngine.Object.FindObjectsByType<CombatTankAI>()
                 .Where(item => item != null)
                 .OrderBy(item => director.GetEntityId(item.GetComponent<TeamMember>()), StringComparer.Ordinal)
                 .ToArray();
@@ -734,6 +753,7 @@ namespace LocalTanks
                 if (bot == null) continue;
                 TeamMember member = bot.GetComponent<TeamMember>();
                 NavigationAgent navigation = bot.GetComponent<NavigationAgent>();
+                TankMotor motor = bot.GetComponent<TankMotor>();
                 TeamMember target = bot.CurrentTarget;
                 string botId = director.GetEntityId(member);
                 string targetId = target != null ? director.GetEntityId(target) : string.Empty;
@@ -769,7 +789,8 @@ namespace LocalTanks
                     navigation != null && navigation.IsRecoveringFromStall,
                     bot.TacticalMovementPurpose,
                     targetRelativeAngle,
-                    navigation != null && navigation.MovingInReverse));
+                    navigation != null && navigation.MovingInReverse,
+                    motor != null ? motor.CurrentSpeed : 0f));
             }
         }
 

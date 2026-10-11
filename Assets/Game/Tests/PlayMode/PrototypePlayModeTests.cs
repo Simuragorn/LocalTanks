@@ -32,7 +32,7 @@ namespace LocalTanks.Tests
                 Assert.That(lab, Is.Not.Null, $"AI Duel Lab case {caseIndex} did not load.");
                 Assert.That(lab.IsReady, Is.True, $"AI Duel Lab case {caseIndex} did not become ready.");
                 Assert.That(lab.ActiveCase.id, Is.EqualTo(expectedIds[caseIndex]));
-                Assert.That(Object.FindObjectsByType<CombatTankAI>(FindObjectsSortMode.None), Has.Length.EqualTo(2));
+                Assert.That(Object.FindObjectsByType<CombatTankAI>(), Has.Length.EqualTo(2));
 
                 Time.timeScale = 3f;
                 while (!lab.IsComplete) yield return null;
@@ -95,7 +95,7 @@ namespace LocalTanks.Tests
             Assert.That(director.SpawnedMembers.Count(item => item.Team == TeamId.TeamA), Is.EqualTo(1));
             Assert.That(director.SpawnedMembers.Count(item => item.Team == TeamId.TeamB), Is.EqualTo(1));
             Assert.That(director.SpawnedMembers.Any(item => item.IsPlayerControlled), Is.False);
-            Assert.That(Object.FindObjectsByType<CombatTankAI>(FindObjectsSortMode.None), Has.Length.EqualTo(2));
+            Assert.That(Object.FindObjectsByType<CombatTankAI>(), Has.Length.EqualTo(2));
             Assert.That(director.StrategicPlanner, Is.Null);
             Assert.That(director.StrategicCoordinator, Is.Null);
             Assert.That(lab.Auditor, Is.Not.Null);
@@ -908,7 +908,7 @@ namespace LocalTanks.Tests
                     $"AI did not route around obstacle; state={shooter.State}, " +
                     $"block={shooter.CurrentFireBlockReason}, planner={shooter.LastTacticalPositionResult}");
                 Assert.That(shooter.LastTacticalPositionResult,
-                    Is.EqualTo("Прострел получен").Or.Contains("Объезд"));
+                    Is.EqualTo("Устойчивый прострел получен").Or.Contains("Объезд"));
             }
             finally
             {
@@ -1244,12 +1244,7 @@ namespace LocalTanks.Tests
 
             string report = session.Auditor.BuildReport(duration);
             Debug.Log(report + "\n" + session.Auditor.BuildTransitionReport());
-            CombatAiAuditIssue[] blockingIssues = session.Auditor.Issues
-                .Where(issue => issue.Kind != CombatAiAuditIssueKind.TacticalTaskThrashing &&
-                                issue.Kind != CombatAiAuditIssueKind.FiringLineThrashing &&
-                                issue.Kind != CombatAiAuditIssueKind.RearExposedToVisibleTarget &&
-                                issue.Kind != CombatAiAuditIssueKind.ReverseWithoutRetreatTask)
-                .ToArray();
+            CombatAiAuditIssue[] blockingIssues = session.Auditor.Issues.ToArray();
             Assert.That(blockingIssues, Is.Empty, report);
         }
 

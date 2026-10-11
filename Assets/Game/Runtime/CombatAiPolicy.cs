@@ -29,6 +29,10 @@ namespace LocalTanks
         public const float LostContactGraceSeconds = 0.9f;
         public const float TargetLockSeconds = 3f;
         public const float TargetSwitchScoreAdvantage = 10f;
+        public const float FiringLineClearConfirmationSeconds = 0.75f;
+        public const float FiringLineDestinationConfirmationSeconds = 0.35f;
+        public const float FiringLineRetryCooldownSeconds = 2.5f;
+        public const float MaximumAdvanceRearAngle = 90f;
 
         public static float ScoreTarget(
             float distance,
@@ -72,6 +76,25 @@ namespace LocalTanks
             float repositionExpiresAt)
         {
             return hasRememberedTarget && !destinationReached && currentTime < repositionExpiresAt;
+        }
+
+        public static bool ShouldCompleteFiringLineManeuver(
+            bool lineClear,
+            bool destinationReached,
+            float clearSince,
+            float currentTime,
+            float confirmationSeconds = FiringLineClearConfirmationSeconds)
+        {
+            if (!lineClear) return false;
+            float requiredConfirmation = destinationReached
+                ? Mathf.Min(confirmationSeconds, FiringLineDestinationConfirmationSeconds)
+                : confirmationSeconds;
+            return clearSince >= 0f && currentTime - clearSince >= Mathf.Max(0f, requiredConfirmation);
+        }
+
+        public static bool ShouldAlignHullBeforeAdvancing(float targetRelativeAngleDegrees)
+        {
+            return Mathf.Abs(targetRelativeAngleDegrees) > MaximumAdvanceRearAngle;
         }
 
         public static bool ShouldSwitchVisibleTarget(

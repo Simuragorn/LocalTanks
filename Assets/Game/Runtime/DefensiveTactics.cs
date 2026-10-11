@@ -39,6 +39,16 @@ namespace LocalTanks
             if (requestedPurpose == currentPurpose) return true;
             return requestedPriority >= currentPriority;
         }
+
+        public static bool ShouldFireBeforeCover(
+            bool weaponReady,
+            bool targetVisible,
+            bool lineClear,
+            bool criticalSurvival,
+            float healthRatio)
+        {
+            return weaponReady && targetVisible && lineClear && !criticalSurvival && healthRatio > 0.25f;
+        }
     }
 
     public readonly struct TacticalBehaviorProfile
@@ -117,10 +127,17 @@ namespace LocalTanks
                 searchDistance);
         }
 
-        public bool ShouldSeekCoverWhileReloading(float reloadProgress, bool exposed, bool crossfire)
+        public bool ShouldSeekCoverWhileReloading(
+            float reloadProgress,
+            bool exposed,
+            bool crossfire,
+            bool recentlyDamaged,
+            float healthRatio)
         {
             if (!exposed) return false;
             if (crossfire) return true;
+            float lowHealthThreshold = Mathf.Lerp(0.35f, 0.58f, CoverPreference);
+            if (!recentlyDamaged && healthRatio > lowHealthThreshold) return false;
             float triggerProgress = Mathf.Lerp(0.28f, 0.7f, CoverPreference);
             return reloadProgress < triggerProgress;
         }
@@ -381,7 +398,8 @@ namespace LocalTanks
                 default,
                 position,
                 0f,
-                false)
+                false,
+                Vector2.zero)
         {
         }
 
@@ -394,7 +412,8 @@ namespace LocalTanks
             Vector2Int firingCell,
             Vector2 firingPosition,
             float firingPathLength,
-            bool hasFiringPosition)
+            bool hasFiringPosition,
+            Vector2 initialPathDirection)
         {
             Cell = cell;
             Position = position;
@@ -405,6 +424,9 @@ namespace LocalTanks
             FiringPosition = firingPosition;
             FiringPathLength = firingPathLength;
             HasFiringPosition = hasFiringPosition;
+            InitialPathDirection = initialPathDirection.sqrMagnitude > 0.0001f
+                ? initialPathDirection.normalized
+                : Vector2.zero;
         }
 
         public Vector2Int Cell { get; }
@@ -416,6 +438,7 @@ namespace LocalTanks
         public Vector2 FiringPosition { get; }
         public float FiringPathLength { get; }
         public bool HasFiringPosition { get; }
+        public Vector2 InitialPathDirection { get; }
     }
 
     public static class TacticalCoverPlanner
@@ -452,6 +475,31 @@ namespace LocalTanks
             Func<Vector2, bool> canFireFrom,
             out TacticalCoverSolution solution)
         {
+            return TryFindPair(
+                map,
+                origin,
+                clearanceCells,
+                maximumSearchDistance,
+                maximumPeekDistance,
+                isProtected,
+                isAvailable,
+                canFireFrom,
+                null,
+                out solution);
+        }
+
+        public static bool TryFindPair(
+            NavigationMap map,
+            Vector2 origin,
+            int clearanceCells,
+            float maximumSearchDistance,
+            float maximumPeekDistance,
+            Func<Vector2, bool> isProtected,
+            Func<Vector2, bool> isAvailable,
+            Func<Vector2, bool> canFireFrom,
+            Func<IReadOnlyList<Vector2>, float> pathScoreAdjustment,
+            out TacticalCoverSolution solution)
+        {
             solution = default;
             if (map == null || isProtected == null) return false;
 
@@ -467,6 +515,7 @@ namespace LocalTanks
             Vector2 bestFiringPosition = default;
             float bestFiringPathLength = 0f;
             bool bestHasFiringPosition = false;
+            Vector2 bestInitialPathDirection = Vector2.zero;
             int evaluated = 0;
 
             for (int y = originCell.y - radius; y <= originCell.y + radius; y++)
@@ -496,7 +545,10 @@ namespace LocalTanks
                         out Vector2 firingPosition,
                         out float firingPathLength);
                     if (canFireFrom != null && !hasFiringPosition) continue;
-                    float score = pathLength * 1.4f + detour + firingPathLength * 0.75f;
+                    float pathAdjustment = pathScoreAdjustment != null
+                        ? Mathf.Max(0f, pathScoreAdjustment(path))
+                        : 0f;
+                    float score = pathLength * 1.4f + detour + firingPathLength * 0.75f + pathAdjustment;
                     if (!found || score < bestScore - 0.001f ||
                         Mathf.Approximately(score, bestScore) && IsEarlier(cell, bestCell))
                     {
@@ -509,6 +561,7 @@ namespace LocalTanks
                         bestFiringPosition = firingPosition;
                         bestFiringPathLength = firingPathLength;
                         bestHasFiringPosition = hasFiringPosition;
+                        bestInitialPathDirection = FirstPathDirection(path);
                     }
                 }
             }
@@ -523,8 +576,42 @@ namespace LocalTanks
                 bestFiringCell,
                 bestFiringPosition,
                 bestFiringPathLength,
-                bestHasFiringPosition);
+                bestHasFiringPosition,
+                bestInitialPathDirection);
             return true;
+        }
+
+        public static float ThreatExposurePenalty(
+            IReadOnlyList<Vector2> path,
+            Vector2 threatDirection,
+            float maximumReversePathLength)
+        {
+            if (path == null || path.Count < 2 || threatDirection.sqrMagnitude <= 0.0001f) return 0f;
+            float pathLength = CalculatePathLength(path);
+            if (pathLength <= Mathf.Max(0f, maximumReversePathLength)) return 0f;
+            Vector2 initialDirection = FirstPathDirection(path);
+            if (initialDirection.sqrMagnitude <= 0.0001f) return 0f;
+            float rearAngle = Mathf.Abs(Vector2.SignedAngle(initialDirection, threatDirection.normalized));
+            return Mathf.InverseLerp(100f, 180f, rearAngle) * 18f;
+        }
+
+        public static bool ShouldApproachInReverse(
+            TacticalCoverSolution solution,
+            Vector2 threatDirection,
+            float maximumReverseSpeed,
+            float maximumReversePathLength)
+        {
+            if (maximumReverseSpeed <= 0.05f || solution.PathLength > maximumReversePathLength ||
+                solution.InitialPathDirection.sqrMagnitude <= 0.0001f ||
+                threatDirection.sqrMagnitude <= 0.0001f)
+            {
+                return false;
+            }
+
+            float rearAngle = Mathf.Abs(Vector2.SignedAngle(
+                solution.InitialPathDirection,
+                threatDirection.normalized));
+            return rearAngle >= 100f;
         }
 
         private static bool TryFindFiringPoint(
@@ -591,6 +678,19 @@ namespace LocalTanks
             }
 
             return result;
+        }
+
+        private static Vector2 FirstPathDirection(IReadOnlyList<Vector2> path)
+        {
+            if (path == null || path.Count < 2) return Vector2.zero;
+            Vector2 origin = path[0];
+            for (int index = 1; index < path.Count; index++)
+            {
+                Vector2 direction = path[index] - origin;
+                if (direction.sqrMagnitude > 0.0001f) return direction.normalized;
+            }
+
+            return Vector2.zero;
         }
 
         private static bool IsEarlier(Vector2Int candidate, Vector2Int current)

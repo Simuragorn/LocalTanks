@@ -172,6 +172,26 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void CombatAiPolicy_RequiresStableClearLineEvenAtDestinationBeforeFinishingReposition()
+        {
+            Assert.That(CombatAiPolicy.ShouldCompleteFiringLineManeuver(true, false, 10f, 10f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldCompleteFiringLineManeuver(true, false, 10f, 10.74f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldCompleteFiringLineManeuver(true, false, 10f, 10.75f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldCompleteFiringLineManeuver(true, true, 10f, 10.34f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldCompleteFiringLineManeuver(true, true, 10f, 10.35f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldCompleteFiringLineManeuver(false, true, 9f, 10f), Is.False);
+        }
+
+        [Test]
+        public void CombatAiPolicy_AlignsHullBeforeAdvancingTowardRearThreat()
+        {
+            Assert.That(CombatAiPolicy.ShouldAlignHullBeforeAdvancing(120f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldAlignHullBeforeAdvancing(-120f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldAlignHullBeforeAdvancing(90f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldAlignHullBeforeAdvancing(45f), Is.False);
+        }
+
+        [Test]
         public void CombatAiPolicy_SwitchesVisibleTargetOnlyAfterLockAndMeaningfulAdvantage()
         {
             Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(2f, 3f, 50f, 100f), Is.False);

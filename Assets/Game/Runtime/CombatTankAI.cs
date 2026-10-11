@@ -13,6 +13,10 @@ namespace LocalTanks
         private const float DestinationRefreshDistance = 0.8f;
         private const float AimRecoveryDelay = 3f;
         private const float FailedPositionMemorySeconds = 10f;
+        private const float RecentPenetrationDangerSeconds = 6f;
+        private const float MaximumReverseCoverPathLength = 12f;
+        private const float MaximumReverseFiringLinePathLength = 6f;
+        private const float DefensiveRearDangerAngle = 115f;
 
         [SerializeField] private TeamMember member;
         [SerializeField] private TeamVisionSystem visionSystem;
@@ -38,6 +42,7 @@ namespace LocalTanks
         private Vector2 repositionDestination;
         private float repositionExpiresAt;
         private float nextRepositionTime;
+        private float firingLineClearSince = -1f;
         private float lastTargetVisibleTime = float.NegativeInfinity;
         private float defaultPreferredDistance;
         private BotStrategicDecision strategicDecision;
@@ -71,13 +76,17 @@ namespace LocalTanks
         private string coverRequestReason;
         private TacticalDecisionPriority coverRequestPriority;
         private float nextCoverDecisionTime;
+        private float coverShotOpportunityUntil = float.NegativeInfinity;
         private float holdCoverUntil;
         private float coverReachedAt;
+        private float peekReachedAt = float.NegativeInfinity;
         private bool holdingTacticalCover;
         private bool returnForwardFallbackUsed;
         private bool lastCoverReturnStartedInReverse;
         private int completedCoverCycleShots;
         private Vector2 primaryThreatDirection;
+        private float lastPenetratingHitTime = float.NegativeInfinity;
+        private float defensiveRearExposureSince = float.NegativeInfinity;
 
         public CombatAiState State { get; private set; } = CombatAiState.Deploy;
         public FireBlockReason CurrentFireBlockReason { get; private set; } = FireBlockReason.NoVisibleTarget;
@@ -177,6 +186,7 @@ namespace LocalTanks
             strategicTarget = null;
             strategicAlly = null;
             aimingBlockedSince = -1f;
+            firingLineClearSince = -1f;
             targetLockedUntil = 0f;
             failedFiringPositions.Clear();
             currentLineOfFire = default;
@@ -198,11 +208,15 @@ namespace LocalTanks
             coverRequestReason = string.Empty;
             coverRequestPriority = TacticalDecisionPriority.None;
             nextCoverDecisionTime = 0f;
+            coverShotOpportunityUntil = float.NegativeInfinity;
             holdCoverUntil = 0f;
             coverReachedAt = 0f;
+            peekReachedAt = float.NegativeInfinity;
             holdingTacticalCover = false;
             completedCoverCycleShots = 0;
             primaryThreatDirection = Vector2.zero;
+            lastPenetratingHitTime = float.NegativeInfinity;
+            defensiveRearExposureSince = float.NegativeInfinity;
             StartCurrentRoutePoint();
         }
 
@@ -253,6 +267,7 @@ namespace LocalTanks
             strategicAlly = null;
             lastTargetVisibleTime = float.NegativeInfinity;
             aimingBlockedSince = -1f;
+            firingLineClearSince = -1f;
             targetLockedUntil = 0f;
             failedFiringPositions.Clear();
             currentLineOfFire = default;
@@ -260,12 +275,14 @@ namespace LocalTanks
             lastTacticalPositionResult = "Машина уничтожена";
             threatMemory.Clear();
             threatAnalysis = default;
+            lastPenetratingHitTime = float.NegativeInfinity;
             tacticalMovementPurpose = TacticalMovementPurpose.None;
             tacticalDecisionPriority = TacticalDecisionPriority.None;
             tacticalDecisionReason = "Машина уничтожена";
             hasCoverPosition = false;
             hasCoverFiringPosition = false;
             coverRequested = false;
+            coverShotOpportunityUntil = float.NegativeInfinity;
             holdingTacticalCover = false;
             TacticalCoverReservations.Release(GetEntityId().ToString());
             navigation?.ClearDestination();
@@ -301,13 +318,19 @@ namespace LocalTanks
             if (tacticalMovementPurpose == TacticalMovementPurpose.PeekToFire &&
                 State == CombatAiState.Hold)
             {
-                if (!IsTargetVisible(target) || Time.time >= tacticalDecisionExpiresAt)
+                bool reacquisitionExpired = !IsTargetVisible(target) &&
+                                            Time.time >= peekReachedAt + 1.2f;
+                if (reacquisitionExpired || Time.time >= tacticalDecisionExpiresAt)
                 {
                     BeginReturnToCover();
                 }
                 return;
             }
             RequestProactiveCoverWhenExposed();
+            if (coverRequested && ResolveShotBeforeCover())
+            {
+                return;
+            }
             if (coverRequested && Time.time >= nextCoverDecisionTime && TryBeginCoverMovement())
             {
                 return;
@@ -318,7 +341,7 @@ namespace LocalTanks
                 UpdateArmorFacing(primaryThreatDirection);
                 bool minimumHoldComplete = Time.time >= coverReachedAt +
                                            tacticalBehaviorProfile.MinimumCoverHoldSeconds;
-                if (minimumHoldComplete && IsTargetVisible(target) &&
+                if (minimumHoldComplete && target != null && target.IsAlive && hasRememberedTarget &&
                     weapon != null && weapon.ReloadProgress >= tacticalBehaviorProfile.PeekReloadThreshold &&
                     TryBeginPeekFromCover())
                 {
@@ -332,7 +355,9 @@ namespace LocalTanks
 
                 ClearTacticalTask("Ожидание в укрытии завершено");
                 holdingTacticalCover = false;
-                State = IsTargetVisible(target) ? CombatAiState.Engage : CombatAiState.Advance;
+                bool visibleAfterCover = IsTargetVisible(target);
+                State = visibleAfterCover ? CombatAiState.Engage : CombatAiState.Advance;
+                if (!visibleAfterCover) StartCurrentRoutePoint();
             }
             bool targetVisible = IsTargetVisible(target);
             if (!targetVisible)
@@ -353,6 +378,7 @@ namespace LocalTanks
                         lastTacticalPositionResult = "Манёвр отменён после смены цели";
                     }
                     hasFiringPositionSolution = false;
+                    firingLineClearSince = -1f;
                     targetLockedUntil = Time.time + CombatAiPolicy.TargetLockSeconds;
                     aimingBlockedSince = -1f;
                 }
@@ -361,21 +387,37 @@ namespace LocalTanks
                 lastTargetVisibleTime = Time.time;
                 hasRememberedTarget = true;
                 investigationDestinationSet = false;
-                if (State == CombatAiState.Reposition && navigation != null)
+                if (State == CombatAiState.Reposition && navigation != null &&
+                    tacticalMovementPurpose == TacticalMovementPurpose.GainFiringLine)
                 {
                     currentLineOfFire = EvaluateLineOfFireAssessment(selected);
                     if (currentLineOfFire.IsClear)
                     {
-                        hasFiringPositionSolution = false;
-                        ClearTacticalTask("Прострел получен");
-                        lastTacticalPositionResult = "Прострел получен";
-                    }
-                    else if (Time.time < repositionExpiresAt && !navigation.DestinationReached)
-                    {
-                        return;
+                        if (firingLineClearSince < 0f) firingLineClearSince = Time.time;
+                        if (CombatAiPolicy.ShouldCompleteFiringLineManeuver(
+                                true,
+                                navigation.DestinationReached,
+                                firingLineClearSince,
+                                Time.time))
+                        {
+                            hasFiringPositionSolution = false;
+                            nextRepositionTime = Time.time + CombatAiPolicy.FiringLineRetryCooldownSeconds;
+                            ClearTacticalTask("Устойчивый прострел получен");
+                            lastTacticalPositionResult = "Устойчивый прострел получен";
+                        }
+                        else
+                        {
+                            return;
+                        }
                     }
                     else
                     {
+                        firingLineClearSince = -1f;
+                        if (Time.time < repositionExpiresAt && !navigation.DestinationReached)
+                        {
+                            return;
+                        }
+
                         RememberFailedFiringPosition();
                     }
                 }
@@ -468,6 +510,7 @@ namespace LocalTanks
                     tacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat ||
                     tacticalMovementPurpose == TacticalMovementPurpose.PeekToFire)
                 {
+                    MaintainArmorFacingDuringDefensiveMovement(targetPosition);
                     return;
                 }
                 if (CurrentFireBlockReason == FireBlockReason.None && weapon.TryFire())
@@ -480,12 +523,22 @@ namespace LocalTanks
 
             if (distance > preferredDistance * 1.12f)
             {
-                navigation?.ClearFacingDirection();
-                navigation?.SetPaused(false);
-                if (navigation != null &&
-                    (!navigation.HasDestination || Vector2.Distance(navigation.Destination, targetPosition) > DestinationRefreshDistance))
+                Vector2 targetDirection = (targetPosition - (Vector2)transform.position).normalized;
+                float targetRelativeAngle = Vector2.SignedAngle(transform.up, targetDirection);
+                if (CombatAiPolicy.ShouldAlignHullBeforeAdvancing(targetRelativeAngle))
                 {
-                    navigation.SetDestination(targetPosition);
+                    navigation?.SetPaused(true);
+                    UpdateArmorFacing(targetDirection);
+                }
+                else
+                {
+                    navigation?.ClearFacingDirection();
+                    navigation?.SetPaused(false);
+                    if (navigation != null &&
+                        (!navigation.HasDestination || Vector2.Distance(navigation.Destination, targetPosition) > DestinationRefreshDistance))
+                    {
+                        navigation.SetDestination(targetPosition);
+                    }
                 }
             }
             else
@@ -685,10 +738,19 @@ namespace LocalTanks
                 candidate => IsFiringPositionAvailable(candidate) &&
                              EvaluateLineOfFireFrom(candidate, target).IsClear,
                 IsFailedFiringPosition,
+                path => TacticalFiringPositionPlanner.ThreatExposurePenalty(
+                    path,
+                    targetPosition - (Vector2)transform.position,
+                    MaximumReverseFiringLinePathLength),
                 out TacticalFiringPositionSolution solution);
 
             nextRepositionTime = Time.time + (found ? 1.2f : 2.5f);
-            if (!found || !navigation.SetDestination(solution.Position))
+            bool reverse = found && TacticalFiringPositionPlanner.ShouldApproachInReverse(
+                solution,
+                targetPosition - (Vector2)transform.position,
+                member.Definition.maxReverseSpeed,
+                MaximumReverseFiringLinePathLength);
+            if (!found || !navigation.SetDestination(solution.Position, navigation.ClearanceCells, reverse))
             {
                 hasFiringPositionSolution = false;
                 ClearTacticalTask("Огневая позиция не найдена");
@@ -701,6 +763,7 @@ namespace LocalTanks
             }
 
             investigationDestinationSet = false;
+            firingLineClearSince = -1f;
             firingPositionSolution = solution;
             hasFiringPositionSolution = true;
             repositionDestination = solution.Position;
@@ -732,6 +795,14 @@ namespace LocalTanks
             }
 
             Vector2 destination = candidate.transform.position;
+            return EvaluateLineOfFireFromPosition(origin, destination, candidate.transform);
+        }
+
+        private LineOfFireAssessment EvaluateLineOfFireFromPosition(
+            Vector2 origin,
+            Vector2 destination,
+            Transform intendedTarget)
+        {
             Vector2 direction = (destination - origin).normalized;
             Vector2 projectedMuzzle = origin + direction * 0.35f;
             return CombatLineOfFire.Evaluate(
@@ -739,7 +810,7 @@ namespace LocalTanks
                 member.Team,
                 projectedMuzzle,
                 destination,
-                candidate.transform);
+                intendedTarget);
         }
 
         private bool IsFailedFiringPosition(Vector2Int cell)
@@ -777,10 +848,12 @@ namespace LocalTanks
             }
 
             failedFiringPositions[firingPositionSolution.Cell] = Time.time + FailedPositionMemorySeconds;
+            nextRepositionTime = Time.time + CombatAiPolicy.FiringLineRetryCooldownSeconds;
             lastTacticalPositionResult = navigation != null && navigation.DestinationReached
                 ? "Выбранная позиция достигнута, но прострел не появился"
                 : "Манёвр не завершён в расчётное время";
             hasFiringPositionSolution = false;
+            firingLineClearSince = -1f;
             ClearTacticalTask(lastTacticalPositionResult);
         }
 
@@ -839,13 +912,63 @@ namespace LocalTanks
 
             if (!IsTargetVisible(target) || weapon.IsReady) return;
             LineOfFireAssessment exposure = EvaluateLineOfFireAssessment(target);
+            float healthRatio = health != null && health.MaximumHitPoints > 0
+                ? (float)health.CurrentHitPoints / health.MaximumHitPoints
+                : 1f;
+            bool recentlyDamaged = Time.time - lastPenetratingHitTime <= RecentPenetrationDangerSeconds;
             if (tacticalBehaviorProfile.ShouldSeekCoverWhileReloading(
                     weapon.ReloadProgress,
                     exposure.IsClear,
-                    false))
+                    false,
+                    recentlyDamaged,
+                    healthRatio))
             {
                 RequestCover("Перезарядка под видимой угрозой", TacticalDecisionPriority.UseCover);
             }
+        }
+
+        private bool ResolveShotBeforeCover()
+        {
+            if (!coverRequested || weapon == null || target == null || health == null) return false;
+            bool visible = IsTargetVisible(target);
+            LineOfFireAssessment line = visible ? EvaluateLineOfFireAssessment(target) : default;
+            float healthRatio = health.MaximumHitPoints > 0
+                ? (float)health.CurrentHitPoints / health.MaximumHitPoints
+                : 0f;
+            bool criticalSurvival = coverRequestPriority == TacticalDecisionPriority.SurviveCrossfire ||
+                                    threatAnalysis.IsCrossfire;
+            if (!TacticalDecisionArbiter.ShouldFireBeforeCover(
+                    weapon.IsReady,
+                    visible,
+                    visible && line.IsClear,
+                    criticalSurvival,
+                    healthRatio))
+            {
+                coverShotOpportunityUntil = float.NegativeInfinity;
+                return false;
+            }
+
+            float distance = Vector2.Distance(transform.position, target.transform.position);
+            CurrentFireBlockReason = EvaluateFirePermission(target, distance);
+            if (CurrentFireBlockReason == FireBlockReason.None && weapon.TryFire())
+            {
+                coverShotOpportunityUntil = float.NegativeInfinity;
+                tacticalDecisionReason = "Выстрел перед началом защитного отхода";
+                return true;
+            }
+
+            if (CurrentFireBlockReason != FireBlockReason.Aiming)
+            {
+                coverShotOpportunityUntil = float.NegativeInfinity;
+                return false;
+            }
+
+            if (float.IsNegativeInfinity(coverShotOpportunityUntil))
+            {
+                coverShotOpportunityUntil = Time.time + 0.8f;
+            }
+            navigation?.SetPaused(true);
+            return Time.time < coverShotOpportunityUntil;
         }
 
         private void RequestCover(string reason, TacticalDecisionPriority priority)
@@ -880,8 +1003,12 @@ namespace LocalTanks
                 return true;
             }
 
+            float arrivalTolerance = tacticalMovementPurpose == TacticalMovementPurpose.PeekToFire &&
+                                     navigation.Map != null
+                ? Mathf.Max(0.55f, navigation.Map.CellSize * 1.5f)
+                : 0.55f;
             bool reached = navigation.DestinationReached ||
-                           Vector2.Distance(transform.position, expectedPosition) <= 0.55f ||
+                           Vector2.Distance(transform.position, expectedPosition) <= arrivalTolerance ||
                            tacticallyProtectedArrival;
             TacticalMovementPurpose completedPurpose = tacticalMovementPurpose;
             TacticalDecisionPriority completedPriority = tacticalDecisionPriority;
@@ -907,11 +1034,13 @@ namespace LocalTanks
             }
 
             navigation.SetPaused(true);
+            navigation.ClearDestination();
             UpdateArmorFacing(primaryThreatDirection);
             State = CombatAiState.Hold;
             if (completedPurpose == TacticalMovementPurpose.PeekToFire)
             {
                 holdingTacticalCover = false;
+                peekReachedAt = Time.time;
                 SetTacticalTask(
                     TacticalMovementPurpose.PeekToFire,
                     completedPriority,
@@ -946,6 +1075,7 @@ namespace LocalTanks
                 ? TacticalDecisionPriority.UseCover
                 : coverRequestPriority;
             coverRequested = false;
+            coverShotOpportunityUntil = float.NegativeInfinity;
             coverRequestReason = string.Empty;
             coverRequestPriority = TacticalDecisionPriority.None;
             nextCoverDecisionTime = Time.time + 3f;
@@ -963,8 +1093,17 @@ namespace LocalTanks
                 IsFiringPositionAvailable(candidate) &&
                 TacticalCoverReservations.IsAvailable(
                     navigation.Map.WorldToCell(candidate), ownerId, Time.time);
-            Func<Vector2, bool> canFireFrom = IsTargetVisible(target)
-                ? candidate => EvaluateLineOfFireFrom(candidate, target).IsClear
+            TeamMember coverTarget = IsTargetVisible(target) ? target : SelectBestVisibleTarget();
+            if (coverTarget != null && coverTarget != target)
+            {
+                target = coverTarget;
+                lastKnownTargetPosition = coverTarget.transform.position;
+                lastTargetVisibleTime = Time.time;
+                hasRememberedTarget = true;
+                targetLockedUntil = Time.time + CombatAiPolicy.TargetLockSeconds;
+            }
+            Func<Vector2, bool> canFireFrom = coverTarget != null
+                ? candidate => EvaluateLineOfFireFrom(candidate, coverTarget).IsClear
                 : null;
             bool found = TryPlanCover(
                 origin,
@@ -1027,9 +1166,9 @@ namespace LocalTanks
             coverFiringPosition = solution.FiringPosition;
             coverValidUntil = Time.time + 24f;
             repositionDestination = solution.Position;
-            float speed = reverseRetreat
-                ? Mathf.Max(0.2f, member.Definition.maxReverseSpeed * 0.4f)
-                : Mathf.Max(0.35f, member.Definition.maxForwardSpeed * 0.35f);
+            float speed = Mathf.Max(0.2f, Mathf.Min(
+                member.Definition.maxReverseSpeed * 0.4f,
+                member.Definition.maxForwardSpeed * 0.35f));
             repositionExpiresAt = Time.time + Mathf.Clamp(solution.PathLength / speed + 8f, 10f, 38f);
             TacticalMovementPurpose purpose = reverseRetreat
                 ? TacticalMovementPurpose.DefensiveRetreat
@@ -1060,18 +1199,20 @@ namespace LocalTanks
                 candidate => IsProtectedFromThreat(threatOrigin, candidate),
                 isAvailable,
                 canFireFrom,
+                path => TacticalCoverPlanner.ThreatExposurePenalty(
+                    path,
+                    primaryThreatDirection,
+                    MaximumReverseCoverPathLength),
                 out solution);
         }
 
         private bool ShouldReverseToCover(TacticalCoverSolution solution)
         {
-            if (member?.Definition == null || solution.PathLength > 4.5f ||
-                member.Definition.maxReverseSpeed <= 0.05f || primaryThreatDirection.sqrMagnitude <= 0.001f)
-            {
-                return false;
-            }
-
-            return Vector2.Dot(transform.up, primaryThreatDirection.normalized) > 0.15f;
+            return member?.Definition != null && TacticalCoverPlanner.ShouldApproachInReverse(
+                solution,
+                primaryThreatDirection,
+                member.Definition.maxReverseSpeed,
+                MaximumReverseCoverPathLength);
         }
 
         private bool IsProtectedFromThreat(Vector2 threatOrigin, Vector2 candidate)
@@ -1104,12 +1245,15 @@ namespace LocalTanks
         private bool TryBeginPeekFromCover()
         {
             if (!hasCoverPosition || !hasCoverFiringPosition || navigation == null ||
-                Time.time >= coverValidUntil || !IsTargetVisible(target))
+                Time.time >= coverValidUntil || target == null || !target.IsAlive || !hasRememberedTarget)
             {
                 return false;
             }
 
-            if (!EvaluateLineOfFireFrom(coverFiringPosition, target).IsClear)
+            if (!EvaluateLineOfFireFromPosition(
+                    coverFiringPosition,
+                    lastKnownTargetPosition,
+                    target.transform).IsClear)
             {
                 hasCoverFiringPosition = false;
                 lastTacticalPositionResult = "Огневая точка больше не имеет прострела";
@@ -1126,9 +1270,9 @@ namespace LocalTanks
             repositionDestination = coverFiringPosition;
             float speed = Mathf.Max(0.35f, member.Definition.maxForwardSpeed * 0.45f);
             repositionExpiresAt = Time.time + Mathf.Clamp(
-                coverSolution.FiringPathLength / speed + 3f,
-                3f,
-                10f);
+                coverSolution.FiringPathLength / speed + 8f,
+                8f,
+                18f);
             TacticalDecisionPriority cyclePriority = tacticalDecisionPriority == TacticalDecisionPriority.None
                 ? TacticalDecisionPriority.UseCover
                 : tacticalDecisionPriority;
@@ -1157,7 +1301,7 @@ namespace LocalTanks
                 return;
             }
 
-            if (afterShot && hasCoverFiringPosition)
+            if (afterShot)
             {
                 completedCoverCycleShots++;
             }
@@ -1231,6 +1375,40 @@ namespace LocalTanks
             navigation.SetFacingDirection(desired);
         }
 
+        private void MaintainArmorFacingDuringDefensiveMovement(Vector2 targetPosition)
+        {
+            if (navigation == null) return;
+            if (motor == null || Mathf.Abs(motor.CurrentSpeed) <= 0.35f)
+            {
+                defensiveRearExposureSince = float.NegativeInfinity;
+                return;
+            }
+            Vector2 targetDirection = targetPosition - (Vector2)transform.position;
+            if (targetDirection.sqrMagnitude <= 0.001f) return;
+            float targetRelativeAngle = Mathf.Abs(Vector2.SignedAngle(
+                transform.up,
+                targetDirection.normalized));
+            if (targetRelativeAngle < DefensiveRearDangerAngle)
+            {
+                defensiveRearExposureSince = float.NegativeInfinity;
+                return;
+            }
+            if (float.IsNegativeInfinity(defensiveRearExposureSince))
+            {
+                defensiveRearExposureSince = Time.time;
+                return;
+            }
+            if (Time.time - defensiveRearExposureSince < 2.2f) return;
+
+            AbandonCover(
+                $"Защитный маршрут отменён: угроза за кормой {targetRelativeAngle:0}°, " +
+                $"скорость {motor.CurrentSpeed:0.00} м/с");
+            State = CombatAiState.Engage;
+            navigation.SetPaused(true);
+            UpdateArmorFacing(targetDirection.normalized);
+            defensiveRearExposureSince = float.NegativeInfinity;
+        }
+
         private int StableDecisionSeed()
         {
             string entityId = identity?.Identity?.entityId;
@@ -1251,6 +1429,10 @@ namespace LocalTanks
             float healthRatio = health.MaximumHitPoints > 0
                 ? (float)health.CurrentHitPoints / health.MaximumHitPoints
                 : 0f;
+            if (observation.Outcome == ImpactOutcome.Penetrated)
+            {
+                lastPenetratingHitTime = Time.time;
+            }
             if (observation.Outcome == ImpactOutcome.Penetrated &&
                 (tacticalBehaviorProfile.CoverPreference >= 0.45f || healthRatio < 0.65f) &&
                 Time.time >= nextCoverDecisionTime)
@@ -1288,12 +1470,16 @@ namespace LocalTanks
 
         private void ClearTacticalTask(string reason)
         {
+            navigation?.ClearDestination();
             tacticalMovementPurpose = TacticalMovementPurpose.None;
             tacticalDecisionPriority = TacticalDecisionPriority.None;
             tacticalDecisionReason = string.IsNullOrWhiteSpace(reason)
                 ? "Нет активной тактической задачи"
                 : reason;
             tacticalDecisionExpiresAt = 0f;
+            firingLineClearSince = -1f;
+            defensiveRearExposureSince = float.NegativeInfinity;
+            peekReachedAt = float.NegativeInfinity;
             navigation?.ClearFacingDirection();
         }
 
