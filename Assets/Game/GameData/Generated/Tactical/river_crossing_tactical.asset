@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TacticalMapDescriptorAsset
   descriptor:
     analyzerVersion: 1
-    sourceHash: d8f85d4106eddfab8a32475943bdf6dcd7acecc9b0a16e05feeedefb8db48b1f
+    sourceHash: edd84603b76e2fa117a17bc8122a409355834b62828ec2d1191d70e202e3dd79
     mapId: river_crossing
     sceneId: Battle_RiverCrossing
     displayName: "\u041F\u0435\u0440\u0435\u043F\u0440\u0430\u0432\u0430"
@@ -92,14 +92,14 @@ MonoBehaviour:
       - {x: 63, y: 23}
       - {x: 64, y: 22}
       lengthWorld: 50.205856
-      averageWidthWorld: 14.4
+      averageWidthWorld: 15.75
       averageNavigationCost: 1.024138
       hardCoverDensity: 0.14925818
       vegetationDensity: 0.31377783
       concealmentDensity: 0.16939284
-      averageSightlineWorld: 23.647503
+      averageSightlineWorld: 23.859634
       maximumSightlineWorld: 31.819805
-      chokePointCount: 2
+      chokePointCount: 0
       hasMandatoryCrossing: 1
       terrainShares:
       - terrainKind: Grass
@@ -107,11 +107,11 @@ MonoBehaviour:
       - terrainKind: Road
         share: 0.8965517
       suitability:
-        lightTank: 0.763775
-        mediumTank: 0.72236496
-        heavyTank: 0.5557571
-        tankDestroyer: 0.5698236
-        artillery: 0.72521025
+        lightTank: 0.78126067
+        mediumTank: 0.73985064
+        heavyTank: 0.38838333
+        tankDestroyer: 0.57872707
+        artillery: 0.7480315
       connections:
       - targetLaneId: lane_center
         fromCell: {x: 18, y: 29}
@@ -189,14 +189,14 @@ MonoBehaviour:
       - {x: 63, y: 22}
       - {x: 64, y: 22}
       lengthWorld: 42.75
-      averageWidthWorld: 15.4125
+      averageWidthWorld: 16.725
       averageNavigationCost: 1.0413793
       hardCoverDensity: 0.26781067
       vegetationDensity: 0
       concealmentDensity: 0
       averageSightlineWorld: 22.5
       maximumSightlineWorld: 22.5
-      chokePointCount: 1
+      chokePointCount: 0
       hasMandatoryCrossing: 1
       terrainShares:
       - terrainKind: Grass
@@ -204,11 +204,11 @@ MonoBehaviour:
       - terrainKind: Road
         share: 0.82758623
       suitability:
-        lightTank: 0.6834821
-        mediumTank: 0.8008638
-        heavyTank: 0.60962033
-        tankDestroyer: 0.43632185
-        artillery: 0.66127324
+        lightTank: 0.6991071
+        mediumTank: 0.8164888
+        heavyTank: 0.526287
+        tankDestroyer: 0.44257185
+        artillery: 0.68002325
       connections:
       - targetLaneId: lane_north
         fromCell: {x: 18, y: 22}
@@ -271,7 +271,7 @@ MonoBehaviour:
       - {x: 48, y: 10}
       - {x: 49, y: 11}
       - {x: 50, y: 11}
-      - {x: 51, y: 11}
+      - {x: 51, y: 12}
       - {x: 52, y: 12}
       - {x: 53, y: 12}
       - {x: 54, y: 12}
@@ -286,14 +286,14 @@ MonoBehaviour:
       - {x: 63, y: 21}
       - {x: 64, y: 22}
       lengthWorld: 50.205856
-      averageWidthWorld: 15.15
+      averageWidthWorld: 16.575
       averageNavigationCost: 1.024138
       hardCoverDensity: 0.14304323
       vegetationDensity: 0.42006636
       concealmentDensity: 0.35776886
-      averageSightlineWorld: 24.037846
+      averageSightlineWorld: 24.249979
       maximumSightlineWorld: 31.819805
-      chokePointCount: 2
+      chokePointCount: 0
       hasMandatoryCrossing: 1
       terrainShares:
       - terrainKind: Grass
@@ -301,11 +301,11 @@ MonoBehaviour:
       - terrainKind: Road
         share: 0.8965517
       suitability:
-        lightTank: 0.8694939
-        mediumTank: 0.73001146
-        heavyTank: 0.54746413
-        tankDestroyer: 0.76399446
-        artillery: 0.74553776
+        lightTank: 0.8878724
+        mediumTank: 0.74839
+        heavyTank: 0.3800904
+        tankDestroyer: 0.7732551
+        artillery: 0.76943046
       connections:
       - targetLaneId: lane_center
         fromCell: {x: 18, y: 15}

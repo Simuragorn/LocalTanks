@@ -41,7 +41,8 @@ namespace LocalTanks
             CurrentTerrain = map.GetTerrain(cell);
             motor.SetTerrainModifiers(
                 map.GetSpeedMultiplier(cell),
-                map.GetAccelerationMultiplier(cell));
+                map.GetAccelerationMultiplier(cell),
+                CurrentTerrain == TerrainKind.ShallowWater ? 8f : 1f);
         }
     }
 }

@@ -417,6 +417,36 @@ namespace LocalTanks.Tests
             Assert.That(map, Is.Not.Null);
             Assert.That(map.Width, Is.EqualTo(72));
             Assert.That(map.Height, Is.EqualTo(44));
+            Vector2Int riverEdge = new Vector2Int(34, 1);
+            Vector2Int riverCore = new Vector2Int(35, 1);
+            Assert.That(map.GetTerrain(riverEdge), Is.EqualTo(TerrainKind.ShallowWater));
+            Assert.That(map.IsBlocked(riverEdge), Is.False);
+            Assert.That(map.GetSpeedMultiplier(riverEdge), Is.EqualTo(0.05f).Within(0.001f));
+            Assert.That(map.GetAccelerationMultiplier(riverEdge), Is.EqualTo(0.05f).Within(0.001f));
+            Assert.That(map.IsBlocked(riverCore), Is.True);
+            TeamMember riverPlayerMember = Object.FindObjectsByType<TeamMember>()
+                .Single(member => member.IsPlayerControlled);
+            TankMotor riverPlayerMotor = riverPlayerMember.GetComponent<TankMotor>();
+            TerrainMotorModifier riverPlayerTerrain = riverPlayerMember.GetComponent<TerrainMotorModifier>();
+            Vector3 originalPlayerPosition = riverPlayerMember.transform.position;
+            riverPlayerMember.transform.position = map.CellToWorld(riverEdge);
+            yield return new WaitForFixedUpdate();
+            Assert.That(riverPlayerTerrain.CurrentTerrain, Is.EqualTo(TerrainKind.ShallowWater));
+            Assert.That(riverPlayerMotor.TerrainResistanceMultiplier, Is.EqualTo(8f));
+            riverPlayerMember.transform.position = originalPlayerPosition;
+            Physics2D.SyncTransforms();
+            LineOfFireResult riverShot = LineOfFireProbe.Evaluate(
+                riverPlayerMember.transform,
+                map.CellToWorld(new Vector2Int(30, 1)),
+                map.CellToWorld(new Vector2Int(40, 1)));
+            Assert.That(riverShot.IsBlocked, Is.False);
+            LineOfFireAssessment botRiverShot = CombatLineOfFire.Evaluate(
+                riverPlayerMember.transform,
+                TeamId.TeamA,
+                map.CellToWorld(new Vector2Int(30, 1)),
+                map.CellToWorld(new Vector2Int(40, 1)),
+                null);
+            Assert.That(botRiverShot.IsClear, Is.True);
             Assert.That(GameObject.Find("Base_A"), Is.Not.Null);
             Assert.That(GameObject.Find("Base_B"), Is.Not.Null);
             Assert.That(GameObject.Find("NorthStoneBridge"), Is.Not.Null);

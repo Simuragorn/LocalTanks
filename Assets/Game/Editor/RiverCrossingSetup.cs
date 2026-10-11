@@ -1005,7 +1005,8 @@ namespace LocalTanks.Editor
                 case 'm':
                 case 'c': return "Mud";
                 case 'w': return "ShallowWater";
-                case '~': return "DeepWater";
+                case '~':
+                case 'D': return "DeepWater";
                 default: return "Grass";
             }
         }

@@ -12,10 +12,12 @@ namespace LocalTanks
         private float turnInput;
         private float terrainSpeedMultiplier = 1f;
         private float terrainAccelerationMultiplier = 1f;
+        private float terrainResistanceMultiplier = 1f;
 
         public float CurrentSpeed { get; private set; }
         public float TerrainSpeedMultiplier => terrainSpeedMultiplier;
         public float TerrainAccelerationMultiplier => terrainAccelerationMultiplier;
+        public float TerrainResistanceMultiplier => terrainResistanceMultiplier;
 
         private void Awake()
         {
@@ -33,10 +35,14 @@ namespace LocalTanks
             turnInput = Mathf.Clamp(turn, -1f, 1f);
         }
 
-        public void SetTerrainModifiers(float speedMultiplier, float accelerationMultiplier)
+        public void SetTerrainModifiers(
+            float speedMultiplier,
+            float accelerationMultiplier,
+            float resistanceMultiplier = 1f)
         {
             terrainSpeedMultiplier = Mathf.Clamp(speedMultiplier, 0.05f, 2f);
             terrainAccelerationMultiplier = Mathf.Clamp(accelerationMultiplier, 0.05f, 2f);
+            terrainResistanceMultiplier = Mathf.Clamp(resistanceMultiplier, 0.1f, 10f);
         }
 
         public void StopImmediately()
@@ -68,8 +74,8 @@ namespace LocalTanks
                 CurrentSpeed,
                 targetSpeed,
                 config.acceleration * terrainAccelerationMultiplier,
-                config.groundResistance * terrainAccelerationMultiplier,
-                config.braking * terrainAccelerationMultiplier,
+                config.groundResistance * terrainResistanceMultiplier,
+                config.braking * terrainResistanceMultiplier,
                 deltaTime);
 
             float steeringInput = TankMotionMath.SteeringInput(turnInput, CurrentSpeed);
