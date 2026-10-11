@@ -5,7 +5,6 @@ using System.Linq;
 using LocalTanks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityEditor.U2D.Sprites;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
@@ -19,11 +18,11 @@ namespace LocalTanks.Editor
         private const string ScenePath = "Assets/Game/Scenes/Battle_RiverCrossing.unity";
         private const string DuelScenePath = "Assets/Game/Scenes/Battle_AiDuelLab.unity";
         private const string PlayerTestScenePath = "Assets/Game/Scenes/Battle_PlayerAiTestLab.unity";
-        private const string AtlasPath = "Assets/Game/Art/Environment/RiverCrossing/environment_atlas.png";
         private const string GeneratedRoot = "Assets/Game/Generated/RiverCrossing";
         private const string TilesRoot = GeneratedRoot + "/Tiles";
         private const string LineMaterialPath = GeneratedRoot + "/MapLine.mat";
         private const string ShapeTexturePath = GeneratedRoot + "/WhiteSquare.png";
+        private const string CircleTexturePath = GeneratedRoot + "/WhiteCircle.png";
         private const string PreviewPath = "Docs/Media/RiverCrossing.png";
         private const string VisionRulesPath = GeneratedRoot + "/VisionRules.asset";
         private const string CaptureRulesPath = GeneratedRoot + "/CaptureRules.asset";
@@ -31,14 +30,6 @@ namespace LocalTanks.Editor
         private const string BattleHudUxmlPath = "Assets/Game/UI/BattleHud.uxml";
         private const string BattleHudUssPath = "Assets/Game/UI/BattleHud.uss";
         private const string ClassIconsRoot = "Assets/Game/Generated/UI/VehicleClasses";
-
-        private static readonly string[] AtlasSpriteNames =
-        {
-            "BroadleafTrees", "PineTrees", "BushCluster", "Hedge",
-            "Farmhouse", "Workshop", "RuinedHouse", "Barn",
-            "StoneWall", "WoodenFence", "Rubble", "Crater",
-            "DirtPatch", "Reeds", "MeadowGrass", "Boulders"
-        };
 
         private static readonly string[] TankPrefabPaths =
         {
@@ -79,8 +70,6 @@ namespace LocalTanks.Editor
             EnsureFolder(TilesRoot);
             EnsureFolder("Assets/Game/Generated/UI");
             EnsureFolder(ClassIconsRoot);
-            PrimitiveEnvironmentAtlasGenerator.Generate(AtlasPath, AtlasSpriteNames.Length);
-            ConfigureEnvironmentAtlas();
             GenerateVehicleClassIcons();
             CaptureRules captureRules = GetOrCreateCaptureRules();
             BattleScenario battleScenario = BattleScenarioImporter.Reimport();
@@ -304,60 +293,6 @@ namespace LocalTanks.Editor
             return source;
         }
 
-        private static void ConfigureEnvironmentAtlas()
-        {
-            TextureImporter importer = AssetImporter.GetAtPath(AtlasPath) as TextureImporter;
-            if (importer == null)
-            {
-                throw new FileNotFoundException("Environment atlas was not found.", AtlasPath);
-            }
-
-            importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Multiple;
-            importer.spritePixelsPerUnit = 155f;
-            importer.alphaIsTransparency = true;
-            importer.mipmapEnabled = false;
-            importer.filterMode = FilterMode.Bilinear;
-            importer.textureCompression = TextureImporterCompression.CompressedHQ;
-            importer.SaveAndReimport();
-
-            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(AtlasPath);
-            SpriteDataProviderFactories factories = new SpriteDataProviderFactories();
-            factories.Init();
-            ISpriteEditorDataProvider provider = factories.GetSpriteEditorDataProviderFromObject(importer);
-            provider.InitSpriteEditorDataProvider();
-            Dictionary<string, GUID> existingIds = provider.GetSpriteRects()
-                .ToDictionary(rect => rect.name, rect => rect.spriteID);
-
-            SpriteRect[] rects = new SpriteRect[AtlasSpriteNames.Length];
-            for (int index = 0; index < AtlasSpriteNames.Length; index++)
-            {
-                int rowFromTop = index / 4;
-                int column = index % 4;
-                int left = Mathf.RoundToInt(column * texture.width / 4f);
-                int right = Mathf.RoundToInt((column + 1) * texture.width / 4f);
-                int bottom = Mathf.RoundToInt((3 - rowFromTop) * texture.height / 4f);
-                int top = Mathf.RoundToInt((4 - rowFromTop) * texture.height / 4f);
-                string spriteName = AtlasSpriteNames[index];
-                rects[index] = new SpriteRect
-                {
-                    name = spriteName,
-                    rect = new Rect(left, bottom, right - left, top - bottom),
-                    alignment = SpriteAlignment.Center,
-                    pivot = new Vector2(0.5f, 0.5f),
-                    spriteID = existingIds.TryGetValue(spriteName, out GUID id) ? id : GUID.Generate()
-                };
-            }
-
-            provider.SetSpriteRects(rects);
-            ISpriteNameFileIdDataProvider names = provider.GetDataProvider<ISpriteNameFileIdDataProvider>();
-            names?.SetNameFileIdPairs(rects
-                .Select(rect => new SpriteNameFileIdPair(rect.name, rect.spriteID))
-                .ToList());
-            provider.Apply();
-            importer.SaveAndReimport();
-        }
-
         private static TerrainLookup BuildTerrainLookup(MapSource source)
         {
             Dictionary<char, TerrainSource> definitions = source.terrains.ToDictionary(item => item.symbol[0]);
@@ -400,7 +335,9 @@ namespace LocalTanks.Editor
             gridObject.transform.position = MapOrigin(source);
 
             Tilemap ground = CreateTilemapLayer(gridObject.transform, "Ground", -20, false, true);
-            Tilemap blockers = CreateTilemapLayer(gridObject.transform, "NavigationBlockers", -19, true, false);
+            Tilemap hardBlockers = CreateTilemapLayer(gridObject.transform, "HardObstacleColliders", -19, true, false);
+            Tilemap navigationOnlyBlockers = CreateTilemapLayer(gridObject.transform, "NavigationOnlyBlockers", -19, true, false);
+            navigationOnlyBlockers.gameObject.AddComponent<FirePassThroughObstacle>();
             Tilemap visionBlockers = CreateTilemapLayer(gridObject.transform, "VisionBlockers", -18, true, false);
             TilemapCollider2D visionCollider = visionBlockers.GetComponent<TilemapCollider2D>();
             visionCollider.isTrigger = true;
@@ -415,7 +352,8 @@ namespace LocalTanks.Editor
                     ground.SetTile(cell, lookup.GroundTiles[GroundTileName(symbol)]);
                     if (lookup.Definitions[symbol].blocked)
                     {
-                        blockers.SetTile(cell, lookup.BlockerTile);
+                        if (IsHardObstacleSymbol(symbol)) hardBlockers.SetTile(cell, lookup.BlockerTile);
+                        else navigationOnlyBlockers.SetTile(cell, lookup.BlockerTile);
                     }
 
                     if (IsVisionBlockingSymbol(symbol))
@@ -483,15 +421,8 @@ namespace LocalTanks.Editor
 
         private static void CreateEnvironment(MapSource source, NavigationMap map, CaptureRules captureRules)
         {
-            Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(AtlasPath)
-                .OfType<Sprite>()
-                .ToDictionary(sprite => sprite.name, sprite => sprite);
-            if (AtlasSpriteNames.Any(name => !sprites.ContainsKey(name)))
-            {
-                throw new InvalidOperationException("Environment atlas was not sliced into all expected sprites.");
-            }
-
             GameObject environment = new GameObject("Environment");
+            CreateHardObstaclePrimitives(source, map, environment.transform);
             for (int sourceRow = 0; sourceRow < source.height; sourceRow++)
             {
                 int y = source.height - 1 - sourceRow;
@@ -501,33 +432,12 @@ namespace LocalTanks.Editor
                     Vector2 position = map.CellToWorld(new Vector2Int(x, y));
                     switch (symbol)
                     {
-                        case '.':
-                            int detailHash = Math.Abs(x * 92821 ^ y * 68917);
-                            if (detailHash % 97 == 0)
-                            {
-                                PlaceSprite(environment.transform, $"Meadow_{x}_{y}", sprites["MeadowGrass"], position, -15, x, y, 1.10f, 0.32f);
-                            }
-                            else if (detailHash % 173 == 0)
-                            {
-                                PlaceSprite(environment.transform, $"DirtPatch_{x}_{y}", sprites["DirtPatch"], position, -14, x, y, 0.82f, 0.30f);
-                            }
-                            break;
-                        case 'T': PlaceSprite(environment.transform, $"Broadleaf_{x}_{y}", sprites["BroadleafTrees"], position, 4, x, y, 0.90f, 0.28f); break;
-                        case 'P': PlaceSprite(environment.transform, $"Pines_{x}_{y}", sprites["PineTrees"], position, 4, x, y, 0.92f, 0.26f); break;
-                        case 'b': CreateConcealment(environment.transform, $"Bush_{x}_{y}", sprites["BushCluster"], position, 3, x, y, 0.64f, 0.35f, 0.18f); break;
-                        case 'R': CreateConcealment(environment.transform, $"Reeds_{x}_{y}", sprites["Reeds"], position, 2, x, y, 0.66f, 0.27f, 0.08f); break;
-                        case 'c': PlaceSprite(environment.transform, $"Crater_{x}_{y}", sprites["Crater"], position, -8, x, y, 0.66f, 0.30f); break;
-                        case 'r': PlaceSprite(environment.transform, $"Rubble_{x}_{y}", sprites["Rubble"], position, 2, x, y, 0.72f, 0.28f); break;
-                        case 's': PlaceSprite(environment.transform, $"Wall_{x}_{y}", sprites["StoneWall"], position, 2, x, 0, 0.78f, 0.15f); break;
-                        case '1': PlaceSprite(environment.transform, $"Farmhouse_{x}_{y}", sprites["Farmhouse"], position, 2, x, 0, 0.96f, 0.12f); break;
-                        case '2': PlaceSprite(environment.transform, $"Workshop_{x}_{y}", sprites["Workshop"], position, 2, x, 0, 1.06f, 0.12f); break;
-                        case '3': PlaceSprite(environment.transform, $"RuinedHouse_{x}_{y}", sprites["RuinedHouse"], position, 2, x, 0, 0.88f, 0.16f); break;
-                        case '4': PlaceSprite(environment.transform, $"Barn_{x}_{y}", sprites["Barn"], position, 2, x, 0, 1.18f, 0.12f); break;
+                        case 'b': CreateConcealmentPrimitive(environment.transform, $"Bush_{x}_{y}", position, source.cellSize, x, y, 0.18f); break;
+                        case 'R': CreateConcealmentPrimitive(environment.transform, $"Bush_{x}_{y}", position, source.cellSize, x, y, 0.08f); break;
                     }
                 }
             }
 
-            CreateBoundaryVegetation(source, map, environment.transform, sprites);
             CreateBridge(environment.transform, map.CellToWorld(new Vector2Int(35, 35)), "NorthStoneBridge", new Color(0.38f, 0.34f, 0.28f), 2.1f);
             CreateBridge(environment.transform, map.CellToWorld(new Vector2Int(35, 22)), "CentralStoneBridge", new Color(0.40f, 0.36f, 0.31f), 2.4f);
             CreateBridge(environment.transform, map.CellToWorld(new Vector2Int(35, 9)), "SouthWoodBridge", new Color(0.43f, 0.29f, 0.16f), 2.1f);
@@ -538,69 +448,65 @@ namespace LocalTanks.Editor
             CreateBase("Base_B", "B", "База B", TeamId.TeamB, baseB, TeamPalette.Enemy, captureRules);
         }
 
-        private static void CreateBoundaryVegetation(
-            MapSource source,
-            NavigationMap map,
-            Transform parent,
-            IReadOnlyDictionary<string, Sprite> sprites)
+        private static void CreateHardObstaclePrimitives(MapSource source, NavigationMap map, Transform parent)
         {
-            for (int x = 2; x < source.width - 2; x += 4)
+            Sprite sprite = GetShapeSprite();
+            for (int sourceRow = 0; sourceRow < source.height; sourceRow++)
             {
-                string spriteName = x % 8 == 2 ? "BroadleafTrees" : "PineTrees";
-                PlaceSprite(parent, $"BorderNorth_{x}", sprites[spriteName], map.CellToWorld(new Vector2Int(x, source.height - 1)), 4, x, 1, 0.88f, 0.25f);
-                PlaceSprite(parent, $"BorderSouth_{x}", sprites[spriteName], map.CellToWorld(new Vector2Int(x, 0)), 4, x, 2, 0.88f, 0.25f);
-            }
-
-            for (int y = 4; y < source.height - 3; y += 4)
-            {
-                string spriteName = y % 8 == 0 ? "PineTrees" : "BroadleafTrees";
-                PlaceSprite(parent, $"BorderWest_{y}", sprites[spriteName], map.CellToWorld(new Vector2Int(0, y)), 4, 1, y, 0.88f, 0.25f);
-                PlaceSprite(parent, $"BorderEast_{y}", sprites[spriteName], map.CellToWorld(new Vector2Int(source.width - 1, y)), 4, 2, y, 0.88f, 0.25f);
+                int y = source.height - 1 - sourceRow;
+                int runStart = -1;
+                for (int x = 0; x <= source.width; x++)
+                {
+                    bool hardObstacle = x < source.width && IsHardObstacleSymbol(source.rows[sourceRow][x]);
+                    if (hardObstacle && runStart < 0)
+                    {
+                        runStart = x;
+                    }
+                    else if (!hardObstacle && runStart >= 0)
+                    {
+                        int runLength = x - runStart;
+                        Vector2 first = map.CellToWorld(new Vector2Int(runStart, y));
+                        Vector2 last = map.CellToWorld(new Vector2Int(x - 1, y));
+                        GameObject visual = CreateShape(
+                            parent,
+                            $"HardObstacle_{runStart}_{y}_{runLength}",
+                            (first + last) * 0.5f,
+                            new Vector2(runLength * source.cellSize * 0.96f, source.cellSize * 0.90f),
+                            MapPrimitiveVisual.HardObstacleColor,
+                            2,
+                            sprite);
+                        visual.AddComponent<MapPrimitiveVisual>().Configure(MapPrimitiveKind.HardObstacle);
+                        runStart = -1;
+                    }
+                }
             }
         }
 
-        private static GameObject PlaceSprite(
+        private static void CreateConcealmentPrimitive(
             Transform parent,
             string name,
-            Sprite sprite,
             Vector2 position,
-            int sortingOrder,
+            float cellSize,
             int seedX,
             int seedY,
-            float baseScale,
-            float scaleVariation = 0.08f)
-        {
-            GameObject item = new GameObject(name);
-            item.transform.SetParent(parent, false);
-            item.transform.position = position;
-            int hash = Math.Abs(seedX * 73856093 ^ seedY * 19349663);
-            item.transform.rotation = Quaternion.Euler(0f, 0f, (hash % 4) * 90f);
-            float scaleAmount = (hash % 1000) / 999f;
-            float scale = baseScale * Mathf.Lerp(1f - scaleVariation, 1f + scaleVariation, scaleAmount);
-            item.transform.localScale = Vector3.one * scale;
-            SpriteRenderer renderer = item.AddComponent<SpriteRenderer>();
-            renderer.sprite = sprite;
-            renderer.sortingOrder = sortingOrder;
-            return item;
-        }
-
-        private static void CreateConcealment(
-            Transform parent,
-            string name,
-            Sprite sprite,
-            Vector2 position,
-            int sortingOrder,
-            int seedX,
-            int seedY,
-            float baseScale,
-            float scaleVariation,
             float bonus)
         {
-            GameObject item = PlaceSprite(parent, name, sprite, position, sortingOrder, seedX, seedY, baseScale, scaleVariation);
-            BoxCollider2D collider = item.AddComponent<BoxCollider2D>();
+            int hash = Math.Abs(seedX * 73856093 ^ seedY * 19349663);
+            float diameter = cellSize * Mathf.Lerp(1.05f, 1.45f, (hash % 1000) / 999f);
+            Sprite sprite = GetCircleSprite();
+            GameObject item = CreateShape(
+                parent,
+                name,
+                position,
+                Vector2.one * diameter,
+                MapPrimitiveVisual.ConcealmentColor,
+                3,
+                sprite);
+            CircleCollider2D collider = item.AddComponent<CircleCollider2D>();
             collider.isTrigger = true;
-            collider.size = new Vector2(0.9f, 0.9f);
+            collider.radius = sprite.bounds.extents.x * 0.92f;
             item.AddComponent<ConcealmentZone>().Configure(bonus);
+            item.AddComponent<MapPrimitiveVisual>().Configure(MapPrimitiveKind.Concealment);
         }
 
         private static void CreateBridge(Transform parent, Vector2 position, string name, Color color, float height)
@@ -1111,6 +1017,13 @@ namespace LocalTanks.Editor
                    symbol == 's' || symbol == 'r';
         }
 
+        private static bool IsHardObstacleSymbol(char symbol)
+        {
+            return symbol == '#' || symbol == 'x' || symbol == 'T' || symbol == 'P' ||
+                   symbol == '1' || symbol == '2' || symbol == '3' || symbol == '4' ||
+                   symbol == 's' || symbol == 'r';
+        }
+
         private static Vector2Int FindCell(MapSource source, char symbol)
         {
             for (int sourceRow = 0; sourceRow < source.height; sourceRow++)
@@ -1165,6 +1078,47 @@ namespace LocalTanks.Editor
                 throw new InvalidOperationException("Generated square sprite could not be loaded.");
             }
 
+            return sprite;
+        }
+
+        private static Sprite GetCircleSprite()
+        {
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(CircleTexturePath);
+            if (sprite != null) return sprite;
+
+            const int size = 64;
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color32[] pixels = new Color32[size * size];
+            Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+            float radius = size * 0.48f;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    pixels[y * size + x] = Vector2.Distance(new Vector2(x, y), center) <= radius
+                        ? new Color32(255, 255, 255, 255)
+                        : new Color32(255, 255, 255, 0);
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            File.WriteAllBytes(Path.GetFullPath(CircleTexturePath), texture.EncodeToPNG());
+            UnityEngine.Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(CircleTexturePath, ImportAssetOptions.ForceSynchronousImport);
+
+            TextureImporter importer = AssetImporter.GetAtPath(CircleTexturePath) as TextureImporter;
+            if (importer == null) throw new InvalidOperationException("Generated circle texture could not be imported.");
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = size;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.SaveAndReimport();
+            sprite = AssetDatabase.LoadAssetAtPath<Sprite>(CircleTexturePath);
+            if (sprite == null) throw new InvalidOperationException("Generated circle sprite could not be loaded.");
             return sprite;
         }
 

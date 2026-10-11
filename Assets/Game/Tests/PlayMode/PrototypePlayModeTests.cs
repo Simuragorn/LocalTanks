@@ -422,8 +422,25 @@ namespace LocalTanks.Tests
             Assert.That(GameObject.Find("NorthStoneBridge"), Is.Not.Null);
             Assert.That(GameObject.Find("CentralStoneBridge"), Is.Not.Null);
             Assert.That(GameObject.Find("SouthWoodBridge"), Is.Not.Null);
-            Assert.That(GameObject.Find("Farmhouse_27_27"), Is.Not.Null);
-            Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(3));
+            MapPrimitiveVisual[] mapVisuals = Object.FindObjectsByType<MapPrimitiveVisual>();
+            MapPrimitiveVisual[] hardObstacles = mapVisuals
+                .Where(item => item.Kind == MapPrimitiveKind.HardObstacle)
+                .ToArray();
+            MapPrimitiveVisual[] bushes = mapVisuals
+                .Where(item => item.Kind == MapPrimitiveKind.Concealment)
+                .ToArray();
+            Assert.That(hardObstacles, Is.Not.Empty);
+            Assert.That(bushes, Is.Not.Empty);
+            Assert.That(hardObstacles, Has.All.Matches<MapPrimitiveVisual>(item =>
+                item.GetComponent<SpriteRenderer>() != null &&
+                Vector4.Distance(item.GetComponent<SpriteRenderer>().color, MapPrimitiveVisual.HardObstacleColor) < 0.001f));
+            Assert.That(bushes, Has.All.Matches<MapPrimitiveVisual>(item =>
+                item.GetComponent<CircleCollider2D>() != null &&
+                item.GetComponent<SpriteRenderer>() != null &&
+                Vector4.Distance(item.GetComponent<SpriteRenderer>().color, MapPrimitiveVisual.ConcealmentColor) < 0.001f));
+            Assert.That(GameObject.Find("Farmhouse_27_27"), Is.Null);
+            Assert.That(Object.FindObjectsByType<Tilemap>().Length, Is.EqualTo(4));
+            Assert.That(GameObject.Find("NavigationOnlyBlockers").GetComponent<FirePassThroughObstacle>(), Is.Not.Null);
             Assert.That(agents.Length, Is.EqualTo(BattleScenario.TeamSize * 2 - 1));
             foreach (NavigationAgent navigationAgent in agents)
             {
@@ -1343,6 +1360,12 @@ namespace LocalTanks.Tests
 
             NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
             DestructibleObstacle wall = Object.FindAnyObjectByType<DestructibleObstacle>();
+            MapPrimitiveVisual wallVisual = wall.GetComponent<MapPrimitiveVisual>();
+            Assert.That(wallVisual, Is.Not.Null);
+            Assert.That(wallVisual.Kind, Is.EqualTo(MapPrimitiveKind.DestructibleObstacle));
+            Assert.That(Vector4.Distance(
+                wall.GetComponentInChildren<SpriteRenderer>().color,
+                MapPrimitiveVisual.DestructibleObstacleColor), Is.LessThan(0.001f));
             Vector2Int start = new Vector2Int(19, 4);
             Vector2Int destination = new Vector2Int(19, 19);
             var closedPath = map.FindCellPath(start, destination);

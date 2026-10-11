@@ -84,6 +84,7 @@ namespace LocalTanks
             {
                 if (hit.collider == null ||
                     hit.collider.isTrigger ||
+                    hit.collider.GetComponentInParent<FirePassThroughObstacle>() != null ||
                     hit.collider == temporarilyIgnoredCollider ||
                     IsOwnedCollider(hit.collider.transform))
                 {

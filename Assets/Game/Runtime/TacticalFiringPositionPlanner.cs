@@ -78,6 +78,7 @@ namespace LocalTanks
             foreach (RaycastHit2D hit in hits)
             {
                 if (hit.collider == null || hit.collider.isTrigger ||
+                    hit.collider.GetComponentInParent<FirePassThroughObstacle>() != null ||
                     BelongsTo(hit.collider.transform, ownerRoot))
                 {
                     continue;

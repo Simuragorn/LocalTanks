@@ -37,7 +37,9 @@ namespace LocalTanks
             float nearestDistance = float.PositiveInfinity;
             foreach (RaycastHit2D hit in Physics2D.RaycastAll(origin, delta / distance, distance))
             {
-                if (hit.collider == null || hit.collider.isTrigger || BelongsTo(hit.collider.transform, ownerRoot))
+                if (hit.collider == null || hit.collider.isTrigger ||
+                    hit.collider.GetComponentInParent<FirePassThroughObstacle>() != null ||
+                    BelongsTo(hit.collider.transform, ownerRoot))
                 {
                     continue;
                 }
