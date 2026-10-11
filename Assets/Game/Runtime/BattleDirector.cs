@@ -55,6 +55,17 @@ namespace LocalTanks
         public int TeamAAlive { get; private set; }
         public int TeamBAlive { get; private set; }
         public IReadOnlyDictionary<string, BotIdentity> BotIdentities => botIdentities;
+        public IReadOnlyList<TankDefinition> SpawnableTankDefinitions => (combatDatabase?.tanks ?? Array.Empty<TankDefinition>())
+            .Where(item => item != null && item.availableInGame && CanSpawnTank(item.id))
+            .OrderBy(item => item.tier)
+            .ThenBy(item => item.displayName, StringComparer.Ordinal)
+            .ToArray();
+
+        public bool CanSpawnTank(string tankId)
+        {
+            return !string.IsNullOrWhiteSpace(tankId) && tankPrefabs != null &&
+                   tankPrefabs.Any(item => item != null && item.tankId == tankId && item.prefab != null);
+        }
 
         public void OverrideScenario(BattleScenario battleScenario)
         {
@@ -125,10 +136,15 @@ namespace LocalTanks
             {
                 StrategicPlanner = GetComponent<BattleStrategicPlanner>();
                 if (StrategicPlanner == null) StrategicPlanner = gameObject.AddComponent<BattleStrategicPlanner>();
-                StrategicPlanner.Configure(TacticalMap, scenario, combatDatabase, botIdentities);
+                StrategicPlanner.Configure(
+                    TacticalMap,
+                    scenario,
+                    combatDatabase,
+                    botIdentities,
+                    observeLocalRuntime: scenario.UsesRemoteStrategy);
                 StrategicCoordinator = GetComponent<BotStrategicCoordinator>();
                 if (StrategicCoordinator == null) StrategicCoordinator = gameObject.AddComponent<BotStrategicCoordinator>();
-                StrategicCoordinator.Configure(this, StrategicPlanner);
+                StrategicCoordinator.Configure(this, StrategicPlanner, scenario.UsesRemoteStrategy);
             }
             DiagnosticsOverlay = GetComponent<BattleDiagnosticsOverlay>();
             if (DiagnosticsOverlay == null) DiagnosticsOverlay = gameObject.AddComponent<BattleDiagnosticsOverlay>();

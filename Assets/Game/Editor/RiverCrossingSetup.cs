@@ -18,6 +18,7 @@ namespace LocalTanks.Editor
         private const string SourcePath = "Assets/Game/GameData/Maps/river_crossing.json";
         private const string ScenePath = "Assets/Game/Scenes/Battle_RiverCrossing.unity";
         private const string DuelScenePath = "Assets/Game/Scenes/Battle_AiDuelLab.unity";
+        private const string PlayerTestScenePath = "Assets/Game/Scenes/Battle_PlayerAiTestLab.unity";
         private const string AtlasPath = "Assets/Game/Art/Environment/RiverCrossing/environment_atlas.png";
         private const string GeneratedRoot = "Assets/Game/Generated/RiverCrossing";
         private const string TilesRoot = GeneratedRoot + "/Tiles";
@@ -113,6 +114,7 @@ namespace LocalTanks.Editor
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 BuildAiDuelLabScene(scene);
+                BuildPlayerAiTestLabScene(scene);
                 EnsureSceneInBuildSettings();
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
@@ -161,6 +163,32 @@ namespace LocalTanks.Editor
             {
                 if (duelScene.IsValid() && duelScene.isLoaded)
                     EditorSceneManager.CloseScene(duelScene, true);
+            }
+        }
+
+        private static void BuildPlayerAiTestLabScene(Scene sourceScene)
+        {
+            EditorSceneManager.SaveScene(sourceScene, PlayerTestScenePath, true);
+            Scene testScene = EditorSceneManager.OpenScene(PlayerTestScenePath, OpenSceneMode.Additive);
+            try
+            {
+                BattleDirector director = FindInScene<BattleDirector>(testScene);
+                if (director == null)
+                    throw new InvalidOperationException("Copied Player AI Test Lab scene has no BattleDirector.");
+
+                RiverCrossingInstructions instructions = FindInScene<RiverCrossingInstructions>(testScene);
+                if (instructions != null) UnityEngine.Object.DestroyImmediate(instructions.gameObject);
+                GameObject controllerObject = new GameObject("PlayerAiTestLabController");
+                SceneManager.MoveGameObjectToScene(controllerObject, testScene);
+                controllerObject.AddComponent<PlayerAiTestLabController>().Configure(director);
+
+                EditorSceneManager.MarkSceneDirty(testScene);
+                EditorSceneManager.SaveScene(testScene, PlayerTestScenePath);
+            }
+            finally
+            {
+                if (testScene.IsValid() && testScene.isLoaded)
+                    EditorSceneManager.CloseScene(testScene, true);
             }
         }
 
@@ -1155,7 +1183,7 @@ namespace LocalTanks.Editor
         private static void EnsureSceneInBuildSettings()
         {
             List<EditorBuildSettingsScene> scenes = EditorBuildSettings.scenes.ToList();
-            foreach (string path in new[] { ScenePath, DuelScenePath })
+            foreach (string path in new[] { ScenePath, DuelScenePath, PlayerTestScenePath })
             {
                 if (scenes.All(item => item.path != path))
                     scenes.Add(new EditorBuildSettingsScene(path, true));

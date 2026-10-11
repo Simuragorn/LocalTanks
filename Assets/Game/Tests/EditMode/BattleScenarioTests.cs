@@ -1,8 +1,11 @@
+using System;
+using System.IO;
 using System.Linq;
 using LocalTanks.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace LocalTanks.Tests
 {
@@ -131,6 +134,157 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void PlayerAiTestLabScenarioFactory_CreatesDeterministicTierFilteredNationalTeams()
+        {
+            TankDefinition playerTank = CreateTank("player_tank", TankNation.USSR, 5);
+            TankDefinition alliedTierOne = CreateTank("ally_tier_one", TankNation.USSR, 1);
+            TankDefinition enemyTierOneA = CreateTank("enemy_tier_one_a", TankNation.Germany, 1);
+            TankDefinition enemyTierOneB = CreateTank("enemy_tier_one_b", TankNation.Germany, 1);
+            TankDefinition wrongTier = CreateTank("wrong_tier", TankNation.Germany, 2);
+            CombatDatabase database = ScriptableObject.CreateInstance<CombatDatabase>();
+            database.tanks = new[] { playerTank, alliedTierOne, enemyTierOneA, enemyTierOneB, wrongTier };
+            GameObject directorObject = new GameObject("Director");
+            BattleDirector director = directorObject.AddComponent<BattleDirector>();
+            GameObject[] prefabs = database.tanks.Select(item => new GameObject(item.id + "_Prefab")).ToArray();
+            director.Configure(
+                null,
+                database,
+                null,
+                null,
+                null,
+                null,
+                database.tanks.Select((item, index) => new TankPrefabBinding
+                {
+                    tankId = item.id,
+                    prefab = prefabs[index]
+                }).ToArray(),
+                null,
+                null);
+            BattleScenario template = CreateFullTemplate();
+            PlayerAiTestLabSettings settings = new PlayerAiTestLabSettings
+            {
+                playerTankId = playerTank.id,
+                alliedBotCount = 2,
+                enemyBotCount = 3,
+                botTier = 1,
+                seed = 4127
+            };
+
+            BattleScenario first = PlayerAiTestLabScenarioFactory.Create(director, template, settings);
+            BattleScenario second = PlayerAiTestLabScenarioFactory.Create(director, template, settings);
+
+            Assert.That(first.Validate(database), Is.Empty);
+            Assert.That(first.kind, Is.EqualTo(BattleScenarioKind.PlayerAiTestLab));
+            Assert.That(first.entries.Count(item => item.team == TeamId.TeamA), Is.EqualTo(3));
+            Assert.That(first.entries.Count(item => item.team == TeamId.TeamB), Is.EqualTo(3));
+            Assert.That(first.entries.Single(item => item.playerControlled).tankId, Is.EqualTo(playerTank.id));
+            Assert.That(first.entries.Where(item => !item.playerControlled)
+                .All(item => database.FindTank(item.tankId).tier == 1), Is.True);
+            Assert.That(first.entries.Where(item => item.team == TeamId.TeamA)
+                .Select(item => database.FindTank(item.tankId).nation).Distinct(),
+                Is.EqualTo(new[] { TankNation.USSR }));
+            Assert.That(first.entries.Where(item => item.team == TeamId.TeamB)
+                .Select(item => database.FindTank(item.tankId).nation).Distinct(),
+                Is.EqualTo(new[] { TankNation.Germany }));
+            Assert.That(first.entries.Select(item => item.tankId),
+                Is.EqualTo(second.entries.Select(item => item.tankId)));
+
+            Object.DestroyImmediate(first);
+            Object.DestroyImmediate(second);
+            Object.DestroyImmediate(template);
+            Object.DestroyImmediate(directorObject);
+            foreach (GameObject prefab in prefabs) Object.DestroyImmediate(prefab);
+            Object.DestroyImmediate(database);
+            foreach (TankDefinition definition in new[]
+                     { playerTank, alliedTierOne, enemyTierOneA, enemyTierOneB, wrongTier })
+                Object.DestroyImmediate(definition);
+        }
+
+        [Test]
+        public void PlayerAiTestLabScenarioFactory_ExplainsMissingAlliedTier()
+        {
+            TankDefinition playerTank = CreateTank("player_tank", TankNation.USSR, 5);
+            TankDefinition germanTierOne = CreateTank("german_tier_one", TankNation.Germany, 1);
+            CombatDatabase database = ScriptableObject.CreateInstance<CombatDatabase>();
+            database.tanks = new[] { playerTank, germanTierOne };
+            GameObject directorObject = new GameObject("Director");
+            BattleDirector director = directorObject.AddComponent<BattleDirector>();
+            GameObject playerPrefab = new GameObject("PlayerPrefab");
+            GameObject germanPrefab = new GameObject("GermanPrefab");
+            director.Configure(null, database, null, null, null, null, new[]
+            {
+                new TankPrefabBinding { tankId = playerTank.id, prefab = playerPrefab },
+                new TankPrefabBinding { tankId = germanTierOne.id, prefab = germanPrefab }
+            }, null, null);
+            BattleScenario template = CreateFullTemplate();
+            PlayerAiTestLabSettings settings = new PlayerAiTestLabSettings
+            {
+                playerTankId = playerTank.id,
+                alliedBotCount = 1,
+                enemyBotCount = 1,
+                botTier = 1,
+                seed = 1
+            };
+
+            string[] errors = PlayerAiTestLabScenarioFactory.Validate(director, template, settings);
+
+            Assert.That(errors.Any(item => item.Contains("Для союзников нет доступной техники")), Is.True);
+            Object.DestroyImmediate(template);
+            Object.DestroyImmediate(directorObject);
+            Object.DestroyImmediate(playerPrefab);
+            Object.DestroyImmediate(germanPrefab);
+            Object.DestroyImmediate(database);
+            Object.DestroyImmediate(playerTank);
+            Object.DestroyImmediate(germanTierOne);
+        }
+
+        [Test]
+        public void PlayerAiTestBattleReportStore_WritesAnalysisBundleAndLatestPointer()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "LocalTanks_ReportStore_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                PlayerAiTestBattleReport report = new PlayerAiTestBattleReport
+                {
+                    sessionId = "test:session",
+                    outcome = "PlayerTeamVictory",
+                    durationSeconds = 42f,
+                    seed = 17,
+                    playerTankId = "ms_1",
+                    botTier = 1,
+                    alliedBotCount = 1,
+                    enemyBotCount = 2,
+                    playerComment = "Бот долго показывал корму."
+                };
+                PlayerAiTestTelemetrySample sample = new PlayerAiTestTelemetrySample
+                {
+                    time = 1f,
+                    entityId = "enemy_bot_01",
+                    aiState = "Engage"
+                };
+
+                string directory = PlayerAiTestBattleReportStore.Save(
+                    report,
+                    new[] { sample },
+                    "# audit",
+                    "# transitions",
+                    root);
+
+                Assert.That(File.Exists(Path.Combine(directory, "report.json")), Is.True);
+                Assert.That(File.Exists(Path.Combine(directory, "telemetry.jsonl")), Is.True);
+                Assert.That(File.Exists(Path.Combine(directory, "ai_audit.md")), Is.True);
+                Assert.That(File.Exists(Path.Combine(directory, "transitions.md")), Is.True);
+                Assert.That(File.ReadAllText(Path.Combine(directory, "analysis_brief.md")),
+                    Does.Contain(report.playerComment));
+                Assert.That(File.ReadAllText(Path.Combine(root, "latest_report_path.txt")), Is.EqualTo(directory));
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        [Test]
         public void CombatAiPolicy_PrefersClearCurrentDamagedTarget()
         {
             float preferred = CombatAiPolicy.ScoreTarget(3f, 10f, 0.2f, 10f, true, true);
@@ -197,6 +351,43 @@ namespace LocalTanks.Tests
             Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(2f, 3f, 50f, 100f), Is.False);
             Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(4f, 3f, 50f, 59f), Is.False);
             Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(4f, 3f, 50f, 60f), Is.True);
+        }
+
+        private static TankDefinition CreateTank(string id, TankNation nation, int tier)
+        {
+            TankDefinition tank = ScriptableObject.CreateInstance<TankDefinition>();
+            tank.id = id;
+            tank.displayName = id;
+            tank.nation = nation;
+            tank.tier = tier;
+            tank.availableInGame = true;
+            return tank;
+        }
+
+        private static BattleScenario CreateFullTemplate()
+        {
+            BattleScenario scenario = ScriptableObject.CreateInstance<BattleScenario>();
+            scenario.id = "template";
+            scenario.sceneId = "river_crossing";
+            scenario.kind = BattleScenarioKind.StandardBattle;
+            scenario.entries = Enumerable.Range(0, BattleScenario.TeamSize * 2).Select(index =>
+            {
+                bool teamA = index < BattleScenario.TeamSize;
+                int teamIndex = index % BattleScenario.TeamSize;
+                return new BattleScenarioEntry
+                {
+                    id = $"template_{index}",
+                    tankId = "unused",
+                    team = teamA ? TeamId.TeamA : TeamId.TeamB,
+                    playerControlled = teamA && teamIndex == 0,
+                    baseId = teamA ? "A" : "B",
+                    spawnSlot = new[] { 7, 5, 9, 3, 11, 1, 13 }[teamIndex],
+                    lane = teamIndex < 2 ? BattleLane.North : teamIndex < 5 ? BattleLane.Center : BattleLane.South,
+                    role = CombatAiRole.Support,
+                    routeCells = new[] { new Vector2Int(teamIndex, 0), new Vector2Int(teamIndex, 1) }
+                };
+            }).ToArray();
+            return scenario;
         }
     }
 }

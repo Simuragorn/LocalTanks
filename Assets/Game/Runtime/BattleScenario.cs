@@ -8,7 +8,8 @@ namespace LocalTanks
     public enum BattleScenarioKind
     {
         StandardBattle,
-        AiDuelLab
+        AiDuelLab,
+        PlayerAiTestLab
     }
 
     public enum BattleLane
@@ -51,6 +52,7 @@ namespace LocalTanks
 
         public int ExpectedTeamSize => kind == BattleScenarioKind.AiDuelLab ? 1 : TeamSize;
         public int RequiredPlayerCount => kind == BattleScenarioKind.AiDuelLab ? 0 : 1;
+        public bool UsesRemoteStrategy => kind == BattleScenarioKind.StandardBattle;
 
         public string[] Validate(CombatDatabase database)
         {
@@ -58,10 +60,22 @@ namespace LocalTanks
             BattleScenarioEntry[] roster = entries ?? Array.Empty<BattleScenarioEntry>();
             if (string.IsNullOrWhiteSpace(id)) errors.Add("Scenario id is empty.");
             if (string.IsNullOrWhiteSpace(sceneId)) errors.Add("Scenario sceneId is empty.");
-            if (roster.Count(item => item != null && item.team == TeamId.TeamA) != ExpectedTeamSize)
-                errors.Add($"Scenario must contain exactly {ExpectedTeamSize} Team A entries.");
-            if (roster.Count(item => item != null && item.team == TeamId.TeamB) != ExpectedTeamSize)
-                errors.Add($"Scenario must contain exactly {ExpectedTeamSize} Team B entries.");
+            int teamACount = roster.Count(item => item != null && item.team == TeamId.TeamA);
+            int teamBCount = roster.Count(item => item != null && item.team == TeamId.TeamB);
+            if (kind == BattleScenarioKind.PlayerAiTestLab)
+            {
+                if (teamACount < 1 || teamACount > TeamSize)
+                    errors.Add($"Player AI Test Lab needs 1-{TeamSize} Team A entries.");
+                if (teamBCount < 1 || teamBCount > TeamSize)
+                    errors.Add($"Player AI Test Lab needs 1-{TeamSize} Team B entries.");
+            }
+            else
+            {
+                if (teamACount != ExpectedTeamSize)
+                    errors.Add($"Scenario must contain exactly {ExpectedTeamSize} Team A entries.");
+                if (teamBCount != ExpectedTeamSize)
+                    errors.Add($"Scenario must contain exactly {ExpectedTeamSize} Team B entries.");
+            }
             if (roster.Count(item => item != null && item.playerControlled) != RequiredPlayerCount)
                 errors.Add($"Scenario must contain exactly {RequiredPlayerCount} player-controlled entries.");
 
@@ -112,7 +126,7 @@ namespace LocalTanks
                 if (nations.Length > 1)
                     errors.Add($"{team} must contain tanks from exactly one nation.");
 
-                if (kind == BattleScenarioKind.AiDuelLab)
+                if (kind != BattleScenarioKind.StandardBattle)
                 {
                     continue;
                 }

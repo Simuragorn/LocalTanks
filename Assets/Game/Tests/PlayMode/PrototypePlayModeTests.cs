@@ -118,6 +118,43 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator PlayerAiTestLab_WaitsForSelectionThenSpawnsConfiguredTierFilteredBattle()
+        {
+            PlayerAiTestLabSettings settings = PlayerAiTestLabController.CurrentSettings;
+            settings.playerTankId = "ms_1";
+            settings.alliedBotCount = 1;
+            settings.enemyBotCount = 2;
+            settings.botTier = 1;
+            settings.seed = 9231;
+            SceneManager.LoadScene("Battle_PlayerAiTestLab");
+            yield return null;
+            yield return null;
+
+            PlayerAiTestLabController lab = Object.FindAnyObjectByType<PlayerAiTestLabController>();
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            Assert.That(lab, Is.Not.Null);
+            Assert.That(director, Is.Not.Null);
+            Assert.That(lab.IsBattleStarted, Is.False);
+            Assert.That(director.SpawnedMembers, Is.Empty);
+
+            lab.StartBattle();
+            yield return null;
+
+            Assert.That(lab.IsBattleStarted, Is.True);
+            Assert.That(director.Scenario.kind, Is.EqualTo(BattleScenarioKind.PlayerAiTestLab));
+            Assert.That(director.SpawnedMembers, Has.Count.EqualTo(4));
+            Assert.That(director.SpawnedMembers.Count(item => item.Team == TeamId.TeamA), Is.EqualTo(2));
+            Assert.That(director.SpawnedMembers.Count(item => item.Team == TeamId.TeamB), Is.EqualTo(2));
+            Assert.That(director.SpawnedMembers.Count(item => item.IsPlayerControlled), Is.EqualTo(1));
+            Assert.That(director.PlayerMember.Definition.id, Is.EqualTo("ms_1"));
+            Assert.That(director.SpawnedMembers.Where(item => !item.IsPlayerControlled)
+                .All(item => item.Definition.tier == 1), Is.True);
+            Assert.That(director.StrategicPlanner, Is.Not.Null);
+            Assert.That(director.StrategicPlanner.Diagnostics.providerName, Is.EqualTo("Deterministic"));
+            Assert.That(director.StrategicCoordinator, Is.Not.Null);
+        }
+
+        [UnityTest]
         public IEnumerator BattleTestRange_LoadsPlayerAndCamera()
         {
             SceneManager.LoadScene("Battle_TestRange");

@@ -49,7 +49,10 @@ namespace LocalTanks
         public bool InitialDecisionsFinished => initialBatchStarted && initialCompleted >= brains.Count && !processing && queue.Count == 0;
         public int PendingCount => queue.Count + (processing ? 1 : 0);
 
-        public void Configure(BattleDirector battleDirector, BattleStrategicPlanner strategicPlanner)
+        public void Configure(
+            BattleDirector battleDirector,
+            BattleStrategicPlanner strategicPlanner,
+            bool observeLocalRuntime = true)
         {
             director = battleDirector ?? throw new ArgumentNullException(nameof(battleDirector));
             planner = strategicPlanner ?? throw new ArgumentNullException(nameof(strategicPlanner));
@@ -82,7 +85,7 @@ namespace LocalTanks
             {
                 if (captureBase != null) captureBase.Changed += OnBaseChanged;
             }
-            ObserveRuntime(LocalLlmRuntime.Instance);
+            if (observeLocalRuntime) ObserveRuntime(LocalLlmRuntime.Instance);
         }
 
         public void RunInitialDecisionsWithProvider(ILocalLlmProvider decisionProvider)

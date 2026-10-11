@@ -56,7 +56,8 @@ namespace LocalTanks
             BattleScenario battleScenario,
             CombatDatabase combatDefinitions,
             IReadOnlyDictionary<string, BotIdentity> botIdentities,
-            ILocalLlmProvider provider = null)
+            ILocalLlmProvider provider = null,
+            bool observeLocalRuntime = true)
         {
             descriptor = tacticalDescriptor ?? throw new ArgumentNullException(nameof(tacticalDescriptor));
             scenario = battleScenario ?? throw new ArgumentNullException(nameof(battleScenario));
@@ -76,7 +77,7 @@ namespace LocalTanks
                 return;
             }
 
-            ObserveRuntime(LocalLlmRuntime.Instance);
+            if (observeLocalRuntime) ObserveRuntime(LocalLlmRuntime.Instance);
         }
 
         public void RunWithProvider(ILocalLlmProvider provider)
