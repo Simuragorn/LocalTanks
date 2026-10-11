@@ -184,6 +184,12 @@ namespace LocalTanks
         public string targetId;
         public bool targetVisible;
         public string fireBlockReason;
+        public float targetDistance;
+        public float turretAimErrorDegrees;
+        public float targetBearingRateDegrees;
+        public string lineBlockType;
+        public string lineBlockerId;
+        public bool lineBlockerDestroyed;
         public bool hasPath;
         public bool movingInReverse;
     }
@@ -214,7 +220,7 @@ namespace LocalTanks
     [Serializable]
     public sealed class PlayerAiTestBattleReport
     {
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
         public string sessionId;
         public string startedUtc;
         public string completedUtc;
@@ -446,6 +452,10 @@ namespace LocalTanks
                 NavigationAgent navigation = member.GetComponent<NavigationAgent>();
                 TankMotor motor = member.GetComponent<TankMotor>();
                 TeamMember target = ai != null ? ai.CurrentTarget : null;
+                LineOfFireAssessment line = ai != null ? ai.CurrentLineOfFire : default;
+                TeamMember lineBlocker = line.Blocker != null
+                    ? line.Blocker.GetComponentInParent<TeamMember>()
+                    : null;
                 BotIdentityComponent identity = member.GetComponent<BotIdentityComponent>();
                 samples.Add(new PlayerAiTestTelemetrySample
                 {
@@ -469,6 +479,12 @@ namespace LocalTanks
                     targetVisible = ai != null && target != null &&
                                     director.VisionSystem.IsVisibleTo(member.Team, target),
                     fireBlockReason = ai != null ? ai.CurrentFireBlockReason.ToString() : string.Empty,
+                    targetDistance = ai != null && target != null ? ai.CurrentTargetDistance : -1f,
+                    turretAimErrorDegrees = ai != null ? ai.TurretAimErrorDegrees : 0f,
+                    targetBearingRateDegrees = ai != null ? ai.TargetBearingRateDegrees : 0f,
+                    lineBlockType = ai != null ? line.BlockType.ToString() : string.Empty,
+                    lineBlockerId = lineBlocker != null ? director.GetEntityId(lineBlocker) : string.Empty,
+                    lineBlockerDestroyed = lineBlocker != null && !lineBlocker.IsAlive,
                     hasPath = navigation != null && navigation.HasPath,
                     movingInReverse = navigation != null && navigation.MovingInReverse
                 });

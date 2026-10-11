@@ -286,6 +286,7 @@ namespace LocalTanks
                 case TacticalMovementPurpose.PeekToFire: return "выезжает из укрытия для выстрела";
                 case TacticalMovementPurpose.ReturnToCover: return "возвращается в укрытие";
                 case TacticalMovementPurpose.DefensiveRetreat: return "отступает под защиту укрытия";
+                case TacticalMovementPurpose.BreakCloseOrbit: return "разрывает ближний круговой бой";
             }
 
             switch (ai.State)

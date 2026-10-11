@@ -9,6 +9,7 @@ namespace LocalTanks
         None,
         Ally,
         Enemy,
+        Wreck,
         DestructibleObstacle,
         HardObstacle
     }
@@ -59,6 +60,13 @@ namespace LocalTanks
 
     public static class CombatLineOfFire
     {
+        public static bool IsProtectiveCover(LineOfFireBlockType blockType)
+        {
+            return blockType == LineOfFireBlockType.Wreck ||
+                   blockType == LineOfFireBlockType.DestructibleObstacle ||
+                   blockType == LineOfFireBlockType.HardObstacle;
+        }
+
         public static LineOfFireAssessment Evaluate(
             Transform ownerRoot,
             TeamId ownerTeam,
@@ -92,6 +100,18 @@ namespace LocalTanks
                 TeamMember hitMember = hit.collider.GetComponentInParent<TeamMember>();
                 if (hitMember != null)
                 {
+                    if (!hitMember.IsAlive)
+                    {
+                        return new LineOfFireAssessment(
+                            FireBlockReason.ObstacleInLine,
+                            LineOfFireBlockType.Wreck,
+                            hit.collider,
+                            hit.point,
+                            hit.normal,
+                            hit.distance,
+                            false);
+                    }
+
                     bool ally = hitMember.Team == ownerTeam;
                     return new LineOfFireAssessment(
                         ally ? FireBlockReason.AllyInLine : FireBlockReason.ObstacleInLine,

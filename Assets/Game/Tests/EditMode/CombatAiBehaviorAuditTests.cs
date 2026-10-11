@@ -291,6 +291,48 @@ namespace LocalTanks.Tests
                 Is.Zero);
         }
 
+        [Test]
+        public void Auditor_DetectsDestroyedTankStillClassifiedAsLivingAlly()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor();
+            auditor.Record(CloseCombatSample(0f, TacticalMovementPurpose.None,
+                LineOfFireBlockType.Ally, true));
+            auditor.Record(CloseCombatSample(0.2f, TacticalMovementPurpose.None,
+                LineOfFireBlockType.Ally, true));
+
+            Assert.That(auditor.Issues.Count(item =>
+                item.Kind == CombatAiAuditIssueKind.DestroyedTankMisclassifiedAsAlly), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Auditor_DetectsCloseTargetThatTurretCannotTrack()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                closeRangeTrackingFailureSeconds = 2f
+            });
+            auditor.Record(CloseCombatSample(0f));
+            auditor.Record(CloseCombatSample(1f));
+            auditor.Record(CloseCombatSample(3.1f));
+
+            Assert.That(auditor.Issues.Count(item =>
+                item.Kind == CombatAiAuditIssueKind.CloseRangeTrackingFailure), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Auditor_AcceptsCloseTargetWhileBotBreaksOrbit()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                closeRangeTrackingFailureSeconds = 1f
+            });
+            auditor.Record(CloseCombatSample(0f, TacticalMovementPurpose.BreakCloseOrbit));
+            auditor.Record(CloseCombatSample(2f, TacticalMovementPurpose.BreakCloseOrbit));
+
+            Assert.That(auditor.Issues.Any(item =>
+                item.Kind == CombatAiAuditIssueKind.CloseRangeTrackingFailure), Is.False);
+        }
+
         private static CombatAiAuditSample Sample(
             float time,
             CombatAiState state,
@@ -353,6 +395,20 @@ namespace LocalTanks.Tests
                 true, false, true, false, true, string.Empty, false,
                 FireBlockReason.NoVisibleTarget, 0, 0, 180f, false, false,
                 purpose, 0f, true);
+        }
+
+        private static CombatAiAuditSample CloseCombatSample(
+            float time,
+            TacticalMovementPurpose purpose = TacticalMovementPurpose.None,
+            LineOfFireBlockType blockType = LineOfFireBlockType.None,
+            bool blockerDestroyed = false)
+        {
+            return new CombatAiAuditSample(
+                time, "bot-a", "Tester", CombatAiState.Engage, Vector2.zero,
+                true, true, false, false, false, "enemy-a", true,
+                blockerDestroyed ? FireBlockReason.AllyInLine : FireBlockReason.Aiming,
+                0, 0, 0f, false, false, purpose, 25f, false, 0f,
+                blockType, blockerDestroyed, 2.2f, 25f, 30f);
         }
     }
 }

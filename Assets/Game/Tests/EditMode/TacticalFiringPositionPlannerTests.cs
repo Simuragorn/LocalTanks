@@ -81,6 +81,51 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void LineOfFireAssessment_ClassifiesDestroyedTankAsWreckInsteadOfAlly()
+        {
+            GameObject owner = new GameObject("WreckLineOwner");
+            GameObject wreck = new GameObject("DestroyedAllyWreck");
+            GameObject target = new GameObject("WreckLineTarget");
+            TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
+            try
+            {
+                definition.maxHitPoints = 100;
+                owner.transform.position = new Vector2(1400f, 1400f);
+                wreck.transform.position = new Vector2(1400f, 1403f);
+                TankHealth health = wreck.AddComponent<TankHealth>();
+                health.Configure(definition);
+                TeamMember member = wreck.AddComponent<TeamMember>();
+                member.Configure(TeamId.TeamA, false);
+                BoxCollider2D wreckCollider = wreck.AddComponent<BoxCollider2D>();
+                health.ApplyDamage(100);
+                target.transform.position = new Vector2(1400f, 1406f);
+                target.AddComponent<BoxCollider2D>();
+                Physics2D.SyncTransforms();
+
+                LineOfFireAssessment result = CombatLineOfFire.Evaluate(
+                    owner.transform,
+                    TeamId.TeamA,
+                    new Vector2(1400f, 1401f),
+                    target.transform.position,
+                    target.transform);
+
+                Assert.That(result.IsClear, Is.False);
+                Assert.That(result.Reason, Is.EqualTo(FireBlockReason.ObstacleInLine));
+                Assert.That(result.BlockType, Is.EqualTo(LineOfFireBlockType.Wreck));
+                Assert.That(result.Blocker, Is.EqualTo(wreckCollider));
+                Assert.That(CombatLineOfFire.IsProtectiveCover(result.BlockType), Is.True);
+                Assert.That(CombatLineOfFire.IsProtectiveCover(LineOfFireBlockType.Ally), Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+                Object.DestroyImmediate(wreck);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(definition);
+            }
+        }
+
+        [Test]
         public void Planner_FindsReachablePositionAroundBlockedLine()
         {
             NavigationMap map = CreateMap(12, 12, (x, y) => x == 5 && y >= 3 && y <= 7);

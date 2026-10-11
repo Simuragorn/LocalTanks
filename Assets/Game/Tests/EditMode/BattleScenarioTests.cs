@@ -346,6 +346,15 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void CombatAiPolicy_BreaksCloseOrbitWhenTurretCannotTrackTarget()
+        {
+            Assert.That(CombatAiPolicy.ShouldBreakCloseOrbit(2.5f, 3f, 16f, 5f, 20f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldBreakCloseOrbit(2.5f, 3f, 4f, 18f, 20f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldBreakCloseOrbit(2.5f, 3f, 4f, 5f, 20f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldBreakCloseOrbit(4f, 3f, 30f, 30f, 20f), Is.False);
+        }
+
+        [Test]
         public void CombatAiPolicy_SwitchesVisibleTargetOnlyAfterLockAndMeaningfulAdvantage()
         {
             Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(2f, 3f, 50f, 100f), Is.False);

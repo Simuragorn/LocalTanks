@@ -18,7 +18,9 @@ namespace LocalTanks
         TacticalTaskThrashing,
         FiringLineThrashing,
         RearExposedToVisibleTarget,
-        ReverseWithoutRetreatTask
+        ReverseWithoutRetreatTask,
+        DestroyedTankMisclassifiedAsAlly,
+        CloseRangeTrackingFailure
     }
 
     [Serializable]
@@ -41,6 +43,9 @@ namespace LocalTanks
         [Range(90f, 180f)] public float rearExposureAngleDegrees = 115f;
         [Min(0.5f)] public float rearExposureSeconds = 2.5f;
         [Min(0.25f)] public float reverseWithoutRetreatSeconds = 1f;
+        [Min(1f)] public float closeRangeDistance = 3.2f;
+        [Min(1f)] public float closeRangeAimErrorDegrees = 15f;
+        [Min(0.5f)] public float closeRangeTrackingFailureSeconds = 3f;
         [Min(0.1f)] public float duplicateIssueCooldownSeconds = 6f;
     }
 
@@ -68,7 +73,12 @@ namespace LocalTanks
             TacticalMovementPurpose tacticalMovementPurpose = TacticalMovementPurpose.None,
             float targetRelativeAngleDegrees = 0f,
             bool movingInReverse = false,
-            float currentSpeed = 0f)
+            float currentSpeed = 0f,
+            LineOfFireBlockType lineBlockType = LineOfFireBlockType.None,
+            bool lineBlockerDestroyed = false,
+            float targetDistance = float.PositiveInfinity,
+            float turretAimErrorDegrees = 0f,
+            float targetBearingRateDegrees = 0f)
         {
             Time = time;
             BotId = botId ?? string.Empty;
@@ -92,6 +102,11 @@ namespace LocalTanks
             TargetRelativeAngleDegrees = Mathf.Abs(targetRelativeAngleDegrees);
             MovingInReverse = movingInReverse;
             CurrentSpeed = currentSpeed;
+            LineBlockType = lineBlockType;
+            LineBlockerDestroyed = lineBlockerDestroyed;
+            TargetDistance = targetDistance;
+            TurretAimErrorDegrees = Mathf.Abs(turretAimErrorDegrees);
+            TargetBearingRateDegrees = Mathf.Abs(targetBearingRateDegrees);
         }
 
         public float Time { get; }
@@ -116,6 +131,11 @@ namespace LocalTanks
         public float TargetRelativeAngleDegrees { get; }
         public bool MovingInReverse { get; }
         public float CurrentSpeed { get; }
+        public LineOfFireBlockType LineBlockType { get; }
+        public bool LineBlockerDestroyed { get; }
+        public float TargetDistance { get; }
+        public float TurretAimErrorDegrees { get; }
+        public float TargetBearingRateDegrees { get; }
     }
 
     public sealed class CombatAiAuditIssue
@@ -181,6 +201,8 @@ namespace LocalTanks
             TrackCombatActivity(track, sample);
             TrackRearExposure(track, sample);
             TrackReverseWithoutRetreatTask(track, sample);
+            TrackDestroyedTankClassification(track, sample);
+            TrackCloseRangeTracking(track, sample);
             track.TotalDistance += Vector2.Distance(track.LastSample.Position, sample.Position);
             track.LastSample = sample;
         }
@@ -214,7 +236,8 @@ namespace LocalTanks
                                   $"firing-line changes={track.TotalFiringLineChanges}.");
                 report.AppendLine($"  exposure: visible={track.VisibleTargetSeconds:0.0}s, " +
                                   $"rear-facing={track.RearFacingVisibleSeconds:0.0}s, " +
-                                  $"reverse={track.ReverseSeconds:0.0}s.");
+                                  $"reverse={track.ReverseSeconds:0.0}s, " +
+                                  $"close-range aiming={track.CloseRangeTrackingSeconds:0.0}s.");
                 report.AppendLine($"  states: {FormatDurations(track.StateDurations)}");
                 report.AppendLine($"  tasks: {FormatDurations(track.TacticalTaskDurations)}");
                 report.AppendLine($"  fire blocks: {FormatDurations(track.FireBlockDurations)}");
@@ -552,6 +575,7 @@ namespace LocalTanks
             bool reverseTask = sample.TacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
                                sample.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
                                sample.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat ||
+                               sample.TacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit ||
                                sample.TacticalMovementPurpose == TacticalMovementPurpose.GainFiringLine;
             bool staleReverse = sample.MovingInReverse && !reverseTask;
             if (!staleReverse)
@@ -572,6 +596,44 @@ namespace LocalTanks
                 $"Navigation remained in reverse for {sample.Time - track.ReverseWithoutRetreatSince:0.0} s " +
                 $"without a reverse-capable task; state={sample.State}, task={sample.TacticalMovementPurpose}.");
             track.ReverseWithoutRetreatReported = true;
+        }
+
+        private void TrackDestroyedTankClassification(BotTrack track, CombatAiAuditSample sample)
+        {
+            if (sample.LineBlockerDestroyed &&
+                (sample.FireBlockReason == FireBlockReason.AllyInLine ||
+                 sample.LineBlockType == LineOfFireBlockType.Ally))
+            {
+                Emit(track, sample, CombatAiAuditIssueKind.DestroyedTankMisclassifiedAsAlly,
+                    "A destroyed tank still blocks fire as a living ally instead of a wreck.");
+            }
+        }
+
+        private void TrackCloseRangeTracking(BotTrack track, CombatAiAuditSample sample)
+        {
+            bool struggling = sample.TargetVisible &&
+                              sample.TargetDistance <= rules.closeRangeDistance &&
+                              sample.TurretAimErrorDegrees >= rules.closeRangeAimErrorDegrees &&
+                              sample.FireBlockReason == FireBlockReason.Aiming &&
+                              sample.TacticalMovementPurpose != TacticalMovementPurpose.BreakCloseOrbit;
+            if (!struggling)
+            {
+                track.CloseRangeTrackingSince = -1f;
+                return;
+            }
+
+            if (track.CloseRangeTrackingSince < 0f)
+            {
+                track.CloseRangeTrackingSince = sample.Time;
+                return;
+            }
+            track.CloseRangeTrackingSeconds += Mathf.Clamp(sample.Time - track.LastSample.Time, 0f, 1f);
+            if (sample.Time - track.CloseRangeTrackingSince < rules.closeRangeTrackingFailureSeconds) return;
+            Emit(track, sample, CombatAiAuditIssueKind.CloseRangeTrackingFailure,
+                $"Could not track close visible target '{sample.TargetId}' for " +
+                $"{sample.Time - track.CloseRangeTrackingSince:0.0} s; distance={sample.TargetDistance:0.0} m, " +
+                $"aim error={sample.TurretAimErrorDegrees:0}°, bearing rate={sample.TargetBearingRateDegrees:0}°/s.");
+            track.CloseRangeTrackingSince = sample.Time;
         }
 
         private void Emit(BotTrack track, CombatAiAuditSample sample, CombatAiAuditIssueKind kind, string details)
@@ -685,6 +747,8 @@ namespace LocalTanks
             public float VisibleTargetSeconds;
             public float RearFacingVisibleSeconds;
             public float ReverseSeconds;
+            public float CloseRangeTrackingSince = -1f;
+            public float CloseRangeTrackingSeconds;
             public int TotalStateChanges;
             public int TotalTargetChanges;
             public int TotalTacticalTaskChanges;
@@ -704,6 +768,7 @@ namespace LocalTanks
                 RearExposureSince = -1f;
                 ReverseWithoutRetreatSince = -1f;
                 ReverseWithoutRetreatReported = false;
+                CloseRangeTrackingSince = -1f;
                 ResetRotationWindow(sample);
             }
 
@@ -765,6 +830,10 @@ namespace LocalTanks
                 float targetRelativeAngle = targetDirection.sqrMagnitude > 0.0001f
                     ? Mathf.Abs(Vector2.SignedAngle(bot.transform.up, targetDirection))
                     : 0f;
+                LineOfFireAssessment line = bot.CurrentLineOfFire;
+                TeamMember lineBlocker = line.Blocker != null
+                    ? line.Blocker.GetComponentInParent<TeamMember>()
+                    : null;
                 Auditor.Record(new CombatAiAuditSample(
                     time,
                     botId,
@@ -785,12 +854,18 @@ namespace LocalTanks
                     bot.TacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
                     bot.TacticalMovementPurpose == TacticalMovementPurpose.PeekToFire ||
                     bot.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
-                    bot.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat,
+                    bot.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat ||
+                    bot.TacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit,
                     navigation != null && navigation.IsRecoveringFromStall,
                     bot.TacticalMovementPurpose,
                     targetRelativeAngle,
                     navigation != null && navigation.MovingInReverse,
-                    motor != null ? motor.CurrentSpeed : 0f));
+                    motor != null ? motor.CurrentSpeed : 0f,
+                    line.BlockType,
+                    lineBlocker != null && !lineBlocker.IsAlive,
+                    bot.CurrentTargetDistance,
+                    bot.TurretAimErrorDegrees,
+                    bot.TargetBearingRateDegrees));
             }
         }
 

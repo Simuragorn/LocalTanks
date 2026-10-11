@@ -12,7 +12,8 @@ namespace LocalTanks
         HoldCover,
         PeekToFire,
         ReturnToCover,
-        DefensiveRetreat
+        DefensiveRetreat,
+        BreakCloseOrbit
     }
 
     public enum TacticalDecisionPriority
@@ -21,7 +22,8 @@ namespace LocalTanks
         StrategicMovement = 10,
         GainFiringLine = 20,
         UseCover = 30,
-        SurviveCrossfire = 40
+        SurviveCrossfire = 40,
+        EscapeCloseCombat = 50
     }
 
     public static class TacticalDecisionArbiter

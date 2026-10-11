@@ -14,9 +14,12 @@ namespace LocalTanks
         private const float AimRecoveryDelay = 3f;
         private const float FailedPositionMemorySeconds = 10f;
         private const float RecentPenetrationDangerSeconds = 6f;
-        private const float MaximumReverseCoverPathLength = 12f;
+        private const float MaximumReverseCoverPathLength = 6f;
         private const float MaximumReverseFiringLinePathLength = 6f;
         private const float DefensiveRearDangerAngle = 115f;
+        private const float CloseCombatDisengageDistance = 4.5f;
+        private const float CloseCombatDisengageDuration = 10f;
+        private const float CloseCombatRetryCooldown = 2f;
 
         [SerializeField] private TeamMember member;
         [SerializeField] private TeamVisionSystem visionSystem;
@@ -87,6 +90,12 @@ namespace LocalTanks
         private Vector2 primaryThreatDirection;
         private float lastPenetratingHitTime = float.NegativeInfinity;
         private float defensiveRearExposureSince = float.NegativeInfinity;
+        private TeamMember closeCombatTrackedTarget;
+        private Vector2 lastCloseCombatTargetDirection;
+        private float lastCloseCombatSampleTime = float.NegativeInfinity;
+        private float targetBearingRateDegrees;
+        private float nextCloseCombatTime;
+        private Vector2 closeCombatDestination;
 
         public CombatAiState State { get; private set; } = CombatAiState.Deploy;
         public FireBlockReason CurrentFireBlockReason { get; private set; } = FireBlockReason.NoVisibleTarget;
@@ -121,6 +130,12 @@ namespace LocalTanks
         public TacticalBehaviorProfile TacticalBehavior => tacticalBehaviorProfile;
         public bool LastCoverReturnStartedInReverse => lastCoverReturnStartedInReverse;
         public int CompletedCoverCycleShots => completedCoverCycleShots;
+        public float CurrentTargetDistance => target != null
+            ? Vector2.Distance(transform.position, target.transform.position)
+            : float.PositiveInfinity;
+        public float TurretAimErrorDegrees => turret != null ? turret.AimErrorDegrees : 180f;
+        public float TargetBearingRateDegrees => targetBearingRateDegrees;
+        public bool IsBreakingCloseOrbit => tacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit;
 
         private void Awake()
         {
@@ -217,6 +232,12 @@ namespace LocalTanks
             primaryThreatDirection = Vector2.zero;
             lastPenetratingHitTime = float.NegativeInfinity;
             defensiveRearExposureSince = float.NegativeInfinity;
+            closeCombatTrackedTarget = null;
+            lastCloseCombatTargetDirection = Vector2.zero;
+            lastCloseCombatSampleTime = float.NegativeInfinity;
+            targetBearingRateDegrees = 0f;
+            nextCloseCombatTime = 0f;
+            closeCombatDestination = Vector2.zero;
             StartCurrentRoutePoint();
         }
 
@@ -242,6 +263,7 @@ namespace LocalTanks
                                      tacticalMovementPurpose == TacticalMovementPurpose.PeekToFire ||
                                      tacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
                                      tacticalMovementPurpose == TacticalMovementPurpose.HoldCover ||
+                                     tacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit ||
                                      holdingTacticalCover;
             if (strategicHasDestination && navigation != null && !defensiveOverride)
             {
@@ -284,6 +306,8 @@ namespace LocalTanks
             coverRequested = false;
             coverShotOpportunityUntil = float.NegativeInfinity;
             holdingTacticalCover = false;
+            closeCombatTrackedTarget = null;
+            targetBearingRateDegrees = 0f;
             TacticalCoverReservations.Release(GetEntityId().ToString());
             navigation?.ClearDestination();
             motor?.StopImmediately();
@@ -311,6 +335,15 @@ namespace LocalTanks
         {
             RefreshStrategicDecision();
             RefreshThreatAnalysis();
+            UpdateCloseCombatTracking();
+            if (ContinueCloseCombatDisengage())
+            {
+                return;
+            }
+            if (TryBeginCloseCombatDisengage())
+            {
+                return;
+            }
             if (ContinueDefensiveMovement())
             {
                 return;
@@ -505,6 +538,14 @@ namespace LocalTanks
             {
                 navigation?.SetPaused(false);
                 CurrentFireBlockReason = EvaluateFirePermission(target, distance);
+                if (tacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit)
+                {
+                    if (CurrentFireBlockReason == FireBlockReason.None)
+                    {
+                        weapon?.TryFire();
+                    }
+                    return;
+                }
                 if (tacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
                     tacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
                     tacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat ||
@@ -583,6 +624,188 @@ namespace LocalTanks
             {
                 navigation?.SetPaused(true);
             }
+        }
+
+        private void UpdateCloseCombatTracking()
+        {
+            if (!IsTargetVisible(target))
+            {
+                closeCombatTrackedTarget = null;
+                lastCloseCombatTargetDirection = Vector2.zero;
+                lastCloseCombatSampleTime = float.NegativeInfinity;
+                targetBearingRateDegrees = 0f;
+                return;
+            }
+
+            Vector2 direction = (Vector2)target.transform.position - (Vector2)transform.position;
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                targetBearingRateDegrees = 0f;
+                return;
+            }
+
+            direction.Normalize();
+            if (closeCombatTrackedTarget == target && lastCloseCombatTargetDirection.sqrMagnitude > 0.0001f &&
+                !float.IsNegativeInfinity(lastCloseCombatSampleTime))
+            {
+                float elapsed = Mathf.Max(0.02f, Time.time - lastCloseCombatSampleTime);
+                float measuredRate = Mathf.Abs(Vector2.SignedAngle(lastCloseCombatTargetDirection, direction)) / elapsed;
+                targetBearingRateDegrees = Mathf.Lerp(targetBearingRateDegrees, measuredRate, 0.5f);
+            }
+            else
+            {
+                targetBearingRateDegrees = 0f;
+            }
+
+            closeCombatTrackedTarget = target;
+            lastCloseCombatTargetDirection = direction;
+            lastCloseCombatSampleTime = Time.time;
+        }
+
+        private bool TryBeginCloseCombatDisengage()
+        {
+            if (Time.time < nextCloseCombatTime || target == null || !IsTargetVisible(target) ||
+                navigation?.Map == null || member?.Definition == null ||
+                tacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit)
+            {
+                return false;
+            }
+
+            float distance = Vector2.Distance(transform.position, target.transform.position);
+            float triggerDistance = Mathf.Max(
+                CombatAiPolicy.MinimumCloseCombatDistance,
+                navigation.Map.CellSize * 4f);
+            if (!CombatAiPolicy.ShouldBreakCloseOrbit(
+                    distance,
+                    triggerDistance,
+                    TurretAimErrorDegrees,
+                    targetBearingRateDegrees,
+                    member.Definition.turretTurnSpeed))
+            {
+                return false;
+            }
+
+            if (!TryFindCloseCombatDestination(target.transform.position, distance, out Vector2 destination) ||
+                !navigation.SetDestination(destination, navigation.ClearanceCells, true))
+            {
+                nextCloseCombatTime = Time.time + 0.75f;
+                lastTacticalPositionResult = "Не найден путь для разрыва ближнего боя";
+                return false;
+            }
+
+            TacticalCoverReservations.Release(GetEntityId().ToString());
+            hasCoverPosition = false;
+            hasCoverFiringPosition = false;
+            holdingTacticalCover = false;
+            coverRequested = false;
+            coverShotOpportunityUntil = float.NegativeInfinity;
+            hasFiringPositionSolution = false;
+            closeCombatDestination = destination;
+            repositionDestination = destination;
+            repositionExpiresAt = Time.time + CloseCombatDisengageDuration;
+            SetTacticalTask(
+                TacticalMovementPurpose.BreakCloseOrbit,
+                TacticalDecisionPriority.EscapeCloseCombat,
+                "Разрыв слишком близкого кругового боя задним ходом",
+                repositionExpiresAt);
+            State = CombatAiState.Reposition;
+            navigation.SetPaused(false);
+            lastTacticalPositionResult =
+                $"Разрывает ближний бой: дистанция {distance:0.0} м, " +
+                $"ошибка башни {TurretAimErrorDegrees:0}°, угловая скорость цели {targetBearingRateDegrees:0}°/с";
+            return true;
+        }
+
+        private bool ContinueCloseCombatDisengage()
+        {
+            if (State != CombatAiState.Reposition ||
+                tacticalMovementPurpose != TacticalMovementPurpose.BreakCloseOrbit || navigation == null)
+            {
+                return false;
+            }
+
+            float distance = target != null
+                ? Vector2.Distance(transform.position, target.transform.position)
+                : float.PositiveInfinity;
+            bool complete = target == null || !target.IsAlive ||
+                            distance >= CloseCombatDisengageDistance ||
+                            navigation.DestinationReached ||
+                            Vector2.Distance(transform.position, closeCombatDestination) <= 0.55f ||
+                            Time.time >= repositionExpiresAt;
+            if (!complete)
+            {
+                navigation.SetPaused(false);
+                return true;
+            }
+
+            navigation.SetPaused(true);
+            ClearTacticalTask("Ближняя дистанция разорвана");
+            State = IsTargetVisible(target) ? CombatAiState.Engage : CombatAiState.Investigate;
+            nextCloseCombatTime = Time.time + CloseCombatRetryCooldown;
+            lastTacticalPositionResult = distance >= CloseCombatDisengageDistance
+                ? $"Ближний бой разорван до {distance:0.0} м"
+                : "Манёвр разрыва ближнего боя завершён";
+            if (target != null)
+            {
+                UpdateArmorFacing(((Vector2)target.transform.position - (Vector2)transform.position).normalized);
+            }
+            return true;
+        }
+
+        private bool TryFindCloseCombatDestination(
+            Vector2 targetPosition,
+            float currentDistance,
+            out Vector2 destination)
+        {
+            destination = default;
+            NavigationMap map = navigation?.Map;
+            if (map == null) return false;
+
+            Vector2 origin = transform.position;
+            Vector2 away = origin - targetPosition;
+            if (away.sqrMagnitude <= 0.0001f) away = -transform.up;
+            away.Normalize();
+            float[] angles = { 0f, -25f, 25f, -50f, 50f };
+            float[] distances = { 4.5f, 3.5f, 2.5f };
+            HashSet<Vector2Int> tested = new HashSet<Vector2Int>();
+            bool found = false;
+            float bestScore = float.NegativeInfinity;
+            foreach (float retreatDistance in distances)
+            {
+                foreach (float angle in angles)
+                {
+                    Vector2 direction = Rotate(away, angle);
+                    Vector2Int cell = map.WorldToCell(origin + direction * retreatDistance);
+                    if (!tested.Add(cell) || !map.Contains(cell) || map.IsBlocked(cell)) continue;
+                    Vector2 candidate = map.CellToWorld(cell);
+                    float targetDistance = Vector2.Distance(candidate, targetPosition);
+                    if (targetDistance < currentDistance + 1f || !IsFiringPositionAvailable(candidate)) continue;
+                    List<Vector2> path = map.FindWorldPath(origin, candidate, navigation.ClearanceCells);
+                    if (path == null || path.Count < 2) continue;
+                    float pathLength = 0f;
+                    for (int index = 1; index < path.Count; index++)
+                    {
+                        pathLength += Vector2.Distance(path[index - 1], path[index]);
+                    }
+                    float score = targetDistance - pathLength * 0.12f - Mathf.Abs(angle) * 0.005f;
+                    if (found && score <= bestScore) continue;
+                    found = true;
+                    bestScore = score;
+                    destination = candidate;
+                }
+            }
+
+            return found;
+        }
+
+        private static Vector2 Rotate(Vector2 direction, float degrees)
+        {
+            float radians = degrees * Mathf.Deg2Rad;
+            float cosine = Mathf.Cos(radians);
+            float sine = Mathf.Sin(radians);
+            return new Vector2(
+                direction.x * cosine - direction.y * sine,
+                direction.x * sine + direction.y * cosine);
         }
 
         private TeamMember SelectBestVisibleTarget()
@@ -1223,8 +1446,7 @@ namespace LocalTanks
                 threatOrigin,
                 candidate,
                 null);
-            return assessment.BlockType == LineOfFireBlockType.HardObstacle ||
-                   assessment.BlockType == LineOfFireBlockType.DestructibleObstacle;
+            return CombatLineOfFire.IsProtectiveCover(assessment.BlockType);
         }
 
         private bool IsTacticallyProtectedNear(Vector2 expectedPosition)
@@ -1564,6 +1786,7 @@ namespace LocalTanks
                 tacticalMovementPurpose != TacticalMovementPurpose.PeekToFire &&
                 tacticalMovementPurpose != TacticalMovementPurpose.ReturnToCover &&
                 tacticalMovementPurpose != TacticalMovementPurpose.HoldCover &&
+                tacticalMovementPurpose != TacticalMovementPurpose.BreakCloseOrbit &&
                 !holdingTacticalCover)
             {
                 StartCurrentRoutePoint();

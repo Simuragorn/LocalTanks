@@ -33,6 +33,9 @@ namespace LocalTanks
         public const float FiringLineDestinationConfirmationSeconds = 0.35f;
         public const float FiringLineRetryCooldownSeconds = 2.5f;
         public const float MaximumAdvanceRearAngle = 90f;
+        public const float MinimumCloseCombatDistance = 3f;
+        public const float CloseCombatAimErrorDegrees = 10f;
+        public const float CloseCombatBearingRateFactor = 0.7f;
 
         public static float ScoreTarget(
             float distance,
@@ -95,6 +98,18 @@ namespace LocalTanks
         public static bool ShouldAlignHullBeforeAdvancing(float targetRelativeAngleDegrees)
         {
             return Mathf.Abs(targetRelativeAngleDegrees) > MaximumAdvanceRearAngle;
+        }
+
+        public static bool ShouldBreakCloseOrbit(
+            float targetDistance,
+            float triggerDistance,
+            float turretAimErrorDegrees,
+            float targetBearingRateDegrees,
+            float turretTurnSpeed)
+        {
+            if (targetDistance > Mathf.Max(MinimumCloseCombatDistance, triggerDistance)) return false;
+            return turretAimErrorDegrees >= CloseCombatAimErrorDegrees ||
+                   targetBearingRateDegrees >= Mathf.Max(8f, turretTurnSpeed * CloseCombatBearingRateFactor);
         }
 
         public static bool ShouldSwitchVisibleTarget(
