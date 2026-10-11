@@ -20,9 +20,11 @@ namespace LocalTanks
         [SerializeField] private GunDispersionController dispersion;
 
         private Camera worldCamera;
+        private bool uiInteractionActive;
 
         public Transform ControlledTank => controlledTank;
         public bool IsLineOfFireBlocked { get; private set; }
+        public bool UiInteractionActive => uiInteractionActive;
 
         public void Configure(Transform tank)
         {
@@ -30,6 +32,13 @@ namespace LocalTanks
             turret = tank != null ? tank.GetComponentInChildren<TurretAiming>() : null;
             weapon = tank != null ? tank.GetComponent<WeaponController>() : null;
             dispersion = tank != null ? tank.GetComponent<GunDispersionController>() : null;
+            RefreshCursorVisibility();
+        }
+
+        public void SetUiInteractionActive(bool value)
+        {
+            uiInteractionActive = value;
+            RefreshCursorVisibility();
         }
 
         private void Awake()
@@ -39,7 +48,7 @@ namespace LocalTanks
 
         private void OnEnable()
         {
-            if (Application.isPlaying) Cursor.visible = false;
+            RefreshCursorVisibility();
         }
 
         private void OnDisable()
@@ -54,6 +63,8 @@ namespace LocalTanks
 
         private void OnGUI()
         {
+            if (uiInteractionActive) return;
+
             Mouse mouse = Mouse.current;
             if (mouse == null || controlledTank == null || turret == null || weapon == null || dispersion == null)
             {
@@ -92,6 +103,13 @@ namespace LocalTanks
             Color stateColor = Color.Lerp(ReloadingColor, ReadyColor, weapon.ReloadProgress);
             DrawDottedCircle(gunGui, radius, stateColor);
             DrawReloadSegments(gunGui, radius + 8f, weapon.ReloadProgress, stateColor);
+        }
+
+        private void RefreshCursorVisibility()
+        {
+            if (!Application.isPlaying) return;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = uiInteractionActive || controlledTank == null;
         }
 
         private float CalculateRadiusPixels(Vector2 origin, Vector2 center, float distance, float degrees)

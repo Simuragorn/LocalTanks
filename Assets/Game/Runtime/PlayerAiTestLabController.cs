@@ -265,6 +265,7 @@ namespace LocalTanks
         private GUIStyle titleStyle;
         private GUIStyle bodyStyle;
         private GUIStyle warningStyle;
+        private PlayerAimReticle aimReticle;
 
         public BattleDirector Director => director;
         public static PlayerAiTestLabSettings CurrentSettings => SavedSettings;
@@ -284,6 +285,8 @@ namespace LocalTanks
             if (director == null) throw new InvalidOperationException("Player AI Test Lab has no BattleDirector.");
             templateScenario = director.Scenario;
             director.enabled = false;
+            aimReticle = Camera.main != null ? Camera.main.GetComponent<PlayerAimReticle>() : null;
+            aimReticle?.SetUiInteractionActive(true);
         }
 
         private void Start()
@@ -334,6 +337,9 @@ namespace LocalTanks
             runtimeScenario = PlayerAiTestLabScenarioFactory.Create(director, templateScenario, SavedSettings);
             director.OverrideScenario(runtimeScenario);
             director.SpawnAll();
+            if (aimReticle == null && Camera.main != null)
+                aimReticle = Camera.main.GetComponent<PlayerAimReticle>();
+            aimReticle?.SetUiInteractionActive(false);
             SubscribeWeapons();
             auditSession = new CombatAiAuditSession(director);
             samples.Clear();
@@ -363,6 +369,7 @@ namespace LocalTanks
             report.completedUtc = DateTime.UtcNow.ToString("O");
             SaveReport();
             SetPaused(true);
+            aimReticle?.SetUiInteractionActive(true);
         }
 
         public void SaveReport()

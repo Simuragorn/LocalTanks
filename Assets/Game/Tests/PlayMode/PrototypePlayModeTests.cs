@@ -136,6 +136,8 @@ namespace LocalTanks.Tests
             Assert.That(director, Is.Not.Null);
             Assert.That(lab.IsBattleStarted, Is.False);
             Assert.That(director.SpawnedMembers, Is.Empty);
+            PlayerAimReticle reticle = Camera.main.GetComponent<PlayerAimReticle>();
+            Assert.That(reticle.UiInteractionActive, Is.True);
 
             lab.StartBattle();
             yield return null;
@@ -152,6 +154,11 @@ namespace LocalTanks.Tests
             Assert.That(director.StrategicPlanner, Is.Not.Null);
             Assert.That(director.StrategicPlanner.Diagnostics.providerName, Is.EqualTo("Deterministic"));
             Assert.That(director.StrategicCoordinator, Is.Not.Null);
+            Assert.That(reticle.UiInteractionActive, Is.False);
+
+            lab.FinishBattle("TestComplete");
+            Assert.That(reticle.UiInteractionActive, Is.True);
+            Time.timeScale = 1f;
         }
 
         [UnityTest]
