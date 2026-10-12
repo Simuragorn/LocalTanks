@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -10,7 +10,7 @@ namespace LocalTanks.Tests
 {
     /// <summary>
     /// Answers the only question that matters about a converted arena: do the tanks actually fight on
-    /// it. Everything else â€” colliders, navigation, routes â€” is scaffolding for this, and a mistake in
+    /// it. Everything else Ã¢â‚¬â€ colliders, navigation, routes Ã¢â‚¬â€ is scaffolding for this, and a mistake in
     /// any of them shows up here as tanks that never move or never meet.
     /// </summary>
     public sealed class WoTMapPlayabilityTests
