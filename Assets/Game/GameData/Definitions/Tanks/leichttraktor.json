@@ -42,14 +42,23 @@
   },
   "audio": {
     "engineClipId": "engine_eng_gaz_aa_pc",
+    "tracksClipId": "tracks_trds_chf_npc",
     "shotClipId": "gun_wpn_automatic_pc",
+    "reloadClipId": "reload_gun_rld_20_45mm",
     "turretClipId": "turret_tur_man_trav_05",
+    "destructionClipId": "destruction_expl_crew_death_s_npc",
     "engineVolume": 0.4,
+    "tracksVolume": 0.18,
     "shotVolume": 0.82,
+    "reloadVolume": 0.34,
     "turretVolume": 0.17,
+    "destructionVolume": 0.78,
     "enginePitch": 1.05,
+    "tracksPitch": 1.04,
     "shotPitch": 1.0,
-    "turretPitch": 1.04
+    "reloadPitch": 1.03,
+    "turretPitch": 1.04,
+    "destructionPitch": 1.0
   },
   "massTonnes": 7.61,
   "enginePowerHp": 95.0

@@ -21,14 +21,23 @@ namespace LocalTanks
     public sealed class TankAudioProfile
     {
         public string engineClipId;
+        public string tracksClipId;
         public string shotClipId;
+        public string reloadClipId;
         public string turretClipId;
+        public string destructionClipId;
         [Range(0f, 1f)] public float engineVolume = 0.45f;
+        [Range(0f, 1f)] public float tracksVolume = 0.2f;
         [Range(0f, 1f)] public float shotVolume = 0.9f;
+        [Range(0f, 1f)] public float reloadVolume = 0.36f;
         [Range(0f, 1f)] public float turretVolume = 0.22f;
+        [Range(0f, 1f)] public float destructionVolume = 0.78f;
         [Range(0.25f, 3f)] public float enginePitch = 1f;
+        [Range(0.25f, 3f)] public float tracksPitch = 1f;
         [Range(0.25f, 3f)] public float shotPitch = 1f;
+        [Range(0.25f, 3f)] public float reloadPitch = 1f;
         [Range(0.25f, 3f)] public float turretPitch = 1f;
+        [Range(0.25f, 3f)] public float destructionPitch = 1f;
     }
 
     public sealed class TankDefinition : ScriptableObject

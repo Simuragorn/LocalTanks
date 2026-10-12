@@ -35,6 +35,56 @@
       "event": "tur_man_trav_05",
       "variantIndex": 0,
       "usage": "loop"
+    },
+    {
+      "clipId": "tracks_trds_med_npc",
+      "bank": "treads_npc",
+      "event": "trds_med_npc",
+      "variantIndex": 0,
+      "usage": "loop"
+    },
+    {
+      "clipId": "tracks_trds_chf_npc",
+      "bank": "treads_npc",
+      "event": "trds_chf_npc",
+      "variantIndex": 0,
+      "usage": "loop"
+    },
+    {
+      "clipId": "reload_gun_rld_20_45mm",
+      "bank": "gun_reload",
+      "event": "gun_rld_20_45mm",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
+      "clipId": "impact_small_pierced",
+      "bank": "impacts_full",
+      "event": "imp_small_pierce_AP_NPC_NPC",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
+      "clipId": "impact_small_blocked",
+      "bank": "impacts_full",
+      "event": "imp_small_not_pierce_AP_NPC_NPC",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
+      "clipId": "impact_small_ricochet",
+      "bank": "impacts_full",
+      "event": "imp_small_ricochet_AP_NPC_NPC",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
+      "clipId": "destruction_expl_crew_death_s_npc",
+      "bank": "expl",
+      "mediaBank": "streams",
+      "event": "expl_crew_death_s_NPC",
+      "variantIndex": 0,
+      "usage": "oneShot"
     }
   ]
 }

@@ -11,5 +11,14 @@
   "ricochetAngle": 70.0,
   "ricochetSpeedMultiplier": 0.7,
   "ricochetPenetrationMultiplier": 0.65,
-  "maximumRicochets": 2
+  "maximumRicochets": 2,
+  "audio": {
+    "penetrationClipId": "impact_small_pierced",
+    "blockedClipId": "impact_small_blocked",
+    "ricochetClipId": "impact_small_ricochet",
+    "penetrationVolume": 0.26,
+    "blockedVolume": 0.18,
+    "ricochetVolume": 0.18,
+    "pitch": 1.06
+  }
 }

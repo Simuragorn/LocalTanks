@@ -2,6 +2,36 @@ using UnityEngine;
 
 namespace LocalTanks
 {
+    [System.Serializable]
+    public sealed class ShellAudioProfile
+    {
+        public string penetrationClipId;
+        public string blockedClipId;
+        public string ricochetClipId;
+        [Range(0f, 1f)] public float penetrationVolume = 0.28f;
+        [Range(0f, 1f)] public float blockedVolume = 0.2f;
+        [Range(0f, 1f)] public float ricochetVolume = 0.2f;
+        [Range(0.25f, 3f)] public float pitch = 1f;
+
+        public string ClipIdFor(ImpactOutcome outcome)
+        {
+            return outcome == ImpactOutcome.Penetrated
+                ? penetrationClipId
+                : outcome == ImpactOutcome.Ricocheted
+                    ? ricochetClipId
+                    : blockedClipId;
+        }
+
+        public float VolumeFor(ImpactOutcome outcome)
+        {
+            return outcome == ImpactOutcome.Penetrated
+                ? penetrationVolume
+                : outcome == ImpactOutcome.Ricocheted
+                    ? ricochetVolume
+                    : blockedVolume;
+        }
+    }
+
     public sealed class ShellDefinition : ScriptableObject
     {
         public string id;
@@ -16,5 +46,7 @@ namespace LocalTanks
         [Range(0.01f, 1f)] public float ricochetSpeedMultiplier = 0.7f;
         [Range(0.01f, 1f)] public float ricochetPenetrationMultiplier = 0.65f;
         [Range(0, 8)] public int maximumRicochets = 2;
+        [Header("Local audio")]
+        public ShellAudioProfile audio;
     }
 }

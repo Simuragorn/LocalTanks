@@ -16,6 +16,7 @@ namespace LocalTanks
         private float ricochetPenetrationMultiplier;
         private int remainingRicochets;
         private Transform ownerRoot;
+        private ShellAudioProfile audioProfile;
         private Collider2D temporarilyIgnoredCollider;
         private bool initialized;
         private readonly ProjectileTravelBudget travelBudget = new ProjectileTravelBudget();
@@ -61,6 +62,7 @@ namespace LocalTanks
             ricochetSpeedMultiplier = Mathf.Clamp01(shell.ricochetSpeedMultiplier);
             ricochetPenetrationMultiplier = Mathf.Clamp01(shell.ricochetPenetrationMultiplier);
             remainingRicochets = Mathf.Max(0, shell.maximumRicochets);
+            audioProfile = shell.audio;
         }
 
         private void FixedUpdate()
@@ -97,6 +99,7 @@ namespace LocalTanks
                 {
                     DestructibleObstacle obstacle = hit.collider.GetComponentInParent<DestructibleObstacle>();
                     obstacle?.ApplyDamage(damage);
+                    CombatAudioEmitter.PlayImpact(audioProfile, ImpactOutcome.Blocked, hit.point);
                     Destroy(gameObject);
                     return;
                 }
@@ -112,6 +115,8 @@ namespace LocalTanks
                     ricochetSpeedMultiplier,
                     ricochetPenetrationMultiplier,
                     remainingRicochets);
+
+                CombatAudioEmitter.PlayImpact(audioProfile, result.Outcome, hit.point);
 
                 if (result.Outcome != ImpactOutcome.Ricocheted)
                 {

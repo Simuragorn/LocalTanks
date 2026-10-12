@@ -33,17 +33,28 @@ namespace LocalTanks
 
         private ITankAudioClipProvider clipProvider;
         private AudioSource engineSource;
+        private AudioSource tracksSource;
         private AudioSource turretSource;
         private AudioSource weaponSource;
+        private AudioSource mechanismSource;
+        private AudioSource destructionSource;
         private AudioClip shotClip;
+        private AudioClip reloadClip;
+        private AudioClip destructionClip;
         private bool configured;
 
         public AudioSource EngineSource => engineSource;
+        public AudioSource TracksSource => tracksSource;
         public AudioSource TurretSource => turretSource;
         public AudioSource WeaponSource => weaponSource;
+        public AudioSource MechanismSource => mechanismSource;
+        public AudioSource DestructionSource => destructionSource;
         public bool HasEngineClip => engineSource != null && engineSource.clip != null;
+        public bool HasTracksClip => tracksSource != null && tracksSource.clip != null;
         public bool HasShotClip => shotClip != null;
         public int ShotPlayCount { get; private set; }
+        public int ReloadPlayCount { get; private set; }
+        public int DestructionPlayCount { get; private set; }
 
         private void Awake()
         {
@@ -76,7 +87,7 @@ namespace LocalTanks
         private void Update()
         {
             TankAudioProfile profile = config != null ? config.audio : null;
-            if (profile == null || motor == null)
+            if (profile == null || motor == null || (health != null && health.IsDestroyed))
             {
                 return;
             }
@@ -93,6 +104,21 @@ namespace LocalTanks
                 engineSource.volume = profile.engineVolume * Mathf.Lerp(0.48f, 1f, load01);
                 engineSource.pitch = profile.enginePitch * Mathf.Lerp(0.82f, 1.2f, load01);
                 StartLoop(engineSource);
+            }
+
+            if (tracksSource != null && tracksSource.clip != null)
+            {
+                float tracks01 = Mathf.Max(movement01, turn01 * 0.8f);
+                tracksSource.volume = profile.tracksVolume * Mathf.SmoothStep(0f, 1f, tracks01);
+                tracksSource.pitch = profile.tracksPitch * Mathf.Lerp(0.88f, 1.12f, tracks01);
+                if (tracks01 > 0.025f)
+                {
+                    StartLoop(tracksSource);
+                }
+                else if (tracksSource.isPlaying)
+                {
+                    tracksSource.Pause();
+                }
             }
 
             if (turretSource != null && turretSource.clip != null && turret != null)
@@ -137,8 +163,11 @@ namespace LocalTanks
             else
             {
                 engineSource.clip = null;
+                tracksSource.clip = null;
                 turretSource.clip = null;
                 shotClip = null;
+                reloadClip = null;
+                destructionClip = null;
             }
             Subscribe();
         }
@@ -146,8 +175,11 @@ namespace LocalTanks
         private void EnsureSources()
         {
             if (engineSource == null) engineSource = CreateSource("EngineAudio", true);
+            if (tracksSource == null) tracksSource = CreateSource("TracksAudio", true);
             if (turretSource == null) turretSource = CreateSource("TurretAudio", true);
             if (weaponSource == null) weaponSource = CreateSource("WeaponAudio", false);
+            if (mechanismSource == null) mechanismSource = CreateSource("MechanismAudio", false);
+            if (destructionSource == null) destructionSource = CreateSource("DestructionAudio", false);
         }
 
         private AudioSource CreateSource(string sourceName, bool loop)
@@ -173,16 +205,25 @@ namespace LocalTanks
                 return;
             }
 
-            engineSource.clip = clipProvider.Load(profile.engineClipId);
+            engineSource.clip = LoadClip(profile.engineClipId);
             engineSource.pitch = profile.enginePitch;
             if (engineSource.clip != null && engineSource.clip.length > 0f)
             {
                 uint phase = nextEnginePhase++ % 997u;
                 engineSource.time = phase / 997f * engineSource.clip.length;
             }
-            turretSource.clip = clipProvider.Load(profile.turretClipId);
+            turretSource.clip = LoadClip(profile.turretClipId);
             turretSource.pitch = profile.turretPitch;
-            shotClip = clipProvider.Load(profile.shotClipId);
+            tracksSource.clip = LoadClip(profile.tracksClipId);
+            tracksSource.pitch = profile.tracksPitch;
+            shotClip = LoadClip(profile.shotClipId);
+            reloadClip = LoadClip(profile.reloadClipId);
+            destructionClip = LoadClip(profile.destructionClipId);
+        }
+
+        private AudioClip LoadClip(string clipId)
+        {
+            return string.IsNullOrWhiteSpace(clipId) ? null : clipProvider.Load(clipId);
         }
 
         private void Subscribe()
@@ -196,6 +237,8 @@ namespace LocalTanks
             {
                 weapon.Fired -= OnFired;
                 weapon.Fired += OnFired;
+                weapon.ReloadStarted -= OnReloadStarted;
+                weapon.ReloadStarted += OnReloadStarted;
             }
 
             if (health != null)
@@ -207,7 +250,11 @@ namespace LocalTanks
 
         private void Unsubscribe()
         {
-            if (weapon != null) weapon.Fired -= OnFired;
+            if (weapon != null)
+            {
+                weapon.Fired -= OnFired;
+                weapon.ReloadStarted -= OnReloadStarted;
+            }
             if (health != null) health.Destroyed -= OnDestroyed;
         }
 
@@ -229,9 +276,31 @@ namespace LocalTanks
             ShotPlayCount++;
         }
 
+        private void OnReloadStarted(WeaponController source)
+        {
+            TankAudioProfile profile = config != null ? config.audio : null;
+            if (profile == null || mechanismSource == null || reloadClip == null)
+            {
+                return;
+            }
+
+            mechanismSource.pitch = profile.reloadPitch;
+            mechanismSource.PlayOneShot(reloadClip, profile.reloadVolume);
+            ReloadPlayCount++;
+        }
+
         private void OnDestroyed(TankHealth destroyedHealth)
         {
             StopLoops();
+            TankAudioProfile profile = config != null ? config.audio : null;
+            if (profile == null || destructionSource == null || destructionClip == null)
+            {
+                return;
+            }
+
+            destructionSource.pitch = profile.destructionPitch;
+            destructionSource.PlayOneShot(destructionClip, profile.destructionVolume);
+            DestructionPlayCount++;
         }
 
         private static void StartLoop(AudioSource source)
@@ -248,6 +317,7 @@ namespace LocalTanks
         private void StopLoops()
         {
             if (engineSource != null) engineSource.Stop();
+            if (tracksSource != null) tracksSource.Stop();
             if (turretSource != null) turretSource.Stop();
         }
     }

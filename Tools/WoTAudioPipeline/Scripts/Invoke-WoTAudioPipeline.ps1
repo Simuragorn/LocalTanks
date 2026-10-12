@@ -41,13 +41,16 @@ Copy-Item -LiteralPath (Join-Path $pipelineRoot "wwnames.txt") -Destination (Joi
 $profile = Get-Content -Raw -LiteralPath (Join-Path $pipelineRoot "audio_clips.json") | ConvertFrom-Json
 if ($profile.schemaVersion -ne 1) { throw "Unsupported audio profile schema: $($profile.schemaVersion)" }
 
-$bankNames = @($profile.clips | ForEach-Object {
-    $_.bank
-    if (-not [string]::IsNullOrWhiteSpace($_.mediaBank)) { $_.mediaBank }
+$eventBankNames = @($profile.clips | ForEach-Object { $_.bank } | Sort-Object -Unique)
+$mediaBankNames = @($profile.clips | ForEach-Object {
+    if ([string]::IsNullOrWhiteSpace($_.mediaBank)) { $_.bank } else { $_.mediaBank }
 } | Sort-Object -Unique)
+$bankNames = @($eventBankNames + $mediaBankNames | Sort-Object -Unique)
 $requiredEntries = @("Init.bnk")
-foreach ($bankName in $bankNames) {
+foreach ($bankName in $eventBankNames) {
     $requiredEntries += "$bankName.bnk"
+}
+foreach ($bankName in $mediaBankNames) {
     $requiredEntries += "$bankName.pck"
 }
 
@@ -57,7 +60,7 @@ if ($packages.Count -eq 0) { throw "No audioww packages were found in $packageRo
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-function Export-PackageEntry([string]$EntryName) {
+function Export-PackageEntry([string]$EntryName, [bool]$Required = $true) {
     $target = Join-Path $bankRoot $EntryName
     if ((Test-Path -LiteralPath $target) -and -not $Force) { return $target }
 
@@ -78,12 +81,16 @@ function Export-PackageEntry([string]$EntryName) {
         }
     }
 
-    throw "Audio entry '$EntryName' was not found in audioww packages."
+    if ($Required) {
+        throw "Audio entry '$EntryName' was not found in audioww packages."
+    }
+    return $null
 }
 
 $sourceFiles = @{}
 foreach ($entryName in $requiredEntries) {
-    $sourceFiles[$entryName] = Export-PackageEntry $entryName
+    $isOptionalMedia = $entryName.EndsWith(".pck", [StringComparison]::OrdinalIgnoreCase)
+    $sourceFiles[$entryName] = Export-PackageEntry $entryName (-not $isOptionalMedia)
 }
 
 function Write-XorPad([uint32]$EncryptedVersion, [uint32]$PlainVersion) {
@@ -130,13 +137,14 @@ Write-Host "Detected Wwise bank version $bankVersion."
 
 foreach ($bankName in $bankNames) {
     $marker = Join-Path $mediaRoot "$bankName.extracted"
-    if ($Force -or -not (Test-Path -LiteralPath $marker)) {
+    $packagePath = $sourceFiles["$bankName.pck"]
+    if ($null -ne $packagePath -and ($Force -or -not (Test-Path -LiteralPath $marker))) {
         $log = Join-Path $workRoot "quickbms-$bankName.log"
         $errorLog = Join-Path $workRoot "quickbms-$bankName.error.log"
         $arguments = @(
             "-o",
             "`"$pckScript`"",
-            "`"$($sourceFiles["$bankName.pck"])`"",
+            "`"$packagePath`"",
             "`"$mediaRoot`""
         )
         $process = Start-Process -FilePath $quickBms -ArgumentList $arguments -Wait -PassThru `
@@ -147,7 +155,14 @@ foreach ($bankName in $bankNames) {
 
     $bankMediaRoot = Join-Path $mediaRoot $bankName
     New-Item -ItemType Directory -Force -Path $bankMediaRoot | Out-Null
-    Copy-Item -LiteralPath $sourceFiles["$bankName.bnk"] -Destination (Join-Path $bankMediaRoot "$bankName.bnk") -Force
+    $bankPath = $sourceFiles["$bankName.bnk"]
+    if ($null -eq $bankPath) {
+        $bankPath = Export-PackageEntry "$bankName.bnk" $false
+        $sourceFiles["$bankName.bnk"] = $bankPath
+    }
+    if ($null -ne $bankPath) {
+        Copy-Item -LiteralPath $bankPath -Destination (Join-Path $bankMediaRoot "$bankName.bnk") -Force
+    }
 }
 
 $manifestClips = @()

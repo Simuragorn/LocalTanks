@@ -56,14 +56,35 @@ namespace LocalTanks.Editor
     public sealed class TankAudioJson
     {
         public string engineClipId;
+        public string tracksClipId;
         public string shotClipId;
+        public string reloadClipId;
         public string turretClipId;
+        public string destructionClipId;
         public float engineVolume = 0.45f;
+        public float tracksVolume = 0.2f;
         public float shotVolume = 0.9f;
+        public float reloadVolume = 0.36f;
         public float turretVolume = 0.22f;
+        public float destructionVolume = 0.78f;
         public float enginePitch = 1f;
+        public float tracksPitch = 1f;
         public float shotPitch = 1f;
+        public float reloadPitch = 1f;
         public float turretPitch = 1f;
+        public float destructionPitch = 1f;
+    }
+
+    [Serializable]
+    public sealed class ShellAudioJson
+    {
+        public string penetrationClipId;
+        public string blockedClipId;
+        public string ricochetClipId;
+        public float penetrationVolume = 0.28f;
+        public float blockedVolume = 0.2f;
+        public float ricochetVolume = 0.2f;
+        public float pitch = 1f;
     }
 
     [Serializable]
@@ -115,6 +136,7 @@ namespace LocalTanks.Editor
         public float ricochetSpeedMultiplier;
         public float ricochetPenetrationMultiplier;
         public int maximumRicochets;
+        public ShellAudioJson audio;
     }
 
     public sealed class CombatDefinitionSet
@@ -157,6 +179,16 @@ namespace LocalTanks.Editor
                 RequireRange(shell.ricochetSpeedMultiplier, float.Epsilon, 1f, $"Shell '{shell.id}'.ricochetSpeedMultiplier", errors);
                 RequireRange(shell.ricochetPenetrationMultiplier, float.Epsilon, 1f, $"Shell '{shell.id}'.ricochetPenetrationMultiplier", errors);
                 RequireRange(shell.maximumRicochets, 0, 8, $"Shell '{shell.id}'.maximumRicochets", errors);
+                if (shell.audio != null)
+                {
+                    RequireText(shell.audio.penetrationClipId, $"Shell '{shell.id}'.audio.penetrationClipId", errors);
+                    RequireText(shell.audio.blockedClipId, $"Shell '{shell.id}'.audio.blockedClipId", errors);
+                    RequireText(shell.audio.ricochetClipId, $"Shell '{shell.id}'.audio.ricochetClipId", errors);
+                    RequireRange(shell.audio.penetrationVolume, 0f, 1f, $"Shell '{shell.id}'.audio.penetrationVolume", errors);
+                    RequireRange(shell.audio.blockedVolume, 0f, 1f, $"Shell '{shell.id}'.audio.blockedVolume", errors);
+                    RequireRange(shell.audio.ricochetVolume, 0f, 1f, $"Shell '{shell.id}'.audio.ricochetVolume", errors);
+                    RequireRange(shell.audio.pitch, 0.25f, 3f, $"Shell '{shell.id}'.audio.pitch", errors);
+                }
             }
 
             foreach (WeaponDefinitionJson weapon in definitions.Weapons)
@@ -205,14 +237,23 @@ namespace LocalTanks.Editor
                 else if (hasAudio)
                 {
                     RequireText(tank.audio.engineClipId, $"Tank '{tank.id}'.audio.engineClipId", errors);
+                    RequireText(tank.audio.tracksClipId, $"Tank '{tank.id}'.audio.tracksClipId", errors);
                     RequireText(tank.audio.shotClipId, $"Tank '{tank.id}'.audio.shotClipId", errors);
+                    RequireText(tank.audio.reloadClipId, $"Tank '{tank.id}'.audio.reloadClipId", errors);
                     RequireText(tank.audio.turretClipId, $"Tank '{tank.id}'.audio.turretClipId", errors);
+                    RequireText(tank.audio.destructionClipId, $"Tank '{tank.id}'.audio.destructionClipId", errors);
                     RequireRange(tank.audio.engineVolume, 0f, 1f, $"Tank '{tank.id}'.audio.engineVolume", errors);
+                    RequireRange(tank.audio.tracksVolume, 0f, 1f, $"Tank '{tank.id}'.audio.tracksVolume", errors);
                     RequireRange(tank.audio.shotVolume, 0f, 1f, $"Tank '{tank.id}'.audio.shotVolume", errors);
+                    RequireRange(tank.audio.reloadVolume, 0f, 1f, $"Tank '{tank.id}'.audio.reloadVolume", errors);
                     RequireRange(tank.audio.turretVolume, 0f, 1f, $"Tank '{tank.id}'.audio.turretVolume", errors);
+                    RequireRange(tank.audio.destructionVolume, 0f, 1f, $"Tank '{tank.id}'.audio.destructionVolume", errors);
                     RequireRange(tank.audio.enginePitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.enginePitch", errors);
+                    RequireRange(tank.audio.tracksPitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.tracksPitch", errors);
                     RequireRange(tank.audio.shotPitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.shotPitch", errors);
+                    RequireRange(tank.audio.reloadPitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.reloadPitch", errors);
                     RequireRange(tank.audio.turretPitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.turretPitch", errors);
+                    RequireRange(tank.audio.destructionPitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.destructionPitch", errors);
                 }
 
                 if (tank.mobility == null)
@@ -359,8 +400,11 @@ namespace LocalTanks.Editor
         {
             return audio != null &&
                    (!string.IsNullOrWhiteSpace(audio.engineClipId) ||
+                    !string.IsNullOrWhiteSpace(audio.tracksClipId) ||
                     !string.IsNullOrWhiteSpace(audio.shotClipId) ||
-                    !string.IsNullOrWhiteSpace(audio.turretClipId));
+                    !string.IsNullOrWhiteSpace(audio.reloadClipId) ||
+                    !string.IsNullOrWhiteSpace(audio.turretClipId) ||
+                    !string.IsNullOrWhiteSpace(audio.destructionClipId));
         }
 
         private static void RequireText(string value, string field, List<string> errors)
@@ -538,6 +582,18 @@ namespace LocalTanks.Editor
             target.ricochetSpeedMultiplier = source.ricochetSpeedMultiplier;
             target.ricochetPenetrationMultiplier = source.ricochetPenetrationMultiplier;
             target.maximumRicochets = source.maximumRicochets;
+            target.audio = source.audio == null
+                ? null
+                : new ShellAudioProfile
+                {
+                    penetrationClipId = source.audio.penetrationClipId,
+                    blockedClipId = source.audio.blockedClipId,
+                    ricochetClipId = source.audio.ricochetClipId,
+                    penetrationVolume = source.audio.penetrationVolume,
+                    blockedVolume = source.audio.blockedVolume,
+                    ricochetVolume = source.audio.ricochetVolume,
+                    pitch = source.audio.pitch
+                };
             EditorUtility.SetDirty(target);
             return target;
         }
@@ -597,20 +653,32 @@ namespace LocalTanks.Editor
                 source.armor.rear);
             target.audio = source.audio == null ||
                            (string.IsNullOrWhiteSpace(source.audio.engineClipId) &&
+                            string.IsNullOrWhiteSpace(source.audio.tracksClipId) &&
                             string.IsNullOrWhiteSpace(source.audio.shotClipId) &&
-                            string.IsNullOrWhiteSpace(source.audio.turretClipId))
+                            string.IsNullOrWhiteSpace(source.audio.reloadClipId) &&
+                            string.IsNullOrWhiteSpace(source.audio.turretClipId) &&
+                            string.IsNullOrWhiteSpace(source.audio.destructionClipId))
                 ? null
                 : new TankAudioProfile
                 {
                     engineClipId = source.audio.engineClipId,
+                    tracksClipId = source.audio.tracksClipId,
                     shotClipId = source.audio.shotClipId,
+                    reloadClipId = source.audio.reloadClipId,
                     turretClipId = source.audio.turretClipId,
+                    destructionClipId = source.audio.destructionClipId,
                     engineVolume = source.audio.engineVolume,
+                    tracksVolume = source.audio.tracksVolume,
                     shotVolume = source.audio.shotVolume,
+                    reloadVolume = source.audio.reloadVolume,
                     turretVolume = source.audio.turretVolume,
+                    destructionVolume = source.audio.destructionVolume,
                     enginePitch = source.audio.enginePitch,
+                    tracksPitch = source.audio.tracksPitch,
                     shotPitch = source.audio.shotPitch,
-                    turretPitch = source.audio.turretPitch
+                    reloadPitch = source.audio.reloadPitch,
+                    turretPitch = source.audio.turretPitch,
+                    destructionPitch = source.audio.destructionPitch
                 };
             EditorUtility.SetDirty(target);
             return target;

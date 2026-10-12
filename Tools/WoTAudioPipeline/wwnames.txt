@@ -3,3 +3,10 @@ wpn_small_pc
 wpn_automatic_pc
 tur_man_trav_04
 tur_man_trav_05
+gun_rld_20_45mm
+trds_med_npc
+trds_chf_npc
+imp_small_pierce_AP_NPC_NPC
+imp_small_not_pierce_AP_NPC_NPC
+imp_small_ricochet_AP_NPC_NPC
+expl_crew_death_s_NPC

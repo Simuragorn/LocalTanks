@@ -17,6 +17,7 @@ namespace LocalTanks
         private int roundsRemaining;
 
         public event Action<WeaponController> Fired;
+        public event Action<WeaponController> ReloadStarted;
 
         public bool IsReady => reloadTimer.IsReady && shotIntervalTimer.IsReady && roundsRemaining > 0;
         public Transform Muzzle => muzzle;
@@ -107,6 +108,7 @@ namespace LocalTanks
             if (roundsRemaining <= 0)
             {
                 reloadTimer.Start(EffectiveReloadSeconds);
+                ReloadStarted?.Invoke(this);
             }
             else
             {
