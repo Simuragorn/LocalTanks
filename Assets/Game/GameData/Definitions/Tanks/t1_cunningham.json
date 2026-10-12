@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "t1_cunningham",
+  "displayName": "T1 Cunningham",
+  "vehicleClass": "LightTank",
+  "nation": "USA",
+  "tier": 1,
+  "availableInGame": false,
+  "maxHitPoints": 250,
+  "weaponId": "gun_37mm_m1924",
+  "mobility": {
+    "maxForwardSpeed": 2.9496,
+    "maxReverseSpeed": 0.7194,
+    "acceleration": 0.4136,
+    "groundResistance": 1.375,
+    "braking": 1.2173,
+    "hullTurnSpeed": 42.0,
+    "turretTurnSpeed": 35.0
+  },
+  "armor": {
+    "front": 9.5,
+    "left": 6.3,
+    "right": 6.3,
+    "rear": 6.3
+  },
+  "gunHandling": {
+    "minimumDispersionDegrees": 0.2922,
+    "maximumDispersionDegrees": 1.357,
+    "aimingTimeSeconds": 2.5,
+    "movementDispersionDegrees": 0.4553,
+    "hullTraverseDispersionDegrees": 0.4664,
+    "turretTraverseDispersionDegrees": 0.1432,
+    "shotDispersionDegrees": 1.1688
+  },
+  "vision": {
+    "viewRange": 8.75,
+    "stationaryConcealment": 0.225,
+    "movementRevealPenalty": 0.056,
+    "firingRevealPenalty": 0.1811,
+    "firingRevealDuration": 4.5,
+    "guaranteedDetectionRange": 1.4
+  },
+  "audio": {
+    "engineClipId": "engine_eng_gaz_aa_pc",
+    "tracksClipId": "tracks_trds_med_npc",
+    "shotClipId": "gun_wpn_small_pc",
+    "reloadClipId": "reload_gun_rld_20_45mm",
+    "turretClipId": "turret_tur_man_trav_01",
+    "destructionClipId": "destruction_expl_crew_death_s_npc",
+    "engineVolume": 0.4,
+    "tracksVolume": 0.19,
+    "shotVolume": 0.84,
+    "reloadVolume": 0.34,
+    "turretVolume": 0.17,
+    "destructionVolume": 0.78,
+    "enginePitch": 1.0,
+    "tracksPitch": 0.98,
+    "shotPitch": 1.08,
+    "reloadPitch": 1.0,
+    "turretPitch": 1.0,
+    "destructionPitch": 0.96
+  },
+  "massTonnes": 7.555,
+  "enginePowerHp": 150.0
+}

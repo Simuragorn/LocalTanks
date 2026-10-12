@@ -361,6 +361,7 @@ MonoBehaviour:
   turret: {fileID: 710693342537775573}
   weapon: {fileID: 3325340310409873891}
   playerInput: {fileID: 1271144910613082445}
+  body: {fileID: 0}
 --- !u!1 &8070536689276459188
 GameObject:
   m_ObjectHideFlags: 0

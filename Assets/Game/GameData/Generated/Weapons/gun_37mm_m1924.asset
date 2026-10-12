@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f6919c3bb522b84e993b4ddfa24016e, type: 3}
+  m_Name: gun_37mm_m1924
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponDefinition
+  id: gun_37mm_m1924
+  displayName: 37 mm Gun M1924
+  reloadSeconds: 8
+  magazineSize: 5
+  shotIntervalSeconds: 0.5
+  shell: {fileID: 11400000, guid: 4c5448c783628e94c98bf61fa190b0bd, type: 2}

@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d55c50e0cb13394e9090ad258b4ef38, type: 3}
+  m_Name: ap_37mm_m1924
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.ShellDefinition
+  id: ap_37mm_m1924
+  displayName: 37 mm AP M1924
+  damage: 30
+  penetration: 33
+  speed: 10.9091
+  radius: 0.031
+  lifetimeSeconds: 3.9167
+  maximumRange: 40
+  ricochetAngle: 70
+  ricochetSpeedMultiplier: 0.7
+  ricochetPenetrationMultiplier: 0.65
+  maximumRicochets: 2
+  audio:
+    penetrationClipId: impact_small_pierced
+    blockedClipId: impact_small_blocked
+    ricochetClipId: impact_small_ricochet
+    penetrationVolume: 0.27
+    blockedVolume: 0.19
+    ricochetVolume: 0.19
+    pitch: 1.02

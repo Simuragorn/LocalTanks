@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa5fa75625e111249b94a3b56f33e8a2, type: 3}
+  m_Name: t1_cunningham
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankDefinition
+  id: t1_cunningham
+  displayName: T1 Cunningham
+  vehicleClass: 2
+  nation: 2
+  tier: 1
+  availableInGame: 0
+  maxHitPoints: 250
+  massTonnes: 7.555
+  enginePowerHp: 150
+  weapon: {fileID: 11400000, guid: 8086288903d4b9e4ba42efd09cb1577e, type: 2}
+  maxForwardSpeed: 2.9496
+  maxReverseSpeed: 0.7194
+  acceleration: 0.4136
+  groundResistance: 1.375
+  braking: 1.2173
+  hullTurnSpeed: 42
+  turretTurnSpeed: 35
+  minimumDispersionDegrees: 0.2922
+  maximumDispersionDegrees: 1.357
+  aimingTimeSeconds: 2.5
+  movementDispersionDegrees: 0.4553
+  hullTraverseDispersionDegrees: 0.4664
+  turretTraverseDispersionDegrees: 0.1432
+  shotDispersionDegrees: 1.1688
+  viewRange: 8.75
+  stationaryConcealment: 0.225
+  movementRevealPenalty: 0.056
+  firingRevealPenalty: 0.1811
+  firingRevealDuration: 4.5
+  guaranteedDetectionRange: 1.4
+  armor:
+    front: 9.5
+    left: 6.3
+    right: 6.3
+    rear: 6.3
+  audio:
+    engineClipId: engine_eng_gaz_aa_pc
+    tracksClipId: tracks_trds_med_npc
+    shotClipId: gun_wpn_small_pc
+    reloadClipId: reload_gun_rld_20_45mm
+    turretClipId: turret_tur_man_trav_01
+    destructionClipId: destruction_expl_crew_death_s_npc
+    engineVolume: 0.4
+    tracksVolume: 0.19
+    shotVolume: 0.84
+    reloadVolume: 0.34
+    turretVolume: 0.17
+    destructionVolume: 0.78
+    enginePitch: 1
+    tracksPitch: 0.98
+    shotPitch: 1.08
+    reloadPitch: 1
+    turretPitch: 1
+    destructionPitch: 0.96

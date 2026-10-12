@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "ap_37mm_m1924",
+  "displayName": "37 mm AP M1924",
+  "damage": 30,
+  "penetration": 33.0,
+  "speed": 10.9091,
+  "radius": 0.031,
+  "lifetimeSeconds": 3.9167,
+  "maximumRange": 40.0,
+  "ricochetAngle": 70.0,
+  "ricochetSpeedMultiplier": 0.7,
+  "ricochetPenetrationMultiplier": 0.65,
+  "maximumRicochets": 2,
+  "audio": {
+    "penetrationClipId": "impact_small_pierced",
+    "blockedClipId": "impact_small_blocked",
+    "ricochetClipId": "impact_small_ricochet",
+    "penetrationVolume": 0.27,
+    "blockedVolume": 0.19,
+    "ricochetVolume": 0.19,
+    "pitch": 1.02
+  }
+}

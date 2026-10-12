@@ -43,7 +43,16 @@ namespace LocalTanks.Editor
                 new Rect(24f, 24f, 229f, 462f), new Rect(277f, 117f, 158f, 275f),
                 new Vector2(0.4986667f, 0.7045380f), new Vector2(0.5f, 0.6946704f),
                 new Vector2(0.24f, 0.24f), 0.48f,
-                CreateLeichttraktorHullOutline())
+                CreateLeichttraktorHullOutline()),
+            new TankBuildSpec(
+                "T1Cunningham", "T1 Cunningham",
+                "Assets/LocalOnly/WoTGenerated/A01_T1_Cunningham/A01_T1_Cunningham_strip2.png",
+                "Assets/Game/GameData/Generated/Tanks/t1_cunningham.asset",
+                "Assets/Game/Prefabs/Tanks/T1Cunningham_Player.prefab",
+                new Rect(24f, 24f, 195f, 422f), new Rect(243f, 134f, 127f, 202f),
+                new Vector2(0.5005221f, 0.6842200f), new Vector2(0.5025058f, 0.6974256f),
+                new Vector2(0.24f, 0.42f), 1.49f,
+                CreateT1CunninghamHullOutline())
         };
 
         [InitializeOnLoadMethod]
@@ -61,6 +70,8 @@ namespace LocalTanks.Editor
                     return;
                 }
 
+                // A newly added build spec has no prefab yet, so this guard only skips the build
+                // when every configured tank is already present.
                 try
                 {
                     BuildCombatAssets();
@@ -532,6 +543,25 @@ namespace LocalTanks.Editor
                 new Vector2(0.21f, -0.55f), new Vector2(-0.21f, -0.55f),
                 new Vector2(-0.25f, -0.50f), new Vector2(-0.27f, -0.34f),
                 new Vector2(-0.27f, 0.34f), new Vector2(-0.26f, 0.50f)
+            };
+        }
+
+        /// <summary>
+        /// The T1E1 hull is a straight-sided box: its silhouette in the rendered sprite keeps a
+        /// nearly constant width, because the tracks form both edges. The measured half width is
+        /// 0.995 of the hull rectangle, so the contour adds only the chamfers a box collider would
+        /// lose rather than collapsing the hull into a rectangle.
+        /// </summary>
+        private static Vector2[] CreateT1CunninghamHullOutline()
+        {
+            return new[]
+            {
+                new Vector2(-0.90f, 0.985f), new Vector2(0.90f, 0.985f),
+                new Vector2(0.965f, 0.94f), new Vector2(0.985f, 0.86f),
+                new Vector2(0.985f, -0.86f), new Vector2(0.965f, -0.94f),
+                new Vector2(0.90f, -0.985f), new Vector2(-0.90f, -0.985f),
+                new Vector2(-0.965f, -0.94f), new Vector2(-0.985f, -0.86f),
+                new Vector2(-0.985f, 0.86f), new Vector2(-0.965f, 0.94f)
             };
         }
 

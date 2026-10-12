@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "gun_37mm_m1924",
+  "displayName": "37 mm Gun M1924",
+  "reloadSeconds": 8.0,
+  "magazineSize": 5,
+  "shotIntervalSeconds": 0.5,
+  "shellId": "ap_37mm_m1924"
+}

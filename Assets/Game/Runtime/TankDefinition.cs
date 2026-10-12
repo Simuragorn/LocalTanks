@@ -14,7 +14,8 @@ namespace LocalTanks
     public enum TankNation
     {
         Germany,
-        USSR
+        USSR,
+        USA
     }
 
     [System.Serializable]

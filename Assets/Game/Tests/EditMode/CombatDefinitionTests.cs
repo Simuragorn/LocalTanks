@@ -14,7 +14,7 @@ namespace LocalTanks.Tests
 
             Assert.That(definitions.Tanks.Select(item => item.id), Is.EquivalentTo(new[]
             {
-                "leichttraktor", "ms_1", "tiger_ii"
+                "leichttraktor", "ms_1", "t1_cunningham", "tiger_ii"
             }));
             Assert.That(definitions.Weapons.Select(item => item.id), Does.Contain("kwk_43_l71"));
             Assert.That(definitions.Shells.Select(item => item.id), Does.Contain("pzgr_39_43"));

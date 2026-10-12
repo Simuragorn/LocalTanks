@@ -23,6 +23,13 @@
       "usage": "oneShot"
     },
     {
+      "clipId": "turret_tur_man_trav_01",
+      "bank": "turret",
+      "event": "tur_man_trav_01",
+      "variantIndex": 0,
+      "usage": "loop"
+    },
+    {
       "clipId": "turret_tur_man_trav_04",
       "bank": "turret",
       "event": "tur_man_trav_04",
