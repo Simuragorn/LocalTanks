@@ -5,8 +5,8 @@ and produces the two transparent layers used by LocalTanks: hull/chassis and
 turret/gun. Both layers are rendered by the same orthographic camera at the same
 scale. The final `_strip2.png` places the hull on the left and turret on the right.
 
-The personal Codex skill `render-wot-tank-sprite` in
-`C:\Users\kamidashi\.codex\skills\` documents and orchestrates the complete
+The project skill `render-wot-tank-sprite` in
+`C:\UnityProjects\LocalTanks\.dsh\skills\` documents and orchestrates the complete
 name-to-sprite workflow, validation gate, recovery rules and Git boundary.
 
 Before importing a vehicle, render mode removes Blender's factory-startup cube,

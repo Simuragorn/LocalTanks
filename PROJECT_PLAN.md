@@ -609,12 +609,14 @@ InvalidateRegion(bounds)
 Основным редактируемым источником являются текстовые JSON-файлы:
 
 ```text
-Assets/GameData/Definitions/Tanks/*.json
-Assets/GameData/Definitions/Weapons/*.json
-Assets/GameData/Definitions/Shells/*.json
-Assets/GameData/Definitions/Terrain/*.json
-Assets/GameData/Definitions/Rules/*.json
+Assets/Game/GameData/Definitions/Tanks/*.json
+Assets/Game/GameData/Definitions/Weapons/*.json
+Assets/Game/GameData/Definitions/Shells/*.json
+Assets/Game/GameData/Maps/*.json
+Assets/Game/GameData/Scenarios/*.json
 ```
+
+Точный набор полей, единицы измерения и допустимые диапазоны хранятся в `Docs/DATA_SCHEMA.md`; фактическая структура каталогов описана в `Docs/ARCHITECTURE.md`. Отдельные файлы правил и типов местности пока не выделены: значения правил живут в runtime-компонентах и ScriptableObject, а поверхности задаёт карта.
 
 ИИ редактирует JSON, а не Unity `.asset` и не префабы. Unity Editor importer проверяет JSON и создаёт или обновляет внутренние ScriptableObject либо runtime-каталог.
 
@@ -645,12 +647,13 @@ Assets/GameData/Definitions/Rules/*.json
   "prefabId": "tank_standard",
   "maxHitPoints": 850,
   "mobility": {
-    "forwardSpeed": 8.0,
-    "reverseSpeed": 3.5,
+    "maxForwardSpeed": 8.0,
+    "maxReverseSpeed": 3.5,
     "acceleration": 4.0,
     "braking": 6.0,
+    "groundResistance": 0.85,
     "hullTurnSpeed": 75.0,
-    "terrainProfileId": "tracked_medium"
+    "turretTurnSpeed": 40.0
   },
   "armor": {
     "front": 80.0,
@@ -660,17 +663,17 @@ Assets/GameData/Definitions/Rules/*.json
   },
   "vision": {
     "viewRange": 420.0,
-    "proximityDetectionRange": 45.0,
+    "guaranteedDetectionRange": 45.0,
     "stationaryConcealment": 0.28,
-    "movingConcealment": 0.18,
+    "movementRevealPenalty": 0.18,
     "firingRevealPenalty": 0.30,
-    "firingPenaltyDuration": 4.0
+    "firingRevealDuration": 4.0
   },
   "weaponId": "cannon_75mm_standard"
 }
 ```
 
-Числа являются начальными примерами, а не утверждённым балансом.
+Числа являются начальными примерами, а не утверждённым балансом. Для `availableInGame: true` обязателен также блок `audio` с профилем двигателя, гусениц, выстрела, перезарядки, механизма башни и уничтожения.
 
 ### Обязательная валидация
 
@@ -774,12 +777,17 @@ Assets/Game/
 
 ## 16. Сцены и префабы
 
-Минимальный набор сцен:
+Минимальный набор сцен и его текущее состояние:
 
-- `Bootstrap` — загрузка данных и переходы;
-- `MainMenu` — запуск игры и выход;
-- `Battle_TestRange` — технический полигон;
-- `Battle_MainMap` — первая игровая карта.
+- `Bootstrap` — загрузка данных и переходы; ещё не создана;
+- `MainMenu` — запуск игры и выход; ещё не создана, её роль пока выполняет прямое открытие нужной сцены;
+- `Battle_TestRange` — технический полигон; создана;
+- `Battle_NavigationRange` — полигон навигации, создаётся из `navigation_range.json`; создана;
+- `Battle_RiverCrossing` — первая игровая карта, создаётся из `river_crossing.json`; создана;
+- `Battle_AiDuelLab` — лаборатория дуэлей 1×1, производится из основной карты; создана;
+- `Battle_PlayerAiTestLab` — ручной тест игрока против настраиваемого состава; создана.
+
+Все перечисленные игровые сцены создаются и пересобираются Editor-инструментами из JSON-источников, а не редактируются вручную.
 
 Минимальный набор префабов:
 
@@ -948,6 +956,19 @@ Docs/
 - `DEPENDENCIES.md` — версии Unity, пакетов и сторонних библиотек.
 - `KNOWN_ISSUES.md` — подтверждённые неисправности и обходные решения.
 - `BACKLOG.md` — задачи по приоритетам без объявления их выполненными.
+
+Дополнительно в `Docs/` ведутся рабочие документы этапов и подсистем, которые не заменяют перечисленные выше, а раскрывают их: `SPRINT_00N.md` (план и критерии приёмки конкретного этапа), `AI_TESTING.md`, `AI_DUEL_LAB.md`, `AI_PLAYER_TEST_LAB.md`, `AI_TACTICAL_COMBAT_PLAN.md`, `AI_BEHAVIOR_DIAGNOSTIC_*.md`, `MAP_TACTICS.md`, `TANK_REFERENCE.md`, `TANK_BALANCE.md`, `TANK_SPRITE_PROMPTS.md`, `LOCAL_LLM.md`, `WOT_MEDIA_AUDIT.md`, `WOT_TOP_CONFIG_SNAPSHOT.md`. Производные документы (`MAP_TACTICS.md`, `TANK_BALANCE.md`, `WOT_TOP_CONFIG_SNAPSHOT.md`) создаются инструментами и не редактируются вручную.
+
+### Навыки агента
+
+Повторяемые конвейеры проекта описаны как навыки в `.dsh/skills/` и загружаются агентом по имени перед выполнением соответствующей задачи. Навык считается частью конвейера, а не альтернативной документацией: он обязан ссылаться на скрипты в `Tools/` как на источник истины и не дублировать их поведение текстом.
+
+- `add-localtanks-tank` — интеграция машины: данные, префаб, состав боя, тесты, документация; справочник и проверочные скрипты внутри навыка;
+- `render-wot-tank-sprite` — рендер спрайта из локальной 3D-модели WoT (`Tools/WoTSpritePipeline`);
+- `wot-tank-audio` — локальные звуки Wwise и звуковой профиль машины (`Tools/WoTAudioPipeline`);
+- `sync-wot-vehicle-data` — топовый профиль из установленного клиента WoT (`Tools/WoTDataPipeline`).
+
+При появлении нового повторяемого конвейера сначала оценивается возможность оформить его навыком и общим скриптом, а не расширять инструкции вручную.
 
 Документация считается частью результата задачи. Код без обновлённого состояния проекта не считается полностью завершённой работой.
 

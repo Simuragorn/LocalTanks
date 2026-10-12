@@ -84,6 +84,13 @@ crashlytics-build.properties
 # TestRunner generated files
 InitTestScene*.unity*
 
+# Local batchmode test logs and NUnit result files
+/TestResults/
+
+# Local harness state; the project skills under .dsh/skills are tracked on purpose.
+/.dsh/*
+!/.dsh/skills/
+
 # Addressables default ignores, before user customizations
 /ServerData
 /[Aa]ssets/StreamingAssets/aa*

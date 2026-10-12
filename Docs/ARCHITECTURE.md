@@ -152,3 +152,7 @@ JSON является источником истины. `CombatDefinitionImport
 6. добавляет сцену в Build Settings.
 
 Сгенерированные `.meta`, `.asset`, `.prefab` и `.unity` не редактируются вручную.
+
+## Навыки агента
+
+Повторяемые конвейеры, которые нельзя восстанавливать по памяти, оформлены как навыки в `.dsh/skills/` и загружаются по имени: `add-localtanks-tank` (интеграция машины целиком), `render-wot-tank-sprite` (`Tools/WoTSpritePipeline`), `wot-tank-audio` (`Tools/WoTAudioPipeline`), `sync-wot-vehicle-data` (`Tools/WoTDataPipeline`). Навык ссылается на скрипты и README соответствующего инструмента как на источник истины и не заменяет их; при расхождении побеждает реализация в `Tools/`.

@@ -104,18 +104,48 @@
 ```json
 "audio": {
   "engineClipId": "engine_eng_gaz_aa_pc",
+  "tracksClipId": "tracks_trds_med_npc",
   "shotClipId": "gun_wpn_small_pc",
+  "reloadClipId": "reload_gun_rld_20_45mm",
   "turretClipId": "turret_tur_man_trav_04",
+  "destructionClipId": "destruction_expl_crew_death_s_npc",
   "engineVolume": 0.42,
+  "tracksVolume": 0.2,
   "shotVolume": 0.86,
+  "reloadVolume": 0.36,
   "turretVolume": 0.18,
+  "destructionVolume": 0.78,
   "enginePitch": 0.94,
+  "tracksPitch": 0.94,
   "shotPitch": 0.94,
-  "turretPitch": 0.96
+  "reloadPitch": 0.94,
+  "turretPitch": 0.96,
+  "destructionPitch": 0.96
 }
 ```
 
-Для `availableInGame: true` профиль обязателен. Clip ID ссылаются на локально воспроизводимые результаты `WoTAudioPipeline`, а не на Unity GUID; поэтому общий двигатель или орудие переиспользуются без копий и без битых ссылок при отсутствии локальных WoT-материалов. Volume ограничен диапазоном 0–1, pitch — 0,25–3. Скрытая техника может не иметь аудиопрофиля до возвращения в активный состав.
+Для `availableInGame: true` профиль обязателен. Clip ID ссылаются на локально воспроизводимые результаты `WoTAudioPipeline`, а не на Unity GUID; поэтому общий двигатель, гусеницы, орудие, механизм перезарядки и общий эффект уничтожения переиспользуются без копий и без битых ссылок при отсутствии локальных WoT-материалов. Volume ограничен диапазоном 0–1, pitch — 0,25–3. Скрытая техника может не иметь аудиопрофиля до возвращения в активный состав.
+
+Роли клипов: `engine` — зацикленный двигатель; `tracks` — зацикленные гусеницы; `shot` — выстрел; `reload` — механизм перезарядки; `turret` — зацикленный механизм поворота башни; `destruction` — однократный эффект уничтожения машины.
+
+Если блок `audio` присутствует, валидатор требует непустой идентификатор для каждой из шести ролей и числовые значения в допустимых диапазонах: частично заполненный блок отклоняет весь набор определений. Отсутствие блока допустимо только для недоступной техники.
+
+### Аудиопрофиль попадания снаряда
+
+```json
+"audio": {
+  "penetrationClipId": "impact_small_pierced",
+  "blockedClipId": "impact_small_blocked",
+  "ricochetClipId": "impact_small_ricochet",
+  "penetrationVolume": 0.28,
+  "blockedVolume": 0.2,
+  "ricochetVolume": 0.2,
+  "pitch": 0.96
+}
+```
+
+Профиль привязан к фактическому результату расчёта брони, а не к визуальному эффекту: `penetration` проигрывается при пробитии, `blocked` — при непробитии и при попадании в разрушаемый объект, `ricochet` — при рикошете. Все три идентификатора обязательны при наличии блока, поскольку варианты одного события не подменяют друг друга; общий `pitch` и отдельные громкости позволяют различать калибры без отдельных физических файлов.
+
 
 ## WeaponDefinition
 
@@ -149,7 +179,16 @@
   "ricochetAngle": 70.0,
   "ricochetSpeedMultiplier": 0.7,
   "ricochetPenetrationMultiplier": 0.65,
-  "maximumRicochets": 2
+  "maximumRicochets": 2,
+  "audio": {
+    "penetrationClipId": "impact_small_pierced",
+    "blockedClipId": "impact_small_blocked",
+    "ricochetClipId": "impact_small_ricochet",
+    "penetrationVolume": 0.3,
+    "blockedVolume": 0.22,
+    "ricochetVolume": 0.22,
+    "pitch": 0.92
+  }
 }
 ```
 
@@ -159,7 +198,8 @@
 - `penetration`, `speed`, `radius`, `lifetimeSeconds`, `maximumRange` — больше нуля;
 - `ricochetAngle` — от `0` до `90` градусов включительно;
 - множители после рикошета — больше нуля и не больше единицы;
-- `maximumRicochets` — целое число от `0` до `8`.
+- `maximumRicochets` — целое число от `0` до `8`;
+- при наличии блока `audio` — непустые `penetrationClipId`, `blockedClipId`, `ricochetClipId` и громкости в диапазоне 0–1.
 
 Исторические ориентиры и перевод скорости из игровых единиц приведены в `Docs/TANK_REFERENCE.md`. HP, урон и визуальная скорость снаряда являются игровыми величинами и не должны выдаваться за паспортные характеристики.
 
