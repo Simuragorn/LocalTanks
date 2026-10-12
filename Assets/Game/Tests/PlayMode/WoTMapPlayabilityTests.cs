@@ -177,7 +177,24 @@ namespace LocalTanks.Tests
                     Mathf.Abs(obstacle.center.x - goal.x) <= Mathf.Max(obstacle.size.x, obstacle.size.y) * 0.5f &&
                     Mathf.Abs(obstacle.center.y - goal.y) <= Mathf.Max(obstacle.size.x, obstacle.size.y) * 0.5f)
                 : -1;
-            Debug.Log($"  first route point {goal}: overlapped by {overlappingSolids} solid obstacles");
+            // The path the agent actually built. A path that points away from the destination, or that has
+            // collapsed to a single point, separates a routing fault from a motor or physics fault; the
+            // route index alone cannot tell those apart.
+            List<string> paths = new List<string>();
+            foreach (TeamMember member in director.SpawnedMembers.Where(item => item != null && !item.IsPlayerControlled).Take(3))
+            {
+                NavigationAgent agent = member.GetComponent<NavigationAgent>();
+                if (agent == null) continue;
+                Vector2[] points = agent.PathPoints;
+                Vector2 here = member.transform.position;
+                paths.Add($"{member.name}: {points.Length} points, " +
+                          $"dest {agent.Destination} at {Vector2.Distance(here, agent.Destination):0.#} away, " +
+                          $"first {(points.Length > 0 ? Vector2.Distance(here, points[0]) : 0f):0.#}, " +
+                          $"last {(points.Length > 0 ? Vector2.Distance(here, points[points.Length - 1]) : 0f):0.#}, " +
+                          $"visited {agent.PathIndex}");
+            }
+
+            Debug.Log("  paths: " + string.Join(" | ", paths));
 
             // Whether the route even starts where the tank stands. A route whose first point is already
             // reached makes the AI declare the march complete before it moves, which looks like an idle

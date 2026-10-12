@@ -34,6 +34,11 @@ namespace LocalTanks
         [SerializeField, Min(1f)] private float minimumProgressTurn = 8f;
         [SerializeField] private bool loopPatrol = true;
 
+        [Tooltip("How far a tank may drift from its current waypoint before it rejoins the path at a nearer " +
+                 "point. A hull at speed covers several metres before it can turn, so a tight value makes " +
+                 "the tank circle a waypoint it has already passed.")]
+        [SerializeField, Min(0.5f)] private float pathRecoveryDrift = 3f;
+
         private readonly List<Vector2> path = new List<Vector2>();
         private int pathIndex;
         private int patrolIndex;
@@ -62,6 +67,19 @@ namespace LocalTanks
         public bool DestinationReached => destinationReached;
         public bool MovementPaused => movementPaused;
         public Vector2 Destination => destination;
+
+        /// <summary>
+        /// The path the agent is walking, in world units. Exposed for diagnostics: a path that leads away
+        /// from its own destination, or that has collapsed to one point, is a different fault from a tank
+        /// that has a correct path and does not move along it.
+        /// </summary>
+        public Vector2[] PathPoints => path.ToArray();
+
+        /// <summary>How far along the current path the agent has walked.</summary>
+        public int PathIndex => pathIndex;
+
+        /// <summary>How many times the tank rejoined its path after drifting past a waypoint.</summary>
+        public int PathRecoveryCount { get; private set; }
         public bool IsRecoveringFromStall => unstuckTime > 0f;
 
         /// <summary>
@@ -241,6 +259,13 @@ namespace LocalTanks
                 pathIndex++;
             }
 
+            // A tank that overshoots a waypoint cannot simply turn back to it: at speed a hull needs many
+            // metres to come round, so it circles the point it missed while the path stands still. On the
+            // converted arena that left bots at path index one for a whole battle with a perfectly good
+            // four-point path. When the tank has drifted well past its current waypoint, rejoin the path at
+            // the nearest point that actually moves it forward.
+            RecoverPathIfDrifted(position);
+
             if (!HasPath)
             {
                 motor.SetInput(0f, 0f);
@@ -260,6 +285,37 @@ namespace LocalTanks
             ApplyLocalAvoidance(ref drive, ref turn, movementForward, movingInReverse);
             ApplyUnstuck(ref drive, ref turn, position, movingInReverse);
             motor.SetInput(drive, turn);
+        }
+
+        /// <summary>
+        /// Rejoins the path near the tank when it has drifted far from its current waypoint instead of
+        /// trying to turn back to it. The replacement point must be nearer the destination than the tank
+        /// is, so recovery cannot walk the tank backwards along its own route.
+        /// </summary>
+        private void RecoverPathIfDrifted(Vector2 position)
+        {
+            if (!HasPath || pathIndex >= path.Count) return;
+            if (Vector2.Distance(position, path[pathIndex]) <= pathRecoveryDrift) return;
+
+            float toDestination = Vector2.Distance(position, destination);
+            int best = -1;
+            float bestDistance = float.MaxValue;
+            for (int index = pathIndex; index < path.Count; index++)
+            {
+                if (Vector2.Distance(path[index], destination) >= toDestination) continue;
+                float distance = Vector2.Distance(position, path[index]);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = index;
+                }
+            }
+
+            if (best >= 0 && bestDistance < Vector2.Distance(position, path[pathIndex]))
+            {
+                PathRecoveryCount++;
+                pathIndex = best;
+            }
         }
 
         private float ResolveCommittedTurn(float angle, float requestedTurn)
