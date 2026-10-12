@@ -1884,19 +1884,11 @@ namespace LocalTanks
             }
 
             // Skip any route points the tank already stands on, so a spawn point at the head of the
-            // route does not stall the march. The tolerance is the agent's waypoint tolerance rather
-            // than a small constant: navigation cells are far coarser than a hull, so a route point
-            // routinely sits inside a collider the tank cannot occupy, and demanding a tighter approach
-            // than the agent itself uses left every bot circling its first waypoint for a whole battle.
-            float tolerance = navigation != null ? Mathf.Max(0.45f, navigation.WaypointTolerance) : 0.45f;
-            while (routeIndex < routePoints.Length - 1 &&
-                   Vector2.Distance(transform.position, routePoints[routeIndex]) < tolerance)
-            {
-                routeIndex++;
-            }
+            // route does not stall the march.
+            SkipReachedRoutePoints();
 
             if (routeIndex >= routePoints.Length - 1 &&
-                Vector2.Distance(transform.position, routePoints[routeIndex]) < tolerance)
+                Vector2.Distance(transform.position, routePoints[routeIndex]) < RoutePointTolerance)
             {
                 routeComplete = true;
                 State = CombatAiState.Advance;
@@ -1908,6 +1900,29 @@ namespace LocalTanks
             navigation.SetDestination(routePoints[routeIndex]);
         }
 
+        /// <summary>
+        /// Tolerance at which a route point counts as reached. It matches the navigation agent rather
+        /// than using a small constant: navigation cells are far coarser than a hull, so a route point
+        /// routinely sits where a tank cannot stand, and demanding a tighter approach than the agent's
+        /// own left bots circling their first waypoint for an entire battle.
+        /// </summary>
+        private float RoutePointTolerance => navigation != null ? Mathf.Max(0.45f, navigation.WaypointTolerance) : 0.45f;
+
+        /// <summary>
+        /// Moves the route index past every point the tank already stands on. A route normally begins at
+        /// the spawn point itself, so without this the first waypoint is already "reached", the index
+        /// never leaves zero, and the bot stays in Deploy circling its own start while the reported
+        /// destination looks perfectly valid.
+        /// </summary>
+        private void SkipReachedRoutePoints()
+        {
+            while (routeIndex < routePoints.Length - 1 &&
+                   Vector2.Distance(transform.position, routePoints[routeIndex]) < RoutePointTolerance)
+            {
+                routeIndex++;
+            }
+        }
+
         private void StartCurrentRoutePoint()
         {
             if (navigation == null || routePoints.Length == 0)
@@ -1916,7 +1931,9 @@ namespace LocalTanks
             }
 
             routeIndex = Mathf.Clamp(routeIndex, 0, routePoints.Length - 1);
+            SkipReachedRoutePoints();
             navigation.SetPaused(false);
+            State = routeIndex > 0 ? CombatAiState.Advance : CombatAiState.Deploy;
             navigation.SetDestination(routePoints[routeIndex]);
         }
 
