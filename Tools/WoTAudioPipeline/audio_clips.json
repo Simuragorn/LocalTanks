@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "clips": [
+    {
+      "clipId": "engine_eng_gaz_aa_pc",
+      "bank": "engines",
+      "event": "eng_gaz_aa_pc",
+      "variantIndex": 0,
+      "usage": "loop"
+    },
+    {
+      "clipId": "gun_wpn_small_pc",
+      "bank": "wpn",
+      "event": "wpn_small_pc",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
+      "clipId": "turret_tur_man_trav_04",
+      "bank": "turret",
+      "event": "tur_man_trav_04",
+      "variantIndex": 0,
+      "usage": "loop"
+    },
+    {
+      "clipId": "turret_tur_man_trav_05",
+      "bank": "turret",
+      "event": "tur_man_trav_05",
+      "variantIndex": 0,
+      "usage": "loop"
+    }
+  ]
+}

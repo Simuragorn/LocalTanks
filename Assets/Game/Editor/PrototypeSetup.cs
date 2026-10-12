@@ -268,6 +268,11 @@ namespace LocalTanks.Editor
                 input.Configure(motor, aiming, weapon);
                 TankHealth health = root.AddComponent<TankHealth>();
                 health.Configure(definition);
+                if (HasConfiguredAudio(definition.audio))
+                {
+                    TankAudioController audio = root.AddComponent<TankAudioController>();
+                    audio.Configure(definition, motor, aiming, weapon, health);
+                }
                 TankArmor armor = root.AddComponent<TankArmor>();
                 armor.Configure(definition, health);
                 TankDestroyedState destroyedState = root.AddComponent<TankDestroyedState>();
@@ -279,6 +284,14 @@ namespace LocalTanks.Editor
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        private static bool HasConfiguredAudio(TankAudioProfile profile)
+        {
+            return profile != null &&
+                   !string.IsNullOrWhiteSpace(profile.engineClipId) &&
+                   !string.IsNullOrWhiteSpace(profile.shotClipId) &&
+                   !string.IsNullOrWhiteSpace(profile.turretClipId);
         }
 
         private static void CreateTestScene()

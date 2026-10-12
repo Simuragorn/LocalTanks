@@ -15,6 +15,7 @@ namespace LocalTanks
         private float terrainResistanceMultiplier = 1f;
 
         public float CurrentSpeed { get; private set; }
+        public float CurrentTurnRate { get; private set; }
         public float TerrainSpeedMultiplier => terrainSpeedMultiplier;
         public float TerrainAccelerationMultiplier => terrainAccelerationMultiplier;
         public float TerrainResistanceMultiplier => terrainResistanceMultiplier;
@@ -50,6 +51,7 @@ namespace LocalTanks
             driveInput = 0f;
             turnInput = 0f;
             CurrentSpeed = 0f;
+            CurrentTurnRate = 0f;
             if (body != null)
             {
                 body.linearVelocity = Vector2.zero;
@@ -79,6 +81,7 @@ namespace LocalTanks
                 deltaTime);
 
             float steeringInput = TankMotionMath.SteeringInput(turnInput, CurrentSpeed);
+            CurrentTurnRate = steeringInput * config.hullTurnSpeed;
             float nextAngle = body.rotation - steeringInput * config.hullTurnSpeed * deltaTime;
             Vector2 nextPosition = body.position + (Vector2)transform.up * (CurrentSpeed * deltaTime);
             body.MoveRotation(nextAngle);

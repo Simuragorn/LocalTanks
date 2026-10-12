@@ -39,5 +39,16 @@
     "firingRevealPenalty": 0.12,
     "firingRevealDuration": 4.5,
     "guaranteedDetectionRange": 1.4
+  },
+  "audio": {
+    "engineClipId": "engine_eng_gaz_aa_pc",
+    "shotClipId": "gun_wpn_small_pc",
+    "turretClipId": "turret_tur_man_trav_04",
+    "engineVolume": 0.42,
+    "shotVolume": 0.86,
+    "turretVolume": 0.18,
+    "enginePitch": 0.94,
+    "shotPitch": 0.94,
+    "turretPitch": 0.96
   }
 }

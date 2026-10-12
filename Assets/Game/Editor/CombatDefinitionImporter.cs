@@ -53,6 +53,20 @@ namespace LocalTanks.Editor
     }
 
     [Serializable]
+    public sealed class TankAudioJson
+    {
+        public string engineClipId;
+        public string shotClipId;
+        public string turretClipId;
+        public float engineVolume = 0.45f;
+        public float shotVolume = 0.9f;
+        public float turretVolume = 0.22f;
+        public float enginePitch = 1f;
+        public float shotPitch = 1f;
+        public float turretPitch = 1f;
+    }
+
+    [Serializable]
     public sealed class TankDefinitionJson
     {
         public int schemaVersion;
@@ -68,6 +82,7 @@ namespace LocalTanks.Editor
         public ArmorJson armor;
         public VisionJson vision;
         public GunHandlingJson gunHandling;
+        public TankAudioJson audio;
     }
 
     [Serializable]
@@ -172,6 +187,24 @@ namespace LocalTanks.Editor
                 if (string.IsNullOrWhiteSpace(tank.weaponId) || !weaponIds.Contains(tank.weaponId))
                 {
                     errors.Add($"Tank '{tank.id}' references missing weapon '{tank.weaponId}'.");
+                }
+
+                bool hasAudio = HasAudio(tank.audio);
+                if (tank.availableInGame && !hasAudio)
+                {
+                    errors.Add($"Tank '{tank.id}' is available in game but is missing audio.");
+                }
+                else if (hasAudio)
+                {
+                    RequireText(tank.audio.engineClipId, $"Tank '{tank.id}'.audio.engineClipId", errors);
+                    RequireText(tank.audio.shotClipId, $"Tank '{tank.id}'.audio.shotClipId", errors);
+                    RequireText(tank.audio.turretClipId, $"Tank '{tank.id}'.audio.turretClipId", errors);
+                    RequireRange(tank.audio.engineVolume, 0f, 1f, $"Tank '{tank.id}'.audio.engineVolume", errors);
+                    RequireRange(tank.audio.shotVolume, 0f, 1f, $"Tank '{tank.id}'.audio.shotVolume", errors);
+                    RequireRange(tank.audio.turretVolume, 0f, 1f, $"Tank '{tank.id}'.audio.turretVolume", errors);
+                    RequireRange(tank.audio.enginePitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.enginePitch", errors);
+                    RequireRange(tank.audio.shotPitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.shotPitch", errors);
+                    RequireRange(tank.audio.turretPitch, 0.25f, 3f, $"Tank '{tank.id}'.audio.turretPitch", errors);
                 }
 
                 if (tank.mobility == null)
@@ -300,6 +333,22 @@ namespace LocalTanks.Editor
             string trimmed = displayName.TrimEnd();
             return trimmed.EndsWith(")", StringComparison.Ordinal) &&
                    trimmed.LastIndexOf(" (", StringComparison.Ordinal) >= 0;
+        }
+
+        private static bool HasAudio(TankAudioJson audio)
+        {
+            return audio != null &&
+                   (!string.IsNullOrWhiteSpace(audio.engineClipId) ||
+                    !string.IsNullOrWhiteSpace(audio.shotClipId) ||
+                    !string.IsNullOrWhiteSpace(audio.turretClipId));
+        }
+
+        private static void RequireText(string value, string field, List<string> errors)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                errors.Add($"{field} must not be empty.");
+            }
         }
 
         private static void RequirePositive(float value, string field, List<string> errors)
@@ -508,6 +557,23 @@ namespace LocalTanks.Editor
                 source.armor.left,
                 source.armor.right,
                 source.armor.rear);
+            target.audio = source.audio == null ||
+                           (string.IsNullOrWhiteSpace(source.audio.engineClipId) &&
+                            string.IsNullOrWhiteSpace(source.audio.shotClipId) &&
+                            string.IsNullOrWhiteSpace(source.audio.turretClipId))
+                ? null
+                : new TankAudioProfile
+                {
+                    engineClipId = source.audio.engineClipId,
+                    shotClipId = source.audio.shotClipId,
+                    turretClipId = source.audio.turretClipId,
+                    engineVolume = source.audio.engineVolume,
+                    shotVolume = source.audio.shotVolume,
+                    turretVolume = source.audio.turretVolume,
+                    enginePitch = source.audio.enginePitch,
+                    shotPitch = source.audio.shotPitch,
+                    turretPitch = source.audio.turretPitch
+                };
             EditorUtility.SetDirty(target);
             return target;
         }

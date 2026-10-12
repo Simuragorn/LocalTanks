@@ -45,3 +45,13 @@ MonoBehaviour:
     left: 80
     right: 80
     rear: 80
+  audio:
+    engineClipId: 
+    shotClipId: 
+    turretClipId: 
+    engineVolume: 0.45
+    shotVolume: 0.9
+    turretVolume: 0.22
+    enginePitch: 1
+    shotPitch: 1
+    turretPitch: 1

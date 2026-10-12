@@ -10,6 +10,7 @@ namespace LocalTanks
 
         public bool HasTarget => hasTarget;
         public Vector2 TargetPosition => targetPosition;
+        public float AngularVelocityDegreesPerSecond { get; private set; }
         public float AimErrorDegrees
         {
             get
@@ -39,6 +40,7 @@ namespace LocalTanks
 
         private void Update()
         {
+            AngularVelocityDegreesPerSecond = 0f;
             if (!hasTarget || config == null)
             {
                 return;
@@ -51,11 +53,16 @@ namespace LocalTanks
             }
 
             float targetAngle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg - 90f;
+            float currentAngle = transform.eulerAngles.z;
             float nextAngle = TankMotionMath.StepAngle(
-                transform.eulerAngles.z,
+                currentAngle,
                 targetAngle,
                 config.turretTurnSpeed,
                 Time.deltaTime);
+            if (Time.deltaTime > 0f)
+            {
+                AngularVelocityDegreesPerSecond = Mathf.DeltaAngle(currentAngle, nextAngle) / Time.deltaTime;
+            }
             transform.rotation = Quaternion.Euler(0f, 0f, nextAngle);
         }
     }

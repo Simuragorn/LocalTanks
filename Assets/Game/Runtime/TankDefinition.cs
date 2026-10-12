@@ -17,6 +17,20 @@ namespace LocalTanks
         USSR
     }
 
+    [System.Serializable]
+    public sealed class TankAudioProfile
+    {
+        public string engineClipId;
+        public string shotClipId;
+        public string turretClipId;
+        [Range(0f, 1f)] public float engineVolume = 0.45f;
+        [Range(0f, 1f)] public float shotVolume = 0.9f;
+        [Range(0f, 1f)] public float turretVolume = 0.22f;
+        [Range(0.25f, 3f)] public float enginePitch = 1f;
+        [Range(0.25f, 3f)] public float shotPitch = 1f;
+        [Range(0.25f, 3f)] public float turretPitch = 1f;
+    }
+
     public sealed class TankDefinition : ScriptableObject
     {
         public string id;
@@ -58,5 +72,8 @@ namespace LocalTanks
 
         [Header("Hull armor")]
         public ArmorProfile armor;
+
+        [Header("Local audio")]
+        public TankAudioProfile audio;
     }
 }

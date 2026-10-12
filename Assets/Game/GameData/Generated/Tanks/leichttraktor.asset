@@ -45,3 +45,13 @@ MonoBehaviour:
     left: 14
     right: 14
     rear: 14
+  audio:
+    engineClipId: engine_eng_gaz_aa_pc
+    shotClipId: gun_wpn_small_pc
+    turretClipId: turret_tur_man_trav_05
+    engineVolume: 0.4
+    shotVolume: 0.82
+    turretVolume: 0.17
+    enginePitch: 1.05
+    shotPitch: 1.08
+    turretPitch: 1.04

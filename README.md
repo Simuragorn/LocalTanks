@@ -12,6 +12,8 @@
 
 Боевые параметры находятся в JSON под `Assets/Game/GameData/Definitions`. После их изменения импорт выполняется автоматически; его также можно запустить через `Local Tanks > Data > Reimport Combat Definitions`.
 
+Локальные звуки MS-1 и Leichttraktor воспроизводятся из игнорируемого `Assets/LocalOnly`. Если их нужно восстановить после клонирования или обновления WoT, запустите `Tools/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1`, затем `Local Tanks > Build Combat Assets`; подробности находятся в `Tools/WoTAudioPipeline/README.md`.
+
 Если префабы, сгенерированные данные или сцена были удалены, выберите `Local Tanks > Build Sprint 002 Prototype`.
 
 ## Навигационный полигон

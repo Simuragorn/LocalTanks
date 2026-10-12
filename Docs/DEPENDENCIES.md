@@ -32,6 +32,15 @@
 - `Assets/Game/Art/Tanks` удалён. Копировать или синхронизировать игровые листы между каталогами больше не требуется.
 ## Локальные инструменты, не входящие в Git
 
+## Wwise-аудиоконвейер
+
+- `wwiser v20260808` — разбор Wwise bank и генерация TXTP; официальный release `bnnm/wwiser`.
+- `vgmstream r2117` — декодирование TXTP/WEM в PCM WAV; официальный release `vgmstream/vgmstream`.
+- `QuickBMS 0.12.0` и закреплённый `wwise_pck_extractor.bms` commit `ae22a94e33fc981feafd53327ce9d3f4aa6afa0f` — выборочное извлечение Wwise `.pck`.
+- Бинарники устанавливаются в `LocalData/WoTAudioPipeline/ThirdParty`, кэш — в `LocalData/WoTAudioPipeline/Work`; оба каталога исключены из Git.
+- Unity не зависит от этих инструментов во время игры. Подготовленные клипы находятся в игнорируемом `Assets/LocalOnly/Resources/WoTAudio` и воспроизводятся обычным `AudioSource`.
+- Установка и полный воспроизводимый запуск описаны в `Tools/WoTAudioPipeline/README.md`.
+
 ## Ollama
 
 - Версия первого интеграционного прохода: `v0.40.2`, standalone Windows x64.
