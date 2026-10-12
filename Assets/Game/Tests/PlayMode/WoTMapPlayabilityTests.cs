@@ -163,6 +163,20 @@ namespace LocalTanks.Tests
 
             Debug.Log("  route progress: " + string.Join(" | ", routeProgress));
 
+            // Whether the first route point is even reachable. A destination inside a solid obstacle can
+            // never be satisfied, and a tank sent to one circles it for the whole battle while reporting a
+            // valid path, which is exactly the behaviour this arena showed.
+            TeamMember sample = director.SpawnedMembers.First(item => item != null && !item.IsPlayerControlled);
+            CombatTankAI sampleAi = sample.GetComponent<CombatTankAI>();
+            Vector2 goal = sampleAi.RoutePoints.FirstOrDefault();
+            WoTMapContentBuilder content = Object.FindAnyObjectByType<WoTMapContentBuilder>();
+            int overlappingSolids = content != null
+                ? content.Map.obstacles.Count(obstacle => content.Map.IsSolid(obstacle) &&
+                    Mathf.Abs(obstacle.center.x - goal.x) <= Mathf.Max(obstacle.size.x, obstacle.size.y) * 0.5f &&
+                    Mathf.Abs(obstacle.center.y - goal.y) <= Mathf.Max(obstacle.size.x, obstacle.size.y) * 0.5f)
+                : -1;
+            Debug.Log($"  first route point {goal}: overlapped by {overlappingSolids} solid obstacles");
+
             // Whether the route even starts where the tank stands. A route whose first point is already
             // reached makes the AI declare the march complete before it moves, which looks like an idle
             // bot rather than a routing fault.
