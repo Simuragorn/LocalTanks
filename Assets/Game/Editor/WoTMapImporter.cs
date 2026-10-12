@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using LocalTanks;
 using UnityEditor;
@@ -34,6 +35,28 @@ namespace LocalTanks.Editor
         public static string PrimitivesPath(string mapId) => $"{PrimitivesRoot}/{mapId}/{mapId}_primitives.json";
         public static string AssetPath(string mapId) => $"{AssetRoot}/{mapId}_map.asset";
         public static string ScenePath(string mapId) => $"Assets/Game/Scenes/Battle_{mapId}.unity";
+
+        /// <summary>
+        /// Ids of every tank the game can field, taken from the combat database rather than from a list
+        /// here, so a newly playable tank reaches a generated arena scene with no further edit.
+        /// </summary>
+        public static string[] PlayableTankIds()
+        {
+            CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(
+                CombatDefinitionImporter.DatabasePath);
+            if (database == null)
+            {
+                throw new InvalidOperationException(
+                    "Combat database was not generated. Build the combat assets first.");
+            }
+
+            return database.tanks
+                .Where(tank => tank != null && tank.availableInGame)
+                .OrderBy(tank => tank.tier)
+                .ThenBy(tank => tank.id, StringComparer.Ordinal)
+                .Select(tank => tank.id)
+                .ToArray();
+        }
 
         /// <summary>
         /// Converts the source JSON into the map asset. Returns the loaded asset so callers can report
