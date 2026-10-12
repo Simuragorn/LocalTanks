@@ -102,15 +102,16 @@ Do not alter the selected sprite. Use the layout sidecar's Unity bottom-left rec
 
 ### Hull contour contract
 
-The hull outline is the one part of a build spec that a compiler cannot check, so it has explicit rules and the build enforces them:
+The hull geometry is the one part of a build spec that a compiler cannot check, so it has explicit rules and the build enforces all of them by failing with the tank name:
 
-- **Units.** Contour points are world units equal to half of the sprite rectangle multiplied by the visual scale. For a hull rectangle of `width` × `height` pixels at uniform scale `s`, the contour spans `width / 100 * s` by `height / 100 * s`, and a half extent is `width / 200 * s`. MS-1 is the reference: ±0.23 × ±0.56 for a 192 × 476 rectangle at scale 0.24. Normalized `-1..1` points or points doubled by mistake produce a collider that does not cover the sprite.
-- **Uniform scale.** Visual scale uses one value for both axes. A mixed scale stretches the sprite away from the collider derived from the same rectangle.
+- **Fleet scale.** Never enter a visual scale. The build spec carries the documented real hull length in metres, and `PrototypeSetup.ScaleForHullLength` derives the scale by comparing the machine against the reference tank (Tiger II: 7.38 m, 802 pixels, scale 0.24). This is the only thing that keeps machines correct relative to each other, because a wrongly scaled sprite still matches its own collider perfectly. The T1 Cunningham once came out 77% longer than a Tiger II this way.
+- **Units.** Contour points are world units equal to half of the sprite rectangle multiplied by the derived scale. For a hull rectangle of `width` × `height` pixels at scale `s`, the contour spans `width / 100 * s` by `height / 100 * s`, and a half extent is `width / 200 * s`. MS-1 is the reference: ±0.23 × ±0.56. Normalized `-1..1` points or points doubled by mistake produce a collider that does not cover the sprite.
+- **Uniform scale.** The derived scale is used on both axes. A mixed scale stretches the sprite away from the collider derived from the same rectangle.
 - **Point count.** At least ten points, so the outline keeps the chamfers a box collider would lose.
-- **Derivation.** Render scale comes from a documented real dimension: the pipeline draws 108 pixels per model metre, so `scale = real length in metres * 108 / 100 / hull length in pixels`. Record the dimension in `Docs/TANK_REFERENCE.md`.
-- **Enforcement.** `Local Tanks > Build Combat Assets` fails on a contour that does not match its sprite, a mixed scale, or too few points, naming the tank. It also logs `collider W x L, sprite W x L, points N` for every tank, and `TankPrefabRegistrationTests.EveryTankCollider_MatchesItsSpriteRectangle` re-checks the generated prefabs. Read the build summary first when a hull looks wrong.
+- **Sprite agreement.** The build measures the drawn hull rectangle against the documented length at 108 pixels per model metre and rejects a disagreement over 8%, which catches a sprite rendered at the wrong scale or a wrong documented length.
+- **Enforcement.** `Local Tanks > Build Combat Assets` validates all of the above and logs `collider W x L, sprite W x L, points N, hull L m draws as U units` per tank. `TankPrefabRegistrationTests` re-checks the generated prefabs, including that the fleet scale is shared. Read the build summary first when a hull looks wrong.
 
-Build a 10-16 point convex or appropriately supported polygon outline around the visible hull, with extra points at real shoulders, nose changes, and rear tapers. Keep the outline inside the painted tracks/armor edge so hits match the art. Confirm the forward axis used by movement, turret, and muzzle.
+Build a 10-16 point convex or appropriately supported polygon outline around the visible hull, with extra points at real shoulders, nose changes, and rear tapers. Keep the outline inside the painted tracks/armor edge so hits match the art. Confirm the forward axis used by movement, turret, and muzzle. The turret ring offset, the muzzle distance and the outline are all computed from the layout and the derived scale, so they follow a corrected length automatically.
 
 The current turreted prefab hierarchy is:
 

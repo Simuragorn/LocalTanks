@@ -1,4 +1,6 @@
+using System.IO;
 using System.Linq;
+using LocalTanks.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -118,9 +120,47 @@ namespace LocalTanks.Tests
             Assert.That(prefab.GetComponent<PolygonCollider2D>().points.Length, Is.EqualTo(12));
             Assert.That(prefab.GetComponent<Rigidbody2D>().mass, Is.EqualTo(7.61f).Within(0.01f));
             Assert.That(turretPivot.localPosition.x, Is.Zero.Within(0.002f));
-            Assert.That(turretPivot.localPosition.y, Is.EqualTo(-0.2158f).Within(0.002f));
+            // The ring sits where the canonical layout puts it on the hull, scaled by the shared fleet
+            // scale. Deriving the expectation keeps this valid when a documented length is corrected,
+            // instead of failing on a number that only records the scale of the day.
+            Assert.That(turretPivot.localPosition.y,
+                Is.EqualTo(ExpectedTurretRingOffsetY()).Within(0.002f));
             Assert.That(normalizedTurretPivot.x, Is.EqualTo(0.49867f).Within(0.002f));
             Assert.That(normalizedTurretPivot.y, Is.EqualTo(0.73861f).Within(0.002f));
+        }
+
+        /// <summary>
+        /// Local Y of the Leichttraktor turret ring: the layout's turret mount measured from the hull
+        /// rectangle centre, converted to units at the scale the build derives. The pivot is placed at
+        /// the negative of that offset, as it is for every tank.
+        /// </summary>
+        private static float ExpectedTurretRingOffsetY()
+        {
+            string layoutJson = File.ReadAllText(
+                "Assets/LocalOnly/WoTGenerated/G12_Ltraktor/G12_Ltraktor_layout.json");
+            JsonLayout layout = JsonUtility.FromJson<JsonLayout>(layoutJson);
+            float offsetPixels = (layout.hull.turretMount.y - 0.5f) * layout.hull.height;
+            return -offsetPixels / 100f * PrototypeSetup.ScaleForHullLength(4.35f, layout.hull.height);
+        }
+
+        [System.Serializable]
+        private sealed class JsonLayout
+        {
+            public JsonHull hull;
+        }
+
+        [System.Serializable]
+        private sealed class JsonHull
+        {
+            public float height;
+            public JsonPoint turretMount;
+        }
+
+        [System.Serializable]
+        private sealed class JsonPoint
+        {
+            public float x;
+            public float y;
         }
 
         [Test]

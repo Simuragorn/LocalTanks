@@ -28,7 +28,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
                 new Rect(24f, 139f, 419f, 802f), new Rect(467f, 24f, 278f, 1031f),
                 new Vector2(0.4985709f, 0.7753074f), new Vector2(0.4950269f, 0.4900504f),
-                new Vector2(0.24f, 0.24f), 1.41f,
+                7.38f, 1.41f,
                 CreateTigerHullOutline()),
             new TankBuildSpec(
                 "MS1", "MS-1",
@@ -37,7 +37,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
                 new Rect(24f, 24f, 192f, 476f), new Rect(240f, 117f, 120f, 289f),
                 new Vector2(0.5f, 0.6802735f), new Vector2(0.5f, 0.4236555f),
-                new Vector2(0.24f, 0.24f), 0.45f,
+                4.38f, 0.45f,
                 CreateMS1HullOutline()),
             new TankBuildSpec(
                 "Leichttraktor", "Leichttraktor",
@@ -46,7 +46,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab",
                 new Rect(24f, 24f, 229f, 462f), new Rect(277f, 117f, 158f, 275f),
                 new Vector2(0.4986667f, 0.7045380f), new Vector2(0.5f, 0.6946704f),
-                new Vector2(0.24f, 0.24f), 0.48f,
+                4.35f, 0.48f,
                 CreateLeichttraktorHullOutline()),
             new TankBuildSpec(
                 "T1Cunningham", "T1 Cunningham",
@@ -55,7 +55,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/T1Cunningham_Player.prefab",
                 new Rect(24f, 24f, 195f, 422f), new Rect(243f, 134f, 127f, 202f),
                 new Vector2(0.5005221f, 0.6842200f), new Vector2(0.5025058f, 0.6974256f),
-                new Vector2(0.42f, 0.42f), 1.14f,
+                3.866f, 1.14f,
                 CreateT1CunninghamHullOutline())        };
 
         [InitializeOnLoadMethod]
@@ -131,9 +131,69 @@ namespace LocalTanks.Editor
             {
                 Vector2 expected = ExpectedHullSize(spec);
                 Vector2 actual = MeasuredHullSize(spec);
+                float drawnMetres = spec.HullLengthPixels / PixelsPerMetre;
                 Debug.Log($"Hull outline '{spec.DisplayName}': collider {actual.x:0.###} x {actual.y:0.###}, " +
-                          $"sprite {expected.x:0.###} x {expected.y:0.###}, points {spec.HullOutline.Length}.");
+                          $"sprite {expected.x:0.###} x {expected.y:0.###}, points {spec.HullOutline.Length}, " +
+                          $"hull {spec.HullLengthMetres:0.###} m draws as {GameLengthFor(spec.HullLengthMetres):0.###} " +
+                          $"units and the sheet records {drawnMetres:0.###} m.");
             }
+        }
+
+        /// <summary>
+        /// The one game scale every tank is built at, expressed as metres per Unity unit. It follows
+        /// from the reference machine: its 7.38 m hull measures 1.92 units, which the existing map,
+        /// camera, view ranges and collision distances already assume. The fleet is therefore fixed to
+        /// this scale rather than to whatever each author picked while adding a tank.
+        /// </summary>
+        public const float MetresPerUnit = 7.38f / (0.24f * 802f / 100f);
+
+        /// <summary>
+        /// Sprite pixels per model metre produced by the render pipeline. The reference machine
+        /// confirms it: its 7.38 m hull is drawn 802 pixels long, and 7.38 * 108 = 797 pixels, which
+        /// matches the sheet to within the rounding of one brush stroke. The value is used to measure
+        /// what the sheet actually contains, so a sprite rendered at another scale is rejected instead
+        /// of silently making its tank the wrong size.
+        /// </summary>
+        private const float PixelsPerMetre = 108f;
+
+        /// <summary>
+        /// Real hull length of the reference machine, whose sprite already defines the fleet scale.
+        /// Every other tank is measured against it rather than against its own art.
+        /// </summary>
+        public const float ReferenceHullLengthMetres = 7.38f;
+
+        /// <summary>Hull length in pixels of the reference machine in the canonical sheet.</summary>
+        public const float ReferenceHullLengthPixels = 802f;
+        public const float ReferenceVisualScale = 0.24f;
+
+        /// <summary>
+        /// Visual scale that makes a hull of the given real length and sprite size match the reference
+        /// machine on screen. The rendered sprite keeps the model's true proportions, so comparing two
+        /// hulls reduces to their real lengths and their drawn pixel lengths: a hull drawn in half as
+        /// many pixels as the reference is scaled up by two to stay the same real size.
+        /// <para>
+        /// This is the single place the fleet scale is decided. Setting the scale from a tank's own
+        /// sprite instead is what once made the T1 Cunningham 77% longer than a Tiger II, because both
+        /// its documented length and its sheet differed from the reference.
+        /// </para>
+        /// </summary>
+        public static float ScaleForHullLength(float hullLengthMetres, float hullLengthPixels)
+        {
+            if (hullLengthPixels <= 0f || hullLengthMetres <= 0f)
+            {
+                throw new System.InvalidOperationException(
+                    "Hull length must be positive in both metres and pixels to derive the visual scale.");
+            }
+
+            return ReferenceVisualScale
+                   * (hullLengthMetres / ReferenceHullLengthMetres)
+                   * (ReferenceHullLengthPixels / hullLengthPixels);
+        }
+
+        /// <summary>In-game hull length of a machine with the given real length, in Unity units.</summary>
+        public static float GameLengthFor(float hullLengthMetres)
+        {
+            return hullLengthMetres / MetresPerUnit;
         }
 
         private static GameObject[] BuildCombatAssetsInternal()
@@ -210,13 +270,19 @@ namespace LocalTanks.Editor
         }
 
         /// <summary>
-        /// Fails the build when a tank's hull contour does not describe its own sprite.
+        /// Fails the build when a tank's hull contour does not describe its own sprite, or when its
+        /// sprite is not drawn at the shared game scale.
         /// <para>
         /// Contour points are world units equal to half of the sprite rectangle multiplied by the
         /// visual scale, so the contour must span that rectangle. A contour entered in other units
         /// still compiles, still passes validation and still collides with things; the only symptom
-        /// is a hull on screen that does not match what the player hits. Checking it here turns that
-        /// silent mistake into a build error that names the tank.
+        /// is a hull on screen that does not match what the player hits.
+        /// </para>
+        /// <para>
+        /// The second check is the one that keeps machines correct relative to each other. A sprite
+        /// rendered at the wrong scale still matches its own collider, so nothing else notices, and
+        /// the tank simply comes out too large or too small next to its neighbours. Comparing the
+        /// drawn hull against the documented real length at <see cref="MetresPerUnit"/> catches it.
         /// </para>
         /// </summary>
         private static void ValidateHullOutline(TankBuildSpec spec)
@@ -241,6 +307,18 @@ namespace LocalTanks.Editor
                     $"Hull visual scale for '{spec.DisplayName}' is {spec.VisualScale.x} by {spec.VisualScale.y}. " +
                     "Use one uniform scale: a mixed scale stretches the sprite away from the collider that is " +
                     "derived from the same rectangle.");
+            }
+
+            float drawnLengthMetres = spec.HullLengthPixels / PixelsPerMetre;
+            float deviation = Mathf.Abs(drawnLengthMetres / spec.HullLengthMetres - 1f);
+            if (deviation > tolerance)
+            {
+                throw new System.InvalidOperationException(
+                    $"Sprite for '{spec.DisplayName}' is drawn {drawnLengthMetres:0.###} m long but the machine is " +
+                    $"{spec.HullLengthMetres:0.###} m ({deviation * 100f:0}% off), so it would not match the other " +
+                    $"machines. At {MetresPerUnit:0.###} m per unit the hull must measure " +
+                    $"{GameLengthFor(spec.HullLengthMetres):0.###} units. Re-render the sprite or correct the " +
+                    "documented hull length; do not tune the scale of a single tank.");
             }
 
             if (spec.HullOutline.Length < 10)
@@ -712,21 +790,15 @@ namespace LocalTanks.Editor
 
         /// <summary>
         /// The T1E1 hull is a straight-sided box: its silhouette in the rendered sprite keeps a
-        /// nearly constant width, because the tracks form both edges. The measured half width is
-        /// 0.995 of the hull rectangle, so the contour adds only the chamfers a box collider would
-        /// lose rather than collapsing the hull into a rectangle.
-        /// <para>
-        /// Contour points are world units equal to half of the sprite rectangle multiplied by the
-        /// visual scale, exactly as the other tanks express them: the hull rectangle is 195 by 422
-        /// pixels at 0.42 units per hundred pixels, so the half extents are 0.4095 and 0.8862.
-        /// The visual scale stays uniform, because a mixed scale would stretch the art away from
-        /// the collider that is derived from it.
-        /// </para>
+        /// nearly constant width, because the tracks form both edges. Contour points are world units
+        /// equal to half of the sprite rectangle multiplied by the visual scale, as for every other
+        /// tank: the hull rectangle is 195 by 422 pixels at the scale derived from its 3.866 m hull,
+        /// so the half extents are 0.234 and 0.506.
         /// </summary>
         private static Vector2[] CreateT1CunninghamHullOutline()
         {
-            const float halfWidth = 0.4095f;
-            const float halfLength = 0.8862f;
+            const float halfWidth = 0.2309f;
+            const float halfLength = 0.4997f;
             return new[]
             {
                 new Vector2(-halfWidth * 0.91f, halfLength), new Vector2(halfWidth * 0.91f, halfLength),
@@ -754,7 +826,7 @@ namespace LocalTanks.Editor
             public TankBuildSpec(
                 string spritePrefix, string displayName, string texturePath,
                 string definitionPath, string prefabPath, Rect hullRect, Rect turretRect,
-                Vector2 turretPivot, Vector2 hullTurretMount, Vector2 visualScale, float muzzleDistance,
+                Vector2 turretPivot, Vector2 hullTurretMount, float hullLengthMetres, float muzzleDistance,
                 Vector2[] hullOutline)
             {
                 SpritePrefix = spritePrefix;
@@ -766,7 +838,7 @@ namespace LocalTanks.Editor
                 TurretRect = turretRect;
                 TurretPivot = turretPivot;
                 HullTurretMount = hullTurretMount;
-                VisualScale = visualScale;
+                HullLengthMetres = hullLengthMetres;
                 MuzzleDistance = muzzleDistance;
                 HullOutline = hullOutline;
             }
@@ -780,7 +852,17 @@ namespace LocalTanks.Editor
             public Rect TurretRect { get; private set; }
             public Vector2 TurretPivot { get; private set; }
             public Vector2 HullTurretMount { get; private set; }
-            public Vector2 VisualScale { get; }
+            public float HullLengthMetres { get; }
+
+            /// <summary>
+            /// Sprite scale, derived from the documented hull length so every machine shares the one
+            /// game scale. Uniform on both axes on purpose: a mixed scale would stretch the art away
+            /// from the collider derived from the same rectangle.
+            /// </summary>
+            public Vector2 VisualScale => new Vector2(
+                ScaleForHullLength(HullLengthMetres, HullLengthPixels),
+                ScaleForHullLength(HullLengthMetres, HullLengthPixels));
+
             public float MuzzleDistance { get; private set; }
             public Vector2[] HullOutline { get; }
 
@@ -803,6 +885,12 @@ namespace LocalTanks.Editor
                 HullTurretMount = layout.hull.turretMount.ToVector2();
                 MuzzleDistance = layout.turret.height * TurretPivot.y / 100f * VisualScale.y;
             }
+
+            /// <summary>
+            /// Longest side of the hull rectangle in sprite pixels, which is the hull length for every
+            /// machine in the fleet because each hull is longer than it is wide.
+            /// </summary>
+            public float HullLengthPixels => Mathf.Max(HullRect.width, HullRect.height);
         }
 
         [System.Serializable]

@@ -54,6 +54,67 @@ namespace LocalTanks.Tests
             }
         }
 
+        /// <summary>
+        /// Machines must be correct relative to each other, which no per-tank check can see: a sprite
+        /// rendered at the wrong scale still matches its own collider and still looks right alone. The
+        /// T1 Cunningham once came out 77% longer than a Tiger II this way. This compares every built
+        /// hull against the reference machine at the shared game scale.
+        /// </summary>
+        [Test]
+        public void EveryTank_IsBuiltAtTheSharedFleetScale()
+        {
+            CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(
+                CombatDefinitionImporter.DatabasePath);
+            Assert.That(database, Is.Not.Null);
+
+            // The reference machine defines the scale. Its collider sits slightly inside its sprite so
+            // the silhouette covers it, so compare against the drawn hull rather than the contour.
+            Assert.That(PrototypeSetup.TryGetExpectedHullSize("tiger_ii", out Vector2 referenceSprite), Is.True);
+            float tigerLength = HullLengthInUnits("tiger_ii");
+            Assert.That(tigerLength, Is.EqualTo(referenceSprite.y).Within(referenceSprite.y * 0.05f),
+                "The reference machine must measure its documented length in units.");
+
+            // A Tiger II hull is 7.38 m and an MS-1 hull is 4.38 m, so the light tank must come out
+            // visibly shorter. Any pair would do; this one guards the ordering the player sees.
+            float ms1Length = HullLengthInUnits("ms_1");
+            Assert.That(ms1Length, Is.LessThan(tigerLength * 0.7f),
+                "A 4.38 m hull must be clearly shorter than a 7.38 m hull.");
+            Assert.That(ms1Length, Is.GreaterThan(tigerLength * 0.5f),
+                "A 4.38 m hull must stay close to its share of the 7.38 m hull.");
+        }
+
+        [Test]
+        public void ScaleForHullLength_MatchesTheReferenceMachine()
+        {
+            // Feeding the reference values back in must reproduce the reference scale exactly, which is
+            // what makes the formula trustworthy for a tank nobody has built yet.
+            float scale = PrototypeSetup.ScaleForHullLength(
+                PrototypeSetup.ReferenceHullLengthMetres,
+                PrototypeSetup.ReferenceHullLengthPixels);
+
+            Assert.That(scale, Is.EqualTo(PrototypeSetup.ReferenceVisualScale).Within(0.0001f));
+        }
+
+        private static float HullLengthInUnits(string tankId)
+        {
+            string prefabPath = PrototypeSetup.FindTankPrefabPath(tankId);
+            Assert.That(prefabPath, Is.Not.Null, $"No build spec for '{tankId}'.");
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null);
+
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                PolygonCollider2D collider = instance.GetComponent<PolygonCollider2D>();
+                Assert.That(collider, Is.Not.Null);
+                return collider.bounds.size.y;
+            }
+            finally
+            {
+                Object.DestroyImmediate(instance);
+            }
+        }
+
         [Test]
         public void TankPrefabLookup_RejectsAnUnknownId()
         {
