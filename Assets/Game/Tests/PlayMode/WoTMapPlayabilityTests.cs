@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -61,6 +61,7 @@ namespace LocalTanks.Tests
                 Centre(director, TeamId.TeamB));
 
             float previousScale = Time.timeScale;
+            float closestEver = float.MaxValue;
             try
             {
                 Time.timeScale = TimeCompression;
@@ -68,6 +69,18 @@ namespace LocalTanks.Tests
                 float nextProbe = startedAt + 50f;
                 while (Time.time - startedAt < BattleSeconds)
                 {
+                    // Track the closest the two sides ever come. A battle that never starts and a battle
+                    // that starts and then stalls look identical in an end-of-run snapshot, and this is
+                    // what separates them.
+                    foreach (TeamMember ally in director.SpawnedMembers.Where(item => item != null && item.Team == TeamId.TeamA))
+                    {
+                        foreach (TeamMember enemy in director.SpawnedMembers.Where(item => item != null && item.Team == TeamId.TeamB))
+                        {
+                            closestEver = Mathf.Min(closestEver,
+                                Vector2.Distance(ally.transform.position, enemy.transform.position));
+                        }
+                    }
+
                     if (Time.time >= nextProbe)
                     {
                         nextProbe += 50f;
@@ -77,7 +90,8 @@ namespace LocalTanks.Tests
                             .Where(member => member != null && member.Health != null)
                             .Sum(member => member.Health.CurrentHitPoints);
                         Debug.Log($"  t={Time.time - startedAt:0} s: centres {Vector2.Distance(a, b):0.#} apart, " +
-                                  $"health {health}, alive {director.TeamAAlive}+{director.TeamBAlive}");
+                                  $"closest yet {closestEver:0.#}, health {health}, " +
+                                  $"alive {director.TeamAAlive}+{director.TeamBAlive}");
                     }
 
                     yield return null;
