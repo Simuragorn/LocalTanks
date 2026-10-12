@@ -62,6 +62,15 @@ namespace LocalTanks.Tests
 
             float previousScale = Time.timeScale;
             float closestEver = float.MaxValue;
+            // Path length actually walked, accumulated per frame. Net displacement cannot separate a tank
+            // that crawls from one that drives out and returns, and that ambiguity has already cost two
+            // wrong diagnoses.
+            Dictionary<string, float> walked = director.SpawnedMembers
+                .Where(member => member != null)
+                .ToDictionary(member => member.name, _ => 0f);
+            Dictionary<string, Vector2> lastSeen = director.SpawnedMembers
+                .Where(member => member != null)
+                .ToDictionary(member => member.name, member => (Vector2)member.transform.position);
             try
             {
                 Time.timeScale = TimeCompression;
@@ -69,6 +78,13 @@ namespace LocalTanks.Tests
                 float nextProbe = startedAt + 50f;
                 while (Time.time - startedAt < BattleSeconds)
                 {
+                    foreach (TeamMember member in director.SpawnedMembers)
+                    {
+                        if (member == null || !lastSeen.ContainsKey(member.name)) continue;
+                        Vector2 now = member.transform.position;
+                        walked[member.name] += Vector2.Distance(lastSeen[member.name], now);
+                        lastSeen[member.name] = now;
+                    }
                     // Track the closest the two sides ever come. A battle that never starts and a battle
                     // that starts and then stalls look identical in an end-of-run snapshot, and this is
                     // what separates them.
@@ -171,6 +187,20 @@ namespace LocalTanks.Tests
             }
 
             Debug.Log("  motion: " + string.Join(" | ", motion));
+
+            // The number that decides the pace question: distance actually travelled divided by the time
+            // and the tank's own limit. A value near one means the tank uses its speed; a small value
+            // means something throttles it every frame.
+            List<string> pace = new List<string>();
+            foreach (TeamMember member in director.SpawnedMembers.Where(item => item != null && !item.IsPlayerControlled).Take(4))
+            {
+                float metres = walked[member.name];
+                float limit = member.Definition.maxForwardSpeed;
+                pace.Add($"{member.name}: walked {metres:0.#} units, " +
+                         $"{(limit > 0f ? metres / BattleSeconds / limit : 0f):P0} of its speed");
+            }
+
+            Debug.Log("  pace: " + string.Join(" | ", pace));
 
             Assert.That(stuck, Is.Empty,
                 "Every tank must leave its spawn; these did not:\n- " + string.Join("\n- ", stuck));
