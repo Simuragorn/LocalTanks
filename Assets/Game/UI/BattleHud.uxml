@@ -1,4 +1,5 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements">
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:template="UnityEngine.UIElements">
+    <ui:Template name="SettingsOverlay" src="project://database/Assets/Game/UI/SettingsOverlay.uxml" />
     <ui:VisualElement name="battle-hud" class="battle-hud">
         <ui:VisualElement name="ally-list" class="roster-panel ally-panel" />
         <ui:VisualElement name="score" class="score-panel">
@@ -8,5 +9,10 @@
         </ui:VisualElement>
         <ui:VisualElement name="base-status-list" class="base-status-list" />
         <ui:VisualElement name="enemy-list" class="roster-panel enemy-panel" />
+
+        <!-- The settings overlay is a template so its markup has one definition shared with the test
+             range. It belongs to this document so it draws above the roster panels; a second
+             UIDocument would get its own panel and the order between panels would decide layering. -->
+        <ui:Instance template="SettingsOverlay" name="settings-instance" />
     </ui:VisualElement>
 </ui:UXML>

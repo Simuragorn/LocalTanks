@@ -183,8 +183,18 @@ namespace LocalTanks.Tests
             TestRangeTargetRespawner respawner = Object.FindAnyObjectByType<TestRangeTargetRespawner>();
             Assert.That(selector, Is.Not.Null);
             Assert.That(respawner, Is.Not.Null);
-            Assert.That(selector.AvailableTankCount, Is.EqualTo(2));
-            Assert.That(respawner.CurrentTargets.Length, Is.EqualTo(selector.AvailableTankCount));
+            // The range must offer every playable tank and nothing else. Checking the actual tank ids
+            // keeps this honest without hard-coding a count that changes whenever a tank is added.
+            string[] offered = respawner.CurrentTargets
+                .Select(target => target.GetComponent<TankHealth>().Definition.id)
+                .OrderBy(id => id)
+                .ToArray();
+            Assert.That(selector.AvailableTankCount, Is.EqualTo(respawner.CurrentTargets.Length));
+            Assert.That(offered, Does.Contain("ms_1"));
+            Assert.That(offered, Does.Contain("leichttraktor"));
+            Assert.That(offered, Does.Contain("t1_cunningham"));
+            Assert.That(offered, Does.Not.Contain("tiger_ii"));
+            Assert.That(offered.Distinct().Count(), Is.EqualTo(offered.Length), "Each tank appears once.");
             Assert.That(respawner.CurrentTargets.Select(target =>
                     target.GetComponent<TankHealth>().Definition.id).Distinct().Count(),
                 Is.EqualTo(selector.AvailableTankCount));

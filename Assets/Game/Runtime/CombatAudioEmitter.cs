@@ -60,7 +60,7 @@ namespace LocalTanks
             source.maxDistance = MaximumDistance;
             source.dopplerLevel = 0f;
             source.clip = clip;
-            source.volume = Mathf.Clamp01(volume);
+            source.volume = Mathf.Clamp01(volume * PlayerSettingsStore.EffectsMultiplier);
             source.pitch = Mathf.Clamp(pitch, 0.25f, 3f);
             source.Play();
             Object.Destroy(emitter, clip.length / source.pitch + 0.1f);

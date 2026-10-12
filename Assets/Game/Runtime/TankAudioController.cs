@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace LocalTanks
 {
@@ -106,10 +106,11 @@ namespace LocalTanks
             float movement01 = Mathf.Clamp01(Mathf.Abs(motor.CurrentSpeed) / speedLimit);
             float turn01 = Mathf.Clamp01(Mathf.Abs(motor.CurrentTurnRate) / Mathf.Max(0.01f, config.hullTurnSpeed));
             float load01 = Mathf.Max(movement01, turn01 * 0.65f);
+            float tankVolume = PlayerSettingsStore.TankMultiplier;
 
             if (engineSource != null && engineSource.clip != null)
             {
-                engineSource.volume = profile.engineVolume * Mathf.Lerp(0.48f, 1f, load01);
+                engineSource.volume = profile.engineVolume * Mathf.Lerp(0.48f, 1f, load01) * tankVolume;
                 engineSource.pitch = profile.enginePitch * Mathf.Lerp(0.82f, 1.2f, load01);
                 StartLoop(engineSource);
             }
@@ -117,7 +118,7 @@ namespace LocalTanks
             if (tracksSource != null && tracksSource.clip != null)
             {
                 float tracks01 = Mathf.Max(movement01, turn01 * 0.8f);
-                tracksSource.volume = profile.tracksVolume * Mathf.SmoothStep(0f, 1f, tracks01);
+                tracksSource.volume = profile.tracksVolume * Mathf.SmoothStep(0f, 1f, tracks01) * tankVolume;
                 tracksSource.pitch = profile.tracksPitch * Mathf.Lerp(0.88f, 1.12f, tracks01);
                 if (tracks01 > 0.025f)
                 {
@@ -134,7 +135,7 @@ namespace LocalTanks
                 float turret01 = Mathf.Clamp01(
                     Mathf.Abs(turret.AngularVelocityDegreesPerSecond) /
                     Mathf.Max(0.01f, config.turretTurnSpeed));
-                turretSource.volume = profile.turretVolume * turret01;
+                turretSource.volume = profile.turretVolume * turret01 * tankVolume;
                 turretSource.pitch = profile.turretPitch * Mathf.Lerp(0.92f, 1.08f, turret01);
                 if (turret01 > 0.015f)
                 {
@@ -283,7 +284,7 @@ namespace LocalTanks
             }
 
             weaponSource.pitch = profile.shotPitch;
-            weaponSource.PlayOneShot(shotClip, profile.shotVolume);
+            weaponSource.PlayOneShot(shotClip, profile.shotVolume * PlayerSettingsStore.EffectsMultiplier);
             ShotPlayCount++;
         }
 
@@ -296,7 +297,7 @@ namespace LocalTanks
             }
 
             mechanismSource.pitch = profile.reloadPitch;
-            mechanismSource.PlayOneShot(reloadClip, profile.reloadVolume);
+            mechanismSource.PlayOneShot(reloadClip, profile.reloadVolume * PlayerSettingsStore.EffectsMultiplier);
             ReloadPlayCount++;
         }
 
@@ -310,7 +311,7 @@ namespace LocalTanks
             }
 
             destructionSource.pitch = profile.destructionPitch;
-            destructionSource.PlayOneShot(destructionClip, profile.destructionVolume);
+            destructionSource.PlayOneShot(destructionClip, profile.destructionVolume * PlayerSettingsStore.EffectsMultiplier);
             DestructionPlayCount++;
         }
 

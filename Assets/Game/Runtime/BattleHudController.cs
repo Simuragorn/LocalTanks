@@ -12,7 +12,7 @@ namespace LocalTanks
         public const int MaximumTankNameLength = 20;
 
         [SerializeField] private BattleRoster roster;
-        [SerializeField] private StyleSheet styleSheet;
+        [SerializeField] private StyleSheet[] styleSheets;
         [SerializeField] private CaptureBase[] captureBases;
 
         private UIDocument document;
@@ -50,7 +50,7 @@ namespace LocalTanks
             }
         }
 
-        public void Configure(BattleRoster battleRoster, StyleSheet styles, CaptureBase[] bases)
+        public void Configure(BattleRoster battleRoster, StyleSheet[] styles, CaptureBase[] bases)
         {
             if (roster != null)
             {
@@ -58,7 +58,7 @@ namespace LocalTanks
             }
 
             roster = battleRoster;
-            styleSheet = styles;
+            styleSheets = styles;
             captureBases = bases;
             if (isActiveAndEnabled && roster != null)
             {
@@ -74,9 +74,15 @@ namespace LocalTanks
             }
 
             VisualElement root = document.rootVisualElement;
-            if (styleSheet != null && !root.styleSheets.Contains(styleSheet))
+            if (styleSheets != null)
             {
-                root.styleSheets.Add(styleSheet);
+                foreach (StyleSheet sheet in styleSheets)
+                {
+                    if (sheet != null && !root.styleSheets.Contains(sheet))
+                    {
+                        root.styleSheets.Add(sheet);
+                    }
+                }
             }
 
             allyList = root.Q<VisualElement>("ally-list");

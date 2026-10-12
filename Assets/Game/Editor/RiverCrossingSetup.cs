@@ -29,6 +29,7 @@ namespace LocalTanks.Editor
         private const string PanelSettingsPath = GeneratedRoot + "/BattleHudPanelSettings.asset";
         private const string BattleHudUxmlPath = "Assets/Game/UI/BattleHud.uxml";
         private const string BattleHudUssPath = "Assets/Game/UI/BattleHud.uss";
+        private const string SettingsOverlayUssPath = "Assets/Game/UI/SettingsOverlay.uss";
         private const string ClassIconsRoot = "Assets/Game/Generated/UI/VehicleClasses";
 
         [InitializeOnLoadMethod]
@@ -841,9 +842,10 @@ namespace LocalTanks.Editor
 
             VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BattleHudUxmlPath);
             StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(BattleHudUssPath);
-            if (visualTree == null || styleSheet == null)
+            StyleSheet settingsStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(SettingsOverlayUssPath);
+            if (visualTree == null || styleSheet == null || settingsStyleSheet == null)
             {
-                throw new InvalidOperationException("Battle HUD UXML or USS could not be loaded.");
+                throw new InvalidOperationException("Battle HUD or settings UXML/USS could not be loaded.");
             }
 
             GameObject hud = new GameObject("BattleHUD");
@@ -854,7 +856,8 @@ namespace LocalTanks.Editor
             CaptureBase[] captureBases = UnityEngine.Object.FindObjectsByType<CaptureBase>()
                 .OrderBy(item => item.BaseId, StringComparer.Ordinal)
                 .ToArray();
-            hud.AddComponent<BattleHudController>().Configure(roster, styleSheet, captureBases);
+            hud.AddComponent<BattleHudController>().Configure(roster, new[] { styleSheet, settingsStyleSheet }, captureBases);
+            hud.AddComponent<SettingsPanelController>();
             return vision;
         }
 

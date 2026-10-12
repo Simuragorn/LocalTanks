@@ -7,6 +7,7 @@ using UnityEditor.SceneManagement;
 using UnityEditor.U2D.Sprites;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 
 namespace LocalTanks.Editor
 {
@@ -14,6 +15,9 @@ namespace LocalTanks.Editor
     {
         private const string ProjectilePrefabPath = "Assets/Game/Prefabs/Combat/PrototypeProjectile.prefab";
         private const string ScenePath = "Assets/Game/Scenes/Battle_TestRange.unity";
+        private const string SettingsOverlayUxmlPath = "Assets/Game/UI/SettingsOverlay.uxml";
+        private const string SettingsOverlayUssPath = "Assets/Game/UI/SettingsOverlay.uss";
+        private const string SettingsPanelSettingsPath = "Assets/Game/Generated/UI/SettingsPanelSettings.asset";
 
         private static readonly TankBuildSpec[] TankSpecs =
         {
@@ -421,6 +425,51 @@ namespace LocalTanks.Editor
                    !string.IsNullOrWhiteSpace(profile.turretClipId);
         }
 
+        /// <summary>
+        /// Adds the settings overlay to a scene that has no battle HUD of its own. The test range only
+        /// drives and shoots at targets, so it needs its own document with the same shared markup and
+        /// styles that the battle scenes include as a template. Rebuilding a scene must not add a
+        /// second copy.
+        /// </summary>
+        private static void EnsureSettingsOverlay(Scene scene)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                if (root.GetComponentInChildren<SettingsPanelController>(true) != null)
+                {
+                    return;
+                }
+            }
+
+            VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(SettingsOverlayUxmlPath);
+            StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(SettingsOverlayUssPath);
+            if (visualTree == null || styleSheet == null)
+            {
+                throw new System.InvalidOperationException("Settings overlay UXML or USS could not be loaded.");
+            }
+
+            PanelSettings panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(SettingsPanelSettingsPath);
+            if (panelSettings == null)
+            {
+                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                AssetDatabase.CreateAsset(panelSettings, SettingsPanelSettingsPath);
+            }
+
+            panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+            panelSettings.match = 0.5f;
+            EditorUtility.SetDirty(panelSettings);
+
+            GameObject overlay = new GameObject("SettingsOverlay");
+            SceneManager.MoveGameObjectToScene(overlay, scene);
+            UIDocument document = overlay.AddComponent<UIDocument>();
+            document.panelSettings = panelSettings;
+            document.visualTreeAsset = visualTree;
+            document.sortingOrder = 120;
+            SettingsPanelController controller = overlay.AddComponent<SettingsPanelController>();
+            controller.Configure(styleSheet);
+        }
+
         private static void CreateTestScene()
         {
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -456,6 +505,7 @@ namespace LocalTanks.Editor
             player.transform.SetPositionAndRotation(new Vector3(0f, -5.5f, 0f), Quaternion.identity);
 
             CameraFollow2D follow = EnsureCamera(player.transform);
+            EnsureSettingsOverlay(scene);
             GameObject selectorObject = new GameObject("PlayerTankSelector");
 
             Vector3[] positions = Enumerable.Range(0, tankPrefabs.Length)

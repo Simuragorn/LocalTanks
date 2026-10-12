@@ -38,6 +38,7 @@ namespace LocalTanks
             new GameCommandInfo("help", "F1", "Открыть или закрыть эту справку", GameCommandGroup.Interface),
             new GameCommandInfo("bot_selection", "Tab / Shift+Tab", "Следующий или предыдущий живой бот при открытом F4", GameCommandGroup.Interface),
             new GameCommandInfo("close_window", "Esc", "Закрыть верхнее диагностическое окно", GameCommandGroup.Interface),
+            new GameCommandInfo("settings", "F7", "Открыть или закрыть панель настроек", GameCommandGroup.Interface),
             new GameCommandInfo("navigation_debug", "F2", "Показать навигационную сетку и маршруты", GameCommandGroup.Development),
             new GameCommandInfo("vision_debug", "F3", "Показать диагностику обнаружения", GameCommandGroup.Development),
             new GameCommandInfo("ai_debug", "F4", "Открыть инспектор ИИ", GameCommandGroup.Development),
