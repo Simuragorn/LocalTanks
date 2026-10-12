@@ -15,21 +15,46 @@ namespace LocalTanks
     [DisallowMultipleComponent]
     public sealed class WoTMapContentBuilder : MonoBehaviour
     {
+        /// <summary>
+        /// Art for one library object, bound when the scene is built. A sprite reference cannot live in
+        /// the map asset, because that asset is generated from JSON and the library is local-only, so the
+        /// scene carries the mapping and this component resolves it by id at load time.
+        /// </summary>
+        [System.Serializable]
+        public sealed class SpriteBinding
+        {
+            public string spriteId;
+            public Sprite sprite;
+
+            [Tooltip("Physical size of the drawn object in source metres, used to scale it to its footprint.")]
+            public Vector2 worldSizeMeters;
+        }
+
         [SerializeField] private WoTMapAsset map;
+        [SerializeField] private SpriteBinding[] sprites = System.Array.Empty<SpriteBinding>();
 
         [Tooltip("Set when the scene is inspected and the generated objects must be visible in the editor.")]
         [SerializeField] private bool buildOnAwake = true;
 
         private Transform obstacleRoot;
         private Transform vegetationRoot;
+        private readonly System.Collections.Generic.Dictionary<string, SpriteBinding> spriteLookup =
+            new System.Collections.Generic.Dictionary<string, SpriteBinding>();
 
         public int BuiltObstacles { get; private set; }
         public int BuiltPlants { get; private set; }
+        public int SpritesApplied { get; private set; }
         public WoTMapAsset Map => map;
 
         public void Configure(WoTMapAsset asset)
         {
             map = asset;
+        }
+
+        /// <summary>Binds the art the scene builder resolved from the environment library.</summary>
+        public void ConfigureSprites(SpriteBinding[] bindings)
+        {
+            sprites = bindings ?? System.Array.Empty<SpriteBinding>();
         }
 
         private void Awake()
@@ -55,6 +80,15 @@ namespace LocalTanks
             }
 
             Clear();
+            spriteLookup.Clear();
+            foreach (SpriteBinding binding in sprites)
+            {
+                if (binding != null && !string.IsNullOrWhiteSpace(binding.spriteId) && binding.sprite != null)
+                {
+                    spriteLookup[binding.spriteId] = binding;
+                }
+            }
+
             obstacleRoot = CreateRoot("Obstacles");
             vegetationRoot = CreateRoot("Vegetation");
             BuildObstacles();
@@ -108,8 +142,42 @@ namespace LocalTanks
                     target.AddComponent<VisionBlocker>();
                 }
 
+                AddSprite(target, obstacle.sourceResource, obstacle.category, obstacle.size);
+
                 BuiltObstacles++;
             }
+        }
+
+        /// <summary>
+        /// Draws the art chosen for this object, scaled so the sprite occupies the footprint the pipeline
+        /// measured. The art hangs on a child transform on purpose: scaling the object itself would scale
+        /// its collider too, and the collider is already the measured size. The library draws each object
+        /// at its true physical size, so the scale is the ratio of wanted to drawn size rather than a
+        /// constant, which lets one sprite serve small and large instances of a family.
+        /// </summary>
+        private void AddSprite(GameObject target, string sourceResource, string category, Vector2 wantedSize)
+        {
+            string spriteId = MapSpriteMatcher.Resolve(sourceResource, category, spriteLookup.Keys);
+            if (spriteId == null || !spriteLookup.TryGetValue(spriteId, out SpriteBinding binding))
+            {
+                return;
+            }
+
+            GameObject visual = new GameObject("Visual");
+            visual.transform.SetParent(target.transform, false);
+            SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = binding.sprite;
+            // Buildings and rocks draw over ground clutter, plants draw last so vegetation overlaps the
+            // obstacles it grows against.
+            renderer.sortingOrder = category == "house" || category == "rock" ? -4 : -3;
+
+            Vector2 drawn = binding.sprite.bounds.size;
+            if (drawn.x > 0.0001f && drawn.y > 0.0001f && wantedSize.x > 0.0001f && wantedSize.y > 0.0001f)
+            {
+                visual.transform.localScale = new Vector3(wantedSize.x / drawn.x, wantedSize.y / drawn.y, 1f);
+            }
+
+            SpritesApplied++;
         }
 
         /// <summary>
@@ -169,6 +237,9 @@ namespace LocalTanks
                 CircleCollider2D circle = target.AddComponent<CircleCollider2D>();
                 circle.radius = Mathf.Max(0.2f, plant.radius);
                 circle.isTrigger = !plant.destructible;
+
+                AddSprite(target, plant.sourceResource, plant.kind == MapCoverKind.Tree ? "tree" : "bush",
+                    new Vector2(plant.radius * 2f, plant.radius * 2f));
                 BuiltPlants++;
             }
         }

@@ -72,5 +72,37 @@ namespace LocalTanks.Tests
             Assert.That(outside, Is.Zero,
                 $"{outside} colliders sit outside the playable field, so the arena is offset.");
         }
+        [UnityTest]
+        public IEnumerator ConvertedArena_DrawsItsEnvironmentArt()
+        {
+            if (!SceneExists) Assert.Ignore($"Scene '{SceneName}' is not in the build settings yet.");
+
+            SceneManager.LoadScene(SceneName);
+            yield return null;
+            yield return null;
+
+            WoTMapContentBuilder builder = Object.FindAnyObjectByType<WoTMapContentBuilder>();
+            Assert.That(builder, Is.Not.Null);
+
+            SpriteRenderer[] renderers = Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None);
+            Assert.That(renderers.Length, Is.GreaterThan(100),
+                "The arena must draw environment art, not only colliders.");
+
+            // Art must be scaled to the footprint it stands on. A sprite left at its drawn size would show
+            // a building at its library scale, which is metres away from the arena scale.
+            WoTMapObstacle[] obstacles = builder.Map.obstacles;
+            int outside = renderers.Count(renderer =>
+            {
+                Bounds bounds = renderer.bounds;
+                float limit = builder.Map.playableSize.x * 0.5f + 40f;
+                return Mathf.Abs(bounds.center.x) > limit || Mathf.Abs(bounds.center.y) > limit;
+            });
+            Assert.That(outside, Is.Zero,
+                $"{outside} sprites are drawn outside the playable field, so the art is offset from the map.");
+
+            Assert.That(obstacles.Any(item => item.blocksMovement), Is.True);
+            Debug.Log($"Arena art: {renderers.Length} sprite renderers for {builder.Map.ObstacleCount} obstacles " +
+                      $"and {builder.Map.VegetationCount} plants.");
+        }
     }
 }
