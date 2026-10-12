@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -147,6 +147,18 @@ namespace LocalTanks.Tests
             }
 
             Debug.Log("  routes: " + string.Join(" | ", routeReport));
+
+            // Where each bot is along its own route. A route index parked near its start after a whole
+            // battle means the tank is stuck trying to reach one waypoint, not that it has nowhere to go.
+            List<string> routeProgress = new List<string>();
+            foreach (TeamMember member in director.SpawnedMembers.Where(item => item != null && !item.IsPlayerControlled).Take(6))
+            {
+                CombatTankAI ai = member.GetComponent<CombatTankAI>();
+                if (ai == null) continue;
+                routeProgress.Add($"{member.name}={ai.RouteIndex}/{ai.RoutePoints.Length}");
+            }
+
+            Debug.Log("  route progress: " + string.Join(" | ", routeProgress));
 
             // Whether the route even starts where the tank stands. A route whose first point is already
             // reached makes the AI declare the march complete before it moves, which looks like an idle

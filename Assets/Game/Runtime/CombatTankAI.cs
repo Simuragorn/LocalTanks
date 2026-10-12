@@ -51,6 +51,9 @@ namespace LocalTanks
 
         /// <summary>The route this bot was given, in world units. Exposed for diagnostics and tests.</summary>
         public Vector2[] RoutePoints => routePoints;
+
+        /// <summary>How far along its route the bot has walked. Exposed for diagnostics and tests.</summary>
+        public int RouteIndex => routeIndex;
         private float preferredDistance;
         private Vector2 repositionDestination;
         private float repositionExpiresAt;
@@ -1881,15 +1884,19 @@ namespace LocalTanks
             }
 
             // Skip any route points the tank already stands on, so a spawn point at the head of the
-            // route does not stall the march.
+            // route does not stall the march. The tolerance is the agent's waypoint tolerance rather
+            // than a small constant: navigation cells are far coarser than a hull, so a route point
+            // routinely sits inside a collider the tank cannot occupy, and demanding a tighter approach
+            // than the agent itself uses left every bot circling its first waypoint for a whole battle.
+            float tolerance = navigation != null ? Mathf.Max(0.45f, navigation.WaypointTolerance) : 0.45f;
             while (routeIndex < routePoints.Length - 1 &&
-                   Vector2.Distance(transform.position, routePoints[routeIndex]) < 0.45f)
+                   Vector2.Distance(transform.position, routePoints[routeIndex]) < tolerance)
             {
                 routeIndex++;
             }
 
             if (routeIndex >= routePoints.Length - 1 &&
-                Vector2.Distance(transform.position, routePoints[routeIndex]) < 0.45f)
+                Vector2.Distance(transform.position, routePoints[routeIndex]) < tolerance)
             {
                 routeComplete = true;
                 State = CombatAiState.Advance;

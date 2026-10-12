@@ -65,6 +65,13 @@ namespace LocalTanks
         public bool IsRecoveringFromStall => unstuckTime > 0f;
         public NavigationMap Map => map;
         public int ClearanceCells => clearanceCells;
+
+        /// <summary>
+        /// How close a tank must come to a waypoint before it counts as reached. Route consumers need
+        /// this to decide the same thing the agent does; a tighter demand than the agent's own leaves a
+        /// tank circling a point it can never satisfy.
+        /// </summary>
+        public float WaypointTolerance => waypointTolerance;
         public bool HasFacingDirection => hasFacingDirection;
         public Vector2 FacingDirection => facingDirection;
         public bool MovingInReverse => movingInReverse;
