@@ -11,6 +11,14 @@ namespace LocalTanks
     {
         public AudioClip Load(string clipId)
         {
+            // Batchmode runs the automated suites on a build machine, where the extracted WoT clips
+            // are usually absent and any audio that did play would be a surprise for whoever runs the
+            // tests. Loading nothing keeps the simulation identical and the run silent.
+            if (Application.isBatchMode)
+            {
+                return null;
+            }
+
             return string.IsNullOrWhiteSpace(clipId)
                 ? null
                 : Resources.Load<AudioClip>($"WoTAudio/Clips/{clipId}");
@@ -223,6 +231,9 @@ namespace LocalTanks
 
         private AudioClip LoadClip(string clipId)
         {
+            // Batchmode keeps the extracted WoT clips out of the automated suites, so the
+            // resources provider returns nothing there. A provider supplied by a test is the
+            // test's own concern and still resolves its clips.
             return string.IsNullOrWhiteSpace(clipId) ? null : clipProvider.Load(clipId);
         }
 

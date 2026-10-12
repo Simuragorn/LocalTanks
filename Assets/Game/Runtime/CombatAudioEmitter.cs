@@ -32,6 +32,12 @@ namespace LocalTanks
                 return;
             }
 
+            // Automated suites run in batchmode; they must not create audio objects or play clips.
+            if (Application.isBatchMode && clipProvider is ResourcesTankAudioClipProvider)
+            {
+                return;
+            }
+
             if (!Cache.TryGetValue(clipId, out AudioClip clip))
             {
                 clip = clipProvider.Load(clipId);
