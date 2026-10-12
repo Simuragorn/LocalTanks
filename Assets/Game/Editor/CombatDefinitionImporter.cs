@@ -77,6 +77,8 @@ namespace LocalTanks.Editor
         public int tier;
         public bool availableInGame;
         public int maxHitPoints;
+        public float massTonnes;
+        public float enginePowerHp;
         public string weaponId;
         public MobilityJson mobility;
         public ArmorJson armor;
@@ -92,6 +94,8 @@ namespace LocalTanks.Editor
         public string id;
         public string displayName;
         public float reloadSeconds;
+        public int magazineSize = 1;
+        public float shotIntervalSeconds;
         public string shellId;
     }
 
@@ -160,6 +164,8 @@ namespace LocalTanks.Editor
                 ValidateCommon(weapon.schemaVersion, weapon.id, weapon.displayName, "Weapon", allIds, errors);
                 weaponIds.Add(weapon.id ?? string.Empty);
                 RequirePositive(weapon.reloadSeconds, $"Weapon '{weapon.id}'.reloadSeconds", errors);
+                RequireRange(weapon.magazineSize, 1, 100, $"Weapon '{weapon.id}'.magazineSize", errors);
+                RequireNonNegative(weapon.shotIntervalSeconds, $"Weapon '{weapon.id}'.shotIntervalSeconds", errors);
                 if (string.IsNullOrWhiteSpace(weapon.shellId) || !shellIds.Contains(weapon.shellId))
                 {
                     errors.Add($"Weapon '{weapon.id}' references missing shell '{weapon.shellId}'.");
@@ -175,6 +181,8 @@ namespace LocalTanks.Editor
                         $"Tank '{tank.id}'.displayName must contain only the main player-facing designation without a parenthetical variant suffix.");
                 }
                 RequirePositive(tank.maxHitPoints, $"Tank '{tank.id}'.maxHitPoints", errors);
+                RequirePositive(tank.massTonnes, $"Tank '{tank.id}'.massTonnes", errors);
+                RequirePositive(tank.enginePowerHp, $"Tank '{tank.id}'.enginePowerHp", errors);
                 if (!Enum.TryParse(tank.vehicleClass, false, out VehicleClass _))
                 {
                     errors.Add($"Tank '{tank.id}' has unknown vehicleClass '{tank.vehicleClass}'.");
@@ -271,6 +279,18 @@ namespace LocalTanks.Editor
                     }
                 }
             }
+
+            HashSet<string> referencedWeapons = definitions.Tanks
+                .Select(item => item.weaponId ?? string.Empty)
+                .ToHashSet(StringComparer.Ordinal);
+            foreach (string unused in weaponIds.Where(id => !referencedWeapons.Contains(id)))
+                errors.Add($"Weapon '{unused}' is not referenced by any tank.");
+
+            HashSet<string> referencedShells = definitions.Weapons
+                .Select(item => item.shellId ?? string.Empty)
+                .ToHashSet(StringComparer.Ordinal);
+            foreach (string unused in shellIds.Where(id => !referencedShells.Contains(id)))
+                errors.Add($"Shell '{unused}' is not referenced by any weapon.");
 
             return errors.ToArray();
         }
@@ -422,6 +442,10 @@ namespace LocalTanks.Editor
                 .OrderBy(item => item.id, StringComparer.Ordinal)
                 .ToDictionary(item => item.id, item => ImportTank(item, weapons[item.weaponId]), StringComparer.Ordinal);
 
+            DeleteStaleGeneratedAssets(GeneratedRoot + "/Shells", shells.Values.Select(AssetDatabase.GetAssetPath));
+            DeleteStaleGeneratedAssets(GeneratedRoot + "/Weapons", weapons.Values.Select(AssetDatabase.GetAssetPath));
+            DeleteStaleGeneratedAssets(GeneratedRoot + "/Tanks", tanks.Values.Select(AssetDatabase.GetAssetPath));
+
             CombatDatabase database = LoadOrCreate<CombatDatabase>(DatabasePath);
             database.shells = shells.Values.ToArray();
             database.weapons = weapons.Values.ToArray();
@@ -431,6 +455,16 @@ namespace LocalTanks.Editor
             TankBalanceDocumentGenerator.Write(source);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             Debug.Log($"Local Tanks: imported {tanks.Count} tank(s), {weapons.Count} weapon(s), and {shells.Count} shell(s).");
+        }
+
+        private static void DeleteStaleGeneratedAssets(string folder, IEnumerable<string> retainedPaths)
+        {
+            HashSet<string> retained = new HashSet<string>(retainedPaths, StringComparer.OrdinalIgnoreCase);
+            foreach (string guid in AssetDatabase.FindAssets("t:ScriptableObject", new[] { folder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!retained.Contains(path)) AssetDatabase.DeleteAsset(path);
+            }
         }
 
         [MenuItem("Local Tanks/Data/Validate Combat Definitions")]
@@ -515,6 +549,8 @@ namespace LocalTanks.Editor
             target.id = source.id;
             target.displayName = source.displayName;
             target.reloadSeconds = source.reloadSeconds;
+            target.magazineSize = source.magazineSize;
+            target.shotIntervalSeconds = source.shotIntervalSeconds;
             target.shell = shell;
             EditorUtility.SetDirty(target);
             return target;
@@ -531,6 +567,8 @@ namespace LocalTanks.Editor
             target.tier = source.tier;
             target.availableInGame = source.availableInGame;
             target.maxHitPoints = source.maxHitPoints;
+            target.massTonnes = source.massTonnes;
+            target.enginePowerHp = source.enginePowerHp;
             target.weapon = weapon;
             target.maxForwardSpeed = source.mobility.maxForwardSpeed;
             target.maxReverseSpeed = source.mobility.maxReverseSpeed;

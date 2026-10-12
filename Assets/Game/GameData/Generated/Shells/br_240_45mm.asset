@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: br_240_45mm
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.ShellDefinition
   id: br_240_45mm
-  displayName: BR-240
-  damage: 75
-  penetration: 43
-  speed: 13.8
-  radius: 0.038
-  lifetimeSeconds: 3
+  displayName: 45 mm UBR-240A
+  damage: 47
+  penetration: 51
+  speed: 13.7636
+  radius: 0.037
+  lifetimeSeconds: 3.1562
   maximumRange: 40
   ricochetAngle: 70
   ricochetSpeedMultiplier: 0.7

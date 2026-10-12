@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "wotRoot": "C:\\Games\\World_of_Tanks_EU",
+  "conversion": {
+    "kilometresPerHourPerUnitySpeed": 13.9,
+    "viewRangeMetresPerUnityUnit": 32.0,
+    "projectileSpeedDivisor": 55.0,
+    "maximumProjectileRange": 40.0,
+    "accelerationPowerToWeightDivisor": 48.0,
+    "groundResistanceMultiplier": 1.25,
+    "firingRevealDuration": 4.5,
+    "guaranteedDetectionRange": 1.4
+  },
+  "profiles": [
+    {
+      "tankId": "ms_1",
+      "vehicleId": "R11_MS-1",
+      "nation": "ussr",
+      "weaponId": "gun_20_k_45mm",
+      "weaponDisplayName": "45 mm mod. 1932",
+      "shellId": "br_240_45mm",
+      "shellDisplayName": "45 mm UBR-240A"
+    },
+    {
+      "tankId": "leichttraktor",
+      "vehicleId": "G12_Ltraktor",
+      "nation": "germany",
+      "weaponId": "breda_20mm_ltr",
+      "weaponDisplayName": "2 cm Breda",
+      "shellId": "pzgr_39_ltr_20mm",
+      "shellDisplayName": "2 cm Pzgr. 39"
+    }
+  ]
+}

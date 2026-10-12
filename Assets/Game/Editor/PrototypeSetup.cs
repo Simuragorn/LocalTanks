@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using LocalTanks;
 using UnityEditor;
@@ -23,7 +24,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
                 new Rect(24f, 139f, 419f, 802f), new Rect(467f, 24f, 278f, 1031f),
                 new Vector2(0.4985709f, 0.7753074f), new Vector2(0.4950269f, 0.4900504f),
-                new Vector2(0.24f, 0.24f), 1.41f, 69.8f,
+                new Vector2(0.24f, 0.24f), 1.41f,
                 CreateTigerHullOutline()),
             new TankBuildSpec(
                 "MS1", "MS-1",
@@ -32,7 +33,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
                 new Rect(24f, 24f, 192f, 476f), new Rect(240f, 117f, 120f, 289f),
                 new Vector2(0.5f, 0.6802735f), new Vector2(0.5f, 0.4236555f),
-                new Vector2(0.24f, 0.24f), 0.45f, 5.5f,
+                new Vector2(0.24f, 0.24f), 0.45f,
                 CreateMS1HullOutline()),
             new TankBuildSpec(
                 "Leichttraktor", "Leichttraktor",
@@ -41,7 +42,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab",
                 new Rect(24f, 24f, 229f, 462f), new Rect(277f, 117f, 158f, 275f),
                 new Vector2(0.4986667f, 0.7045380f), new Vector2(0.5f, 0.6946704f),
-                new Vector2(0.24f, 0.24f), 0.48f, 8.96f,
+                new Vector2(0.24f, 0.24f), 0.48f,
                 CreateLeichttraktorHullOutline())
         };
 
@@ -109,6 +110,7 @@ namespace LocalTanks.Editor
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             foreach (TankBuildSpec spec in TankSpecs)
             {
+                spec.LoadCanonicalLayout();
                 ConfigureTankTexture(spec);
             }
 
@@ -233,7 +235,7 @@ namespace LocalTanks.Editor
             {
                 Rigidbody2D body = root.AddComponent<Rigidbody2D>();
                 body.gravityScale = 0f;
-                body.mass = spec.Mass;
+                body.mass = definition.massTonnes;
                 body.linearDamping = 1f;
                 body.angularDamping = 4f;
                 body.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -550,7 +552,7 @@ namespace LocalTanks.Editor
                 string spritePrefix, string displayName, string texturePath,
                 string definitionPath, string prefabPath, Rect hullRect, Rect turretRect,
                 Vector2 turretPivot, Vector2 hullTurretMount, Vector2 visualScale, float muzzleDistance,
-                float mass, Vector2[] hullOutline)
+                Vector2[] hullOutline)
             {
                 SpritePrefix = spritePrefix;
                 DisplayName = displayName;
@@ -563,7 +565,6 @@ namespace LocalTanks.Editor
                 HullTurretMount = hullTurretMount;
                 VisualScale = visualScale;
                 MuzzleDistance = muzzleDistance;
-                Mass = mass;
                 HullOutline = hullOutline;
             }
 
@@ -572,14 +573,63 @@ namespace LocalTanks.Editor
             public string TexturePath { get; }
             public string DefinitionPath { get; }
             public string PrefabPath { get; }
-            public Rect HullRect { get; }
-            public Rect TurretRect { get; }
-            public Vector2 TurretPivot { get; }
-            public Vector2 HullTurretMount { get; }
+            public Rect HullRect { get; private set; }
+            public Rect TurretRect { get; private set; }
+            public Vector2 TurretPivot { get; private set; }
+            public Vector2 HullTurretMount { get; private set; }
             public Vector2 VisualScale { get; }
-            public float MuzzleDistance { get; }
-            public float Mass { get; }
+            public float MuzzleDistance { get; private set; }
             public Vector2[] HullOutline { get; }
+
+            public void LoadCanonicalLayout()
+            {
+                string directory = Path.GetDirectoryName(TexturePath)?.Replace('\\', '/');
+                string vehicleId = string.IsNullOrEmpty(directory) ? string.Empty : Path.GetFileName(directory);
+                string layoutPath = $"{directory}/{vehicleId}_layout.json";
+                string absolutePath = Path.GetFullPath(layoutPath);
+                if (!File.Exists(absolutePath))
+                    throw new System.InvalidOperationException($"Canonical sprite layout was not found: {layoutPath}");
+
+                SpriteLayoutJson layout = JsonUtility.FromJson<SpriteLayoutJson>(File.ReadAllText(absolutePath));
+                if (layout == null || layout.schemaVersion != 2 || layout.hull == null || layout.turret == null)
+                    throw new InvalidDataException($"Unsupported or incomplete sprite layout: {layoutPath}");
+
+                HullRect = layout.hull.ToRect();
+                TurretRect = layout.turret.ToRect();
+                TurretPivot = layout.turret.pivot.ToVector2();
+                HullTurretMount = layout.hull.turretMount.ToVector2();
+                MuzzleDistance = layout.turret.height * TurretPivot.y / 100f * VisualScale.y;
+            }
+        }
+
+        [System.Serializable]
+        private sealed class SpriteLayoutJson
+        {
+            public int schemaVersion;
+            public SpriteLayoutPartJson hull;
+            public SpriteLayoutPartJson turret;
+        }
+
+        [System.Serializable]
+        private sealed class SpriteLayoutPartJson
+        {
+            public float x;
+            public float y;
+            public float width;
+            public float height;
+            public SpriteLayoutPointJson pivot;
+            public SpriteLayoutPointJson turretMount;
+
+            public Rect ToRect() => new Rect(x, y, width, height);
+        }
+
+        [System.Serializable]
+        private sealed class SpriteLayoutPointJson
+        {
+            public float x;
+            public float y;
+
+            public Vector2 ToVector2() => new Vector2(x, y);
         }
     }
 }

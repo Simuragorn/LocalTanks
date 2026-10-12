@@ -19,25 +19,27 @@ MonoBehaviour:
   tier: 1
   availableInGame: 1
   maxHitPoints: 280
-  weapon: {fileID: 11400000, guid: c6fcfed09ae467d459bda6a25f053102, type: 2}
-  maxForwardSpeed: 2.16
-  maxReverseSpeed: 0.5
-  acceleration: 0.27
-  groundResistance: 1.45
-  braking: 1.9
-  hullTurnSpeed: 26
-  turretTurnSpeed: 24
-  minimumDispersionDegrees: 0
-  maximumDispersionDegrees: 2.5
-  aimingTimeSeconds: 1.9
-  movementDispersionDegrees: 1.45
-  hullTraverseDispersionDegrees: 1
-  turretTraverseDispersionDegrees: 0.4
-  shotDispersionDegrees: 1
-  viewRange: 8.9
-  stationaryConcealment: 0.29
-  movementRevealPenalty: 0.09
-  firingRevealPenalty: 0.11
+  massTonnes: 7.61
+  enginePowerHp: 95
+  weapon: {fileID: 11400000, guid: 8de8dad5b1713df41a4707793e9b67d1, type: 2}
+  maxForwardSpeed: 2.5899
+  maxReverseSpeed: 0.6475
+  acceleration: 0.2601
+  groundResistance: 1.5
+  braking: 1.2085
+  hullTurnSpeed: 66
+  turretTurnSpeed: 39
+  minimumDispersionDegrees: 0.3037
+  maximumDispersionDegrees: 1.5372
+  aimingTimeSeconds: 1.8
+  movementDispersionDegrees: 0.3935
+  hullTraverseDispersionDegrees: 0.7215
+  turretTraverseDispersionDegrees: 0.1184
+  shotDispersionDegrees: 0.4251
+  viewRange: 9.6875
+  stationaryConcealment: 0.224
+  movementRevealPenalty: 0.056
+  firingRevealPenalty: 0.1707
   firingRevealDuration: 4.5
   guaranteedDetectionRange: 1.4
   armor:
@@ -47,11 +49,11 @@ MonoBehaviour:
     rear: 14
   audio:
     engineClipId: engine_eng_gaz_aa_pc
-    shotClipId: gun_wpn_small_pc
+    shotClipId: gun_wpn_automatic_pc
     turretClipId: turret_tur_man_trav_05
     engineVolume: 0.4
     shotVolume: 0.82
     turretVolume: 0.17
     enginePitch: 1.05
-    shotPitch: 1.08
+    shotPitch: 1
     turretPitch: 1.04

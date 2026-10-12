@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: gun_20_k_45mm
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponDefinition
   id: gun_20_k_45mm
-  displayName: 45 mm 20-K mod. 1932
-  reloadSeconds: 6
+  displayName: 45 mm mod. 1932
+  reloadSeconds: 2.9
+  magazineSize: 1
+  shotIntervalSeconds: 0
   shell: {fileID: 11400000, guid: fd3c6976249b755408965c1de752ad3d, type: 2}

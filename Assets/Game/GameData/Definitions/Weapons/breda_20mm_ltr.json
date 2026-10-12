@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "breda_20mm_ltr",
+  "displayName": "2 cm Breda",
+  "reloadSeconds": 4.7,
+  "magazineSize": 12,
+  "shotIntervalSeconds": 0.25,
+  "shellId": "pzgr_39_ltr_20mm"
+}

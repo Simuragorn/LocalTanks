@@ -9,6 +9,51 @@ namespace LocalTanks.Tests
     public sealed class TankAudioPlayModeTests
     {
         [UnityTest]
+        public IEnumerator WeaponMagazine_UsesShotIntervalThenReloadsWholeMagazine()
+        {
+            TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
+            WeaponDefinition weaponDefinition = ScriptableObject.CreateInstance<WeaponDefinition>();
+            ShellDefinition shell = ScriptableObject.CreateInstance<ShellDefinition>();
+            weaponDefinition.reloadSeconds = 0.04f;
+            weaponDefinition.magazineSize = 3;
+            weaponDefinition.shotIntervalSeconds = 0.01f;
+            weaponDefinition.shell = shell;
+            definition.weapon = weaponDefinition;
+            shell.speed = 1f;
+            shell.radius = 0.01f;
+            shell.lifetimeSeconds = 0.02f;
+            shell.maximumRange = 1f;
+
+            GameObject root = new GameObject("MagazineTank");
+            GameObject muzzle = new GameObject("Muzzle");
+            muzzle.transform.SetParent(root.transform, false);
+            GameObject projectileObject = new GameObject("ProjectilePrefab");
+            Projectile2D projectile = projectileObject.AddComponent<Projectile2D>();
+            WeaponController weapon = root.AddComponent<WeaponController>();
+            weapon.Configure(definition, projectile, muzzle.transform);
+
+            Assert.That(weapon.TryFire(), Is.True);
+            Assert.That(weapon.RoundsRemaining, Is.EqualTo(2));
+            Assert.That(weapon.TryFire(), Is.False);
+            yield return new WaitForSeconds(0.02f);
+            Assert.That(weapon.TryFire(), Is.True);
+            yield return new WaitForSeconds(0.02f);
+            Assert.That(weapon.TryFire(), Is.True);
+            Assert.That(weapon.RoundsRemaining, Is.Zero);
+            Assert.That(weapon.IsReady, Is.False);
+            yield return new WaitForSeconds(0.06f);
+            Assert.That(weapon.IsReady, Is.True);
+            Assert.That(weapon.RoundsRemaining, Is.EqualTo(3));
+
+            Object.Destroy(root);
+            Object.Destroy(projectileObject);
+            Object.Destroy(definition);
+            Object.Destroy(weaponDefinition);
+            Object.Destroy(shell);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator AudioController_LoadsLoopsAndReactsToWeaponFire()
         {
             AudioClip engineClip = AudioClip.Create("engine", 4800, 1, 48000, false);

@@ -34,7 +34,12 @@ namespace LocalTanks.Tests
             Assert.That(ms1.vehicleClass, Is.EqualTo("LightTank"));
             Assert.That(leichttraktor.vehicleClass, Is.EqualTo("LightTank"));
             Assert.That(ms1.weaponId, Is.EqualTo("gun_20_k_45mm"));
-            Assert.That(leichttraktor.weaponId, Is.EqualTo("kwk_l45_37mm"));
+            Assert.That(leichttraktor.weaponId, Is.EqualTo("breda_20mm_ltr"));
+            Assert.That(ms1.massTonnes, Is.EqualTo(4.895f).Within(0.001f));
+            Assert.That(leichttraktor.massTonnes, Is.EqualTo(7.61f).Within(0.001f));
+            WeaponDefinitionJson breda = definitions.Weapons.Single(item => item.id == "breda_20mm_ltr");
+            Assert.That(breda.magazineSize, Is.EqualTo(12));
+            Assert.That(breda.shotIntervalSeconds, Is.EqualTo(0.25f).Within(0.001f));
             Assert.That(ms1.nation, Is.EqualTo("USSR"));
             Assert.That(leichttraktor.nation, Is.EqualTo("Germany"));
             Assert.That(tiger.nation, Is.EqualTo("Germany"));

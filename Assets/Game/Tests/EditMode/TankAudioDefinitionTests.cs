@@ -7,7 +7,7 @@ namespace LocalTanks.Tests
     public sealed class TankAudioDefinitionTests
     {
         [Test]
-        public void AvailableTierOneTanks_UseSharedWoTEventsAndDistinctTuning()
+        public void AvailableTierOneTanks_UseTopConfigurationWoTEvents()
         {
             CombatDefinitionSet definitions = CombatDefinitionImporter.LoadAndValidate();
             TankDefinitionJson ms1 = definitions.Tanks.Single(item => item.id == "ms_1");
@@ -15,7 +15,8 @@ namespace LocalTanks.Tests
 
             Assert.That(ms1.audio.engineClipId, Is.EqualTo("engine_eng_gaz_aa_pc"));
             Assert.That(leichttraktor.audio.engineClipId, Is.EqualTo(ms1.audio.engineClipId));
-            Assert.That(leichttraktor.audio.shotClipId, Is.EqualTo(ms1.audio.shotClipId));
+            Assert.That(ms1.audio.shotClipId, Is.EqualTo("gun_wpn_small_pc"));
+            Assert.That(leichttraktor.audio.shotClipId, Is.EqualTo("gun_wpn_automatic_pc"));
             Assert.That(leichttraktor.audio.turretClipId, Is.Not.EqualTo(ms1.audio.turretClipId));
             Assert.That(leichttraktor.audio.enginePitch, Is.GreaterThan(ms1.audio.enginePitch));
             Assert.That(leichttraktor.audio.shotPitch, Is.GreaterThan(ms1.audio.shotPitch));

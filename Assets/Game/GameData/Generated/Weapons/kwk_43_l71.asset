@@ -15,4 +15,6 @@ MonoBehaviour:
   id: kwk_43_l71
   displayName: 8.8 cm KwK 43 L/71
   reloadSeconds: 8
+  magazineSize: 1
+  shotIntervalSeconds: 0
   shell: {fileID: 11400000, guid: 74486f7327b383e49b4b22f6d895ce4c, type: 2}

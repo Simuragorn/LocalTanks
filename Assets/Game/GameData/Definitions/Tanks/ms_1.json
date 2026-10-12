@@ -6,16 +6,16 @@
   "nation": "USSR",
   "tier": 1,
   "availableInGame": true,
-  "maxHitPoints": 260,
+  "maxHitPoints": 220,
   "weaponId": "gun_20_k_45mm",
   "mobility": {
-    "maxForwardSpeed": 1.45,
-    "maxReverseSpeed": 0.36,
-    "acceleration": 0.24,
-    "groundResistance": 1.55,
-    "braking": 1.9,
-    "hullTurnSpeed": 24.0,
-    "turretTurnSpeed": 20.0
+    "maxForwardSpeed": 2.3022,
+    "maxReverseSpeed": 0.5755,
+    "acceleration": 0.2554,
+    "groundResistance": 1.5,
+    "braking": 1.8788,
+    "hullTurnSpeed": 48.0,
+    "turretTurnSpeed": 35.0
   },
   "armor": {
     "front": 16.0,
@@ -24,19 +24,19 @@
     "rear": 16.0
   },
   "gunHandling": {
-    "minimumDispersionDegrees": 0.0,
-    "maximumDispersionDegrees": 2.8,
-    "aimingTimeSeconds": 2.2,
-    "movementDispersionDegrees": 1.6,
-    "hullTraverseDispersionDegrees": 1.2,
-    "turretTraverseDispersionDegrees": 0.45,
-    "shotDispersionDegrees": 1.2
+    "minimumDispersionDegrees": 0.2636,
+    "maximumDispersionDegrees": 1.1939,
+    "aimingTimeSeconds": 2.5,
+    "movementDispersionDegrees": 0.3205,
+    "hullTraverseDispersionDegrees": 0.4807,
+    "turretTraverseDispersionDegrees": 0.1291,
+    "shotDispersionDegrees": 0.7907
   },
   "vision": {
-    "viewRange": 8.7,
-    "stationaryConcealment": 0.32,
-    "movementRevealPenalty": 0.09,
-    "firingRevealPenalty": 0.12,
+    "viewRange": 8.75,
+    "stationaryConcealment": 0.263,
+    "movementRevealPenalty": 0.065,
+    "firingRevealPenalty": 0.198,
     "firingRevealDuration": 4.5,
     "guaranteedDetectionRange": 1.4
   },
@@ -50,5 +50,7 @@
     "enginePitch": 0.94,
     "shotPitch": 0.94,
     "turretPitch": 0.96
-  }
+  },
+  "massTonnes": 4.895,
+  "enginePowerHp": 60.0
 }

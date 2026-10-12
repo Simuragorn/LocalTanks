@@ -40,6 +40,8 @@ namespace LocalTanks
         [Range(1, 10)] public int tier = 1;
         public bool availableInGame = true;
         [Min(1)] public int maxHitPoints = 1;
+        [Min(0.01f)] public float massTonnes = 1f;
+        [Min(0.01f)] public float enginePowerHp = 1f;
         public WeaponDefinition weapon;
 
         [Header("Hull movement")]

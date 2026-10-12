@@ -7,6 +7,8 @@
   "tier": 8,
   "availableInGame": false,
   "maxHitPoints": 1600,
+  "massTonnes": 69.8,
+  "enginePowerHp": 700.0,
   "weaponId": "kwk_43_l71",
   "mobility": {
     "maxForwardSpeed": 1.9,

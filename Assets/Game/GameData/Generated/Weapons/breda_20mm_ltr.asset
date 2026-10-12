@@ -10,9 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6f6919c3bb522b84e993b4ddfa24016e, type: 3}
-  m_Name: kwk_l45_37mm
+  m_Name: breda_20mm_ltr
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponDefinition
-  id: kwk_l45_37mm
-  displayName: 3.7 cm KwK L/45
-  reloadSeconds: 4.5
-  shell: {fileID: 11400000, guid: a39508f04dbe3f7419f1eb068c336c7d, type: 2}
+  id: breda_20mm_ltr
+  displayName: 2 cm Breda
+  reloadSeconds: 4.7
+  magazineSize: 12
+  shotIntervalSeconds: 0.25
+  shell: {fileID: 11400000, guid: 8b441eee1c241a24486921f085d90386, type: 2}

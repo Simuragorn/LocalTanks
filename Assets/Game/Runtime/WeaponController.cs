@@ -12,21 +12,36 @@ namespace LocalTanks
         [SerializeField, Min(0f)] private float reloadOverrideSeconds;
 
         private readonly ReloadTimer reloadTimer = new ReloadTimer();
+        private readonly ReloadTimer shotIntervalTimer = new ReloadTimer();
         private Transform projectileOwnerRoot;
+        private int roundsRemaining;
 
         public event Action<WeaponController> Fired;
 
-        public bool IsReady => reloadTimer.IsReady;
+        public bool IsReady => reloadTimer.IsReady && shotIntervalTimer.IsReady && roundsRemaining > 0;
         public Transform Muzzle => muzzle;
-        public float RemainingReloadSeconds => reloadTimer.Remaining;
-        public float ReloadProgress => IsReady || EffectiveReloadSeconds <= 0f
-            ? 1f
-            : 1f - Mathf.Clamp01(reloadTimer.Remaining / EffectiveReloadSeconds);
+        public float RemainingReloadSeconds => reloadTimer.IsReady ? shotIntervalTimer.Remaining : reloadTimer.Remaining;
+        public int RoundsRemaining => roundsRemaining;
+        public int MagazineSize => config != null && config.weapon != null ? Mathf.Max(1, config.weapon.magazineSize) : 1;
+        public float ReloadProgress
+        {
+            get
+            {
+                if (IsReady) return 1f;
+                if (!reloadTimer.IsReady && EffectiveReloadSeconds > 0f)
+                    return 1f - Mathf.Clamp01(reloadTimer.Remaining / EffectiveReloadSeconds);
+                float interval = EffectiveShotIntervalSeconds;
+                return interval <= 0f ? 1f : 1f - Mathf.Clamp01(shotIntervalTimer.Remaining / interval);
+            }
+        }
         public float EffectiveReloadSeconds => reloadOverrideSeconds > 0f
             ? reloadOverrideSeconds
             : config != null && config.weapon != null
                 ? config.weapon.reloadSeconds
                 : 0f;
+        public float EffectiveShotIntervalSeconds => config != null && config.weapon != null
+            ? config.weapon.shotIntervalSeconds
+            : 0f;
 
         public void Configure(
             TankDefinition newConfig,
@@ -38,12 +53,16 @@ namespace LocalTanks
             projectilePrefab = newProjectilePrefab;
             muzzle = newMuzzle;
             dispersion = newDispersion != null ? newDispersion : GetComponent<GunDispersionController>();
+            roundsRemaining = MagazineSize;
+            reloadTimer.Reset();
+            shotIntervalTimer.Reset();
             ResolveProjectileOwner();
         }
 
         private void Awake()
         {
             if (dispersion == null) dispersion = GetComponent<GunDispersionController>();
+            if (roundsRemaining <= 0) roundsRemaining = MagazineSize;
             ResolveProjectileOwner();
         }
 
@@ -59,13 +78,18 @@ namespace LocalTanks
         private void Update()
         {
             reloadTimer.Tick(Time.deltaTime);
+            shotIntervalTimer.Tick(Time.deltaTime);
+            if (reloadTimer.IsReady && roundsRemaining <= 0)
+            {
+                roundsRemaining = MagazineSize;
+            }
         }
 
         public bool TryFire()
         {
             WeaponDefinition weapon = config != null ? config.weapon : null;
             ShellDefinition shell = weapon != null ? weapon.shell : null;
-            if (!reloadTimer.IsReady || shell == null || projectilePrefab == null || muzzle == null)
+            if (!IsReady || shell == null || projectilePrefab == null || muzzle == null)
             {
                 return false;
             }
@@ -79,7 +103,15 @@ namespace LocalTanks
                 shotDirection,
                 shell,
                 projectileOwnerRoot != null ? projectileOwnerRoot : transform);
-            reloadTimer.Start(EffectiveReloadSeconds);
+            roundsRemaining--;
+            if (roundsRemaining <= 0)
+            {
+                reloadTimer.Start(EffectiveReloadSeconds);
+            }
+            else
+            {
+                shotIntervalTimer.Start(EffectiveShotIntervalSeconds);
+            }
             Fired?.Invoke(this);
             return true;
         }

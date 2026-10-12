@@ -43,13 +43,13 @@ namespace LocalTanks.Editor
             TankDefinitionJson[] tanks = definitions.Tanks.OrderBy(item => item.id, StringComparer.Ordinal).ToArray();
             output.AppendLine("## Роль, прочность и вооружение");
             output.AppendLine();
-            output.AppendLine("| Техника | Нация | Уровень | Класс | В игре | HP | Орудие | Перезарядка, с | Урон | Пробитие, мм |");
-            output.AppendLine("|---|---|---:|---|:---:|---:|---|---:|---:|---:|");
+            output.AppendLine("| Техника | Нация | Уровень | Класс | В игре | HP | Масса, т | Двигатель, л.с. | Орудие | Магазин | Интервал, с | Перезарядка, с | Урон | Пробитие, мм |");
+            output.AppendLine("|---|---|---:|---|:---:|---:|---:|---:|---|---:|---:|---:|---:|---:|");
             foreach (TankDefinitionJson tank in tanks)
             {
                 WeaponDefinitionJson weapon = definitions.Weapons.Single(item => item.id == tank.weaponId);
                 ShellDefinitionJson shell = definitions.Shells.Single(item => item.id == weapon.shellId);
-                output.AppendLine($"| {Escape(tank.displayName)} (`{tank.id}`) | {tank.nation} | {tank.tier} | {tank.vehicleClass} | {(tank.availableInGame ? "да" : "нет")} | {tank.maxHitPoints} | {Escape(weapon.displayName)} | {F(weapon.reloadSeconds)} | {shell.damage} | {F(shell.penetration)} |");
+                output.AppendLine($"| {Escape(tank.displayName)} (`{tank.id}`) | {tank.nation} | {tank.tier} | {tank.vehicleClass} | {(tank.availableInGame ? "да" : "нет")} | {tank.maxHitPoints} | {F(tank.massTonnes)} | {F(tank.enginePowerHp)} | {Escape(weapon.displayName)} | {weapon.magazineSize} | {F(weapon.shotIntervalSeconds)} | {F(weapon.reloadSeconds)} | {shell.damage} | {F(shell.penetration)} |");
             }
 
             output.AppendLine();
@@ -65,7 +65,7 @@ namespace LocalTanks.Editor
             output.AppendLine();
             output.AppendLine("## Сведение и разброс");
             output.AppendLine();
-            output.AppendLine("Все значения разброса указаны как максимальное угловое отклонение в градусах. При полном сведении `0°` траектория идеально совпадает с направлением ствола. Штраф башни намеренно меньше штрафов движения и поворота корпуса.");
+            output.AppendLine("Все значения разброса указаны как максимальное угловое отклонение в градусах. После полного сведения остаётся указанный минимальный разброс; `0°` означал бы идеально точную ось ствола. Штраф башни намеренно меньше штрафов движения и поворота корпуса.");
             output.AppendLine();
             output.AppendLine("| Техника | Мин., ° | Макс., ° | Сведение, с | Движение, ° | Корпус, ° | Башня, ° | После выстрела, ° |");
             output.AppendLine("|---|---:|---:|---:|---:|---:|---:|---:|");

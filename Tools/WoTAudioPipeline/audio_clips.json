@@ -16,6 +16,13 @@
       "usage": "oneShot"
     },
     {
+      "clipId": "gun_wpn_automatic_pc",
+      "bank": "wpn",
+      "event": "wpn_automatic_pc",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
       "clipId": "turret_tur_man_trav_04",
       "bank": "turret",
       "event": "tur_man_trav_04",

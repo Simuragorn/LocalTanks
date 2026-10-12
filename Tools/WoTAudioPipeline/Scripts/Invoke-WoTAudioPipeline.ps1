@@ -1,10 +1,13 @@
 param(
     [string]$WoTRoot = "C:\Games\World_of_Tanks_EU",
-    [string]$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path,
+    [string]$ProjectRoot,
     [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+    $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+}
 $pipelineRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $packageRoot = Join-Path $WoTRoot "res\packages"
 $localRoot = Join-Path $ProjectRoot "LocalData\WoTAudioPipeline"
@@ -38,7 +41,10 @@ Copy-Item -LiteralPath (Join-Path $pipelineRoot "wwnames.txt") -Destination (Joi
 $profile = Get-Content -Raw -LiteralPath (Join-Path $pipelineRoot "audio_clips.json") | ConvertFrom-Json
 if ($profile.schemaVersion -ne 1) { throw "Unsupported audio profile schema: $($profile.schemaVersion)" }
 
-$bankNames = @($profile.clips | ForEach-Object { $_.bank } | Sort-Object -Unique)
+$bankNames = @($profile.clips | ForEach-Object {
+    $_.bank
+    if (-not [string]::IsNullOrWhiteSpace($_.mediaBank)) { $_.mediaBank }
+} | Sort-Object -Unique)
 $requiredEntries = @("Init.bnk")
 foreach ($bankName in $bankNames) {
     $requiredEntries += "$bankName.bnk"
@@ -164,7 +170,8 @@ foreach ($clip in $profile.clips) {
     $txtpFiles = @(Get-ChildItem -LiteralPath $eventRoot -Filter "*.txtp" | Sort-Object Name)
     if ($txtpFiles.Count -eq 0) {
         $bankPath = $sourceFiles["$($clip.bank).bnk"]
-        $mediaPath = (Resolve-Path -LiteralPath (Join-Path $mediaRoot $clip.bank)).Path
+        $mediaBank = if ([string]::IsNullOrWhiteSpace($clip.mediaBank)) { $clip.bank } else { $clip.mediaBank }
+        $mediaPath = (Resolve-Path -LiteralPath (Join-Path $mediaRoot $mediaBank)).Path
         & python $wwiser $sourceFiles["Init.bnk"] $bankPath -g -gf $clip.event `
             -go $eventRoot -gw $mediaPath -nl (Join-Path $bankRoot "wwnames.txt") -nd $namesDb
         if ($LASTEXITCODE -ne 0) { throw "wwiser failed for event '$($clip.event)'." }
@@ -189,6 +196,7 @@ foreach ($clip in $profile.clips) {
     $manifestClips += [ordered]@{
         clipId = $clip.clipId
         bank = $clip.bank
+        mediaBank = if ([string]::IsNullOrWhiteSpace($clip.mediaBank)) { $clip.bank } else { $clip.mediaBank }
         event = $clip.event
         variantIndex = $variantIndex
         variantCount = $txtpFiles.Count

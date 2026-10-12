@@ -19,6 +19,8 @@ MonoBehaviour:
   tier: 8
   availableInGame: 0
   maxHitPoints: 1600
+  massTonnes: 69.8
+  enginePowerHp: 700
   weapon: {fileID: 11400000, guid: 217b06bef7fe9b042acc40f8085a571d, type: 2}
   maxForwardSpeed: 1.9
   maxReverseSpeed: 0.85

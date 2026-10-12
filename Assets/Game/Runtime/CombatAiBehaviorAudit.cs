@@ -573,6 +573,7 @@ namespace LocalTanks
         private void TrackReverseWithoutRetreatTask(BotTrack track, CombatAiAuditSample sample)
         {
             bool reverseTask = sample.TacticalMovementPurpose == TacticalMovementPurpose.MoveToCover ||
+                               sample.TacticalMovementPurpose == TacticalMovementPurpose.PeekToFire ||
                                sample.TacticalMovementPurpose == TacticalMovementPurpose.ReturnToCover ||
                                sample.TacticalMovementPurpose == TacticalMovementPurpose.DefensiveRetreat ||
                                sample.TacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit ||

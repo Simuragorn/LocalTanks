@@ -44,7 +44,7 @@
 | Машина LocalTanks | Двигатель | Выстрел | Остальные события |
 |---|---|---|---|
 | MS-1, 45 mm 20-K | `GAZ_M1` → `eng_gaz_aa_pc` | `shot_small` → `wpn_small_PC` | `reload20_45`, `tur_man_trav_04`, `treads_type_pc`; NPC-гусеницы `trds_med_npc` |
-| Leichttraktor, 3.7 cm KwK L/45 | `Krupp_M311_LTr` → `eng_gaz_aa_pc` | `shot_KwK_L46` → `wpn_small_PC` | `reload20_45`, `tur_man_trav_05`, `treads_type_pc`; NPC-гусеницы `trds_chf_npc` |
+| Leichttraktor, топовая 2 cm Breda | `Krupp_M311_LTr` → `eng_gaz_aa_pc` | `shot_Breda_auto` → `wpn_automatic_PC` | магазин 12, интервал 0,25 с; `tur_man_trav_05`, `treads_type_pc`; NPC-гусеницы `trds_chf_npc` |
 | Tiger II, 8.8 cm KwK 43 L/71 | топовый `Maybach_HL_230_TRM_P45` → `eng_ContinentalR_pc`; штатный HL 210 использует `eng_Ford_GAA_pc` | `shot_main_mb` → `wpn_main_PC` | `reload85_107`, `tur_mech_trav`, `treads_type_pc`; NPC-гусеницы `trds_chf_npc` |
 
 Это подтверждает, что MS-1 и Leichttraktor могут иметь одинаковую основу двигателя: WoT классифицирует звук по аудиопрофилю, а не хранит отдельную запись под каждое историческое название мотора. Уникальность машины создаётся сочетанием двигателя, выстрела, механики башни, гусениц, массы и настроек pitch/volume.
@@ -169,7 +169,7 @@ Assets/Game/GameData/Definitions/Tanks/
 - `Tools/WoTAudioPipeline` устанавливает закреплённые wwiser, vgmstream и QuickBMS в `LocalData`.
 - Версия XOR-защищённого Wwise bank определяется автоматически; для проверенного клиента обнаружена версия 150.
 - Извлекаются только банки `engines`, `wpn` и `turret`, после чего генерируются четыре используемых клипа и manifest с контрольными суммами.
-- MS-1 и Leichttraktor совместно используют один двигатель и класс выстрела без дубликатов, но имеют разные настройки pitch/volume и разные механизмы башни.
+- MS-1 и Leichttraktor совместно используют один двигатель без дубликатов, но топовые 45-мм и автоматическое 20-мм орудия используют разные события выстрела; механизмы башни также раздельны.
 - Runtime загружает локальные клипы по стабильным ID и безопасно работает без них. Tiger II остаётся скрытым и на этом этапе звук не получает.
 
 ## Решение по результатам аудита

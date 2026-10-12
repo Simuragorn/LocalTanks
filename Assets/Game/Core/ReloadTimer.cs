@@ -16,5 +16,10 @@ namespace LocalTanks
         {
             Remaining = Mathf.Max(0f, Remaining - Mathf.Max(0f, deltaTime));
         }
+
+        public void Reset()
+        {
+            Remaining = 0f;
+        }
     }
 }

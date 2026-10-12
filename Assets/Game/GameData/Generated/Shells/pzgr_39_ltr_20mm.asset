@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2d55c50e0cb13394e9090ad258b4ef38, type: 3}
-  m_Name: pzgr_18_37mm
+  m_Name: pzgr_39_ltr_20mm
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.ShellDefinition
-  id: pzgr_18_37mm
-  displayName: 3.7 cm Pzgr.
-  damage: 60
-  penetration: 42
-  speed: 13.9
-  radius: 0.034
-  lifetimeSeconds: 3
+  id: pzgr_39_ltr_20mm
+  displayName: 2 cm Pzgr. 39
+  damage: 11
+  penetration: 30
+  speed: 15.0909
+  radius: 0.02
+  lifetimeSeconds: 2.9006
   maximumRange: 40
   ricochetAngle: 70
   ricochetSpeedMultiplier: 0.7

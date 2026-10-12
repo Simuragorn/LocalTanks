@@ -292,6 +292,21 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void Auditor_AllowsReversePeekFromCover()
+        {
+            CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
+            {
+                reverseWithoutRetreatSeconds = 1f
+            });
+
+            auditor.Record(ReverseSample(0f, TacticalMovementPurpose.PeekToFire));
+            auditor.Record(ReverseSample(1.5f, TacticalMovementPurpose.PeekToFire));
+
+            Assert.That(auditor.Issues.Count(item => item.Kind == CombatAiAuditIssueKind.ReverseWithoutRetreatTask),
+                Is.Zero);
+        }
+
+        [Test]
         public void Auditor_DetectsDestroyedTankStillClassifiedAsLivingAlly()
         {
             CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor();
