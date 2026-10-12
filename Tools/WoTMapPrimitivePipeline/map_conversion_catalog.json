@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "pipelineVersion": "1.0.0",
+  "defaults": {
+    "outputRoot": "Assets/LocalOnly/WoTMapPrimitives",
+    "terrainGridStepMeters": 20.0,
+    "waterGridStepMeters": 10.0,
+    "vegetationClusterCellMeters": 25.0,
+    "aiAnalysisCellMeters": 50.0,
+    "minimumStaticFootprintMeters": 0.75
+  },
+  "maps": [
+    {
+      "id": "10_hills",
+      "displayName": "Рудники",
+      "englishName": "Mines",
+      "package": "res/packages/10_hills.pkg",
+      "spacePath": "spaces/10_hills/space.bin",
+      "arenaDefinitionPackage": "res/packages/scripts.pkg",
+      "arenaDefinitionPath": "scripts/arena_defs/10_hills.xml",
+      "preferredGameplayType": "ctf"
+    }
+  ],
+  "vegetation": {
+    "bushTokens": [
+      "/shrubs/",
+      "bush",
+      "cedarelfin",
+      "grapevine",
+      "hedera",
+      "hawthorn",
+      "rose_",
+      "olive_bush"
+    ],
+    "treeRadiusMeters": 3.2,
+    "bushRadiusMeters": 2.1
+  },
+  "staticRules": [
+    {
+      "id": "ignore_non_gameplay",
+      "action": "ignore",
+      "matchAny": [
+        "particles/",
+        "content/outland/",
+        "objects/misc/bbox/",
+        "sidewalk",
+        "clayjug",
+        "flowerpot",
+        "milkcans",
+        "washingline",
+        "flora_debris",
+        "branchescommon",
+        "dec_002_bricks"
+      ]
+    },
+    {
+      "id": "bridge",
+      "action": "include",
+      "category": "bridge",
+      "shape": "rectangle",
+      "matchAny": ["bridge", "pier"]
+    },
+    {
+      "id": "house",
+      "action": "include",
+      "category": "house",
+      "shape": "rectangle",
+      "matchAny": ["content/buildings/"]
+    },
+    {
+      "id": "rock",
+      "action": "include",
+      "category": "rock",
+      "shape": "ellipse",
+      "forceIndestructible": true,
+      "matchAny": ["cliff_rock", "italycliffs", "smallmountain", "boulder"]
+    },
+    {
+      "id": "fence_or_wall",
+      "action": "include",
+      "category": "obstacle",
+      "shape": "rectangle",
+      "matchAny": ["gatesandfences/", "_wall", "stonefence", "woodfence", "windbreak"]
+    },
+    {
+      "id": "destructible_prop",
+      "action": "include",
+      "category": "obstacle",
+      "shape": "rectangle",
+      "forceDestructible": true,
+      "matchAny": [
+        "logs",
+        "firewood",
+        "woodencart",
+        "telega",
+        "box",
+        "canister",
+        "blocksbrick",
+        "rubbish",
+        "compostheap",
+        "furniture",
+        "bench",
+        "trestle",
+        "wheelbarrow",
+        "doghouse",
+        "toilet",
+        "vendorcart"
+      ]
+    },
+    {
+      "id": "solid_environment",
+      "action": "include",
+      "category": "obstacle",
+      "shape": "rectangle",
+      "matchAny": ["entryofmine", "woodwells", "waterpump", "fireplace"]
+    }
+  ]
+}
