@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -10,13 +10,23 @@ namespace LocalTanks.Tests
 {
     /// <summary>
     /// Answers the only question that matters about a converted arena: do the tanks actually fight on
-    /// it. Everything else — colliders, navigation, routes — is scaffolding for this, and a mistake in
+    /// it. Everything else â€” colliders, navigation, routes â€” is scaffolding for this, and a mistake in
     /// any of them shows up here as tanks that never move or never meet.
     /// </summary>
     public sealed class WoTMapPlayabilityTests
     {
         private const string SceneName = "Battle_10_hills";
-        private const float BattleSeconds = 30f;
+
+        /// <summary>
+        /// Simulated battle length. The sides start on opposite corners of an eight-hundred-metre field,
+        /// so at roughly two units per second they need about ninety seconds of travel before they can
+        /// even see each other. A shorter run measures the approach rather than the battle, which is how
+        /// a "no damage" result was misread as a broken AI twice.
+        /// </summary>
+        private const float BattleSeconds = 150f;
+
+        /// <summary>Time compression, kept modest so physics and AI decisions stay faithful.</summary>
+        private const float TimeCompression = 5f;
 
         private static bool SceneExists =>
             Enumerable.Range(0, SceneManager.sceneCountInBuildSettings)
@@ -53,14 +63,14 @@ namespace LocalTanks.Tests
             float previousScale = Time.timeScale;
             try
             {
-                Time.timeScale = 3f;
+                Time.timeScale = TimeCompression;
                 float startedAt = Time.time;
-                float nextProbe = startedAt + 10f;
+                float nextProbe = startedAt + 50f;
                 while (Time.time - startedAt < BattleSeconds)
                 {
                     if (Time.time >= nextProbe)
                     {
-                        nextProbe += 10f;
+                        nextProbe += 50f;
                         Vector2 a = Centre(director, TeamId.TeamA);
                         Vector2 b = Centre(director, TeamId.TeamB);
                         int health = director.SpawnedMembers
