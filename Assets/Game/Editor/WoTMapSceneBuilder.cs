@@ -153,6 +153,12 @@ namespace LocalTanks.Editor
                 baseObject.transform.position = new Vector3(position.x, position.y, 0f);
 
                 List<SpriteRenderer> slots = CreateSpawnSlots(baseObject.transform, asset, position);
+                int blockedSlots = slots.Count(slot => IsBlocked(asset, slot.transform.position));
+                if (blockedSlots > 0)
+                {
+                    Debug.LogWarning($"Base {baseId}: {blockedSlots} of {slots.Count} spawn slots sit on ground " +
+                                     "that routing cannot cross, so a tank spawned there may not be able to leave.");
+                }
                 LineRenderer ring = baseObject.AddComponent<LineRenderer>();
                 ring.useWorldSpace = false;
                 ring.loop = true;
@@ -173,28 +179,52 @@ namespace LocalTanks.Editor
         }
 
         /// <summary>
-        /// Spawn slots on a ring around the base. Sixteen slots covers both teams with room to spare and
-        /// exceeds the largest battle the game currently fields.
+        /// Spawn slots on a ring around the base. A slot that lands on ground routing cannot cross is
+        /// moved outward along its own direction until it finds open ground, because a tank spawned
+        /// inside geometry cannot drive out and looks exactly like a broken AI: one converted base had
+        /// five of its seven tanks trapped this way.
         /// </summary>
         private static List<SpriteRenderer> CreateSpawnSlots(Transform parent, WoTMapAsset asset, Vector2 center)
         {
             const int slotCount = 16;
-            const float ringRadius = 6f;
+            const float firstRadius = 6f;
             List<SpriteRenderer> slots = new List<SpriteRenderer>(slotCount);
             for (int index = 0; index < slotCount; index++)
             {
                 float angle = index * Mathf.PI * 2f / slotCount;
+                Vector2 direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+                Vector2 position = center + direction * firstRadius;
+                for (float radius = firstRadius; radius <= firstRadius + 24f; radius += 2f)
+                {
+                    position = center + direction * radius;
+                    if (!IsBlocked(asset, position)) break;
+                }
+
                 GameObject slot = new GameObject($"Spawn_{index:00}");
                 slot.transform.SetParent(parent, false);
-                slot.transform.localPosition = new Vector3(
-                    Mathf.Cos(angle) * ringRadius,
-                    Mathf.Sin(angle) * ringRadius,
-                    0f);
+                slot.transform.localPosition = new Vector3(position.x - center.x, position.y - center.y, 0f);
                 SpriteRenderer renderer = slot.AddComponent<SpriteRenderer>();
                 slots.Add(renderer);
             }
 
             return slots;
+        }
+
+        /// <summary>
+        /// Whether a world position falls on ground the navigation grid marks as closed. A tank spawned
+        /// there is boxed in by geometry, which looks exactly like a broken AI.
+        /// </summary>
+        private static bool IsBlocked(WoTMapAsset asset, Vector2 world)
+        {
+            Vector2 origin = asset.worldCenter - asset.playableSize * 0.5f;
+            int column = Mathf.FloorToInt((world.x - origin.x) / asset.navigationCellSize);
+            int row = Mathf.FloorToInt((world.y - origin.y) / asset.navigationCellSize);
+            if (column < 0 || row < 0 || column >= asset.navigationColumns || row >= asset.navigationRows)
+            {
+                return true;
+            }
+
+            return asset.navigationBlocked[row * asset.navigationColumns + column];
         }
 
         private static CameraFollow2D CreateCamera(NavigationMap map, WoTMapAsset asset)
