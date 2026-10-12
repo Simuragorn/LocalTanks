@@ -143,7 +143,8 @@ namespace LocalTanks.Editor
                 if (instructions != null) UnityEngine.Object.DestroyImmediate(instructions.gameObject);
                 GameObject controllerObject = new GameObject("AiDuelLabController");
                 SceneManager.MoveGameObjectToScene(controllerObject, duelScene);
-                controllerObject.AddComponent<AiDuelLabController>().Configure(director, duelCatalog);
+                controllerObject.AddComponent<AiDuelLabController>()
+                    .Configure(director, duelCatalog, showHiddenTanks: true);
 
                 EditorSceneManager.MarkSceneDirty(duelScene);
                 EditorSceneManager.SaveScene(duelScene, DuelScenePath);
@@ -853,6 +854,10 @@ namespace LocalTanks.Editor
             GameObject systems = new GameObject("BattleSystems");
             TeamVisionSystem vision = systems.AddComponent<TeamVisionSystem>();
             vision.Configure(visionRules, TeamId.TeamA);
+            // A normal battle hides a tank the team cannot see. A laboratory that wants the
+            // semi-transparent testing silhouette carries its own BattleVisibilitySettings and
+            // passes it to this component from its controller.
+            systems.AddComponent<BattleVisibilitySettings>().Configure(false);
             BattleRoster roster = systems.AddComponent<BattleRoster>();
             roster.Configure(TeamId.TeamA, vision);
             systems.AddComponent<VisionDebugOverlay>().Configure(vision);

@@ -5,7 +5,13 @@ namespace LocalTanks
 {
     public sealed class TankVisibilityPresenter : MonoBehaviour
     {
-        [SerializeField] private bool showHiddenForTesting = true;
+        /// <summary>
+        /// Keeps an unseen tank rendered as a semi-transparent silhouette. <see cref="BattleDirector"/>
+        /// sets this from the scene's <see cref="BattleVisibilitySettings"/>; the default is
+        /// disabled, so a tank the team cannot see is invisible.
+        /// </summary>
+        [SerializeField] private bool showHiddenTanksForTesting;
+
         [SerializeField, Range(0.05f, 0.9f)] private float hiddenAlpha = 0.28f;
 
         private SpriteRenderer[] renderers;
@@ -13,6 +19,8 @@ namespace LocalTanks
         private TankHealthBar healthBar;
 
         public bool IsVisible { get; private set; } = true;
+        public bool ShowHiddenTanksForTesting => showHiddenTanksForTesting;
+        public float HiddenAlpha => hiddenAlpha;
 
         private void Awake()
         {
@@ -20,6 +28,14 @@ namespace LocalTanks
             {
                 CacheVisuals();
             }
+        }
+
+        /// <summary>Applies the per-scene visibility presentation used for every spawned tank.</summary>
+        public void ConfigureHiddenPresentation(bool showHiddenForTesting, float alpha)
+        {
+            showHiddenTanksForTesting = showHiddenForTesting;
+            hiddenAlpha = Mathf.Clamp(alpha, 0.05f, 0.9f);
+            SetVisible(IsVisible);
         }
 
         public void SetVisible(bool visible)
@@ -38,7 +54,7 @@ namespace LocalTanks
                     continue;
                 }
 
-                renderer.enabled = visible || showHiddenForTesting;
+                renderer.enabled = visible || showHiddenTanksForTesting;
                 Color color = renderer.color;
                 color.a = originalAlphas[index] * (visible ? 1f : hiddenAlpha);
                 renderer.color = color;

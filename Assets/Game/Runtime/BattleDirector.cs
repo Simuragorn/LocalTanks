@@ -31,6 +31,9 @@ namespace LocalTanks
         [SerializeField] private TankPrefabBinding[] tankPrefabs;
         [SerializeField] private VehicleClassIconBinding[] classIcons;
 
+        private BattleVisibilitySettings visibilitySettings;
+        private readonly List<TankVisibilityPresenter> spawnedVisibilityPresenters = new List<TankVisibilityPresenter>();
+
         private readonly List<TeamMember> spawnedMembers = new List<TeamMember>();
         private readonly Dictionary<TankHealth, TeamId> trackedHealth = new Dictionary<TankHealth, TeamId>();
         private readonly Dictionary<string, BotIdentity> botIdentities = new Dictionary<string, BotIdentity>(StringComparer.Ordinal);
@@ -173,6 +176,8 @@ namespace LocalTanks
 
             TankVisibilityPresenter visibility = tank.GetComponent<TankVisibilityPresenter>();
             if (visibility == null) visibility = tank.AddComponent<TankVisibilityPresenter>();
+            ApplyVisibilitySettings(visibility);
+            spawnedVisibilityPresenters.Add(visibility);
             Sprite classIcon = ResolveClassIcon(definition != null ? definition.vehicleClass : VehicleClass.HeavyTank);
             TankClassIconPresenter iconPresenter = tank.GetComponent<TankClassIconPresenter>();
             if (iconPresenter == null) iconPresenter = tank.AddComponent<TankClassIconPresenter>();
@@ -290,6 +295,47 @@ namespace LocalTanks
         {
             VehicleClassIconBinding binding = classIcons?.FirstOrDefault(item => item != null && item.vehicleClass == vehicleClass);
             return binding != null ? binding.icon : null;
+        }
+
+        /// <summary>
+        /// Scene-owned visibility presentation. A scene without the component keeps unseen tanks
+        /// invisible, which is the production behaviour.
+        /// </summary>
+        private BattleVisibilitySettings ResolveVisibilitySettings()
+        {
+            if (visibilitySettings == null)
+            {
+                visibilitySettings = FindAnyObjectByType<BattleVisibilitySettings>();
+            }
+
+            return visibilitySettings;
+        }
+
+        private void ApplyVisibilitySettings(TankVisibilityPresenter presenter)
+        {
+            if (presenter == null)
+            {
+                return;
+            }
+
+            BattleVisibilitySettings settings = ResolveVisibilitySettings();
+            presenter.ConfigureHiddenPresentation(
+                settings != null && settings.ShowHiddenTanksForTesting,
+                settings != null ? settings.HiddenTankAlpha : 0.28f);
+        }
+
+        /// <summary>
+        /// Reapplies the scene visibility presentation to every spawned tank. A scene controller
+        /// that changes the setting after the tanks exist calls this instead of relying on the
+        /// undefined order between its own Awake and <see cref="SpawnAll"/>.
+        /// </summary>
+        public void ReapplyVisibilitySettings()
+        {
+            visibilitySettings = FindAnyObjectByType<BattleVisibilitySettings>();
+            foreach (TankVisibilityPresenter presenter in spawnedVisibilityPresenters)
+            {
+                ApplyVisibilitySettings(presenter);
+            }
         }
 
         private void ValidateConfiguration()

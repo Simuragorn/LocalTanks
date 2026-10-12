@@ -48,10 +48,21 @@ namespace LocalTanks
             UnityEngine.Random.InitState(catalog.cases[caseIndex].seed);
         }
 
-        public void Configure(BattleDirector battleDirector, AiDuelLabCatalog caseCatalog)
+        /// <summary>
+        /// The duel laboratory is a developer scene whose purpose is watching two bots maneuver, so
+        /// this scene value opts into the semi-transparent silhouette for unseen tanks. It is
+        /// written by the scene builder and can be changed per scene without touching code.
+        /// </summary>
+        [SerializeField] private bool showHiddenTanksForTesting = true;
+
+        public bool ShowHiddenTanksForTesting => showHiddenTanksForTesting;
+
+        public void Configure(BattleDirector battleDirector, AiDuelLabCatalog caseCatalog, bool showHiddenTanks = true)
         {
             director = battleDirector;
             catalog = caseCatalog;
+            showHiddenTanksForTesting = showHiddenTanks;
+            FindAnyObjectByType<BattleVisibilitySettings>()?.Configure(showHiddenTanks);
         }
 
         private IEnumerator Start()
@@ -61,6 +72,9 @@ namespace LocalTanks
                 yield return null;
             }
 
+            // The setting may have changed after the tanks were spawned, so apply it explicitly
+            // instead of relying on the order between Awake and BattleDirector.SpawnAll.
+            director?.ReapplyVisibilitySettings();
             InitializeCase(requestedCaseIndex);
         }
 

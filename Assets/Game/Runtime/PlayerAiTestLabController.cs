@@ -280,6 +280,15 @@ namespace LocalTanks
         public string SavedDirectory => savedDirectory;
         public PlayerAiTestBattleReport Report => report;
 
+        /// <summary>
+        /// The manual test laboratory is a developer scene whose purpose is watching a battle, so
+        /// this scene value opts into the semi-transparent silhouette for unseen tanks. It is
+        /// written by the scene builder and can be changed per scene without touching code.
+        /// </summary>
+        [SerializeField] private bool showHiddenTanksForTesting = true;
+
+        public bool ShowHiddenTanksForTesting => showHiddenTanksForTesting;
+
         public void Configure(BattleDirector battleDirector)
         {
             director = battleDirector;
@@ -291,6 +300,9 @@ namespace LocalTanks
             if (director == null) throw new InvalidOperationException("Player AI Test Lab has no BattleDirector.");
             templateScenario = director.Scenario;
             director.enabled = false;
+            // This laboratory exists to watch a manual battle, so it opts into the semi-transparent
+            // silhouette for tanks the team cannot see instead of inheriting the battle default.
+            FindAnyObjectByType<BattleVisibilitySettings>()?.Configure(showHiddenTanksForTesting);
             aimReticle = Camera.main != null ? Camera.main.GetComponent<PlayerAimReticle>() : null;
             aimReticle?.SetUiInteractionActive(true);
         }
@@ -343,6 +355,8 @@ namespace LocalTanks
             runtimeScenario = PlayerAiTestLabScenarioFactory.Create(director, templateScenario, SavedSettings);
             director.OverrideScenario(runtimeScenario);
             director.SpawnAll();
+            // The setting is scene-owned and may have been applied before the tanks existed.
+            director.ReapplyVisibilitySettings();
             if (aimReticle == null && Camera.main != null)
                 aimReticle = Camera.main.GetComponent<PlayerAimReticle>();
             aimReticle?.SetUiInteractionActive(false);

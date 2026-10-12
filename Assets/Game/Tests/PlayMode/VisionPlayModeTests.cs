@@ -26,6 +26,13 @@ namespace LocalTanks.Tests
             Assert.That(system.IsVisibleTo(TeamId.TeamA, target), Is.False);
             Assert.That(target.VisibilityPresenter.IsVisible, Is.False);
             SpriteRenderer hiddenRenderer = target.GetComponent<SpriteRenderer>();
+            Assert.That(hiddenRenderer.enabled, Is.False,
+                "a normal battle hides a tank the team cannot see");
+
+            // The semi-transparent silhouette is a per-scene developer aid, so it must only appear
+            // once the scene settings ask for it.
+            target.VisibilityPresenter.ConfigureHiddenPresentation(true, 0.28f);
+            target.VisibilityPresenter.SetVisible(false);
             Assert.That(hiddenRenderer.enabled, Is.True, "testing mode keeps a hidden enemy rendered");
             Assert.That(hiddenRenderer.color.a, Is.EqualTo(0.28f).Within(0.01f));
 
@@ -104,6 +111,10 @@ namespace LocalTanks.Tests
             Assert.That(result.Reason, Is.EqualTo(DetectionReason.OutsideViewArc));
             Assert.That(system.IsVisibleTo(TeamId.TeamA, target), Is.False);
             Assert.That(target.VisibilityPresenter.IsVisible, Is.False);
+            Assert.That(target.GetComponent<SpriteRenderer>().enabled, Is.False,
+                "a target behind the hull is hidden, not shown as a silhouette");
+            target.VisibilityPresenter.ConfigureHiddenPresentation(true, 0.28f);
+            target.VisibilityPresenter.SetVisible(false);
             Assert.That(target.GetComponent<SpriteRenderer>().color.a, Is.EqualTo(0.28f).Within(0.01f));
             Cleanup(system.gameObject, observer.gameObject, target.gameObject, rules);
             yield return null;
