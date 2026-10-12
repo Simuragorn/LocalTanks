@@ -1,0 +1,311 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1602fba6ffa78c140b40763ecee1c0da, type: 3}
+  m_Name: 10_hills_tactical
+  m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TacticalMapDescriptorAsset
+  descriptor:
+    analyzerVersion: 1
+    sourceHash: c33650abbc52b4aba70a419ed9c266203fc7c5988eb0587a5783e068618f2c08
+    mapId: 10_hills_tactical
+    sceneId: Battle_10_hills
+    displayName: "\u0420\u0443\u0434\u043D\u0438\u043A\u0438"
+    width: 52
+    height: 52
+    cellSize: 4
+    baseA: {x: 37, y: 5}
+    baseB: {x: 11, y: 47}
+    lanes:
+    - id: lane_01
+      provisionalName: "\u041D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 1"
+      order: 0
+      crossingCell: {x: 9, y: 26}
+      entryA: {x: 31, y: 4}
+      entryB: {x: 12, y: 41}
+      defenseA: {x: 23, y: 9}
+      defenseB: {x: 9, y: 34}
+      pathCells:
+      - {x: 37, y: 5}
+      - {x: 36, y: 5}
+      - {x: 35, y: 4}
+      - {x: 34, y: 4}
+      - {x: 33, y: 4}
+      - {x: 32, y: 4}
+      - {x: 31, y: 4}
+      - {x: 30, y: 4}
+      - {x: 29, y: 4}
+      - {x: 28, y: 4}
+      - {x: 27, y: 5}
+      - {x: 26, y: 6}
+      - {x: 25, y: 7}
+      - {x: 24, y: 8}
+      - {x: 23, y: 9}
+      - {x: 22, y: 10}
+      - {x: 22, y: 11}
+      - {x: 22, y: 12}
+      - {x: 22, y: 13}
+      - {x: 21, y: 14}
+      - {x: 20, y: 14}
+      - {x: 19, y: 14}
+      - {x: 18, y: 14}
+      - {x: 17, y: 15}
+      - {x: 16, y: 16}
+      - {x: 15, y: 17}
+      - {x: 14, y: 18}
+      - {x: 13, y: 18}
+      - {x: 12, y: 18}
+      - {x: 11, y: 19}
+      - {x: 11, y: 20}
+      - {x: 11, y: 21}
+      - {x: 11, y: 22}
+      - {x: 11, y: 23}
+      - {x: 10, y: 24}
+      - {x: 9, y: 25}
+      - {x: 9, y: 26}
+      - {x: 9, y: 27}
+      - {x: 9, y: 28}
+      - {x: 9, y: 29}
+      - {x: 9, y: 30}
+      - {x: 8, y: 31}
+      - {x: 8, y: 32}
+      - {x: 8, y: 33}
+      - {x: 9, y: 34}
+      - {x: 10, y: 35}
+      - {x: 10, y: 36}
+      - {x: 10, y: 37}
+      - {x: 10, y: 38}
+      - {x: 11, y: 39}
+      - {x: 11, y: 40}
+      - {x: 12, y: 40}
+      - {x: 12, y: 41}
+      - {x: 12, y: 42}
+      - {x: 13, y: 43}
+      - {x: 13, y: 44}
+      - {x: 13, y: 45}
+      - {x: 12, y: 46}
+      - {x: 11, y: 47}
+      lengthWorld: 268.45084
+      averageWidthWorld: 46.666668
+      averageNavigationCost: 1.9118642
+      hardCoverDensity: 0.8520599
+      vegetationDensity: 0
+      concealmentDensity: 0
+      averageSightlineWorld: 67.43554
+      maximumSightlineWorld: 120
+      chokePointCount: 1
+      hasMandatoryCrossing: 1
+      terrainShares:
+      - terrainKind: Grass
+        share: 0.6440678
+      - terrainKind: Obstacle
+        share: 0.15254237
+      - terrainKind: ShallowWater
+        share: 0.20338982
+      suitability:
+        lightTank: 0.48136893
+        mediumTank: 0.68952495
+        heavyTank: 0.758562
+        tankDestroyer: 0.33918193
+        artillery: 0.33573607
+      connections:
+      - targetLaneId: lane_02
+        fromCell: {x: 26, y: 6}
+        targetCell: {x: 26, y: 6}
+        transferDistanceWorld: 0
+    - id: lane_02
+      provisionalName: "\u041D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 2"
+      order: 1
+      crossingCell: {x: 11, y: 26}
+      entryA: {x: 31, y: 4}
+      entryB: {x: 12, y: 41}
+      defenseA: {x: 23, y: 9}
+      defenseB: {x: 9, y: 34}
+      pathCells:
+      - {x: 37, y: 5}
+      - {x: 36, y: 5}
+      - {x: 35, y: 4}
+      - {x: 34, y: 4}
+      - {x: 33, y: 4}
+      - {x: 32, y: 4}
+      - {x: 31, y: 4}
+      - {x: 30, y: 4}
+      - {x: 29, y: 4}
+      - {x: 28, y: 4}
+      - {x: 27, y: 5}
+      - {x: 26, y: 6}
+      - {x: 25, y: 7}
+      - {x: 24, y: 8}
+      - {x: 23, y: 9}
+      - {x: 22, y: 10}
+      - {x: 22, y: 11}
+      - {x: 22, y: 12}
+      - {x: 22, y: 13}
+      - {x: 21, y: 14}
+      - {x: 20, y: 14}
+      - {x: 19, y: 14}
+      - {x: 18, y: 14}
+      - {x: 17, y: 15}
+      - {x: 16, y: 16}
+      - {x: 15, y: 17}
+      - {x: 14, y: 18}
+      - {x: 13, y: 18}
+      - {x: 12, y: 18}
+      - {x: 11, y: 19}
+      - {x: 11, y: 20}
+      - {x: 11, y: 21}
+      - {x: 11, y: 22}
+      - {x: 11, y: 23}
+      - {x: 11, y: 24}
+      - {x: 11, y: 25}
+      - {x: 11, y: 26}
+      - {x: 11, y: 27}
+      - {x: 11, y: 28}
+      - {x: 11, y: 29}
+      - {x: 11, y: 30}
+      - {x: 11, y: 31}
+      - {x: 10, y: 32}
+      - {x: 9, y: 33}
+      - {x: 9, y: 34}
+      - {x: 10, y: 35}
+      - {x: 10, y: 36}
+      - {x: 10, y: 37}
+      - {x: 10, y: 38}
+      - {x: 11, y: 39}
+      - {x: 11, y: 40}
+      - {x: 12, y: 40}
+      - {x: 12, y: 41}
+      - {x: 12, y: 42}
+      - {x: 13, y: 43}
+      - {x: 13, y: 44}
+      - {x: 13, y: 45}
+      - {x: 12, y: 46}
+      - {x: 11, y: 47}
+      lengthWorld: 265.13712
+      averageWidthWorld: 46.666668
+      averageNavigationCost: 1.9499998
+      hardCoverDensity: 0.8535588
+      vegetationDensity: 0
+      concealmentDensity: 0
+      averageSightlineWorld: 65.985016
+      maximumSightlineWorld: 112
+      chokePointCount: 1
+      hasMandatoryCrossing: 1
+      terrainShares:
+      - terrainKind: Grass
+        share: 0.62711865
+      - terrainKind: Obstacle
+        share: 0.15254237
+      - terrainKind: ShallowWater
+        share: 0.22033899
+      suitability:
+        lightTank: 0.47382745
+        mediumTank: 0.68280184
+        heavyTank: 0.75619525
+        tankDestroyer: 0.3360089
+        artillery: 0.3312032
+      connections:
+      - targetLaneId: lane_01
+        fromCell: {x: 26, y: 6}
+        targetCell: {x: 26, y: 6}
+        transferDistanceWorld: 0
+    - id: lane_03
+      provisionalName: "\u041D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 3"
+      order: 2
+      crossingCell: {x: 41, y: 26}
+      entryA: {x: 37, y: 11}
+      entryB: {x: 15, y: 42}
+      defenseA: {x: 35, y: 20}
+      defenseB: {x: 24, y: 42}
+      pathCells:
+      - {x: 37, y: 5}
+      - {x: 37, y: 6}
+      - {x: 37, y: 7}
+      - {x: 37, y: 8}
+      - {x: 37, y: 9}
+      - {x: 37, y: 10}
+      - {x: 37, y: 11}
+      - {x: 37, y: 12}
+      - {x: 36, y: 13}
+      - {x: 35, y: 14}
+      - {x: 35, y: 15}
+      - {x: 34, y: 16}
+      - {x: 34, y: 17}
+      - {x: 34, y: 18}
+      - {x: 34, y: 19}
+      - {x: 35, y: 20}
+      - {x: 36, y: 21}
+      - {x: 37, y: 22}
+      - {x: 38, y: 23}
+      - {x: 39, y: 24}
+      - {x: 40, y: 25}
+      - {x: 41, y: 26}
+      - {x: 41, y: 27}
+      - {x: 41, y: 28}
+      - {x: 41, y: 29}
+      - {x: 41, y: 30}
+      - {x: 40, y: 30}
+      - {x: 39, y: 30}
+      - {x: 38, y: 30}
+      - {x: 38, y: 31}
+      - {x: 37, y: 32}
+      - {x: 36, y: 33}
+      - {x: 36, y: 34}
+      - {x: 36, y: 35}
+      - {x: 36, y: 36}
+      - {x: 35, y: 37}
+      - {x: 34, y: 38}
+      - {x: 33, y: 39}
+      - {x: 32, y: 40}
+      - {x: 31, y: 41}
+      - {x: 30, y: 42}
+      - {x: 29, y: 42}
+      - {x: 28, y: 42}
+      - {x: 27, y: 42}
+      - {x: 26, y: 42}
+      - {x: 25, y: 42}
+      - {x: 24, y: 42}
+      - {x: 23, y: 42}
+      - {x: 22, y: 42}
+      - {x: 21, y: 42}
+      - {x: 20, y: 42}
+      - {x: 19, y: 43}
+      - {x: 18, y: 43}
+      - {x: 17, y: 43}
+      - {x: 16, y: 42}
+      - {x: 15, y: 42}
+      - {x: 14, y: 42}
+      - {x: 13, y: 43}
+      - {x: 13, y: 44}
+      - {x: 13, y: 45}
+      - {x: 12, y: 46}
+      - {x: 11, y: 47}
+      lengthWorld: 282.10773
+      averageWidthWorld: 45.090908
+      averageNavigationCost: 1.9669348
+      hardCoverDensity: 0.91515154
+      vegetationDensity: 0
+      concealmentDensity: 0
+      averageSightlineWorld: 54.53605
+      maximumSightlineWorld: 79.19596
+      chokePointCount: 2
+      hasMandatoryCrossing: 0
+      terrainShares:
+      - terrainKind: Grass
+        share: 0.46774194
+      - terrainKind: Obstacle
+        share: 0.5322581
+      suitability:
+        lightTank: 0.45352635
+        mediumTank: 0.66285396
+        heavyTank: 0.84527135
+        tankDestroyer: 0.30955735
+        artillery: 0.29120436
+      connections: []

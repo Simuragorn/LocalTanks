@@ -258,14 +258,9 @@ namespace LocalTanks.Editor
                 throw new InvalidOperationException("Combat database was not generated.");
             }
 
-            TacticalMapDescriptorAsset tacticalMap = AssetDatabase.LoadAssetAtPath<TacticalMapDescriptorAsset>(
-                TacticalMapDescriptorImporter.AssetPath);
-            if (tacticalMap == null || tacticalMap.Validate().Length > 0)
-            {
-                throw new InvalidOperationException(
-                    "Tactical map descriptor was not generated or is invalid. Build the River Crossing map " +
-                    "once to create it, because analysis assets are shared between arenas.");
-            }
+            // Each arena needs its own analysis: the shared descriptor describes another map, and the
+            // director rejects a mismatch rather than letting the AI reason about the wrong battlefield.
+            TacticalMapDescriptorAsset tacticalMap = WoTMapTacticalDescriptorBuilder.Build(asset.mapId);
 
             VehicleClassIconBinding[] icons = Enum.GetValues(typeof(VehicleClass))
                 .Cast<VehicleClass>()
@@ -281,7 +276,7 @@ namespace LocalTanks.Editor
             }
 
             TankPrefabBinding[] prefabs = CreatePrefabBindings(asset);
-            BattleScenario scenario = CreateScenario(database, prefabs);
+            BattleScenario scenario = CreateScenario(database, prefabs, tacticalMap, $"Battle_{asset.mapId}");
             GameObject root = new GameObject("BattleDirector");
             SceneManager.MoveGameObjectToScene(root, SceneManager.GetActiveScene());
             root.AddComponent<BattleDirector>().Configure(
@@ -321,8 +316,18 @@ namespace LocalTanks.Editor
         /// A symmetric roster on the arena's two bases. Each side fields the same tank, chosen as the
         /// lowest-tier playable machine so both teams are matched, and each slot uses one of the base's
         /// own spawn markers.
+        /// <para>
+        /// Every AI entry carries the route of a real analysed lane. The tactical analysis produces paths
+        /// from base B to base A, so a Team B entry follows the path as given and a Team A entry follows
+        /// it reversed. Bots are spread across the lanes in turn, which is what makes them use the whole
+        /// arena instead of walking into the same wall.
+        /// </para>
         /// </summary>
-        private static BattleScenario CreateScenario(CombatDatabase database, TankPrefabBinding[] prefabs)
+        private static BattleScenario CreateScenario(
+            CombatDatabase database,
+            TankPrefabBinding[] prefabs,
+            TacticalMapDescriptorAsset tacticalMap,
+            string sceneId)
         {
             TankDefinition chosen = database.tanks
                 .Where(tank => tank != null && tank.availableInGame)
@@ -331,35 +336,61 @@ namespace LocalTanks.Editor
                 .First();
             int teamSize = BattleScenario.TeamSize;
 
-            List<BattleScenarioEntry> entries = new List<BattleScenarioEntry>();
-            for (int slot = 0; slot < teamSize; slot++)
+            Vector2Int[][] paths = tacticalMap.descriptor.lanes
+                .Where(lane => lane != null && lane.pathCells != null && lane.pathCells.Length >= 2)
+                .OrderByDescending(lane => lane.lengthWorld)
+                .Select(lane => lane.pathCells)
+                .ToArray();
+            if (paths.Length == 0)
             {
-                entries.Add(new BattleScenarioEntry
+                throw new InvalidOperationException(
+                    "The tactical analysis produced no lane with a usable path, so bots would have no route.");
+            }
+
+            // The game enforces a fixed shape: two bots per flank lane and three down the middle. The
+            // analysed lanes are assigned to those three roles so the arena's real routes drive the
+            // formation instead of the bots sharing one path.
+            BattleLane[] formation = { BattleLane.Center, BattleLane.North, BattleLane.South };
+            int[] perLane = { 3, 2, 2 };
+
+            List<BattleScenarioEntry> entries = new List<BattleScenarioEntry>();
+            for (int laneIndex = 0; laneIndex < formation.Length; laneIndex++)
+            {
+                Vector2Int[] forward = paths[laneIndex % paths.Length];
+                for (int within = 0; within < perLane[laneIndex]; within++)
                 {
-                    id = $"a_slot_{slot:00}",
-                    tankId = chosen.id,
-                    team = TeamId.TeamA,
-                    playerControlled = slot == 0,
-                    baseId = "A",
-                    spawnSlot = slot,
-                    lane = BattleLane.Center,
-                    role = CombatAiRole.Assault
-                });
-                entries.Add(new BattleScenarioEntry
-                {
-                    id = $"b_slot_{slot:00}",
-                    tankId = chosen.id,
-                    team = TeamId.TeamB,
-                    playerControlled = false,
-                    baseId = "B",
-                    spawnSlot = slot,
-                    lane = BattleLane.Center,
-                    role = CombatAiRole.Assault
-                });
+                    bool player = laneIndex == 1 && within == 0;
+                    entries.Add(new BattleScenarioEntry
+                    {
+                        id = $"a_{formation[laneIndex]}_{within:00}",
+                        tankId = chosen.id,
+                        team = TeamId.TeamA,
+                        playerControlled = player,
+                        baseId = "A",
+                        spawnSlot = entries.Count(entry => entry.team == TeamId.TeamA),
+                        lane = formation[laneIndex],
+                        role = laneIndex == 0 ? CombatAiRole.Assault : CombatAiRole.Flank,
+                        // Base A sits at the far end of an analysed path, so its route is that path reversed.
+                        routeCells = player ? null : forward.Reverse().ToArray()
+                    });
+                    entries.Add(new BattleScenarioEntry
+                    {
+                        id = $"b_{formation[laneIndex]}_{within:00}",
+                        tankId = chosen.id,
+                        team = TeamId.TeamB,
+                        playerControlled = false,
+                        baseId = "B",
+                        spawnSlot = entries.Count(entry => entry.team == TeamId.TeamB),
+                        lane = formation[laneIndex],
+                        role = laneIndex == 0 ? CombatAiRole.Assault : CombatAiRole.Flank,
+                        routeCells = forward
+                    });
+                }
             }
 
             BattleScenario scenario = ScriptableObject.CreateInstance<BattleScenario>();
             scenario.id = "generated_10_hills";
+            scenario.sceneId = sceneId;
             scenario.kind = BattleScenarioKind.StandardBattle;
             scenario.entries = entries.ToArray();
             return scenario;
