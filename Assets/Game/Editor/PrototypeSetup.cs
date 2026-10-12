@@ -51,9 +51,8 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/T1Cunningham_Player.prefab",
                 new Rect(24f, 24f, 195f, 422f), new Rect(243f, 134f, 127f, 202f),
                 new Vector2(0.5005221f, 0.6842200f), new Vector2(0.5025058f, 0.6974256f),
-                new Vector2(0.24f, 0.42f), 1.49f,
-                CreateT1CunninghamHullOutline())
-        };
+                new Vector2(0.42f, 0.42f), 1.14f,
+                CreateT1CunninghamHullOutline())        };
 
         [InitializeOnLoadMethod]
         private static void SchedulePrototypeAssetUpgrade()
@@ -147,6 +146,30 @@ namespace LocalTanks.Editor
                     tankId,
                     System.StringComparison.OrdinalIgnoreCase))
                 ?.PrefabPath;
+        }
+
+        /// <summary>
+        /// Expected world size of a tank's hull collider: the canonical sprite rectangle multiplied
+        /// by the tank's visual scale. Outline points use the same units as that rectangle, so this
+        /// is what the generated <c>PolygonCollider2D</c> must span. A contour written in other
+        /// units produces a collider that no longer matches the visible hull.
+        /// </summary>
+        public static bool TryGetExpectedHullSize(string tankId, out Vector2 size)
+        {
+            size = Vector2.zero;
+            TankBuildSpec spec = TankSpecs.FirstOrDefault(item => string.Equals(
+                Path.GetFileNameWithoutExtension(item.DefinitionPath),
+                tankId,
+                System.StringComparison.OrdinalIgnoreCase));
+            if (spec == null)
+            {
+                return false;
+            }
+
+            spec.LoadCanonicalLayout();
+            size = new Vector2(spec.HullRect.width / 100f * spec.VisualScale.x,
+                               spec.HullRect.height / 100f * spec.VisualScale.y);
+            return true;
         }
 
         private static TankDefinition LoadDefinition(TankBuildSpec spec)
@@ -567,17 +590,26 @@ namespace LocalTanks.Editor
         /// nearly constant width, because the tracks form both edges. The measured half width is
         /// 0.995 of the hull rectangle, so the contour adds only the chamfers a box collider would
         /// lose rather than collapsing the hull into a rectangle.
+        /// <para>
+        /// Contour points are world units equal to half of the sprite rectangle multiplied by the
+        /// visual scale, exactly as the other tanks express them: the hull rectangle is 195 by 422
+        /// pixels at 0.42 units per hundred pixels, so the half extents are 0.4095 and 0.8862.
+        /// The visual scale stays uniform, because a mixed scale would stretch the art away from
+        /// the collider that is derived from it.
+        /// </para>
         /// </summary>
         private static Vector2[] CreateT1CunninghamHullOutline()
         {
+            const float halfWidth = 0.4095f;
+            const float halfLength = 0.8862f;
             return new[]
             {
-                new Vector2(-0.90f, 0.985f), new Vector2(0.90f, 0.985f),
-                new Vector2(0.965f, 0.94f), new Vector2(0.985f, 0.86f),
-                new Vector2(0.985f, -0.86f), new Vector2(0.965f, -0.94f),
-                new Vector2(0.90f, -0.985f), new Vector2(-0.90f, -0.985f),
-                new Vector2(-0.965f, -0.94f), new Vector2(-0.985f, -0.86f),
-                new Vector2(-0.985f, 0.86f), new Vector2(-0.965f, 0.94f)
+                new Vector2(-halfWidth * 0.91f, halfLength), new Vector2(halfWidth * 0.91f, halfLength),
+                new Vector2(halfWidth * 0.975f, halfLength * 0.954f), new Vector2(halfWidth, halfLength * 0.872f),
+                new Vector2(halfWidth, -halfLength * 0.872f), new Vector2(halfWidth * 0.975f, -halfLength * 0.954f),
+                new Vector2(halfWidth * 0.91f, -halfLength), new Vector2(-halfWidth * 0.91f, -halfLength),
+                new Vector2(-halfWidth * 0.975f, -halfLength * 0.954f), new Vector2(-halfWidth, -halfLength * 0.872f),
+                new Vector2(-halfWidth, halfLength * 0.872f), new Vector2(-halfWidth * 0.975f, halfLength * 0.954f)
             };
         }
 
