@@ -16,12 +16,42 @@ namespace LocalTanks
         Circle
     }
 
-    /// <summary>How a piece of cover behaves, so AI and gameplay read one flag instead of a name.</summary>
+        /// <summary>How a piece of cover behaves, so AI and gameplay read one flag instead of a name.</summary>
     public enum MapCoverKind
     {
         None,
         Bush,
         Tree
+    }
+
+    /// <summary>
+    /// Whether a static obstacle also closes the ground it stands on for routing.
+    /// <para>
+    /// Most obstacles are collision objects only. Making every fence, vine row, log pile and boulder
+    /// close a navigation cell turns a dense arena into an unusable labyrinth: on the converted Mines
+    /// the unmodified rule blocked about 68% of the routing grid. Only substantial structures should
+    /// steer a route; everything else is something a driver expects to squeeze past or break.
+    /// </para>
+    /// </summary>
+    public enum MapNavigationPolicy
+    {
+        /// <summary>Only footprints at least as long as <see cref="WoTMapAsset.NavigationBlockerMetres"/> close ground.</summary>
+        SubstantialOnly,
+
+        /// <summary>
+        /// A destructible obstacle never closes ground, and the rest must also be at least as long as
+        /// <see cref="WoTMapAsset.NavigationBlockerMetres"/>. This is the default because a tank crew
+        /// drives through a fence, a vine row, a log pile or a cart and breaks it, so routing should not
+        /// treat those as walls. On the converted Mines this is the difference between a field split
+        /// into dozens of pockets and one connected battlefield.
+        /// </summary>
+        DestructiblePassable,
+
+        /// <summary>Every obstacle that blocks movement also closes its ground. Strict and usually unusable.</summary>
+        AllMovementBlockers,
+
+        /// <summary>Nothing closes ground; routing ignores objects entirely.</summary>
+        Never
     }
 
     /// <summary>
@@ -40,6 +70,12 @@ namespace LocalTanks
         public bool blocksMovement;
         public bool blocksProjectiles;
         public bool blocksVision;
+
+        /// <summary>
+        /// Whether this obstacle closes its ground for routing. Set by the importer from the map's
+        /// navigation policy; separate from <see cref="blocksMovement"/>, which is about collision.
+        /// </summary>
+        public bool blocksNavigation;
 
         /// <summary>Name of the source WoT resource, kept so art can be matched to the original model.</summary>
         public string sourceResource;
@@ -69,6 +105,14 @@ namespace LocalTanks
         /// hard cost: 40 000 cells is comfortable, a million is not. See ADR-053.
         /// </summary>
         public const int MaximumNavigationCells = 250_000;
+
+        /// <summary>
+        /// Longest side, in source metres, at which an obstacle starts closing ground for routing under
+        /// <see cref="MapNavigationPolicy.SubstantialOnly"/>. Ten metres keeps houses, bridges and the
+        /// larger rocks — the things that genuinely divide a battlefield — and drops fences, vine rows,
+        /// logs and scattered boulders, which a tank crew expects to cross or break.
+        /// </summary>
+        public const float NavigationBlockerMetres = 10f;
 
         [Header("Identity")]
         public string mapId;
@@ -125,6 +169,13 @@ namespace LocalTanks
         public float navigationCellSize = 4f;
         public int navigationColumns;
         public int navigationRows;
+
+        [Tooltip("Which obstacles close ground for routing. See the enum for why this is not simply " +
+                 "'blocks movement'.")]
+        public MapNavigationPolicy navigationPolicy = MapNavigationPolicy.DestructiblePassable;
+
+        [Tooltip("Result of the policy: how many obstacles ended up closing ground.")]
+        public int navigationBlockerCount;
 
         [Tooltip("Row-major terrain kind per navigation cell.")]
         public int[] navigationTerrain;

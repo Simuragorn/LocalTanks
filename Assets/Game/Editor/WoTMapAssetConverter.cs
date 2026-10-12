@@ -223,6 +223,7 @@ namespace LocalTanks.Editor
             asset.navigationTerrain = new int[cells];
             asset.navigationBlocked = new bool[cells];
 
+            ApplyNavigationPolicy(asset);
             bool[] water = BuildWaterMask(asset);
             float half = asset.navigationCellSize * 0.5f;
             Vector2 origin = asset.worldCenter - asset.playableSize * 0.5f;
@@ -243,13 +244,41 @@ namespace LocalTanks.Editor
                         continue;
                     }
 
-                    if (OverlapsBlockingObstacle(asset, center, half))
+                    if (OverlapsNavigationBlocker(asset, center, half))
                     {
                         asset.navigationTerrain[index] = (int)TerrainKind.Blocked;
                         asset.navigationBlocked[index] = true;
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Decides which obstacles close ground. Routing a tank through a dense arena cannot treat every
+        /// fence and boulder as a wall: on the converted Mines that blocked about 68% of the grid and
+        /// split the field into more than a hundred pockets.
+        /// </summary>
+        private static void ApplyNavigationPolicy(WoTMapAsset asset)
+        {
+            int blockers = 0;
+            float threshold = WoTMapAsset.NavigationBlockerMetres / asset.metresPerUnit;
+            foreach (WoTMapObstacle obstacle in asset.obstacles)
+            {
+                obstacle.blocksNavigation = asset.navigationPolicy switch
+                {
+                    MapNavigationPolicy.Never => false,
+                    MapNavigationPolicy.AllMovementBlockers => obstacle.blocksMovement,
+                    MapNavigationPolicy.DestructiblePassable => obstacle.blocksMovement &&
+                                                                !obstacle.destructible &&
+                                                                Mathf.Max(obstacle.size.x, obstacle.size.y) >= threshold,
+                    _ => obstacle.blocksMovement &&
+                         Mathf.Max(obstacle.size.x, obstacle.size.y) >= threshold
+                };
+
+                if (obstacle.blocksNavigation) blockers++;
+            }
+
+            asset.navigationBlockerCount = blockers;
         }
 
         /// <summary>
@@ -287,15 +316,15 @@ namespace LocalTanks.Editor
 
         /// <summary>
         /// True when a square of half-extent <paramref name="half"/> centred on
-        /// <paramref name="center"/> touches an obstacle that blocks movement. Footprints are compared
-        /// as rotated boxes, which is the shape the pipeline emits, so a bridge or a fence does not
-        /// block more ground than it occupies.
+        /// <paramref name="center"/> touches an obstacle that closes ground. Footprints are compared as
+        /// rotated boxes, which is the shape the pipeline emits, so a bridge or a fence does not block
+        /// more ground than it occupies.
         /// </summary>
-        private static bool OverlapsBlockingObstacle(WoTMapAsset asset, Vector2 center, float half)
+        private static bool OverlapsNavigationBlocker(WoTMapAsset asset, Vector2 center, float half)
         {
             foreach (WoTMapObstacle obstacle in asset.obstacles)
             {
-                if (!obstacle.blocksMovement) continue;
+                if (!obstacle.blocksNavigation) continue;
                 Vector2 halfSize = obstacle.size * 0.5f;
                 if (halfSize.x <= 0f || halfSize.y <= 0f) continue;
 
@@ -314,6 +343,53 @@ namespace LocalTanks.Editor
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Counts how the walkable ground is split up. A grid can look acceptable by blocked-cell count
+        /// and still be useless if the open cells form a hundred pockets, so this is the number that
+        /// decides whether a converted arena is playable. Returns the largest region and the count.
+        /// </summary>
+        public static (int Largest, int Regions, int Walkable) MeasureWalkableRegions(WoTMapAsset asset)
+        {
+            int columns = asset.navigationColumns;
+            int rows = asset.navigationRows;
+            bool[] seen = new bool[columns * rows];
+            List<int> sizes = new List<int>();
+            int walkable = 0;
+
+            for (int start = 0; start < seen.Length; start++)
+            {
+                if (asset.navigationBlocked[start] || seen[start]) continue;
+                int size = 0;
+                Stack<int> pending = new Stack<int>();
+                pending.Push(start);
+                seen[start] = true;
+                while (pending.Count > 0)
+                {
+                    int index = pending.Pop();
+                    size++;
+                    walkable++;
+                    int column = index % columns;
+                    int row = index / columns;
+                    if (column > 0) Visit(index - 1);
+                    if (column < columns - 1) Visit(index + 1);
+                    if (row > 0) Visit(index - columns);
+                    if (row < rows - 1) Visit(index + columns);
+                }
+
+                sizes.Add(size);
+
+                void Visit(int neighbour)
+                {
+                    if (asset.navigationBlocked[neighbour] || seen[neighbour]) return;
+                    seen[neighbour] = true;
+                    pending.Push(neighbour);
+                }
+            }
+
+            sizes.Sort();
+            return (sizes.Count > 0 ? sizes[sizes.Count - 1] : 0, sizes.Count, walkable);
         }
 
         private static MapObstacleShape ParseShape(string shape)

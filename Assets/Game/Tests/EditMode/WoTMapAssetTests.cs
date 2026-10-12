@@ -70,5 +70,37 @@ namespace LocalTanks.Tests
                 UnityEngine.Object.DestroyImmediate(asset);
             }
         }
+        /// <summary>
+        /// The navigation grid is measured by connectivity, not by how many cells are blocked. A field
+        /// can be 60% blocked and still be one open battlefield, or 30% blocked and useless because the
+        /// open ground is scattered into pockets. This records the current state of the converted Mines
+        /// and fails if the measurement itself breaks.
+        /// </summary>
+        [Test]
+        public void ConnectedMap_MeasuresWalkableRegions()
+        {
+            if (!HasSource) Assert.Ignore("Primitive map JSON is not present; run the WoT map pipeline first.");
+
+            WoTMapAsset asset = WoTMapAssetConverter.Convert(SourcePath, WoTMapImporter.NavigationCellMetres);
+            try
+            {
+                (int largest, int regions, int walkable) = WoTMapAssetConverter.MeasureWalkableRegions(asset);
+
+                Assert.That(regions, Is.GreaterThan(0), "An all-blocked grid would be unusable.");
+                Assert.That(walkable, Is.GreaterThan(0));
+                Assert.That(largest, Is.LessThanOrEqualTo(walkable), "No region can exceed the walkable total.");
+
+                // The measurement must be reproducible for the same asset.
+                (int largestAgain, int regionsAgain, int walkableAgain) =
+                    WoTMapAssetConverter.MeasureWalkableRegions(asset);
+                Assert.That(largestAgain, Is.EqualTo(largest));
+                Assert.That(regionsAgain, Is.EqualTo(regions));
+                Assert.That(walkableAgain, Is.EqualTo(walkable));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(asset);
+            }
+        }
     }
 }

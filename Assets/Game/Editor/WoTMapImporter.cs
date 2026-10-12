@@ -110,7 +110,18 @@ namespace LocalTanks.Editor
             text.AppendLine($"  obstacles: {asset.ObstacleCount}, vegetation: {asset.VegetationCount}");
             text.AppendLine($"  navigation: {asset.navigationColumns}x{asset.navigationRows} at " +
                             $"{asset.navigationCellSize:0.##} units, " +
-                            $"{System.Array.FindAll(asset.navigationBlocked, blocked => blocked).Length} blocked cells");
+                            $"{System.Array.FindAll(asset.navigationBlocked, blocked => blocked).Length} blocked cells, " +
+                            $"{asset.navigationBlockerCount} of {asset.ObstacleCount} obstacles close ground " +
+                            $"({asset.navigationPolicy})");
+
+            // A blocked-cell percentage says nothing about whether a tank can get anywhere, so the
+            // walkable ground is measured as regions: a field split into pockets is not playable even at
+            // a comfortable blocked share.
+            (int largestRegion, int regionCount, int walkable) = WoTMapAssetConverter.MeasureWalkableRegions(asset);
+            int total = asset.navigationColumns * asset.navigationRows;
+            float share = total > 0 ? largestRegion * 100f / total : 0f;
+            text.AppendLine($"  walkable: {walkable} of {total} cells in {regionCount} region(s); " +
+                            $"largest region {largestRegion} cells ({share:0.#}% of the field)");
             return text.ToString();
         }
     }
