@@ -37,6 +37,25 @@ namespace LocalTanks
         public const float CloseCombatAimErrorDegrees = 10f;
         public const float CloseCombatBearingRateFactor = 0.7f;
 
+        /// <summary>
+        /// Reports whether a fire block reason names a blocking object, and otherwise clears the
+        /// assessment it is paired with. <see cref="FireBlockReason.AllyInLine"/> and
+        /// <see cref="FireBlockReason.ObstacleInLine"/> come from a line-of-fire assessment and
+        /// must keep it; reasons such as no visible target or out of range describe nothing about
+        /// a blocker, so a leftover assessment would misreport a destroyed tank as a living ally.
+        /// </summary>
+        public static bool DescribesBlocker(FireBlockReason reason, ref LineOfFireAssessment assessment)
+        {
+            bool describesBlocker = reason == FireBlockReason.AllyInLine ||
+                                    reason == FireBlockReason.ObstacleInLine;
+            if (!describesBlocker)
+            {
+                assessment = default;
+            }
+
+            return describesBlocker;
+        }
+
         public static float ScoreTarget(
             float distance,
             float viewRange,

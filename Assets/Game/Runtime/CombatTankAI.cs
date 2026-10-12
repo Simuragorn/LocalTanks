@@ -20,6 +20,13 @@ namespace LocalTanks
         private const float CloseCombatDisengageDistance = 4.5f;
         private const float CloseCombatDisengageDuration = 10f;
         private const float CloseCombatRetryCooldown = 2f;
+        /// <summary>
+        /// After a protective task ends, the bot must fight for at least this long before it may
+        /// start another proactive cover cycle of the same or lower priority. Without this
+        /// commitment a bot that has just left cover immediately re-decides to seek it again,
+        /// which shows up as cover/combat task thrashing in the behavior audit.
+        /// </summary>
+        private const float ProactiveCoverCommitmentSeconds = 2.5f;
 
         [SerializeField] private TeamMember member;
         [SerializeField] private TeamVisionSystem visionSystem;
@@ -79,6 +86,8 @@ namespace LocalTanks
         private string coverRequestReason;
         private TacticalDecisionPriority coverRequestPriority;
         private float nextCoverDecisionTime;
+        private TacticalDecisionPriority lastProtectiveTaskPriority;
+        private float proactiveCoverAllowedAt;
         private float coverShotOpportunityUntil = float.NegativeInfinity;
         private float holdCoverUntil;
         private float coverReachedAt;
@@ -223,6 +232,8 @@ namespace LocalTanks
             coverRequestReason = string.Empty;
             coverRequestPriority = TacticalDecisionPriority.None;
             nextCoverDecisionTime = 0f;
+            lastProtectiveTaskPriority = TacticalDecisionPriority.None;
+            proactiveCoverAllowedAt = 0f;
             coverShotOpportunityUntil = float.NegativeInfinity;
             holdCoverUntil = 0f;
             coverReachedAt = 0f;
@@ -505,7 +516,7 @@ namespace LocalTanks
                 aimingBlockedSince = -1f;
                 if (State != CombatAiState.Investigate)
                 {
-                    CurrentFireBlockReason = FireBlockReason.NoVisibleTarget;
+                    SetFireBlockWithoutBlocker(FireBlockReason.NoVisibleTarget);
                 }
 
                 return;
@@ -864,8 +875,21 @@ namespace LocalTanks
 
         private FireBlockReason EvaluateFirePermission(TeamMember candidate, float distance)
         {
-            if (!IsTargetVisible(candidate)) return FireBlockReason.NoVisibleTarget;
-            if (member?.Definition == null || distance > member.Definition.viewRange) return FireBlockReason.OutOfRange;
+            if (!IsTargetVisible(candidate))
+            {
+                SetFireBlockWithoutBlocker(FireBlockReason.NoVisibleTarget);
+                return FireBlockReason.NoVisibleTarget;
+            }
+
+            if (member?.Definition == null || distance > member.Definition.viewRange)
+            {
+                SetFireBlockWithoutBlocker(FireBlockReason.OutOfRange);
+                return FireBlockReason.OutOfRange;
+            }
+
+            // Refresh the assessment for every visible target in range. Keeping an assessment
+            // produced while a blocking ally was still alive would report that dead tank as a
+            // living ally in diagnostics and leave currentLineOfFire paired with a stale reason.
             currentLineOfFire = EvaluateLineOfFireAssessment(candidate);
             if (!currentLineOfFire.IsClear) return currentLineOfFire.Reason;
             if (navigation != null && navigation.MovementPaused && navigation.HasFacingDirection &&
@@ -876,6 +900,19 @@ namespace LocalTanks
             if (turret == null || turret.AimErrorDegrees > AimToleranceDegrees) return FireBlockReason.Aiming;
             if (weapon == null || !weapon.IsReady) return FireBlockReason.Reloading;
             return FireBlockReason.None;
+        }
+
+        /// <summary>
+        /// Sets a fire block reason and keeps the paired line-of-fire assessment coherent: a
+        /// reason that names no blocking object drops the stale assessment with it. The audit and
+        /// the diagnostics compare the current reason against the current assessment, so a
+        /// leftover assessment from an earlier target or an earlier moment would be reported as a
+        /// fresh misclassification.
+        /// </summary>
+        private void SetFireBlockWithoutBlocker(FireBlockReason reason)
+        {
+            CurrentFireBlockReason = reason;
+            CombatAiPolicy.DescribesBlocker(reason, ref currentLineOfFire);
         }
 
         private FireBlockReason EvaluateLineOfFire(TeamMember candidate)
@@ -1197,6 +1234,7 @@ namespace LocalTanks
         private void RequestCover(string reason, TacticalDecisionPriority priority)
         {
             if (Time.time < nextCoverDecisionTime || priority < coverRequestPriority) return;
+            if (priority <= lastProtectiveTaskPriority && Time.time < proactiveCoverAllowedAt) return;
             coverRequested = true;
             coverRequestReason = reason;
             coverRequestPriority = priority;
@@ -1667,6 +1705,14 @@ namespace LocalTanks
             }
         }
 
+        private static bool IsCoverPurpose(TacticalMovementPurpose purpose)
+        {
+            return purpose == TacticalMovementPurpose.MoveToCover ||
+                   purpose == TacticalMovementPurpose.HoldCover ||
+                   purpose == TacticalMovementPurpose.PeekToFire ||
+                   purpose == TacticalMovementPurpose.ReturnToCover;
+        }
+
         private void SetTacticalTask(
             TacticalMovementPurpose purpose,
             TacticalDecisionPriority priority,
@@ -1692,6 +1738,12 @@ namespace LocalTanks
 
         private void ClearTacticalTask(string reason)
         {
+            if (IsCoverPurpose(tacticalMovementPurpose))
+            {
+                lastProtectiveTaskPriority = tacticalDecisionPriority;
+                proactiveCoverAllowedAt = Time.time + ProactiveCoverCommitmentSeconds;
+            }
+
             navigation?.ClearDestination();
             tacticalMovementPurpose = TacticalMovementPurpose.None;
             tacticalDecisionPriority = TacticalDecisionPriority.None;
