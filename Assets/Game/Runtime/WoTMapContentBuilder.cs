@@ -185,13 +185,23 @@ namespace LocalTanks
         /// mirrors the routing rule so that what stops a tank and what steers a route agree: scatter,
         /// fences, vines, logs and carts are removable clutter, while buildings and cliffs are solid.
         /// </summary>
+        /// <summary>
+        /// Whether an obstacle is a physical wall rather than something a tank pushes through. It follows
+        /// the routing rule, so what stops a tank and what steers a route agree.
+        /// <para>
+        /// Note what the rule still leaves solid: every non-destructible obstacle, which on the converted
+        /// Mines is 2831 objects including scattered boulders that a route may cross. Those remain stiff
+        /// colliders around a tank as it drives, and the local-avoidance radius is 1.2 units, so the field
+        /// is dense enough to keep slowing movement. That is a candidate for the measured pace of about a
+        /// third of full speed, not a settled cause.
+        /// </para>
+        /// </summary>
         private bool IsSolidFor(WoTMapObstacle obstacle)
         {
             if (!obstacle.blocksMovement) return false;
             if (map.navigationPolicy == MapNavigationPolicy.Never) return false;
             if (map.navigationPolicy == MapNavigationPolicy.AllMovementBlockers) return true;
 
-            // Substantial ground: anything the routing rule refuses to cross is also solid to drive into.
             return obstacle.blocksNavigation;
         }
 
