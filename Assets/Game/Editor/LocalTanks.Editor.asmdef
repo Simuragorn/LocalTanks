@@ -4,7 +4,8 @@
   "references": [
     "LocalTanks.Core",
     "LocalTanks.Runtime",
-    "Unity.2D.Sprite.Editor"
+    "Unity.2D.Sprite.Editor",
+    "Newtonsoft.Json"
   ],
   "includePlatforms": [
     "Editor"
