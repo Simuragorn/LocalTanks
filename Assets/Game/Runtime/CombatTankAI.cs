@@ -54,6 +54,20 @@ namespace LocalTanks
 
         /// <summary>How far along its route the bot has walked. Exposed for diagnostics and tests.</summary>
         public int RouteIndex => routeIndex;
+
+        /// <summary>
+        /// How many times the bot has entered continuation of its route, and how many times the strategic
+        /// layer took the decision away from it. Two counters, because a route that is never continued and
+        /// a route that is continually overridden produce the same symptom - a bot that does not move along
+        /// its route - and telling them apart by reading code has already cost several attempts.
+        /// </summary>
+        public int RouteContinuationCount { get; private set; }
+
+        /// <summary>How many times a strategic decision replaced the route destination.</summary>
+        public int StrategicOverrideCount { get; private set; }
+
+        /// <summary>How many times the tank was in the stall-recovery manoeuvre.</summary>
+        public int StallRecoveryCount { get; private set; }
         private float preferredDistance;
         private Vector2 repositionDestination;
         private float repositionExpiresAt;
@@ -1791,6 +1805,7 @@ namespace LocalTanks
         private bool ExecuteStrategicDirective()
         {
             if (!HasActiveStrategicDecision) return false;
+            StrategicOverrideCount++;
             if (strategicDecision.intent == BotStrategicIntentType.Wait)
             {
                 navigation?.SetPaused(true);
@@ -1856,6 +1871,7 @@ namespace LocalTanks
 
         private void ContinueRoute()
         {
+            RouteContinuationCount++;
             navigation?.SetPaused(false);
             if (routePoints.Length == 0)
             {

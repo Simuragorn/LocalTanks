@@ -63,6 +63,13 @@ namespace LocalTanks
         public bool MovementPaused => movementPaused;
         public Vector2 Destination => destination;
         public bool IsRecoveringFromStall => unstuckTime > 0f;
+
+        /// <summary>
+        /// How many times the tank has entered stall recovery. A high count on a dense arena means the
+        /// tank spends the battle backing out of geometry rather than advancing, which is a different
+        /// fault from being slow.
+        /// </summary>
+        public int StallRecoveryCount { get; private set; }
         public NavigationMap Map => map;
         public int ClearanceCells => clearanceCells;
 
@@ -406,6 +413,7 @@ namespace LocalTanks
             if (HasPath && progress < minimumProgressDistance && turnProgress < minimumProgressTurn)
             {
                 unstuckAttempt++;
+                StallRecoveryCount++;
                 int directionSeed = StableDecisionSeed() + unstuckAttempt;
                 unstuckTurn = (directionSeed & 1) == 0 ? 0.9f : -0.9f;
                 float routeDrive = reverse ? -1f : 1f;

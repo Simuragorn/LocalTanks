@@ -156,8 +156,10 @@ namespace LocalTanks.Tests
                 CombatTankAI ai = member.GetComponent<CombatTankAI>();
                 if (ai == null) continue;
                 routeProgress.Add($"{member.name}={ai.RouteIndex}/{ai.RoutePoints.Length} " +
-                                  $"pos {member.transform.position} dist0 " +
-                                  $"{Vector2.Distance(member.transform.position, ai.RoutePoints.FirstOrDefault()):0.##} " +
+                                  $"continued:{ai.RouteContinuationCount} " +
+                                  $"strategic:{ai.StrategicOverrideCount} " +
+                                  $"stalls:{member.GetComponent<NavigationAgent>().StallRecoveryCount} " +
+                                  $"dist0 {Vector2.Distance(member.transform.position, ai.RoutePoints.FirstOrDefault()):0.#} " +
                                   $"state {ai.State}");
             }
 
