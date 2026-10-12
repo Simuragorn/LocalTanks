@@ -81,12 +81,31 @@ namespace LocalTanks.Tests
             // A tank that never moved is a tank with no route, which is the failure this arena is most
             // likely to produce: thousands of obstacles and a coarse grid.
             List<string> stuck = new List<string>();
+            List<string> movements = new List<string>();
             foreach (TeamMember member in director.SpawnedMembers)
             {
                 if (member == null || !start.TryGetValue(member.name, out Vector2 origin)) continue;
                 float travelled = Vector2.Distance(origin, member.transform.position);
+                movements.Add($"{member.name}={travelled:0.#}");
                 if (travelled < 1f) stuck.Add($"{member.name} moved {travelled:0.##} m");
             }
+
+            Debug.Log("  displacement per tank: " + string.Join(", ", movements.OrderBy(item => item)));
+
+            // Whether the AI actually has a route, as opposed to merely having been told to move. A tank
+            // with no path is not stuck in geometry, it has nowhere to go, and those need different fixes.
+            List<string> routeReport = new List<string>();
+            foreach (TeamMember member in director.SpawnedMembers.Where(item => item != null && !item.IsPlayerControlled).Take(4))
+            {
+                NavigationAgent agent = member.GetComponent<NavigationAgent>();
+                routeReport.Add(agent == null
+                    ? $"{member.name}=no-agent"
+                    : $"{member.name}=path:{agent.HasPath}, dest:{agent.HasDestination}, " +
+                      $"paused:{agent.MovementPaused}, recovering:{agent.IsRecoveringFromStall}, " +
+                      $"reached:{agent.DestinationReached}");
+            }
+
+            Debug.Log("  routes: " + string.Join(" | ", routeReport));
 
             Assert.That(stuck, Is.Empty,
                 "Every tank must leave its spawn; these did not:\n- " + string.Join("\n- ", stuck));

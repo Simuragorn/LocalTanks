@@ -18,8 +18,8 @@ MonoBehaviour:
   penetration: 203
   speed: 18
   radius: 0.06
-  lifetimeSeconds: 3
-  maximumRange: 45
+  lifetimeSeconds: 11.5886
+  maximumRange: 173.8286
   ricochetAngle: 70
   ricochetSpeedMultiplier: 0.7
   ricochetPenetrationMultiplier: 0.65

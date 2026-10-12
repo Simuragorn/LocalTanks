@@ -36,12 +36,12 @@ MonoBehaviour:
   hullTraverseDispersionDegrees: 0.7215
   turretTraverseDispersionDegrees: 0.1184
   shotDispersionDegrees: 0.4251
-  viewRange: 9.6875
+  viewRange: 37.4214
   stationaryConcealment: 0.224
   movementRevealPenalty: 0.056
   firingRevealPenalty: 0.1707
   firingRevealDuration: 4.5
-  guaranteedDetectionRange: 1.4
+  guaranteedDetectionRange: 5.408
   armor:
     front: 14
     left: 14
