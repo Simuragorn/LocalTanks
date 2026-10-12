@@ -107,7 +107,8 @@ namespace LocalTanks.Tests
                             .Sum(member => member.Health.CurrentHitPoints);
                         Debug.Log($"  t={Time.time - startedAt:0} s: centres {Vector2.Distance(a, b):0.#} apart, " +
                                   $"closest yet {closestEver:0.#}, health {health}, " +
-                                  $"alive {director.TeamAAlive}+{director.TeamBAlive}");
+                                  $"alive {director.TeamAAlive}+{director.TeamBAlive}, " +
+                                  $"stalled {StalledCount(director)}/{director.SpawnedMembers.Count}");
                     }
 
                     yield return null;
@@ -241,8 +242,20 @@ namespace LocalTanks.Tests
             Time.captureDeltaTime = previousCaptureDeltaTime;
         }
 
-        private static Vector2 Centre(BattleDirector director, TeamId team)
+        /// <summary>
+        /// How many tanks are in the stall-recovery manoeuvre right now. Recovery overrides the steering
+        /// and drives the tank backwards for a couple of seconds, so a high count means the tanks are
+        /// spending the battle escaping rather than advancing.
+        /// </summary>
+        private static int StalledCount(BattleDirector director)
         {
+            return director.SpawnedMembers
+                .Where(member => member != null)
+                .Select(member => member.GetComponent<NavigationAgent>())
+                .Count(agent => agent != null && agent.IsRecoveringFromStall);
+        }
+
+        private static Vector2 Centre(BattleDirector director, TeamId team)        {
             TeamMember[] members = director.SpawnedMembers
                 .Where(member => member != null && member.Team == team)
                 .ToArray();
