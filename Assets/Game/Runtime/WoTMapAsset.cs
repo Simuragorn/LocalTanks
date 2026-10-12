@@ -47,6 +47,16 @@ namespace LocalTanks
         /// </summary>
         DestructiblePassable,
 
+        /// <summary>
+        /// Only a non-destructible obstacle closes ground; every destructible one, and every object too
+        /// small to matter, makes the ground passable-but-slow instead. This is the working rule for a
+        /// dense arena: on the converted Mines any rule that also blocked small non-destructible scatter
+        /// left the field split into dozens of pockets, because a cell-centre test against thousands of
+        /// rotated footprints over-blocks by construction while the objects cover more ground than the
+        /// arena itself.
+        /// </summary>
+        ObstacleCost,
+
         /// <summary>Every obstacle that blocks movement also closes its ground. Strict and usually unusable.</summary>
         AllMovementBlockers,
 
@@ -172,7 +182,7 @@ namespace LocalTanks
 
         [Tooltip("Which obstacles close ground for routing. See the enum for why this is not simply " +
                  "'blocks movement'.")]
-        public MapNavigationPolicy navigationPolicy = MapNavigationPolicy.DestructiblePassable;
+        public MapNavigationPolicy navigationPolicy = MapNavigationPolicy.ObstacleCost;
 
         [Tooltip("Result of the policy: how many obstacles ended up closing ground.")]
         public int navigationBlockerCount;
@@ -182,6 +192,22 @@ namespace LocalTanks
 
         [Tooltip("Row-major blocked flag per navigation cell.")]
         public bool[] navigationBlocked;
+
+        [Tooltip("Row-major movement cost per navigation cell, where 1 is a clear road.")]
+        public float[] navigationCosts;
+
+        [Tooltip("Row-major speed multiplier per navigation cell.")]
+        public float[] navigationSpeedMultipliers;
+
+        /// <summary>
+        /// Movement cost of ground covered by clutter such as fences, scattered boulders and log piles.
+        /// Roughly twice mud: routing prefers open ground and tolerates cover only when it shortens the
+        /// route, instead of refusing to cross it as the blocked flag would.
+        /// </summary>
+        public const float ObstacleNavigationCost = 2.6f;
+
+        /// <summary>Speed multiplier over clutter, comparable to mud, so crossing it costs time.</summary>
+        public const float ObstacleSpeedMultiplier = 0.5f;
 
         public int ObstacleCount => obstacles?.Length ?? 0;
         public int VegetationCount => vegetation?.Length ?? 0;
@@ -257,6 +283,16 @@ namespace LocalTanks
                 if (navigationBlocked == null || navigationBlocked.Length != cells)
                 {
                     errors.Add("Navigation blocked flags must cover the whole navigation grid.");
+                }
+
+                if (navigationCosts != null && navigationCosts.Length != cells)
+                {
+                    errors.Add("Navigation costs must cover the whole navigation grid when present.");
+                }
+
+                if (navigationSpeedMultipliers != null && navigationSpeedMultipliers.Length != cells)
+                {
+                    errors.Add("Navigation speed multipliers must cover the whole navigation grid when present.");
                 }
             }
 

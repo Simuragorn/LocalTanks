@@ -10,6 +10,14 @@ namespace LocalTanks
         Road,
         Mud,
         ShallowWater,
+
+        /// <summary>
+        /// Ground covered by a fence, a scattered boulder, a log pile or similar clutter. A tank drives
+        /// through it and is slowed, which is what happens in World of Tanks; treating every such object
+        /// as a wall fragments a dense arena into pockets that routing cannot cross.
+        /// </summary>
+        Obstacle,
+
         Blocked
     }
 

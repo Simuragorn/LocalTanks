@@ -222,6 +222,8 @@ namespace LocalTanks.Editor
             int cells = asset.navigationColumns * asset.navigationRows;
             asset.navigationTerrain = new int[cells];
             asset.navigationBlocked = new bool[cells];
+            asset.navigationCosts = new float[cells];
+            asset.navigationSpeedMultipliers = new float[cells];
 
             ApplyNavigationPolicy(asset);
             bool[] water = BuildWaterMask(asset);
@@ -233,6 +235,8 @@ namespace LocalTanks.Editor
                 for (int column = 0; column < asset.navigationColumns; column++)
                 {
                     int index = row * asset.navigationColumns + column;
+                    asset.navigationCosts[index] = 1f;
+                    asset.navigationSpeedMultipliers[index] = 1f;
                     Vector2 center = origin + new Vector2(
                         (column + 0.5f) * asset.navigationCellSize,
                         (row + 0.5f) * asset.navigationCellSize);
@@ -244,13 +248,91 @@ namespace LocalTanks.Editor
                         continue;
                     }
 
-                    if (OverlapsNavigationBlocker(asset, center, half))
+                    ObstacleOverlap overlap = MeasureObstacleOverlap(asset, center, half);
+                    if (overlap.Blocked)
                     {
                         asset.navigationTerrain[index] = (int)TerrainKind.Blocked;
                         asset.navigationBlocked[index] = true;
                     }
+                    else if (overlap.Rough)
+                    {
+                        // Passable but slow: routing prefers open ground without refusing to cross cover.
+                        asset.navigationTerrain[index] = (int)TerrainKind.Obstacle;
+                        asset.navigationCosts[index] = WoTMapAsset.ObstacleNavigationCost;
+                        asset.navigationSpeedMultipliers[index] = WoTMapAsset.ObstacleSpeedMultiplier;
+                    }
                 }
             }
+        }
+
+        private readonly struct ObstacleOverlap
+        {
+            public ObstacleOverlap(bool blocked, bool rough)
+            {
+                Blocked = blocked;
+                Rough = rough;
+            }
+
+            /// <summary>Ground a route may not cross at all.</summary>
+            public bool Blocked { get; }
+
+            /// <summary>Ground a route may cross at a cost.</summary>
+            public bool Rough { get; }
+        }
+
+        /// <summary>
+        /// Fraction of a cell that a hard blocker must cover before the cell is closed to routing.
+        /// Below it the cell is passable-but-slow, which is what keeps doors, alleys and the gaps
+        /// between scattered rocks open. Blocking any cell a footprint merely touches is what once
+        /// split the converted Mines into dozens of pockets.
+        /// </summary>
+        private const float BlockingCoverage = 0.6f;
+
+        /// <summary>
+        /// Classifies one navigation cell against the obstacles covering it. A cell that is only
+        /// partially covered is passable-but-slow; only a hard blocker covering most of the cell
+        /// closes it.
+        /// </summary>
+        private static ObstacleOverlap MeasureObstacleOverlap(WoTMapAsset asset, Vector2 center, float half)
+        {
+            bool rough = false;
+            foreach (WoTMapObstacle obstacle in asset.obstacles)
+            {
+                if (!obstacle.blocksMovement) continue;
+                if (!OverlapsCell(obstacle, center, half)) continue;
+
+                if (!obstacle.blocksNavigation) rough = true;
+                else if (Coverage(obstacle, center, half) >= BlockingCoverage) return new ObstacleOverlap(true, true);
+                else rough = true;
+            }
+
+            return new ObstacleOverlap(false, rough);
+        }
+
+        /// <summary>
+        /// Fraction of the cell's axis-aligned extent that the rotated footprint covers along each axis,
+        /// taking the smaller of the two as the covered share. This is a cheap, monotone stand-in for a
+        /// true area intersection and is only used to decide whether a cell is more obstacle than ground.
+        /// </summary>
+        private static float Coverage(WoTMapObstacle obstacle, Vector2 center, float half)
+        {
+            Vector2 halfSize = obstacle.size * 0.5f;
+            float radians = -obstacle.rotationDegrees * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(radians);
+            float sin = Mathf.Sin(radians);
+            Vector2 delta = center - obstacle.center;
+            Vector2 local = new Vector2(
+                delta.x * cos - delta.y * sin,
+                delta.x * sin + delta.y * cos);
+
+            // Extent of the rotated footprint along the cell axes, which is its bounding box in the cell
+            // frame. Using the bounding box is deliberately conservative: it can only make a cell look
+            // more covered, never less.
+            float extentX = Mathf.Abs(halfSize.x * cos) + Mathf.Abs(halfSize.y * sin);
+            float extentY = Mathf.Abs(halfSize.x * sin) + Mathf.Abs(halfSize.y * cos);
+            float shareX = Mathf.Clamp01((extentX - Mathf.Abs(local.x) + half) / (2f * half));
+            float shareY = Mathf.Clamp01((extentY - Mathf.Abs(local.y) + half) / (2f * half));
+            return Mathf.Min(shareX, shareY);
         }
 
         /// <summary>
@@ -271,7 +353,9 @@ namespace LocalTanks.Editor
                     MapNavigationPolicy.DestructiblePassable => obstacle.blocksMovement &&
                                                                 !obstacle.destructible &&
                                                                 Mathf.Max(obstacle.size.x, obstacle.size.y) >= threshold,
+                    MapNavigationPolicy.ObstacleCost => obstacle.blocksMovement && !obstacle.destructible,
                     _ => obstacle.blocksMovement &&
+                         !obstacle.destructible &&
                          Mathf.Max(obstacle.size.x, obstacle.size.y) >= threshold
                 };
 
@@ -316,33 +400,26 @@ namespace LocalTanks.Editor
 
         /// <summary>
         /// True when a square of half-extent <paramref name="half"/> centred on
-        /// <paramref name="center"/> touches an obstacle that closes ground. Footprints are compared as
-        /// rotated boxes, which is the shape the pipeline emits, so a bridge or a fence does not block
-        /// more ground than it occupies.
+        /// <paramref name="center"/> touches the obstacle's rotated footprint, which is the shape the
+        /// pipeline emits.
         /// </summary>
-        private static bool OverlapsNavigationBlocker(WoTMapAsset asset, Vector2 center, float half)
+        private static bool OverlapsCell(WoTMapObstacle obstacle, Vector2 center, float half)
         {
-            foreach (WoTMapObstacle obstacle in asset.obstacles)
-            {
-                if (!obstacle.blocksNavigation) continue;
-                Vector2 halfSize = obstacle.size * 0.5f;
-                if (halfSize.x <= 0f || halfSize.y <= 0f) continue;
+            Vector2 halfSize = obstacle.size * 0.5f;
+            if (halfSize.x <= 0f || halfSize.y <= 0f) return false;
 
-                // Work in the obstacle's own frame so the rotation is a change of basis, not a test.
-                float radians = -obstacle.rotationDegrees * Mathf.Deg2Rad;
-                float cos = Mathf.Cos(radians);
-                float sin = Mathf.Sin(radians);
-                Vector2 delta = center - obstacle.center;
-                Vector2 local = new Vector2(
-                    delta.x * cos - delta.y * sin,
-                    delta.x * sin + delta.y * cos);
+            // Work in the obstacle's own frame so the rotation is a change of basis, not a test.
+            float radians = -obstacle.rotationDegrees * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(radians);
+            float sin = Mathf.Sin(radians);
+            Vector2 delta = center - obstacle.center;
+            Vector2 local = new Vector2(
+                delta.x * cos - delta.y * sin,
+                delta.x * sin + delta.y * cos);
 
-                if (Mathf.Abs(local.x) > halfSize.x + half) continue;
-                if (Mathf.Abs(local.y) > halfSize.y + half) continue;
-                return true;
-            }
-
-            return false;
+            if (Mathf.Abs(local.x) > halfSize.x + half) return false;
+            if (Mathf.Abs(local.y) > halfSize.y + half) return false;
+            return true;
         }
 
         /// <summary>
