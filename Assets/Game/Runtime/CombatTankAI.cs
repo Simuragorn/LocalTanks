@@ -1805,6 +1805,19 @@ namespace LocalTanks
         private bool ExecuteStrategicDirective()
         {
             if (!HasActiveStrategicDecision) return false;
+
+            // A route is a mission, so it outranks the strategic layer until it is walked. Without this
+            // the two systems deadlocked: the route index advances only once the tank reaches its current
+            // point, while the strategy kept steering the tank back towards its own base, so the tank never
+            // arrived and the route never progressed. Measured over one battle, the strategy took the
+            // decision 240 times out of 360 route continuations and the route index stayed at zero.
+            // Contact still overrides everything: a bot that sees an enemy fights, and the route resumes
+            // when the contact ends.
+            if (!routeComplete && routePoints.Length > 1 && !hasRememberedTarget)
+            {
+                return false;
+            }
+
             StrategicOverrideCount++;
             if (strategicDecision.intent == BotStrategicIntentType.Wait)
             {
