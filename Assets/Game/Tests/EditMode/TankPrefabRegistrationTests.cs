@@ -78,7 +78,10 @@ namespace LocalTanks.Tests
             {
                 string prefabPath = PrototypeSetup.FindTankPrefabPath(tank.id);
                 if (string.IsNullOrWhiteSpace(prefabPath)) continue;
-                if (!PrototypeSetup.TryGetExpectedHullSize(tank.id, out Vector2 expected)) continue;
+                if (!PrototypeSetup.TryGetExpectedHullSize(tank.id, out Vector2 expected))
+                {
+                    Assert.Fail($"Tank '{tank.id}' has a prefab but no usable build spec.");
+                }
 
                 GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
                 Assert.That(prefab, Is.Not.Null);

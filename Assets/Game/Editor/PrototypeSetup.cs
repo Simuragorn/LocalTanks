@@ -113,6 +113,23 @@ namespace LocalTanks.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             Debug.Log($"Local Tanks combat assets created with {tankPrefabs.Length} tank prefabs.");
+            LogHullOutlineSummary();
+        }
+
+        /// <summary>
+        /// Prints the hull size against its sprite for every tank. The numbers are already validated,
+        /// so this is the record that makes a wrong-looking hull diagnosable from the build log alone
+        /// without opening the scene.
+        /// </summary>
+        private static void LogHullOutlineSummary()
+        {
+            foreach (TankBuildSpec spec in TankSpecs)
+            {
+                Vector2 expected = ExpectedHullSize(spec);
+                Vector2 actual = MeasuredHullSize(spec);
+                Debug.Log($"Hull outline '{spec.DisplayName}': collider {actual.x:0.###} x {actual.y:0.###}, " +
+                          $"sprite {expected.x:0.###} x {expected.y:0.###}, points {spec.HullOutline.Length}.");
+            }
         }
 
         private static GameObject[] BuildCombatAssetsInternal()
@@ -121,6 +138,7 @@ namespace LocalTanks.Editor
             foreach (TankBuildSpec spec in TankSpecs)
             {
                 spec.LoadCanonicalLayout();
+                ValidateHullOutline(spec);
                 ConfigureTankTexture(spec);
             }
 
@@ -167,9 +185,66 @@ namespace LocalTanks.Editor
             }
 
             spec.LoadCanonicalLayout();
-            size = new Vector2(spec.HullRect.width / 100f * spec.VisualScale.x,
-                               spec.HullRect.height / 100f * spec.VisualScale.y);
+            size = ExpectedHullSize(spec);
             return true;
+        }
+
+        /// <summary>World size the hull contour must span: the sprite rectangle at its visual scale.</summary>
+        private static Vector2 ExpectedHullSize(TankBuildSpec spec)
+        {
+            return new Vector2(
+                spec.HullRect.width / 100f * spec.VisualScale.x,
+                spec.HullRect.height / 100f * spec.VisualScale.y);
+        }
+
+        /// <summary>World size the hull contour actually spans.</summary>
+        private static Vector2 MeasuredHullSize(TankBuildSpec spec)
+        {
+            return new Vector2(
+                spec.HullOutline.Max(point => point.x) - spec.HullOutline.Min(point => point.x),
+                spec.HullOutline.Max(point => point.y) - spec.HullOutline.Min(point => point.y));
+        }
+
+        /// <summary>
+        /// Fails the build when a tank's hull contour does not describe its own sprite.
+        /// <para>
+        /// Contour points are world units equal to half of the sprite rectangle multiplied by the
+        /// visual scale, so the contour must span that rectangle. A contour entered in other units
+        /// still compiles, still passes validation and still collides with things; the only symptom
+        /// is a hull on screen that does not match what the player hits. Checking it here turns that
+        /// silent mistake into a build error that names the tank.
+        /// </para>
+        /// </summary>
+        private static void ValidateHullOutline(TankBuildSpec spec)
+        {
+            Vector2 expected = ExpectedHullSize(spec);
+            Vector2 actual = MeasuredHullSize(spec);
+
+            const float tolerance = 0.08f;
+            if (Mathf.Abs(actual.x - expected.x) > expected.x * tolerance ||
+                Mathf.Abs(actual.y - expected.y) > expected.y * tolerance)
+            {
+                throw new System.InvalidOperationException(
+                    $"Hull contour for '{spec.DisplayName}' is {actual.x:0.###} by {actual.y:0.###} but its " +
+                    $"sprite rectangle at the configured visual scale is {expected.x:0.###} by {expected.y:0.###}. " +
+                    "Outline points must be world units equal to half of the sprite rectangle multiplied by the " +
+                    "visual scale; a contour written in other units produces a collider that does not match the hull.");
+            }
+
+            if (!Mathf.Approximately(spec.VisualScale.x, spec.VisualScale.y))
+            {
+                throw new System.InvalidOperationException(
+                    $"Hull visual scale for '{spec.DisplayName}' is {spec.VisualScale.x} by {spec.VisualScale.y}. " +
+                    "Use one uniform scale: a mixed scale stretches the sprite away from the collider that is " +
+                    "derived from the same rectangle.");
+            }
+
+            if (spec.HullOutline.Length < 10)
+            {
+                throw new System.InvalidOperationException(
+                    $"Hull contour for '{spec.DisplayName}' has {spec.HullOutline.Length} points. The visible " +
+                    "hull outline needs at least ten points so it does not collapse into a rectangle.");
+            }
         }
 
         private static TankDefinition LoadDefinition(TankBuildSpec spec)

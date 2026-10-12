@@ -98,7 +98,17 @@ Use the dedicated `wot-tank-audio` skill; this is only the integration summary.
 
 ## Art and prefab measurements
 
-Do not alter the selected sprite. Use the layout sidecar's Unity bottom-left rectangles and turret pivot when present. Without a sidecar, determine non-transparent component bounds rather than guessing slice rectangles and set pivots from visible mechanical centers, not canvas centers. Preserve existing sprite IDs when configuring an already imported tracked texture. Scale the finished hull from historical width/length against the established game scale.
+Do not alter the selected sprite. Use the layout sidecar's Unity bottom-left rectangles and turret pivot when present. Without a sidecar, determine non-transparent component bounds rather than guessing slice rectangles and set pivots from visible mechanical centers, not canvas centers. Preserve existing sprite IDs when configuring an already imported tracked texture. Scale the finished hull from a documented real dimension against the established game scale.
+
+### Hull contour contract
+
+The hull outline is the one part of a build spec that a compiler cannot check, so it has explicit rules and the build enforces them:
+
+- **Units.** Contour points are world units equal to half of the sprite rectangle multiplied by the visual scale. For a hull rectangle of `width` × `height` pixels at uniform scale `s`, the contour spans `width / 100 * s` by `height / 100 * s`, and a half extent is `width / 200 * s`. MS-1 is the reference: ±0.23 × ±0.56 for a 192 × 476 rectangle at scale 0.24. Normalized `-1..1` points or points doubled by mistake produce a collider that does not cover the sprite.
+- **Uniform scale.** Visual scale uses one value for both axes. A mixed scale stretches the sprite away from the collider derived from the same rectangle.
+- **Point count.** At least ten points, so the outline keeps the chamfers a box collider would lose.
+- **Derivation.** Render scale comes from a documented real dimension: the pipeline draws 108 pixels per model metre, so `scale = real length in metres * 108 / 100 / hull length in pixels`. Record the dimension in `Docs/TANK_REFERENCE.md`.
+- **Enforcement.** `Local Tanks > Build Combat Assets` fails on a contour that does not match its sprite, a mixed scale, or too few points, naming the tank. It also logs `collider W x L, sprite W x L, points N` for every tank, and `TankPrefabRegistrationTests.EveryTankCollider_MatchesItsSpriteRectangle` re-checks the generated prefabs. Read the build summary first when a hull looks wrong.
 
 Build a 10-16 point convex or appropriately supported polygon outline around the visible hull, with extra points at real shoulders, nose changes, and rear tapers. Keep the outline inside the painted tracks/armor edge so hits match the art. Confirm the forward axis used by movement, turret, and muzzle.
 
