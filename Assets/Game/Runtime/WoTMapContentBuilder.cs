@@ -126,10 +126,9 @@ namespace LocalTanks
                 target.transform.localPosition = new Vector3(obstacle.center.x, obstacle.center.y, 0f);
                 target.transform.localRotation = Quaternion.Euler(0f, 0f, obstacle.rotationDegrees);
 
-                // One collider per obstacle. A projectile that passes through still has to stop a tank,
-                // so the shape is a solid collider and the pass-through is expressed by the marker
-                // component the gunnery code already understands, not by dropping the collider.
-                bool solid = IsSolidFor(obstacle);
+                // Collision follows the same rule as routing, so a tank is never stopped by something a
+                // route may cross. That keeps the two descriptions of the map from disagreeing.
+                bool solid = map.IsSolid(obstacle);
                 AddShape(target, obstacle, !solid);
 
                 if (solid && !obstacle.blocksProjectiles)
@@ -185,26 +184,6 @@ namespace LocalTanks
         /// mirrors the routing rule so that what stops a tank and what steers a route agree: scatter,
         /// fences, vines, logs and carts are removable clutter, while buildings and cliffs are solid.
         /// </summary>
-        /// <summary>
-        /// Whether an obstacle is a physical wall rather than something a tank pushes through. It follows
-        /// the routing rule, so what stops a tank and what steers a route agree.
-        /// <para>
-        /// Note what the rule still leaves solid: every non-destructible obstacle, which on the converted
-        /// Mines is 2831 objects including scattered boulders that a route may cross. Those remain stiff
-        /// colliders around a tank as it drives, and the local-avoidance radius is 1.2 units, so the field
-        /// is dense enough to keep slowing movement. That is a candidate for the measured pace of about a
-        /// third of full speed, not a settled cause.
-        /// </para>
-        /// </summary>
-        private bool IsSolidFor(WoTMapObstacle obstacle)
-        {
-            if (!obstacle.blocksMovement) return false;
-            if (map.navigationPolicy == MapNavigationPolicy.Never) return false;
-            if (map.navigationPolicy == MapNavigationPolicy.AllMovementBlockers) return true;
-
-            return obstacle.blocksNavigation;
-        }
-
         /// <summary>
         /// Adds the collider matching the measured footprint. A rectangle becomes a box, a rounded rock
         /// becomes a circle, and an object that neither stops a tank nor blocks sight is a trigger so it

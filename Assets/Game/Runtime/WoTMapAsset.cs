@@ -124,6 +124,28 @@ namespace LocalTanks
         /// </summary>
         public const float NavigationBlockerMetres = 10f;
 
+        /// <summary>
+        /// Whether an obstacle is a wall a tank cannot drive through, as opposed to clutter it pushes
+        /// past. Collision and routing must answer this the same way: when collision was stiffer than
+        /// routing, every route ran through objects a tank could not pass, and on the converted Mines
+        /// 2831 stiff colliders — 1475 of them boulders under ten metres — left tanks wedged and
+        /// recovering instead of advancing, at about a third of their speed.
+        /// </summary>
+        public bool IsSolid(WoTMapObstacle obstacle)
+        {
+            if (obstacle == null || !obstacle.blocksMovement) return false;
+            switch (navigationPolicy)
+            {
+                case MapNavigationPolicy.Never:
+                    return false;
+                case MapNavigationPolicy.AllMovementBlockers:
+                    return true;
+                default:
+                    return !obstacle.destructible &&
+                           Mathf.Max(obstacle.size.x, obstacle.size.y) >= NavigationBlockerMetres / metresPerUnit;
+            }
+        }
+
         [Header("Identity")]
         public string mapId;
         public string displayName;
