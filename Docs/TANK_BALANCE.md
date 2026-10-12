@@ -10,7 +10,7 @@
 |---|---|---:|---|:---:|---:|---:|---:|---|---:|---:|---:|---:|---:|
 | Leichttraktor (`leichttraktor`) | Germany | 1 | LightTank | да | 280 | 7.61 | 95 | 2 cm Breda | 12 | 0.25 | 4.7 | 11 | 30 |
 | MS-1 (`ms_1`) | USSR | 1 | LightTank | да | 220 | 4.9 | 60 | 45 mm mod. 1932 | 1 | 0 | 2.9 | 47 | 51 |
-| T1 Cunningham (`t1_cunningham`) | USA | 1 | LightTank | нет | 250 | 7.56 | 150 | 37 mm Gun M1924 | 5 | 0.5 | 8 | 30 | 33 |
+| T1 Cunningham (`t1_cunningham`) | USA | 1 | LightTank | да | 250 | 7.56 | 150 | 37 mm Gun M1924 | 5 | 0.5 | 8 | 30 | 33 |
 | Tiger II (`tiger_ii`) | Germany | 8 | HeavyTank | нет | 1600 | 69.8 | 700 | 8.8 cm KwK 43 L/71 | 1 | 0 | 8 | 300 | 203 |
 
 ## Мобильность и броня

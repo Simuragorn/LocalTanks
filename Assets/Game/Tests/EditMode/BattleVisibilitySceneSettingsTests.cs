@@ -61,24 +61,32 @@ namespace LocalTanks.Tests
         }
 
         [Test]
-        public void EveryBattleScene_ResolvesOneVisibilityOwner()
+        public void EveryBattleScene_ResolvesTheVisibilityItExpects()
         {
             foreach (string path in new[] { RiverCrossingScene, AiDuelLabScene, PlayerAiTestLabScene })
             {
                 using (SceneScope scope = SceneScope.Open(path))
                 {
-                    int settingsCount = scope.Scene.GetRootGameObjects()
-                        .SelectMany(root => root.GetComponentsInChildren<BattleVisibilitySettings>(true))
-                        .Count();
-                    int optInCount = scope.Scene.GetRootGameObjects()
-                        .SelectMany(root => root.GetComponentsInChildren<AiDuelLabController>(true))
-                        .Count()
-                        + scope.Scene.GetRootGameObjects()
-                            .SelectMany(root => root.GetComponentsInChildren<PlayerAiTestLabController>(true))
-                            .Count();
+                    BattleVisibilitySettings settings = Find<BattleVisibilitySettings>(scope.Scene);
+                    AiDuelLabController duel = Find<AiDuelLabController>(scope.Scene);
+                    PlayerAiTestLabController playerLab = Find<PlayerAiTestLabController>(scope.Scene);
+                    bool hasLaboratory = duel != null || playerLab != null;
 
-                    Assert.That(settingsCount + optInCount, Is.LessThanOrEqualTo(1),
-                        $"Scene '{path}' must not stack a scene setting and a laboratory opt-in.");
+                    // A laboratory owns the value through its own controller and turns the silhouette
+                    // on at runtime, so the scene component itself must keep the safe default.
+                    bool effective = hasLaboratory
+                        ? (duel != null ? duel.ShowHiddenTanksForTesting : playerLab.ShowHiddenTanksForTesting)
+                        : settings != null && settings.ShowHiddenTanksForTesting;
+
+                    Assert.That(effective, Is.EqualTo(hasLaboratory),
+                        $"Scene '{path}' must show the testing silhouette exactly when a laboratory owns the scene.");
+                    if (!hasLaboratory)
+                    {
+                        // The battle scene is the only place where the stored value decides, because no
+                        // controller overrides it there. It has to hide unseen tanks.
+                        Assert.That(settings == null || !settings.ShowHiddenTanksForTesting, Is.True,
+                            $"Scene '{path}' must hide unseen tanks; only a laboratory may opt in.");
+                    }
                 }
             }
         }

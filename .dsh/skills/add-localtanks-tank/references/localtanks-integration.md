@@ -54,7 +54,7 @@ Inspect these before changing them because names and responsibilities may move:
 - `Assets/Game/Tests/PlayMode/PrototypePlayModeTests.cs`: battle behavior and named-tank assumptions.
 - `Assets/Game/Tests/PlayMode/TankAudioPlayModeTests.cs`: audio loading and weapon-fire reaction.
 
-Registry lists have been evolving toward data-driven discovery: inspect the current `PrototypeSetup`, `RiverCrossingSetup` and `BattleDirector` code instead of assuming either fixed lists or full automation. Adding only a JSON file never makes a playable vehicle.
+Registry lists are derived from data now: `PrototypeSetup.FindTankPrefabPath` resolves a tank id to its prefab, and `RiverCrossingSetup.CreatePrefabBindings` builds the scene bindings from every playable tank plus every scenario entry. A new tank needs a build spec entry and its JSON definitions only — never a second prefab list, a second tank-id list or a scene edit. `availableInGame` is the single playability switch and decides whether the tank appears in the test range and in the two laboratories; it does not by itself add the tank to the fixed battle roster, which stays hand-authored in `river_crossing_battle.json`.
 
 ## Existing data contract
 

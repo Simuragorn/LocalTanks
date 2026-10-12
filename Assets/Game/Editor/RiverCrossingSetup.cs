@@ -31,12 +31,6 @@ namespace LocalTanks.Editor
         private const string BattleHudUssPath = "Assets/Game/UI/BattleHud.uss";
         private const string ClassIconsRoot = "Assets/Game/Generated/UI/VehicleClasses";
 
-        private static readonly string[] TankPrefabPaths =
-        {
-            "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab"
-        };
-
         [InitializeOnLoadMethod]
         private static void ScheduleInitialBuild()
         {
@@ -607,88 +601,6 @@ namespace LocalTanks.Editor
             return material;
         }
 
-        private static GameObject CreateTanks(Scene scene, NavigationMap map)
-        {
-            GameObject[] prefabs = TankPrefabPaths.Select(AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
-            if (prefabs.Any(prefab => prefab == null))
-            {
-                throw new InvalidOperationException("Build the combat test range before building River Crossing.");
-            }
-
-            CaptureBase[] bases = UnityEngine.Object.FindObjectsByType<CaptureBase>();
-            CaptureBase teamABase = bases.Single(item => item.Owner == TeamId.TeamA);
-            CaptureBase teamBBase = bases.Single(item => item.Owner == TeamId.TeamB);
-            Quaternion teamARotation = Quaternion.Euler(0f, 0f, -90f);
-            Quaternion teamBRotation = Quaternion.Euler(0f, 0f, 90f);
-
-            GameObject player = CreateTank(
-                prefabs[0],
-                scene,
-                "RiverCrossing_Player",
-                teamABase.GetSpawnPosition(7),
-                teamARotation);
-            AddTerrainModifier(player, map);
-            AddTeamMember(player, TeamId.TeamA, true);
-
-            GameObject north = CreateAgent(prefabs[1], scene, "Route_North_Leichttraktor", map, teamBBase.GetSpawnPosition(11), teamBRotation, new[]
-            {
-                new Vector2Int(61, 24), new Vector2Int(53, 31), new Vector2Int(35, 35), new Vector2Int(21, 33),
-                new Vector2Int(11, 25), new Vector2Int(21, 33), new Vector2Int(35, 35), new Vector2Int(53, 31)
-            });
-            AddTeamMember(north, TeamId.TeamB, false);
-            GameObject center = CreateAgent(prefabs[1], scene, "Route_Center_Leichttraktor", map, teamBBase.GetSpawnPosition(7), teamBRotation, new[]
-            {
-                new Vector2Int(60, 22), new Vector2Int(48, 22), new Vector2Int(35, 22), new Vector2Int(22, 22),
-                new Vector2Int(11, 22), new Vector2Int(22, 22), new Vector2Int(35, 22), new Vector2Int(48, 22)
-            });
-            AddTeamMember(center, TeamId.TeamB, false);
-            GameObject south = CreateAgent(prefabs[1], scene, "Route_South_Leichttraktor", map, teamBBase.GetSpawnPosition(1), teamBRotation, new[]
-            {
-                new Vector2Int(61, 20), new Vector2Int(54, 14), new Vector2Int(35, 9), new Vector2Int(22, 10),
-                new Vector2Int(11, 19), new Vector2Int(22, 10), new Vector2Int(35, 9), new Vector2Int(54, 14)
-            });
-            AddTeamMember(south, TeamId.TeamB, false);
-            return player;
-        }
-
-        private static GameObject CreateTank(
-            GameObject prefab,
-            Scene scene,
-            string name,
-            Vector2 position,
-            Quaternion rotation)
-        {
-            GameObject tank = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
-            tank.name = name;
-            tank.transform.SetPositionAndRotation(position, rotation);
-            return tank;
-        }
-
-        private static GameObject CreateAgent(
-            GameObject prefab,
-            Scene scene,
-            string name,
-            NavigationMap map,
-            Vector2 spawn,
-            Quaternion rotation,
-            Vector2Int[] patrolCells)
-        {
-            GameObject tank = CreateTank(prefab, scene, name, spawn, rotation);
-            PlayerTankInput input = tank.GetComponent<PlayerTankInput>();
-            TurretAiming turret = tank.GetComponentInChildren<TurretAiming>();
-            WeaponController weapon = tank.GetComponent<WeaponController>();
-            if (input != null) input.enabled = false;
-            if (turret != null) turret.enabled = false;
-            if (weapon != null) weapon.enabled = false;
-
-            TankMotor motor = tank.GetComponent<TankMotor>();
-            AddTerrainModifier(tank, map);
-            NavigationAgent agent = tank.AddComponent<NavigationAgent>();
-            agent.Configure(map, motor, patrolCells.Select(map.CellToWorld).ToArray(), 1, true);
-            tank.AddComponent<TankHealthBar>().Configure(1.45f);
-            return tank;
-        }
-
         private static void AddTeamMember(GameObject tank, TeamId team, bool playerControlled)
         {
             TankDefinition definition = tank.GetComponent<TankHealth>()?.Definition;
@@ -720,6 +632,56 @@ namespace LocalTanks.Editor
             }
 
             member.Configure(team, playerControlled);
+        }
+
+        /// <summary>
+        /// Prefab bindings for the generated battle scenes, derived from the combat database and
+        /// the battle scenario instead of a hand-written list of tank ids.
+        /// <para>
+        /// Every tank that is playable in game is bound, because the manual AI test laboratory
+        /// offers exactly those tanks in its selection screens. The scenario entries are bound as
+        /// well, so the fixed roster of the base battle keeps resolving its prefabs even for a tank
+        /// that is not currently playable. Adding a tank therefore requires no change here.
+        /// </para>
+        /// </summary>
+        private static TankPrefabBinding[] CreatePrefabBindings(BattleScenario scenario, CombatDatabase database)
+        {
+            List<string> tankIds = new List<string>();
+            foreach (TankDefinition tank in database.tanks)
+            {
+                if (tank == null || string.IsNullOrWhiteSpace(tank.id)) continue;
+                if (tank.availableInGame && !tankIds.Contains(tank.id)) tankIds.Add(tank.id);
+            }
+
+            if (scenario?.entries != null)
+            {
+                foreach (BattleScenarioEntry entry in scenario.entries)
+                {
+                    if (entry == null || string.IsNullOrWhiteSpace(entry.tankId)) continue;
+                    if (!tankIds.Contains(entry.tankId)) tankIds.Add(entry.tankId);
+                }
+            }
+
+            return tankIds.Select(tankId =>
+            {
+                string prefabPath = PrototypeSetup.FindTankPrefabPath(tankId);
+                if (string.IsNullOrWhiteSpace(prefabPath))
+                {
+                    throw new InvalidOperationException(
+                        $"Tank '{tankId}' is playable but has no build spec in PrototypeSetup.TankSpecs, " +
+                        "so no prefab can be bound into the battle scenes.");
+                }
+
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                if (prefab == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Prefab was not generated for tank '{tankId}': {prefabPath}. " +
+                        "Build the combat assets before building the battle scenes.");
+                }
+
+                return new TankPrefabBinding { tankId = tankId, prefab = prefab };
+            }).ToArray();
         }
 
         private static void GenerateVehicleClassIcons()
@@ -940,18 +902,7 @@ namespace LocalTanks.Editor
                 throw new InvalidOperationException("Tactical map descriptor was not generated or is invalid.");
             }
 
-            GameObject[] prefabs = TankPrefabPaths.Select(AssetDatabase.LoadAssetAtPath<GameObject>).ToArray();
-            if (prefabs.Any(prefab => prefab == null))
-            {
-                throw new InvalidOperationException("Build the combat test range before building River Crossing.");
-            }
-
-            string[] tankIds = { "ms_1", "leichttraktor" };
-            TankPrefabBinding[] prefabBindings = tankIds.Select((tankId, index) => new TankPrefabBinding
-            {
-                tankId = tankId,
-                prefab = prefabs[index]
-            }).ToArray();
+            TankPrefabBinding[] prefabBindings = CreatePrefabBindings(scenario, database);
             VehicleClassIconBinding[] iconBindings = Enum.GetValues(typeof(VehicleClass))
                 .Cast<VehicleClass>()
                 .Select(vehicleClass => new VehicleClassIconBinding

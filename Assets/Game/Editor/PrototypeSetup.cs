@@ -133,6 +133,22 @@ namespace LocalTanks.Editor
             return tankPrefabs;
         }
 
+        /// <summary>
+        /// Prefab path for a generated tank, or null when no build spec produces that tank.
+        /// Scene builders derive their <see cref="TankPrefabBinding"/> arrays from the combat
+        /// database through this lookup, so adding a tank needs one build spec entry and nothing
+        /// else: no second prefab list and no second tank-id list to keep in sync.
+        /// </summary>
+        public static string FindTankPrefabPath(string tankId)
+        {
+            return TankSpecs
+                .FirstOrDefault(spec => string.Equals(
+                    Path.GetFileNameWithoutExtension(spec.DefinitionPath),
+                    tankId,
+                    System.StringComparison.OrdinalIgnoreCase))
+                ?.PrefabPath;
+        }
+
         private static TankDefinition LoadDefinition(TankBuildSpec spec)
         {
             TankDefinition definition = AssetDatabase.LoadAssetAtPath<TankDefinition>(spec.DefinitionPath);

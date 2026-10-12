@@ -42,6 +42,9 @@ namespace LocalTanks
         {
             previousRandomState = UnityEngine.Random.state;
             hasPreviousRandomState = true;
+            // The scene may have been generated before this laboratory opted in, so the runtime
+            // value is applied here as well as at build time.
+            FindAnyObjectByType<BattleVisibilitySettings>()?.Configure(showHiddenTanksForTesting);
             int count = catalog?.cases?.Length ?? 0;
             if (count <= 0) return;
             int caseIndex = (requestedCaseIndex % count + count) % count;

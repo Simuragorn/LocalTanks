@@ -5,7 +5,7 @@
   "vehicleClass": "LightTank",
   "nation": "USA",
   "tier": 1,
-  "availableInGame": false,
+  "availableInGame": true,
   "maxHitPoints": 250,
   "weaponId": "gun_37mm_m1924",
   "mobility": {

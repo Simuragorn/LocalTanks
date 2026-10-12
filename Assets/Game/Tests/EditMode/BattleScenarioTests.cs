@@ -24,8 +24,13 @@ namespace LocalTanks.Tests
             Assert.That(scenario.entries.Count(item => item.playerControlled), Is.EqualTo(1));
             Assert.That(scenario.entries.GroupBy(item => $"{item.baseId}:{item.spawnSlot}")
                 .All(group => group.Count() == 1), Is.True);
-            Assert.That(scenario.entries.Select(item => item.tankId).Distinct(),
-                Is.EquivalentTo(database.tanks.Where(item => item.availableInGame).Select(item => item.id)));
+            // The fixed roster names its own vehicles; what matters is that every named vehicle is
+            // actually playable. A tank can be available for the manual test laboratory without
+            // joining this scenario, which has to stay a hand-authored seven versus seven.
+            Assert.That(scenario.entries
+                    .Select(item => database.FindTank(item.tankId))
+                    .All(tank => tank != null && tank.availableInGame),
+                Is.True);
             Assert.That(scenario.entries.Count(item => item.tankId == "ms_1"), Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(scenario.entries.Count(item => item.tankId == "leichttraktor"), Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(scenario.entries.Any(item => item.tankId == "tiger_ii"), Is.False);

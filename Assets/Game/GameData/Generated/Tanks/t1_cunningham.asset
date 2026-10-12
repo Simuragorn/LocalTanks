@@ -17,7 +17,7 @@ MonoBehaviour:
   vehicleClass: 2
   nation: 2
   tier: 1
-  availableInGame: 0
+  availableInGame: 1
   maxHitPoints: 250
   massTonnes: 7.555
   enginePowerHp: 150
