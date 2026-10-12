@@ -49,11 +49,20 @@ MonoBehaviour:
     rear: 16
   audio:
     engineClipId: engine_eng_gaz_aa_pc
+    tracksClipId: tracks_trds_med_npc
     shotClipId: gun_wpn_small_pc
+    reloadClipId: reload_gun_rld_20_45mm
     turretClipId: turret_tur_man_trav_04
+    destructionClipId: destruction_expl_crew_death_s_npc
     engineVolume: 0.42
+    tracksVolume: 0.2
     shotVolume: 0.86
+    reloadVolume: 0.36
     turretVolume: 0.18
+    destructionVolume: 0.78
     enginePitch: 0.94
+    tracksPitch: 0.94
     shotPitch: 0.94
+    reloadPitch: 0.94
     turretPitch: 0.96
+    destructionPitch: 0.96

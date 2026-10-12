@@ -24,3 +24,11 @@ MonoBehaviour:
   ricochetSpeedMultiplier: 0.7
   ricochetPenetrationMultiplier: 0.65
   maximumRicochets: 2
+  audio:
+    penetrationClipId: impact_small_pierced
+    blockedClipId: impact_small_blocked
+    ricochetClipId: impact_small_ricochet
+    penetrationVolume: 0.3
+    blockedVolume: 0.22
+    ricochetVolume: 0.22
+    pitch: 0.92

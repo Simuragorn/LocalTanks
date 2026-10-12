@@ -49,11 +49,20 @@ MonoBehaviour:
     rear: 80
   audio:
     engineClipId: 
+    tracksClipId: 
     shotClipId: 
+    reloadClipId: 
     turretClipId: 
+    destructionClipId: 
     engineVolume: 0.45
+    tracksVolume: 0.2
     shotVolume: 0.9
+    reloadVolume: 0.36
     turretVolume: 0.22
+    destructionVolume: 0.78
     enginePitch: 1
+    tracksPitch: 1
     shotPitch: 1
+    reloadPitch: 1
     turretPitch: 1
+    destructionPitch: 1
