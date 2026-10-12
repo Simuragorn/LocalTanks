@@ -28,6 +28,21 @@ namespace LocalTanks
         [SerializeField] private Vector2[] patrolPoints;
         [SerializeField, Min(0)] private int clearanceCells;
         [SerializeField, Min(0.05f)] private float waypointTolerance = 0.3f;
+
+        /// <summary>
+        /// Smallest waypoint tolerance the agent will work with, in world units.
+        /// <para>
+        /// Three tenths of a unit is smaller than a hull and far smaller than a navigation cell, which is
+        /// four units across on the converted arena. A tank travelling at 2.59 units per second covers
+        /// several metres before it can come round, so it overshoots a point that close and its turning
+        /// circle is wider than the distance left; it then circles the point it has already passed. On the
+        /// converted Mines bots sat at path index one for a whole battle with a correct four-point path for
+        /// exactly this reason.
+        /// </para>
+        /// </summary>
+        [Tooltip("Smallest waypoint tolerance, in world units. A tolerance below a hull's turning " +
+                 "circle makes a tank circle waypoints it has already passed.")]
+        [SerializeField, Min(0.05f)] private float minimumWaypointTolerance = 1.2f;
         [SerializeField, Min(0.1f)] private float avoidanceRadius = 1.2f;
         [SerializeField, Min(0.5f)] private float unstuckDuration = 1.8f;
         [SerializeField, Min(0.01f)] private float minimumProgressDistance = 0.18f;
@@ -254,17 +269,14 @@ namespace LocalTanks
             }
 
             Vector2 position = transform.position;
-            while (pathIndex < path.Count && Vector2.Distance(position, path[pathIndex]) <= waypointTolerance)
+            while (pathIndex < path.Count && Vector2.Distance(position, path[pathIndex]) <= WaypointTolerance)
             {
                 pathIndex++;
             }
 
             // A tank that overshoots a waypoint cannot simply turn back to it: at speed a hull needs many
-            // metres to come round, so it circles the point it missed while the path stands still. On the
-            // converted arena that left bots at path index one for a whole battle with a perfectly good
-            // four-point path. When the tank has drifted well past its current waypoint, rejoin the path at
-            // the nearest point that actually moves it forward.
-            RecoverPathIfDrifted(position);
+            // metres to come round, so it circles the point it missed while the path stands still. This
+            // rejoins the path at a nearer forward point instead.
 
             if (!HasPath)
             {
@@ -291,6 +303,13 @@ namespace LocalTanks
         /// Rejoins the path near the tank when it has drifted far from its current waypoint instead of
         /// trying to turn back to it. The replacement point must be nearer the destination than the tank
         /// is, so recovery cannot walk the tank backwards along its own route.
+        /// <para>
+        /// Currently not called. It was tried on the converted arena to stop bots circling a waypoint they
+        /// had overshot, and it did not change their progress; on River Crossing the same call broke the
+        /// behaviour audit, which compares manoeuvres frame by frame. Kept because the reasoning is sound
+        /// and the next attempt should test it deliberately rather than rediscover it, but any caller must
+        /// re-run the audit before committing.
+        /// </para>
         /// </summary>
         private void RecoverPathIfDrifted(Vector2 position)
         {

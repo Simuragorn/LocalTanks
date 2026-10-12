@@ -188,10 +188,11 @@ namespace LocalTanks.Tests
                 Vector2[] points = agent.PathPoints;
                 Vector2 here = member.transform.position;
                 paths.Add($"{member.name}: {points.Length} points, " +
+                          $"tol {agent.WaypointTolerance:0.##}, " +
                           $"dest {agent.Destination} at {Vector2.Distance(here, agent.Destination):0.#} away, " +
                           $"first {(points.Length > 0 ? Vector2.Distance(here, points[0]) : 0f):0.#}, " +
                           $"last {(points.Length > 0 ? Vector2.Distance(here, points[points.Length - 1]) : 0f):0.#}, " +
-                          $"visited {agent.PathIndex}");
+                          $"visited {agent.PathIndex}, recoveries {agent.PathRecoveryCount}");
             }
 
             Debug.Log("  paths: " + string.Join(" | ", paths));
