@@ -133,6 +133,18 @@ namespace LocalTanks
             hasFacingDirection = false;
         }
 
+        /// <summary>
+        /// Leaves reverse approach mode. A reverse-capable task switches it on through
+        /// <see cref="SetDestination(Vector2, int, bool)"/>, and nothing switched it off when that
+        /// task ended: the next task only set a new destination for a forward approach, or paused
+        /// movement entirely, so the flag outlived the maneuver and the tank kept reversing while
+        /// fighting or holding cover.
+        /// </summary>
+        public void ClearReverseMode()
+        {
+            movingInReverse = false;
+        }
+
         public void SetPaused(bool paused)
         {
             movementPaused = paused;

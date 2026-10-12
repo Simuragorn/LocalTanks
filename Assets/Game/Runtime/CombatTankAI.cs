@@ -1248,6 +1248,9 @@ namespace LocalTanks
                                      tacticalMovementPurpose == TacticalMovementPurpose.PeekToFire;
             if (State != CombatAiState.Reposition || !defensiveMovement || navigation == null)
             {
+                // The maneuver no longer owns the movement, so it must not leave reverse approach
+                // mode behind: the audit reports a stale reverse as ReverseWithoutRetreatTask.
+                navigation?.ClearReverseMode();
                 return false;
             }
 
