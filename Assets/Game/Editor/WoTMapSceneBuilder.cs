@@ -59,6 +59,15 @@ namespace LocalTanks.Editor
             TerrainKind[] terrain = asset.navigationTerrain.Select(kind => (TerrainKind)kind).ToArray();
             float[] costs = asset.navigationCosts ?? Enumerable.Repeat(1f, count).ToArray();
             float[] speeds = asset.navigationSpeedMultipliers ?? Enumerable.Repeat(1f, count).ToArray();
+            // Cover steers a route through its movement cost, which is the part that matters. Its speed
+            // penalty is dropped here because a navigation cell is four units across while a hull is about
+            // one, so a per-cell penalty slows a tank almost everywhere on a dense arena: measured speeds
+            // fell to 0.05 against a limit of 2.59 and the battle never started.
+            for (int index = 0; index < count; index++)
+            {
+                if (terrain[index] == TerrainKind.Obstacle) speeds[index] = 1f;
+            }
+
             float[] accelerations = speeds;
             bool[] blocked = asset.navigationBlocked;
 
@@ -171,7 +180,7 @@ namespace LocalTanks.Editor
                 }
 
                 CaptureBase capture = baseObject.AddComponent<CaptureBase>();
-                capture.Configure(baseId, $"База {baseId}", owner, new CaptureRules(), ring);
+                capture.Configure(baseId, $"ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¹Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â·ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â° {baseId}", owner, new CaptureRules(), ring);
                 bases.Add(capture);
             }
 
@@ -208,6 +217,27 @@ namespace LocalTanks.Editor
             }
 
             return slots;
+        }
+
+        /// <summary>
+        /// Returns the path running away from <paramref name="fromWorld"/>. The tactical analysis draws
+        /// every lane from one base to the other without recording which, so the direction is decided by
+        /// geometry: the endpoint nearest the team's own base becomes the start. Assuming the direction
+        /// instead sent one team across the map from the enemy's side.
+        /// </summary>
+        private static Vector2Int[] OrientFrom(Vector2Int[] path, Vector2 fromWorld, float cellSize, Vector2 origin)
+        {
+            if (path == null || path.Length < 2) return path;
+
+            // Compared in world units, the space both the base and the cell centres live in.
+            Vector2 firstWorld = origin + new Vector2(
+                (path[0].x + 0.5f) * cellSize, (path[0].y + 0.5f) * cellSize);
+            Vector2 lastWorld = origin + new Vector2(
+                (path[path.Length - 1].x + 0.5f) * cellSize,
+                (path[path.Length - 1].y + 0.5f) * cellSize);
+            return Vector2.Distance(firstWorld, fromWorld) <= Vector2.Distance(lastWorld, fromWorld)
+                ? path
+                : path.Reverse().ToArray();
         }
 
         /// <summary>
@@ -306,7 +336,7 @@ namespace LocalTanks.Editor
             }
 
             TankPrefabBinding[] prefabs = CreatePrefabBindings(asset);
-            BattleScenario scenario = CreateScenario(database, prefabs, tacticalMap, $"Battle_{asset.mapId}");
+            BattleScenario scenario = CreateScenario(database, prefabs, tacticalMap, asset, asset.basePositions, $"Battle_{asset.mapId}");
             GameObject root = new GameObject("BattleDirector");
             SceneManager.MoveGameObjectToScene(root, SceneManager.GetActiveScene());
             root.AddComponent<BattleDirector>().Configure(
@@ -357,6 +387,8 @@ namespace LocalTanks.Editor
             CombatDatabase database,
             TankPrefabBinding[] prefabs,
             TacticalMapDescriptorAsset tacticalMap,
+            WoTMapAsset mapAsset,
+            Vector2[] baseSpawnPositions,
             string sceneId)
         {
             TankDefinition chosen = database.tanks
@@ -383,6 +415,14 @@ namespace LocalTanks.Editor
             BattleLane[] formation = { BattleLane.Center, BattleLane.North, BattleLane.South };
             int[] perLane = { 3, 2, 2 };
 
+            // The route must leave the tank's own base, so every lane is oriented from that team's spawn.
+            // The tactical source is also transformed by the grid origin and cell size, so those travel
+            // with the paths to keep one definition of where a cell sits.
+            Vector2 worldOrigin = mapAsset.worldCenter - mapAsset.playableSize * 0.5f;
+            Vector2 spawnA = baseSpawnPositions[0];
+            Vector2 spawnB = baseSpawnPositions[1];
+            Vector2[] spawnOrigins = { spawnA, spawnA, spawnA, spawnB, spawnB, spawnB };
+
             List<BattleScenarioEntry> entries = new List<BattleScenarioEntry>();
             for (int laneIndex = 0; laneIndex < formation.Length; laneIndex++)
             {
@@ -400,8 +440,10 @@ namespace LocalTanks.Editor
                         spawnSlot = entries.Count(entry => entry.team == TeamId.TeamA),
                         lane = formation[laneIndex],
                         role = laneIndex == 0 ? CombatAiRole.Assault : CombatAiRole.Flank,
-                        // Base A sits at the far end of an analysed path, so its route is that path reversed.
-                        routeCells = player ? null : forward.Reverse().ToArray()
+                        // The route must leave the tank's own base. Orienting it by geometry rather than by
+                        // assuming the analysis direction cannot silently send a team across the map from
+                        // the enemy's side, which is what happened when the assumption was wrong.
+                        routeCells = player ? null : OrientFrom(forward, spawnOrigins[laneIndex], mapAsset.navigationCellSize, worldOrigin)
                     });
                     entries.Add(new BattleScenarioEntry
                     {
@@ -413,7 +455,7 @@ namespace LocalTanks.Editor
                         spawnSlot = entries.Count(entry => entry.team == TeamId.TeamB),
                         lane = formation[laneIndex],
                         role = laneIndex == 0 ? CombatAiRole.Assault : CombatAiRole.Flank,
-                        routeCells = forward
+                        routeCells = OrientFrom(forward, spawnOrigins[laneIndex + 3], mapAsset.navigationCellSize, worldOrigin)
                     });
                 }
             }

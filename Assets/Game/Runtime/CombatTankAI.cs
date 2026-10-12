@@ -48,6 +48,9 @@ namespace LocalTanks
         private bool hasRememberedTarget;
         private bool investigationDestinationSet;
         private bool routeComplete;
+
+        /// <summary>The route this bot was given, in world units. Exposed for diagnostics and tests.</summary>
+        public Vector2[] RoutePoints => routePoints;
         private float preferredDistance;
         private Vector2 repositionDestination;
         private float repositionExpiresAt;
@@ -1868,20 +1871,34 @@ namespace LocalTanks
                 return;
             }
 
-            if (!navigation.HasDestination || navigation.DestinationReached ||
+            // Advance only when there is nothing to walk to. Advancing because the tank merely stands
+            // near a route point is wrong: a route's first point is normally where the tank spawned, and
+            // treating that as "already reached" walked the whole index to the end in a few frames and
+            // then reported the march complete, which looked exactly like an idle bot.
+            if (navigation.HasDestination && !navigation.DestinationReached)
+            {
+                return;
+            }
+
+            // Skip any route points the tank already stands on, so a spawn point at the head of the
+            // route does not stall the march.
+            while (routeIndex < routePoints.Length - 1 &&
+                   Vector2.Distance(transform.position, routePoints[routeIndex]) < 0.45f)
+            {
+                routeIndex++;
+            }
+
+            if (routeIndex >= routePoints.Length - 1 &&
                 Vector2.Distance(transform.position, routePoints[routeIndex]) < 0.45f)
             {
-                if (routeIndex >= routePoints.Length - 1)
-                {
-                    routeComplete = true;
-                    navigation.ClearDestination();
-                    return;
-                }
-
-                routeIndex = Mathf.Min(routeIndex + 1, routePoints.Length - 1);
-                State = routeIndex > 0 ? CombatAiState.Advance : CombatAiState.Deploy;
-                navigation.SetDestination(routePoints[routeIndex]);
+                routeComplete = true;
+                State = CombatAiState.Advance;
+                navigation.ClearDestination();
+                return;
             }
+
+            State = routeIndex > 0 ? CombatAiState.Advance : CombatAiState.Deploy;
+            navigation.SetDestination(routePoints[routeIndex]);
         }
 
         private void StartCurrentRoutePoint()

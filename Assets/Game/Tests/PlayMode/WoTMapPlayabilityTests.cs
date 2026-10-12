@@ -107,6 +107,47 @@ namespace LocalTanks.Tests
 
             Debug.Log("  routes: " + string.Join(" | ", routeReport));
 
+            // Whether the route even starts where the tank stands. A route whose first point is already
+            // reached makes the AI declare the march complete before it moves, which looks like an idle
+            // bot rather than a routing fault.
+            CaptureBase baseA = Object.FindObjectsByType<CaptureBase>(FindObjectsSortMode.None)
+                .Single(item => item.BaseId == "A");
+            CaptureBase baseB = Object.FindObjectsByType<CaptureBase>(FindObjectsSortMode.None)
+                .Single(item => item.BaseId == "B");
+            Debug.Log($"  bases: A {baseA.transform.position}, B {baseB.transform.position}, " +
+                      $"apart {Vector2.Distance(baseA.transform.position, baseB.transform.position):0.#}");
+
+            List<string> routeStarts = new List<string>();
+            foreach (TeamMember member in director.SpawnedMembers.Where(item => item != null && !item.IsPlayerControlled).Take(3))
+            {
+                CombatTankAI ai = member.GetComponent<CombatTankAI>();
+                if (ai == null) continue;
+                Vector2[] points = ai.RoutePoints;
+                Vector2 first = points.FirstOrDefault();
+                Vector2 last = points.LastOrDefault();
+                routeStarts.Add($"{member.name} ({member.Team}): {points.Length} points, " +
+                                $"first {first} (toA {Vector2.Distance(first, baseA.transform.position):0.#}, " +
+                                $"toB {Vector2.Distance(first, baseB.transform.position):0.#}), " +
+                                $"last {last} (toA {Vector2.Distance(last, baseA.transform.position):0.#}, " +
+                                $"toB {Vector2.Distance(last, baseB.transform.position):0.#})");
+            }
+
+            Debug.Log("  route geometry: " + string.Join(" | ", routeStarts));
+
+            // Actual motion, not just intent: a tank with a path that crawls is a different fault from one
+            // with no path, and the two need different fixes.
+            List<string> motion = new List<string>();
+            foreach (TeamMember member in director.SpawnedMembers.Where(item => item != null && !item.IsPlayerControlled).Take(4))
+            {
+                TankMotor motor = member.GetComponent<TankMotor>();
+                NavigationAgent agent = member.GetComponent<NavigationAgent>();
+                motion.Add($"{member.name}: speed {motor?.CurrentSpeed ?? 0f:0.00}, " +
+                           $"limit {member.Definition.maxForwardSpeed:0.00}, " +
+                           $"pathPoints {(agent != null && agent.HasPath ? "yes" : "no")}");
+            }
+
+            Debug.Log("  motion: " + string.Join(" | ", motion));
+
             Assert.That(stuck, Is.Empty,
                 "Every tank must leave its spawn; these did not:\n- " + string.Join("\n- ", stuck));
 
