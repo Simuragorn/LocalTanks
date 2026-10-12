@@ -124,6 +124,7 @@ InitTestScene*.unity*
 /Tools/WoTSpritePipeline/ThirdParty/
 /Tools/WoTSpritePipeline/Local/
 /Tools/WoTSpritePipeline/config.local.json
+/Tools/WoTEnvironmentPipeline/Local/
 
 # Local LLM runtime and model cache. The game can provision these files on the
 # developer machine, but multi-gigabyte third-party binaries/models never enter Git.

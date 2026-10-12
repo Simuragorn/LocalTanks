@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "pixelsPerMeter": 108,
+  "maximumSpriteDimension": 4096,
+  "objects": [
+    {
+      "id": "village_cowshed",
+      "displayName": "Village cowshed",
+      "category": "building",
+      "layer": "SolidObstacles",
+      "sourcePackages": ["02_malinovka.pkg", "02_malinovka_hd.pkg"],
+      "sourceRoot": "content/Buildings/hd_bld_SU_002_Cowshed",
+      "sourceModel": "content/Buildings/hd_bld_SU_002_Cowshed/normal/lod0/hd_bld_SU_002_Cowshed.model",
+      "tags": ["village", "farm", "large"],
+      "gameplay": {"blocksMovement": true, "blocksProjectiles": true, "blocksVision": true, "providesConcealment": false, "destructible": false, "canFall": false}
+    },
+    {
+      "id": "village_wood_shed",
+      "displayName": "Village wooden shed",
+      "category": "building",
+      "layer": "SolidObstacles",
+      "sourcePackages": ["02_malinovka.pkg", "02_malinovka_hd.pkg"],
+      "sourceRoot": "content/Buildings/hd_bld_SU_003_MiddleWoodShed",
+      "sourceModel": "content/Buildings/hd_bld_SU_003_MiddleWoodShed/normal/lod0/hd_bld_SU_003_MiddleWoodShed.model",
+      "excludedMaterials": ["s_ramp_0"],
+      "tags": ["village", "farm", "medium"],
+      "gameplay": {"blocksMovement": true, "blocksProjectiles": true, "blocksVision": true, "providesConcealment": false, "destructible": false, "canFall": false}
+    },
+    {
+      "id": "village_windmill",
+      "displayName": "Village windmill",
+      "category": "building",
+      "layer": "SolidObstacles",
+      "sourcePackages": ["02_malinovka.pkg", "02_malinovka_hd.pkg"],
+      "sourceRoot": "content/Buildings/hd_bld_EU_223_PMill",
+      "sourceModel": "content/Buildings/hd_bld_EU_223_PMill/normal/lod0/hd_bld_EU_223_PMill_03.model",
+      "excludedMaterials": ["s_wall_0"],
+      "tags": ["village", "landmark", "large"],
+      "gameplay": {"blocksMovement": true, "blocksProjectiles": true, "blocksVision": true, "providesConcealment": false, "destructible": false, "canFall": false}
+    },
+    {
+      "id": "rock_sandstone",
+      "displayName": "Sandstone cover",
+      "category": "rock",
+      "layer": "SolidObstacles",
+      "sourcePackages": ["shared_content_sandbox-part1.pkg", "shared_content_sandbox-part2.pkg", "shared_content_sandbox_hd-part1.pkg", "shared_content_sandbox_hd-part2.pkg"],
+      "sourceRoot": "content/Decor/dec_011_Murovanka_Rock",
+      "sourceModel": "content/Decor/dec_011_Murovanka_Rock/normal/lod0/dec_rock_sandstone_01.model",
+      "tags": ["mountain", "forest", "large"],
+      "gameplay": {"blocksMovement": true, "blocksProjectiles": true, "blocksVision": true, "providesConcealment": false, "destructible": false, "canFall": false}
+    },
+    {
+      "id": "wood_fence",
+      "displayName": "Wooden field fence",
+      "category": "destructible_cover",
+      "layer": "DestructibleObstacles",
+      "sourcePackages": ["shared_content_sandbox-part1.pkg", "shared_content_sandbox-part2.pkg", "shared_content_sandbox_hd-part1.pkg", "shared_content_sandbox_hd-part2.pkg"],
+      "sourceRoot": "content/GatesAndFences/hd_gaf001_WoodFence",
+      "sourceModel": "content/GatesAndFences/hd_gaf001_WoodFence/normal/lod0/hd_gaf001_WoodFence.model",
+      "tags": ["village", "meadow", "small"],
+      "gameplay": {"blocksMovement": true, "blocksProjectiles": true, "blocksVision": false, "providesConcealment": false, "destructible": true, "canFall": false}
+    },
+    {
+      "id": "haystack",
+      "displayName": "Haystack",
+      "category": "destructible_cover",
+      "layer": "DestructibleObstacles",
+      "sourcePackages": ["shared_content_sandbox-part1.pkg", "shared_content_sandbox-part2.pkg", "shared_content_sandbox_hd-part1.pkg", "shared_content_sandbox_hd-part2.pkg"],
+      "sourceRoot": "content/Environment/hd_env_EU_019_Haystack",
+      "sourceModel": "content/Environment/hd_env_EU_019_Haystack/normal/lod0/hd_env_EU_019_Haystack_01.model",
+      "tags": ["village", "meadow", "medium"],
+      "gameplay": {"blocksMovement": true, "blocksProjectiles": false, "blocksVision": true, "providesConcealment": true, "destructible": true, "canFall": false}
+    },
+    {
+      "id": "log_pile",
+      "displayName": "Log pile",
+      "category": "destructible_cover",
+      "layer": "DestructibleObstacles",
+      "sourcePackages": ["shared_content_sandbox-part1.pkg", "shared_content_sandbox-part2.pkg", "shared_content_sandbox_hd-part1.pkg", "shared_content_sandbox_hd-part2.pkg"],
+      "sourceRoot": "content/Environment/hd_env002_Logs",
+      "sourceModel": "content/Environment/hd_env002_Logs/normal/lod0/hd_env002_Logs.model",
+      "excludedMaterials": ["s_wall_0", "s_ramp_0"],
+      "tags": ["forest", "village", "medium"],
+      "gameplay": {"blocksMovement": true, "blocksProjectiles": true, "blocksVision": false, "providesConcealment": false, "destructible": true, "canFall": false}
+    },
+    {
+      "id": "dry_bush",
+      "displayName": "Dry bush",
+      "category": "vegetation",
+      "layer": "Vegetation",
+      "sourcePackages": ["h33_battle_royale_2021.pkg", "h33_battle_royale_2021_hd.pkg"],
+      "sourceRoot": "content/Hangars/h33_battle_royale_2021/Environment/h33_br_004_Bush_Wild_Dry_5m_Big",
+      "sourceModel": "content/Hangars/h33_battle_royale_2021/Environment/h33_br_004_Bush_Wild_Dry_5m_Big/normal/lod0/h33_br_004_Bush_Wild_Dry_5m_Big.model",
+      "tags": ["forest", "meadow", "medium"],
+      "gameplay": {"blocksMovement": false, "blocksProjectiles": false, "blocksVision": false, "providesConcealment": true, "destructible": false, "canFall": false}
+    },
+    {
+      "id": "fallen_tree_root",
+      "displayName": "Fallen tree root",
+      "category": "vegetation",
+      "layer": "Vegetation",
+      "sourcePackages": ["38_mannerheim_line.pkg", "38_mannerheim_line_hd.pkg"],
+      "sourceRoot": "content/Environment/hd_env_EU_001_FallenTree",
+      "sourceModel": "content/Environment/hd_env_EU_001_FallenTree/normal/lod0/hd_env_EU_001_FallenTree.model",
+      "tags": ["forest", "fallen", "small"],
+      "gameplay": {"blocksMovement": false, "blocksProjectiles": false, "blocksVision": false, "providesConcealment": true, "destructible": false, "canFall": false}
+    },
+    {
+      "id": "burnt_tree",
+      "displayName": "Burnt tree",
+      "category": "vegetation",
+      "layer": "Vegetation",
+      "sourcePackages": ["shared_content-part1.pkg", "shared_content-part2.pkg", "shared_content-part3.pkg", "shared_content_hd-part1.pkg", "shared_content_hd-part2.pkg", "shared_content_hd-part3.pkg"],
+      "sourceRoot": "content/Environment/hd_env_UNI_073_BurntTree",
+      "sourceModel": "content/Environment/hd_env_UNI_073_BurntTree/normal/lod0/hd_env_UNI_073_BurntTree_01.model",
+      "tags": ["forest", "dead", "medium"],
+      "gameplay": {"blocksMovement": true, "blocksProjectiles": false, "blocksVision": false, "providesConcealment": false, "destructible": true, "canFall": true, "fallenVariantId": "fallen_tree_root"}
+    }
+  ],
+  "surfaces": [
+    {"id": "meadow_grass", "displayName": "Green meadow grass", "terrainId": "grass", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Grass_Lawn_Green_20_AM.dds"},
+    {"id": "dry_grass", "displayName": "Dry meadow grass", "terrainId": "dry_grass", "tileable": true, "sourcePackage": "shared_content_sandbox-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Grass_Lawn_Dry_03_AM.dds"},
+    {"id": "forest_ground", "displayName": "Forest ground", "terrainId": "forest", "tileable": true, "sourcePackage": "shared_content-part3.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Forest_Ground_AM.dds"},
+    {"id": "wet_ground", "displayName": "Wet ground", "terrainId": "mud", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Ground_wet_01_AM.dds"},
+    {"id": "fine_gravel", "displayName": "Fine gravel", "terrainId": "gravel", "tileable": true, "sourcePackage": "shared_content_sandbox-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Gravel_Sandy_Fine_14_AM.dds"},
+    {"id": "damaged_soil", "displayName": "Damaged soil", "terrainId": "damaged_soil", "tileable": true, "sourcePackage": "shared_content_sandbox-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Soil_Damaged_Big_10_AM.dds"},
+    {"id": "earth", "displayName": "Packed earth", "terrainId": "earth", "tileable": true, "sourcePackage": "shared_content-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_Ground_10_2_AM.dds"}
+  ]
+}
