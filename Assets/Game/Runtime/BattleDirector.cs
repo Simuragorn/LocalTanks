@@ -50,6 +50,7 @@ namespace LocalTanks
         public BattleStrategicPlanner StrategicPlanner { get; private set; }
         public BotStrategicCoordinator StrategicCoordinator { get; private set; }
         public BattleDiagnosticsOverlay DiagnosticsOverlay { get; private set; }
+        public BattleAudioDirector AudioDirector { get; private set; }
         public BattleScenario Scenario => scenario;
         public CombatDatabase CombatDatabase => combatDatabase;
         public NavigationMap NavigationMap => navigationMap;
@@ -76,6 +77,15 @@ namespace LocalTanks
             scenario = battleScenario != null
                 ? battleScenario
                 : throw new ArgumentNullException(nameof(battleScenario));
+        }
+
+        private void Awake()
+        {
+            // The audio layer is attached here rather than in Start so the loading track covers the
+            // moment between the scene waking up and the machines appearing. The map is already known
+            // from the serialised descriptor, and a laboratory that replaces its scenario at runtime
+            // never replaces the map.
+            AudioDirector = BattleAudioDirector.Attach(this);
         }
 
         private void Start()
@@ -163,6 +173,9 @@ namespace LocalTanks
             LocalTanksOverrides.ApplyToLoadedScenes();
 
             LivingCountsChanged?.Invoke(TeamId.Neutral, TeamAAlive, TeamBAlive);
+            // The machines exist, so the battle layer and its announcement start now instead of during
+            // the load. A laboratory that spawns later gets the same call at the same moment.
+            AudioDirector?.BeginBattle();
         }
 
         private void Spawn(BattleScenarioEntry entry, int decisionIndex)

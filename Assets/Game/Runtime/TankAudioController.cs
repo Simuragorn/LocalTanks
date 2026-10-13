@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace LocalTanks
 {
@@ -7,21 +7,25 @@ namespace LocalTanks
         AudioClip Load(string clipId);
     }
 
+    /// <summary>
+    /// The runtime clip provider. Path resolution lives in <see cref="WotAudioClipLibrary"/>, because a
+    /// vehicle clip stays flat in `Clips/` while map and battle clips are grouped in subfolders: one
+    /// resolver for both keeps a second table of paths out of the code.
+    /// </summary>
     public sealed class ResourcesTankAudioClipProvider : ITankAudioClipProvider
     {
         public AudioClip Load(string clipId)
         {
             // Batchmode runs the automated suites on a build machine, where the extracted WoT clips
             // are usually absent and any audio that did play would be a surprise for whoever runs the
-            // tests. Loading nothing keeps the simulation identical and the run silent.
+            // tests. Loading nothing keeps the simulation identical and the run silent. The library
+            // applies the same rule, and this early return keeps the guarantee visible here as well.
             if (Application.isBatchMode)
             {
                 return null;
             }
 
-            return string.IsNullOrWhiteSpace(clipId)
-                ? null
-                : Resources.Load<AudioClip>($"WoTAudio/Clips/{clipId}");
+            return string.IsNullOrWhiteSpace(clipId) ? null : WotAudioClipLibrary.Shared.Load(clipId);
         }
     }
 

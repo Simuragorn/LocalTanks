@@ -20,8 +20,18 @@
                 <ui:Slider name="slider-effects" low-value="0" high-value="100" value="100" class="settings-slider" />
                 <ui:Label name="value-effects" text="100%" class="settings-value" />
             </ui:VisualElement>
+            <ui:VisualElement class="settings-row">
+                <ui:Label text="Музыка" class="settings-label" />
+                <ui:Slider name="slider-music" low-value="0" high-value="100" value="100" class="settings-slider" />
+                <ui:Label name="value-music" text="100%" class="settings-value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings-row">
+                <ui:Label text="Голос и сигналы" class="settings-label" />
+                <ui:Slider name="slider-voice" low-value="0" high-value="100" value="100" class="settings-slider" />
+                <ui:Label name="value-voice" text="100%" class="settings-value" />
+            </ui:VisualElement>
             <ui:VisualElement class="settings-hint-row">
-                <ui:Label text="Техника — двигатель, гусеницы, башня. Эффекты — выстрелы, попадания, уничтожение."
+                <ui:Label text="Техника — двигатель, гусеницы, башня. Эффекты — выстрелы, попадания, уничтожение. Музыка — музыка и атмосфера арены. Голос — реплики экипажа и сигналы боя."
                     class="settings-hint" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-button-row">

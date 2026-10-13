@@ -69,12 +69,46 @@ namespace LocalTanks.Tests
             PlayerSettingsStore.MasterVolume = 0.5f;
             PlayerSettingsStore.TankVolume = 0.4f;
             PlayerSettingsStore.EffectsVolume = 1f;
+            PlayerSettingsStore.MusicVolume = 0.6f;
+            PlayerSettingsStore.VoiceVolume = 0.8f;
 
             Assert.That(PlayerSettingsStore.TankMultiplier, Is.EqualTo(0.2f).Within(0.0001f));
             Assert.That(PlayerSettingsStore.EffectsMultiplier, Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.MusicMultiplier, Is.EqualTo(0.3f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.VoiceMultiplier, Is.EqualTo(0.4f).Within(0.0001f));
 
             PlayerSettingsStore.MasterVolume = 0f;
             Assert.That(PlayerSettingsStore.TankMultiplier, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.EffectsMultiplier, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.MusicMultiplier, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.VoiceMultiplier, Is.EqualTo(0f).Within(0.0001f));
+        }
+
+        [Test]
+        public void Channels_DoNotLeakIntoEachOther()
+        {
+            PlayerSettingsStore.MasterVolume = 1f;
+            PlayerSettingsStore.TankVolume = 1f;
+            PlayerSettingsStore.EffectsVolume = 1f;
+            PlayerSettingsStore.MusicVolume = 1f;
+            PlayerSettingsStore.VoiceVolume = 1f;
+
+            // A player who silences the guns must still hear the capture warning, and a player who wants
+            // a quiet battle must be able to silence the music alone.
+            PlayerSettingsStore.MusicVolume = 0f;
+            PlayerSettingsStore.VoiceVolume = 0f;
+
+            Assert.That(PlayerSettingsStore.TankMultiplier, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.EffectsMultiplier, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.MusicMultiplier, Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.VoiceMultiplier, Is.EqualTo(0f).Within(0.0001f));
+
+            PlayerSettingsStore.MusicVolume = 1f;
+            PlayerSettingsStore.VoiceVolume = 1f;
+            PlayerSettingsStore.EffectsVolume = 0f;
+
+            Assert.That(PlayerSettingsStore.MusicMultiplier, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.VoiceMultiplier, Is.EqualTo(1f).Within(0.0001f));
             Assert.That(PlayerSettingsStore.EffectsMultiplier, Is.EqualTo(0f).Within(0.0001f));
         }
 
@@ -105,12 +139,16 @@ namespace LocalTanks.Tests
             PlayerSettingsStore.MasterVolume = 0.1f;
             PlayerSettingsStore.TankVolume = 0.1f;
             PlayerSettingsStore.EffectsVolume = 0.1f;
+            PlayerSettingsStore.MusicVolume = 0.1f;
+            PlayerSettingsStore.VoiceVolume = 0.1f;
 
             PlayerSettingsStore.ResetToDefaults();
 
             Assert.That(PlayerSettingsStore.MasterVolume, Is.EqualTo(PlayerSettingsStore.DefaultVolume).Within(0.0001f));
             Assert.That(PlayerSettingsStore.TankVolume, Is.EqualTo(PlayerSettingsStore.DefaultVolume).Within(0.0001f));
             Assert.That(PlayerSettingsStore.EffectsVolume, Is.EqualTo(PlayerSettingsStore.DefaultVolume).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.MusicVolume, Is.EqualTo(PlayerSettingsStore.DefaultVolume).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.VoiceVolume, Is.EqualTo(PlayerSettingsStore.DefaultVolume).Within(0.0001f));
         }
     }
 }

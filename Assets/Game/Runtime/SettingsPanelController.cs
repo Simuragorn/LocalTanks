@@ -21,9 +21,13 @@ namespace LocalTanks
         private Slider masterSlider;
         private Slider tankSlider;
         private Slider effectsSlider;
+        private Slider musicSlider;
+        private Slider voiceSlider;
         private Label masterValue;
         private Label tankValue;
         private Label effectsValue;
+        private Label musicValue;
+        private Label voiceValue;
         private Button resetButton;
         private Button closeButton;
 
@@ -117,24 +121,33 @@ namespace LocalTanks
             masterSlider = source.rootVisualElement.Q<Slider>("slider-master");
             tankSlider = source.rootVisualElement.Q<Slider>("slider-tank");
             effectsSlider = source.rootVisualElement.Q<Slider>("slider-effects");
+            musicSlider = source.rootVisualElement.Q<Slider>("slider-music");
+            voiceSlider = source.rootVisualElement.Q<Slider>("slider-voice");
             masterValue = source.rootVisualElement.Q<Label>("value-master");
             tankValue = source.rootVisualElement.Q<Label>("value-tank");
             effectsValue = source.rootVisualElement.Q<Label>("value-effects");
+            musicValue = source.rootVisualElement.Q<Label>("value-music");
+            voiceValue = source.rootVisualElement.Q<Label>("value-voice");
             resetButton = source.rootVisualElement.Q<Button>("button-reset");
             closeButton = source.rootVisualElement.Q<Button>("button-close");
 
-            if (overlay == null || masterSlider == null || tankSlider == null || effectsSlider == null)
+            if (overlay == null || masterSlider == null || tankSlider == null || effectsSlider == null ||
+                musicSlider == null || voiceSlider == null)
             {
-                Debug.LogError("Settings panel markup is incomplete; the overlay needs three named sliders.");
+                Debug.LogError("Settings panel markup is incomplete; the overlay needs five named sliders.");
                 return;
             }
 
             masterSlider.value = PlayerSettingsStore.MasterVolume * 100f;
             tankSlider.value = PlayerSettingsStore.TankVolume * 100f;
             effectsSlider.value = PlayerSettingsStore.EffectsVolume * 100f;
+            musicSlider.value = PlayerSettingsStore.MusicVolume * 100f;
+            voiceSlider.value = PlayerSettingsStore.VoiceVolume * 100f;
             masterSlider.RegisterValueChangedCallback(OnMasterChanged);
             tankSlider.RegisterValueChangedCallback(OnTankChanged);
             effectsSlider.RegisterValueChangedCallback(OnEffectsChanged);
+            musicSlider.RegisterValueChangedCallback(OnMusicChanged);
+            voiceSlider.RegisterValueChangedCallback(OnVoiceChanged);
             if (resetButton != null)
             {
                 resetButton.clicked += OnResetClicked;
@@ -154,6 +167,8 @@ namespace LocalTanks
             if (masterSlider != null) masterSlider.UnregisterValueChangedCallback(OnMasterChanged);
             if (tankSlider != null) tankSlider.UnregisterValueChangedCallback(OnTankChanged);
             if (effectsSlider != null) effectsSlider.UnregisterValueChangedCallback(OnEffectsChanged);
+            if (musicSlider != null) musicSlider.UnregisterValueChangedCallback(OnMusicChanged);
+            if (voiceSlider != null) voiceSlider.UnregisterValueChangedCallback(OnVoiceChanged);
             if (resetButton != null) resetButton.clicked -= OnResetClicked;
             if (closeButton != null) closeButton.clicked -= OnCloseClicked;
         }
@@ -176,12 +191,26 @@ namespace LocalTanks
             RefreshLabels();
         }
 
+        private void OnMusicChanged(ChangeEvent<float> change)
+        {
+            PlayerSettingsStore.MusicVolume = change.newValue / 100f;
+            RefreshLabels();
+        }
+
+        private void OnVoiceChanged(ChangeEvent<float> change)
+        {
+            PlayerSettingsStore.VoiceVolume = change.newValue / 100f;
+            RefreshLabels();
+        }
+
         private void OnResetClicked()
         {
             PlayerSettingsStore.ResetToDefaults();
             if (masterSlider != null) masterSlider.value = PlayerSettingsStore.MasterVolume * 100f;
             if (tankSlider != null) tankSlider.value = PlayerSettingsStore.TankVolume * 100f;
             if (effectsSlider != null) effectsSlider.value = PlayerSettingsStore.EffectsVolume * 100f;
+            if (musicSlider != null) musicSlider.value = PlayerSettingsStore.MusicVolume * 100f;
+            if (voiceSlider != null) voiceSlider.value = PlayerSettingsStore.VoiceVolume * 100f;
             RefreshLabels();
         }
 
@@ -195,6 +224,8 @@ namespace LocalTanks
             if (masterValue != null) masterValue.text = $"{Mathf.RoundToInt(PlayerSettingsStore.MasterVolume * 100f)}%";
             if (tankValue != null) tankValue.text = $"{Mathf.RoundToInt(PlayerSettingsStore.TankVolume * 100f)}%";
             if (effectsValue != null) effectsValue.text = $"{Mathf.RoundToInt(PlayerSettingsStore.EffectsVolume * 100f)}%";
+            if (musicValue != null) musicValue.text = $"{Mathf.RoundToInt(PlayerSettingsStore.MusicVolume * 100f)}%";
+            if (voiceValue != null) voiceValue.text = $"{Mathf.RoundToInt(PlayerSettingsStore.VoiceVolume * 100f)}%";
         }
     }
 }

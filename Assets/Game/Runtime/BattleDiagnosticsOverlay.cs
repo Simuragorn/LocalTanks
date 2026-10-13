@@ -149,12 +149,12 @@ namespace LocalTanks
 
             if (planner == null || planner.MapAnalysis == null)
             {
-                GUI.Label(new Rect(panel.x + 24f, panel.y + 62f, panel.width - 48f, 80f),
-                    "Планировщик ещё не подготовил анализ карты.", bodyStyle);
+                GUI.Label(new Rect(panel.x + 24f, panel.y + 62f, panel.width - 48f, 120f),
+                    "Планировщик ещё не подготовил анализ карты.\n\n" + BuildAudioText(), bodyStyle);
                 return;
             }
 
-            string text = BuildMapAnalysisText(planner);
+            string text = BuildAudioText() + "\n\n" + BuildMapAnalysisText(planner);
             Rect viewport = new Rect(panel.x + 18f, panel.y + 58f, panel.width - 36f, panel.height - 102f);
             float contentHeight = Mathf.Max(viewport.height - 4f, bodyStyle.CalcHeight(new GUIContent(text), viewport.width - 32f) + 16f);
             mapScroll = GUI.BeginScrollView(viewport, mapScroll,
@@ -180,6 +180,59 @@ namespace LocalTanks
                 height += 10f;
             }
             return height + 4f;
+        }
+
+        /// <summary>
+        /// The audio layer, shown with the map analysis because music, ambience and signals belong to the
+        /// arena. It reports what is actually playing and why the layer last changed, so a silent battle
+        /// has a stated reason instead of an unexplained absence of sound.
+        /// </summary>
+        private string BuildAudioText()
+        {
+            BattleAudioDirector audio = director != null ? director.AudioDirector : null;
+            StringBuilder text = new StringBuilder();
+            text.AppendLine("—— ЗВУК АРЕНЫ ——");
+            if (audio == null)
+            {
+                text.AppendLine("Аудиослой не подключён к этой сцене.");
+                return text.ToString();
+            }
+
+            text.AppendLine($"Профиль: {(audio.HasProfile ? $"{audio.Profile.mapId} ({audio.Profile.displayName})" : "нет")}   " +
+                            $"Библиотека: {audio.Library?.DescribeState() ?? "нет"}");
+            BattleMusicController music = audio.Music;
+            if (music != null)
+            {
+                text.AppendLine($"Музыка: {music.State}, настроение {music.Mood}, напряжённость {music.Intensity:0.00}");
+                text.AppendLine($"Клип: {Show(music.CurrentClipId)}; переходов {music.TransitionCount}; причина: {music.LastTransitionReason}");
+            }
+
+            BattleFlowAudioController flow = audio.Flow;
+            if (flow != null)
+            {
+                text.AppendLine($"Атмосфера: {(flow.IsAmbiencePlaying ? Show(flow.AmbienceClipId) : "не играет")}");
+                text.AppendLine($"Захват: {(flow.IsCaptureLoopPlaying ? $"цикл играет ({flow.CapturingBaseCount} баз)" : "цикл остановлен")}; " +
+                                $"реплик {flow.VoicePlayCount}, сигналов {flow.SignalPlayCount}; последнее: {flow.LastReason}");
+            }
+
+            if (audio.Profile != null)
+            {
+                text.AppendLine($"Уровни профиля: музыка {Percent(audio.Profile.musicVolume)}, атмосфера {Percent(audio.Profile.ambienceVolume)}, " +
+                                $"сигналы {Percent(audio.Profile.signalVolume)}, голос {Percent(audio.Profile.voiceVolume)}");
+                text.AppendLine($"Каналы игрока: музыка {Percent(PlayerSettingsStore.MusicMultiplier)}, голос {Percent(PlayerSettingsStore.VoiceMultiplier)}");
+            }
+
+            return text.ToString();
+        }
+
+        private static string Show(string clipId)
+        {
+            return string.IsNullOrWhiteSpace(clipId) ? "нет" : clipId;
+        }
+
+        private static string Percent(float value)
+        {
+            return $"{Mathf.RoundToInt(Mathf.Clamp01(value) * 100f)}%";
         }
 
         private static string BuildMapAnalysisText(BattleStrategicPlanner planner)

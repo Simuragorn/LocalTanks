@@ -20,8 +20,9 @@ namespace LocalTanks.Tests
 
         private static readonly string[] RequiredControls =
         {
-            "settings-overlay", "slider-master", "slider-tank", "slider-effects",
-            "value-master", "value-tank", "value-effects", "button-reset", "button-close"
+            "settings-overlay", "slider-master", "slider-tank", "slider-effects", "slider-music", "slider-voice",
+            "value-master", "value-tank", "value-effects", "value-music", "value-voice",
+            "button-reset", "button-close"
         };
 
         [Test]

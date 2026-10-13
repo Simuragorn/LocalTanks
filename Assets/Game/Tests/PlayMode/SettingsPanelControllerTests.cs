@@ -17,17 +17,20 @@ namespace LocalTanks.Tests
         private const string SettingsOverlayPath = "Assets/Game/UI/SettingsOverlay.uxml";
 
         private float previousMaster;
+        private float previousMusic;
 
         [SetUp]
         public void CapturePreviousValue()
         {
             previousMaster = PlayerSettingsStore.MasterVolume;
+            previousMusic = PlayerSettingsStore.MusicVolume;
         }
 
         [TearDown]
         public void RestorePreviousValue()
         {
             PlayerSettingsStore.MasterVolume = previousMaster;
+            PlayerSettingsStore.MusicVolume = previousMusic;
         }
 
         [UnityTest]
@@ -65,6 +68,20 @@ namespace LocalTanks.Tests
                 Label value = root.Q<Label>("value-master");
                 Assert.That(value, Is.Not.Null);
                 Assert.That(value.text, Is.EqualTo("40%"));
+
+                // The music channel is a second bus with its own slider, and it must not be a decoration.
+                Slider music = root.Q<Slider>("slider-music");
+                Assert.That(music, Is.Not.Null, "The music slider is missing from the document.");
+                music.value = 25f;
+                yield return null;
+                Assert.That(PlayerSettingsStore.MusicVolume, Is.EqualTo(0.25f).Within(0.001f),
+                    "Moving the music slider must reach the settings store.");
+                Label musicValue = root.Q<Label>("value-music");
+                Assert.That(musicValue, Is.Not.Null);
+                Assert.That(musicValue.text, Is.EqualTo("25%"));
+
+                Slider voice = root.Q<Slider>("slider-voice");
+                Assert.That(voice, Is.Not.Null, "The voice slider is missing from the document.");
 
                 controller.SetOpen(true);
                 Assert.That(controller.IsOpen, Is.True);

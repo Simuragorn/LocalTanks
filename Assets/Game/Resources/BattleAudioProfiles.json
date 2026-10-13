@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "mapId": "10_hills_tactical",
+      "displayName": "Рудники",
+      "music": {
+        "loading": "mines_music_loading",
+        "relaxed": "mines_music_battle_relaxed",
+        "intensive": "mines_music_battle_intensive",
+        "victory": "mines_music_result_victory",
+        "draw": "mines_music_result_draw",
+        "defeat": "mines_music_result_defeat"
+      },
+      "ambienceClipId": "mines_ambient_wind_summer",
+      "battleStartClipId": "battle_start_ru",
+      "captureProgressClipId": "base_capture_progress_loop",
+      "baseCapturedClipId": "base_captured_ru",
+      "battleEndByLastKillClipId": "battle_end_by_last_kill",
+      "battleEndByCaptureClipId": "battle_end_by_base_capture",
+      "musicVolume": 0.45,
+      "ambienceVolume": 0.3,
+      "signalVolume": 0.6,
+      "voiceVolume": 0.85
+    }
+  ]
+}
