@@ -28,3 +28,11 @@ ibc_vo_pc_request_retreat
 ibc_vo_pc_reply_thank_you
 vo_start_battle
 vo_target_captured
+vo_target_lost
+vo_armor_not_pierced_by_player
+vo_armor_ricochet_by_player
+vo_enemy_hp_damaged_by_projectile_by_player
+vo_enemy_killed_by_player
+vo_enemy_killed
+vo_ally_killed_by_player
+vo_vehicle_destroyed

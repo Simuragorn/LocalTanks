@@ -17,7 +17,9 @@ Extract only the Wwise events the project actually names, decode them to WAV in 
 - `Tools/WoTAudioPipeline/wwnames.txt` — Wwise name hints copied into the work bank folder.
 - `Docs/WOT_MEDIA_AUDIT.md` — how module → Wwise event mapping was proven for this installation.
 - `Assets/Game/GameData/Definitions/Tanks/<tank_id>.json` — the per-vehicle `audio` object that Unity consumes.
-- `Assets/Game/Resources/BattleAudioProfiles.json` — the per-arena audio profile: music states, ambience, battle flow and voice clips plus their levels.
+- `Assets/Game/Resources/BattleAudioProfiles.json` — the per-arena audio profile: music states, ambience and battle signals plus their levels.
+- `Assets/Game/Resources/CrewVoiceProfiles.json` — nation → voice language, role → clip ID pattern, and the crew voice level. This is the only place the language of a crew line is decided.
+- `Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py` — collects voice event names from the client scripts and verifies them by hash; prints per-nation voice language IDs.
 - `Assets/Game/Runtime/WotAudioClipLibrary.cs` — the runtime resolver that turns a stable clip ID into the local WAV path through the manifest.
 
 Read the scripts before changing anything; the repository wins over this summary.
@@ -38,6 +40,7 @@ The vehicle group currently declares thirteen clips. Reuse these IDs instead of 
 | Arena music | `mines_music_loading`, `mines_music_battle_relaxed`, `mines_music_battle_intensive`, `mines_music_result_victory`, `mines_music_result_draw`, `mines_music_result_defeat` |
 | Ambience | `mines_ambient_wind_summer` |
 | Battle flow | `battle_start_ru`, `base_capture_progress_loop`, `base_captured_ru`, `battle_end_by_last_kill`, `battle_end_by_base_capture` |
+| Crew voice (ru) | `crew_not_penetrated_ru`, `crew_ricochet_ru`, `crew_penetrated_ru`, `crew_enemy_destroyed_ru`, `crew_enemy_destroyed_by_ally_ru`, `crew_ally_destroyed_ru`, `crew_vehicle_destroyed_ru`, `crew_base_lost_ru` |
 | Quick commands | `quick_command_affirmative_ru`, `quick_command_need_help_ru`, `quick_command_supporting_ru`, `quick_command_retreat_ru`, `quick_command_thanks_ru` |
 
 MS-1 and Leichttraktor deliberately share `engine_eng_gaz_aa_pc`; their guns and turret mechanisms stay separate. One physical WAV per event, never one per vehicle.
@@ -110,11 +113,33 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
 
    `mapId` must be the ID the tactical descriptor reports — `10_hills_tactical`, not `10_hills`. Then run `Local Tanks > Data/Validate Battle Audio Profiles`: it fails with the list of known arena IDs and the undeclared clip ID when either is wrong, and the same check runs automatically when the file changes. No scene has to be edited: `BattleAudioDirector` attaches itself to the battle director and picks the profile for the loaded map.
 
-6. **Refresh Unity.** Run `Local Tanks > Build Combat Assets` (or reimport combat definitions) so `TankAudioProfile` and the prefabs are rebuilt from JSON.
+6. **Add a language to the crew voice.** Crew lines live in localized banks (`audioww/<nation>/voiceover.bnk`), so the same role is a different recording per language and the clip ID carries the language suffix. The data decides which suffix a machine asks for: `Assets/Game/Resources/CrewVoiceProfiles.json` maps a nation to a language and a role to a clip ID pattern with `{lang}`.
+
+   1. Take the language ID and bank entry from the table in `Tools/WoTAudioPipeline/README.md` (they are read from the bank headers, not guessed). Every nation currently points at `ru` because only the Russian set is extracted.
+   2. Declare one clip per role for the new language in `audio_clips.json`, copying the `ru` entries and changing `clipId` suffix, `bankEntry` and `languageId`:
+      ```json
+      {
+        "clipId": "crew_not_penetrated_de",
+        "group": "Universal/CrewVoice/German",
+        "bank": "germany_voiceover",
+        "bankEntry": "germany/voiceover.bnk",
+        "languageId": "665432976",
+        "event": "vo_armor_not_pierced_by_player",
+        "variantIndex": 0,
+        "trimTrailingSilenceDb": -45,
+        "usage": "voice"
+      }
+      ```
+   3. Run the pipeline, then point the nation at the new language in `CrewVoiceProfiles.json`. `Local Tanks > Data/Validate Battle Audio Profiles` fails until every clip of every language in use is declared, so a half-finished language cannot ship as silence.
+   4. Keep `crew_*_{lang}` naming and never inline a language in a role pattern: the validator rejects a pattern without `{lang}`.
+
+7. **Refresh Unity.** Run `Local Tanks > Build Combat Assets` (or reimport combat definitions) so `TankAudioProfile` and the prefabs are rebuilt from JSON.
 
 ## Hazards
 
 - **`-Force` is required when an event mapping changes.** Without it, existing TXTP folders and WAV files are reused and the manifest keeps the old selection.
+- **Never guess an event name; prove it by hash.** A bank stores only hashed names. Collect candidate names from the client's own packed XML (`scripts.pkg` — arena definitions and `item_defs/hints/battle_hints.xml` reference them as plain strings), then require the FNV-1 32-bit hash of the name to appear as a `CAkEvent` id in a wwiser dump. `Scripts/inspect_wot_voice.py` does both steps and prints the language IDs of every nation's voice bank; a name that is only a game hint identifier (for example `vo_hint_*`-style battle event ids) will not be in the bank, and registering it produces no clip at all.
+- **An event name also has to be in `wwnames.txt`.** `wwiser -gf <event>` resolves the name through the name list; adding the clip to `audio_clips.json` without the hint name can produce no TXTP variants even though the hash exists.
 - **Variants differ per event.** `variantIndex` selects one decoded variant out of however many the event produced; the pipeline fails loudly when the requested index does not exist. Record the chosen variant and its count in the manifest for reproducibility.
 - **Bank-version detection uses a candidate list.** If it throws after a WoT client update, the client's bank version appeared outside the known candidates; extend the list deliberately rather than guessing.
 - **`mediaBank` changes where media are extracted and decoded from.** `mediaEntries` may list multiple PCK parts; they are merged with hard links rather than copied. Nested localized banks also require their exact `languageId` or wwiser may silently select no usable event.
@@ -129,7 +154,7 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
 
 1. The pipeline exits successfully and reports the detected bank version and generated clip count.
 2. `Assets/LocalOnly/Resources/WoTAudio/audio_manifest.json` lists every declared clip with `group`, `relativePath`, `variantCount`, selected TXTP and SHA-256; every file exists and matches its hash.
-3. Every clip ID referenced by any tank JSON resolves to a manifest entry and a WAV file, and every clip ID referenced by an arena profile is declared in `audio_clips.json`. `Local Tanks > Data/Validate Battle Audio Profiles` reports no error and `BattleAudioProfileTests` passes; an unknown `mapId` is reported with the list of known arenas.
+3. Every clip ID referenced by any tank JSON resolves to a manifest entry and a WAV file, and every clip ID referenced by an arena profile or by a crew voice language in use is declared in `audio_clips.json`. `Local Tanks > Data/Validate Battle Audio Profiles` reports no error and `BattleAudioProfileTests` passes; an unknown `mapId` is reported with the list of known arenas, and a nation pointed at a language without declared clips is reported with the languages that do exist.
 4. Reimporting combat definitions succeeds; the Edit Mode audio definition tests pass.
 5. Play Mode confirms the engine and gun sources load and react to an actual shot (see `TankAudioPlayModeTests`).
 6. `git ls-files Assets/LocalOnly LocalData` is empty and the prefab YAML contains no `Assets/LocalOnly` GUID.

@@ -22,6 +22,7 @@ namespace LocalTanks
 
         public BattleMusicController Music { get; private set; }
         public BattleFlowAudioController Flow { get; private set; }
+        public CrewVoiceController Crew { get; private set; }
         public BattleAudioProfile Profile => profile;
         public WotAudioClipLibrary Library => library;
         public bool HasProfile => profile != null;
@@ -89,13 +90,20 @@ namespace LocalTanks
                 Configure(director, false);
             }
 
+            // Crew voice depends on the player's machine, which only exists once the battle spawned, and
+            // it is not tied to an arena: a map without an audio profile still gets its crew lines.
+            Crew ??= gameObject.AddComponent<CrewVoiceController>();
+            Crew.Configure(director, library);
+
             if (profile == null)
             {
+                status = Crew.IsActive ? "звучит только экипаж: у арены нет профиля звука" : status;
                 return;
             }
 
             Music.BeginBattle(Time.time);
-            Flow.PlayBattleStart();
+            Flow.StartAmbience();
+            Crew.PlayBattleStart();
             status = "бой звучит";
         }
 
@@ -109,6 +117,7 @@ namespace LocalTanks
         {
             Music?.Stop();
             Flow?.StopAll();
+            Crew?.StopAll();
         }
 
         private void OnDestroy()
@@ -268,7 +277,8 @@ namespace LocalTanks
 
         private void OnBaseCaptured(CaptureBase captureBase, TeamId previousOwner, TeamId newOwner)
         {
-            Flow?.PlayBaseCaptured();
+            // The completion line is crew voice, so the crew controller owns it; this only feeds the
+            // intensity model that decides which music layer plays.
             RegisterEvent(BattleAudioEventKind.Captured);
         }
 

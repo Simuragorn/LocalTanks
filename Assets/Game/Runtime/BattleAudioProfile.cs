@@ -29,14 +29,8 @@ namespace LocalTanks
         public BattleMusicClipIds music = new BattleMusicClipIds();
         public string ambienceClipId;
 
-        /// <summary>Voice line played once when the tanks appear.</summary>
-        public string battleStartClipId;
-
         /// <summary>Loop that runs while a base is being captured; stopped by the runtime, not by a clip.</summary>
         public string captureProgressClipId;
-
-        /// <summary>Voice line played when a base finishes changing hands.</summary>
-        public string baseCapturedClipId;
 
         /// <summary>Signal for a battle that ended with the last enemy destroyed.</summary>
         public string battleEndByLastKillClipId;
@@ -53,9 +47,6 @@ namespace LocalTanks
 
         /// <summary>Battle signals: capture notices and end-of-battle stingers.</summary>
         [Range(0f, 1f)] public float signalVolume = 0.65f;
-
-        /// <summary>Radio voice lines, both the battle flow and (later) the quick commands.</summary>
-        [Range(0f, 1f)] public float voiceVolume = 0.85f;
 
         public string[] Validate()
         {
@@ -86,7 +77,6 @@ namespace LocalTanks
             CheckVolume(errors, "musicVolume", musicVolume);
             CheckVolume(errors, "ambienceVolume", ambienceVolume);
             CheckVolume(errors, "signalVolume", signalVolume);
-            CheckVolume(errors, "voiceVolume", voiceVolume);
             return errors.ToArray();
         }
 
@@ -103,8 +93,7 @@ namespace LocalTanks
 
             foreach (string clipId in new[]
                      {
-                         ambienceClipId, battleStartClipId, captureProgressClipId, baseCapturedClipId,
-                         battleEndByLastKillClipId, battleEndByCaptureClipId
+                         ambienceClipId, captureProgressClipId, battleEndByLastKillClipId, battleEndByCaptureClipId
                      })
             {
                 if (!string.IsNullOrWhiteSpace(clipId)) yield return clipId;

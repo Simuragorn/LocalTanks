@@ -3,23 +3,23 @@ using UnityEngine;
 
 namespace LocalTanks
 {
-    /// <summary>
-    /// Battle flow audio that is not music: the announcement that the battle began, the capture loop and
-    /// its completion line, and the end-of-battle stinger.
-    /// </summary>
-    /// <remarks>
-    /// Every trigger is an event the battle already raises, so this controller adds no new game rule. The
-    /// capture loop deserves a note: in World of Tanks `base_capture_1` starts the loop and
-    /// `base_capture_2` stops it, and the latter is a control event with digital silence rather than a
-    /// clip. The runtime therefore stops its own source instead of waiting for a stop clip.
-    /// </remarks>
-    public sealed class BattleFlowAudioController : MonoBehaviour
+        /// <summary>
+        /// Battle flow audio that is not music and not crew voice: the capture loop, its completion
+        /// signal and the end-of-battle stinger. Crew lines belong to <see cref="CrewVoiceController"/>,
+        /// because the language of a line depends on the nation of the machine that hears it.
+        /// </summary>
+        /// <remarks>
+        /// Every trigger is an event the battle already raises, so this controller adds no new game rule.
+        /// The capture loop deserves a note: in World of Tanks `base_capture_1` starts the loop and
+        /// `base_capture_2` stops it, and the latter is a control event with digital silence rather than a
+        /// clip. The runtime therefore stops its own source instead of waiting for a stop clip.
+        /// </remarks>
+        public sealed class BattleFlowAudioController : MonoBehaviour
     {
         private readonly HashSet<string> capturingBases = new HashSet<string>();
 
         private BattleAudioProfile profile;
         private WotAudioClipLibrary library;
-        private AudioSource voiceSource;
         private AudioSource signalSource;
         private AudioSource captureSource;
         private AudioSource ambienceSource;
@@ -28,7 +28,6 @@ namespace LocalTanks
 
         public string LastClipId { get; private set; } = string.Empty;
         public string LastReason { get; private set; } = "сигналов ещё не было";
-        public int VoicePlayCount { get; private set; }
         public int SignalPlayCount { get; private set; }
         public int CaptureLoopStartCount { get; private set; }
         public int CaptureLoopStopCount { get; private set; }
@@ -43,11 +42,7 @@ namespace LocalTanks
         public string AmbienceClipId { get; private set; } = string.Empty;
         public int CapturingBaseCount => capturingBases.Count;
 
-        /// <summary>Voice and battle signals share the `Voice` channel, so both are always audible together.</summary>
-        public float VoiceVolume => profile != null
-            ? profile.voiceVolume * PlayerSettingsStore.VoiceMultiplier
-            : 0f;
-
+        /// <summary>Battle signals share the `Voice` channel with crew lines, so both follow one slider.</summary>
         public float SignalVolume => profile != null
             ? profile.signalVolume * PlayerSettingsStore.VoiceMultiplier
             : 0f;
@@ -61,17 +56,9 @@ namespace LocalTanks
         {
             profile = audioProfile;
             library = clipLibrary ?? WotAudioClipLibrary.Shared;
-            voiceSource ??= CreateSource("BattleVoice", false);
             signalSource ??= CreateSource("BattleSignal", false);
             captureSource ??= CreateSource("BattleCaptureLoop", true);
             ambienceSource ??= CreateSource("BattleAmbience", true);
-        }
-
-        /// <summary>The battle announcement, played once when the tanks appear. Also starts the ambience.</summary>
-        public void PlayBattleStart()
-        {
-            StartAmbience();
-            PlayVoice(profile?.battleStartClipId, "начало боя");
         }
 
         /// <summary>Starts the map ambience loop, once per battle.</summary>
@@ -93,12 +80,6 @@ namespace LocalTanks
             ambienceSource.Play();
             ambienceActive = true;
             AmbienceClipId = profile.ambienceClipId;
-        }
-
-        /// <summary>The completion line of a capture that changed the owner of a base.</summary>
-        public void PlayBaseCaptured()
-        {
-            PlayVoice(profile?.baseCapturedClipId, "база захвачена");
         }
 
         /// <summary>
@@ -133,7 +114,6 @@ namespace LocalTanks
 
         public void StopAll()
         {
-            if (voiceSource != null) voiceSource.Stop();
             if (signalSource != null) signalSource.Stop();
             if (captureSource != null) captureSource.Stop();
             if (ambienceSource != null) ambienceSource.Stop();
@@ -180,18 +160,6 @@ namespace LocalTanks
             CaptureLoopStartCount++;
             LastClipId = profile.captureProgressClipId;
             LastReason = "идёт захват базы";
-        }
-
-        private void PlayVoice(string clipId, string reason)
-        {
-            if (voiceSource == null || !PlayOneShot(voiceSource, clipId, VoiceVolume))
-            {
-                return;
-            }
-
-            VoicePlayCount++;
-            LastClipId = clipId;
-            LastReason = reason;
         }
 
         private void PlaySignal(string clipId, string reason)

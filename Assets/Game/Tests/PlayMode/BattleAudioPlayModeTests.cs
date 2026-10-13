@@ -25,6 +25,14 @@ namespace LocalTanks.Tests
                 { ""clipId"": ""mines_ambient_wind_summer"", ""relativePath"": ""Clips/Mines/Ambience/mines_ambient_wind_summer.wav"" },
                 { ""clipId"": ""battle_start_ru"", ""relativePath"": ""Clips/Universal/BattleFlow/Russian/battle_start_ru.wav"" },
                 { ""clipId"": ""base_captured_ru"", ""relativePath"": ""Clips/Universal/BaseCapture/Russian/base_captured_ru.wav"" },
+                { ""clipId"": ""crew_ricochet_ru"", ""relativePath"": ""Clips/Universal/CrewVoice/Russian/crew_ricochet_ru.wav"" },
+                { ""clipId"": ""crew_not_penetrated_ru"", ""relativePath"": ""Clips/Universal/CrewVoice/Russian/crew_not_penetrated_ru.wav"" },
+                { ""clipId"": ""crew_penetrated_ru"", ""relativePath"": ""Clips/Universal/CrewVoice/Russian/crew_penetrated_ru.wav"" },
+                { ""clipId"": ""crew_enemy_destroyed_ru"", ""relativePath"": ""Clips/Universal/CrewVoice/Russian/crew_enemy_destroyed_ru.wav"" },
+                { ""clipId"": ""crew_enemy_destroyed_by_ally_ru"", ""relativePath"": ""Clips/Universal/CrewVoice/Russian/crew_enemy_destroyed_by_ally_ru.wav"" },
+                { ""clipId"": ""crew_ally_destroyed_ru"", ""relativePath"": ""Clips/Universal/CrewVoice/Russian/crew_ally_destroyed_ru.wav"" },
+                { ""clipId"": ""crew_vehicle_destroyed_ru"", ""relativePath"": ""Clips/Universal/CrewVoice/Russian/crew_vehicle_destroyed_ru.wav"" },
+                { ""clipId"": ""crew_base_lost_ru"", ""relativePath"": ""Clips/Universal/CrewVoice/Russian/crew_base_lost_ru.wav"" },
                 { ""clipId"": ""base_capture_progress_loop"", ""relativePath"": ""Clips/Universal/BaseCapture/base_capture_progress_loop.wav"" },
                 { ""clipId"": ""battle_end_by_last_kill"", ""relativePath"": ""Clips/Universal/BattleFlow/battle_end_by_last_kill.wav"" }
             ]
@@ -159,13 +167,11 @@ namespace LocalTanks.Tests
                 BattleFlowAudioController flow = host.AddComponent<BattleFlowAudioController>();
                 flow.Configure(BuildProfile(), BuildLibrary(clips));
 
-                flow.PlayBattleStart();
+                flow.StartAmbience();
                 yield return null;
 
                 Assert.That(flow.IsAmbiencePlaying, Is.True, "The map ambience starts with the battle.");
                 Assert.That(flow.AmbienceClipId, Is.EqualTo("mines_ambient_wind_summer"));
-                Assert.That(flow.VoicePlayCount, Is.EqualTo(1));
-                Assert.That(flow.LastClipId, Is.EqualTo("battle_start_ru"));
 
                 flow.ApplyCaptureState("base_b", BaseCaptureState.Capturing);
                 yield return null;
@@ -184,10 +190,6 @@ namespace LocalTanks.Tests
                     "Taking the base must stop the loop even when the state jumps straight to owned.");
                 Assert.That(flow.CaptureLoopStartCount, Is.EqualTo(2));
                 Assert.That(flow.CaptureLoopStopCount, Is.EqualTo(2));
-
-                flow.PlayBaseCaptured();
-                Assert.That(flow.VoicePlayCount, Is.EqualTo(2));
-                Assert.That(flow.LastClipId, Is.EqualTo("base_captured_ru"));
 
                 flow.PlayBattleEnd(false);
                 Assert.That(flow.SignalPlayCount, Is.EqualTo(1));
@@ -240,6 +242,157 @@ namespace LocalTanks.Tests
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator CrewVoice_FollowsThePlayersOwnBattleInTheNationsLanguage()
+        {
+            GameObject host = new GameObject("CrewVoiceHost");
+            List<AudioClip> clips = new List<AudioClip>();
+            List<Object> spawned = new List<Object>();
+            try
+            {
+                host.AddComponent<AudioListener>();
+                CrewVoiceController crew = host.AddComponent<CrewVoiceController>();
+                CrewVoiceProfileCatalog catalog = CrewVoiceProfileCatalog.Load();
+                Assert.That(catalog.roles.Length, Is.EqualTo(10),
+                    "The committed crew voice catalog must declare every role.");
+
+                // The player drives a German machine, which still speaks Russian because that is the only
+                // extracted set: this is exactly the scaffolding the project asked for.
+                TeamMember player = BuildMember("PlayerTank", TeamId.TeamA, TankNation.Germany, spawned);
+                TeamMember enemy = BuildMember("EnemyTank", TeamId.TeamB, TankNation.USSR, spawned);
+                TeamMember ally = BuildMember("AllyTank", TeamId.TeamA, TankNation.USSR, spawned);
+                crew.Configure(player, BuildLibrary(clips), catalog, new[] { player, enemy, ally });
+
+                Assert.That(crew.IsActive, Is.True);
+                Assert.That(crew.Language, Is.EqualTo("ru"));
+                Assert.That(crew.Volume, Is.EqualTo(catalog.volume * PlayerSettingsStore.VoiceMultiplier).Within(0.001f));
+
+                crew.PlayBattleStart();
+                Assert.That(crew.LastClipId, Is.EqualTo("battle_start_ru"));
+
+                TankArmor enemyArmor = enemy.GetComponent<TankArmor>();
+                crew.ReportShotResult(enemyArmor, ImpactOutcome.Blocked, false);
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_not_penetrated_ru"));
+                crew.ReportShotResult(enemyArmor, ImpactOutcome.Ricocheted, false);
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_ricochet_ru"));
+                crew.ReportShotResult(enemyArmor, ImpactOutcome.Penetrated, false);
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_penetrated_ru"));
+
+                // Hitting a friendly machine is not a line of its own; destroying one is.
+                TankArmor allyArmor = ally.GetComponent<TankArmor>();
+                string afterHit = crew.LastClipId;
+                crew.ReportShotResult(allyArmor, ImpactOutcome.Penetrated, false);
+                Assert.That(crew.LastClipId, Is.EqualTo(afterHit));
+                crew.ReportShotResult(allyArmor, ImpactOutcome.Penetrated, true);
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_ally_destroyed_ru"));
+
+                // The player's own kill: the victim reports itself first inside ResolveImpact, so the
+                // generic line has to yield to the player's own line for the same machine.
+                crew.MarkIncomingHit(enemyArmor);
+                enemy.GetComponent<TankHealth>().ApplyDamage(100000);
+                Assert.That(crew.SuppressedDuplicates, Is.EqualTo(1));
+                crew.ReportShotResult(enemyArmor, ImpactOutcome.Penetrated, true);
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_enemy_destroyed_ru"));
+
+                // An enemy destroyed by somebody else still reaches the player's crew.
+                TeamMember other = BuildMember("OtherEnemy", TeamId.TeamB, TankNation.USSR, spawned);
+                crew.Configure(player, BuildLibrary(clips), catalog, new[] { player, other });
+                other.GetComponent<TankHealth>().ApplyDamage(100000);
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_enemy_destroyed_by_ally_ru"));
+
+                crew.ReportBaseCaptured(TeamId.TeamB, TeamId.TeamA);
+                Assert.That(crew.LastClipId, Is.EqualTo("base_captured_ru"));
+                crew.ReportBaseCaptured(TeamId.TeamA, TeamId.TeamB);
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_base_lost_ru"));
+
+                player.GetComponent<TankHealth>().ApplyDamage(100000);
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_vehicle_destroyed_ru"));
+            }
+            finally
+            {
+                Object.Destroy(host);
+                foreach (Object spawnedObject in spawned)
+                {
+                    Object.Destroy(spawnedObject);
+                }
+
+                foreach (AudioClip clip in clips)
+                {
+                    Object.Destroy(clip);
+                }
+            }
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator CrewVoice_AsksForTheLanguageTheNationPointsAt()
+        {
+            GameObject host = new GameObject("CrewVoiceLanguageHost");
+            List<AudioClip> clips = new List<AudioClip>();
+            List<Object> spawned = new List<Object>();
+            try
+            {
+                host.AddComponent<AudioListener>();
+                CrewVoiceController crew = host.AddComponent<CrewVoiceController>();
+                CrewVoiceProfileCatalog catalog = CrewVoiceProfileCatalog.Load();
+                TeamMember player = BuildMember("GermanTank", TeamId.TeamA, TankNation.Germany, spawned);
+
+                // Flip the data only: the German machine now asks for German clips. They are not extracted
+                // yet, so the line stays silent, but the request itself is already language-correct.
+                CrewVoiceProfileCatalog german = new CrewVoiceProfileCatalog
+                {
+                    defaultLanguage = catalog.defaultLanguage,
+                    volume = catalog.volume,
+                    languages = catalog.languages,
+                    roles = catalog.roles,
+                    nations = new[]
+                    {
+                        new CrewVoiceNationLanguage { nation = "Germany", language = "de" },
+                        new CrewVoiceNationLanguage { nation = "USSR", language = "ru" },
+                        new CrewVoiceNationLanguage { nation = "USA", language = "ru" }
+                    }
+                };
+
+                crew.Configure(player, BuildLibrary(clips), german, new[] { player });
+                Assert.That(crew.Language, Is.EqualTo("de"));
+                Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.False,
+                    "A language whose clips are missing must stay silent rather than block the battle.");
+                Assert.That(crew.LastClipId, Is.EqualTo("crew_ricochet_de"));
+            }
+            finally
+            {
+                Object.Destroy(host);
+                foreach (Object spawnedObject in spawned)
+                {
+                    Object.Destroy(spawnedObject);
+                }
+
+                foreach (AudioClip clip in clips)
+                {
+                    Object.Destroy(clip);
+                }
+            }
+
+            yield return null;
+        }
+
+        private static TeamMember BuildMember(string name, TeamId team, TankNation nation, List<Object> spawned)
+        {
+            GameObject tank = new GameObject(name);
+            TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
+            definition.nation = nation;
+            definition.maxHitPoints = 100;
+            TankHealth health = tank.AddComponent<TankHealth>();
+            health.Configure(definition);
+            TeamMember member = tank.AddComponent<TeamMember>();
+            member.Configure(team, false);
+            tank.AddComponent<TankArmor>();
+            spawned.Add(tank);
+            spawned.Add(definition);
+            return member;
+        }
+
         private static BattleAudioProfile BuildProfile()
         {
             return new BattleAudioProfile
@@ -256,14 +409,11 @@ namespace LocalTanks.Tests
                     defeat = "mines_music_result_defeat"
                 },
                 ambienceClipId = "mines_ambient_wind_summer",
-                battleStartClipId = "battle_start_ru",
                 captureProgressClipId = "base_capture_progress_loop",
-                baseCapturedClipId = "base_captured_ru",
                 battleEndByLastKillClipId = "battle_end_by_last_kill",
                 musicVolume = 0.45f,
                 ambienceVolume = 0.3f,
-                signalVolume = 0.6f,
-                voiceVolume = 0.85f
+                signalVolume = 0.6f
             };
         }
 
@@ -275,6 +425,9 @@ namespace LocalTanks.Tests
                          "mines_music_loading", "mines_music_battle_relaxed", "mines_music_battle_intensive",
                          "mines_music_result_victory", "mines_music_result_draw", "mines_music_result_defeat",
                          "mines_ambient_wind_summer", "battle_start_ru", "base_captured_ru",
+                         "crew_ricochet_ru", "crew_not_penetrated_ru", "crew_penetrated_ru",
+                         "crew_enemy_destroyed_ru", "crew_enemy_destroyed_by_ally_ru", "crew_ally_destroyed_ru",
+                         "crew_vehicle_destroyed_ru", "crew_base_lost_ru",
                          "base_capture_progress_loop", "battle_end_by_last_kill"
                      })
             {

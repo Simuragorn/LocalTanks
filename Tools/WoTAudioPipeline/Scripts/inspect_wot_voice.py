@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Find and verify World of Tanks Wwise voice events without guessing names.
+
+The client never ships the Wwise project, so a bank stores only hashed event names. Guesswork is
+therefore useless, and two facts have to be established before a voice line can be extracted:
+
+1. which event *names* the game itself uses — they are plain strings inside the packed XML of
+   ``res/packages/scripts.pkg`` (arena definitions and ``item_defs/hints/battle_hints.xml``);
+2. whether a bank really contains that event — the FNV-1 32-bit hash of the name must appear as a
+   ``CAkEvent`` id in a bank dump made by wwiser.
+
+This script does both: it collects candidate names from the client scripts, reads the Wwise language
+ID of every nation's voice bank straight from the package, and verifies the candidates against a bank
+dump. It changes nothing, so it is safe to run at any time.
+
+Produce the dump first (the audio pipeline already does this for the banks it extracts)::
+
+    cd LocalData/WoTAudioPipeline/Work/Banks/audioww/ussr
+    python ../../../../ThirdParty/wwiser.pyz ../Init.bnk voiceover.bnk -d txt \
+        -nl ../wwnames.txt -nd ../../../../ThirdParty/wwnames.db3
+
+Then::
+
+    python Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py \
+        --dump LocalData/WoTAudioPipeline/Work/Banks/audioww/ussr/banks.txt
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import struct
+import sys
+import zipfile
+from pathlib import Path
+
+NAME_PATTERN = re.compile(r"(?:ev_wt_)?vo_[a-z0-9_]+")
+LANGUAGE_BANKS = ("voiceover.bnk", "inbattle_communication_pc.bnk")
+
+
+def fnv1(name: str) -> int:
+    """The hash Wwise uses for names: FNV-1, 32 bit, lowercase."""
+    value = 2166136261
+    for byte in name.lower().encode("utf-8"):
+        value = (value * 16777619) & 0xFFFFFFFF
+        value ^= byte
+    return value
+
+
+def collect_candidates(package: Path, pattern: re.Pattern[str]) -> dict[str, str]:
+    """Candidate voice names from the client's packed XML, with one source entry per name."""
+    found: dict[str, str] = {}
+    with zipfile.ZipFile(package) as archive:
+        for name in archive.namelist():
+            if not name.lower().endswith(".xml"):
+                continue
+            text = archive.read(name).decode("utf-8", errors="ignore")
+            for match in pattern.findall(text):
+                found.setdefault(match, name)
+    return found
+
+
+def read_event_hashes(dump: Path) -> set[int]:
+    """Event ids from a wwiser text dump. Every dump line starts with an address prefix."""
+    text = dump.read_text(encoding="utf-8", errors="ignore")
+    hashes: set[int] = set()
+    for match in re.finditer(r"\[Event\]", text):
+        tail = text[match.end():match.end() + 400]
+        identifier = re.search(r"ulID = (\d+)", tail)
+        if identifier:
+            hashes.add(int(identifier.group(1)))
+    return hashes
+
+
+def read_language_ids(packages: list[Path]) -> dict[str, dict[str, tuple[int, int]]]:
+    """Per bank folder: bank name -> (Wwise language id, media id), read from the BKHD header."""
+    found: dict[str, dict[str, tuple[int, int]]] = {}
+    for package in packages:
+        with zipfile.ZipFile(package) as archive:
+            for info in archive.infolist():
+                parts = info.filename.split("/")
+                if len(parts) != 3 or parts[0] != "audioww" or parts[2] not in LANGUAGE_BANKS:
+                    continue
+                with archive.open(info.filename) as stream:
+                    header = stream.read(0x18)
+                if header[:4] != b"BKHD":
+                    continue
+                _, media_id, language_id = struct.unpack_from("<III", header, 8)
+                found.setdefault(parts[1], {})[parts[2]] = (language_id, media_id)
+    return found
+
+
+def declared_clips(project_root: Path) -> tuple[set[str], set[str]]:
+    """Clip ids and event names the project already declares."""
+    path = project_root / "Tools/WoTAudioPipeline/audio_clips.json"
+    if not path.exists():
+        return set(), set()
+    catalog = json.loads(path.read_text(encoding="utf-8"))
+    clips = {clip["clipId"] for clip in catalog["clips"]}
+    events = {clip.get("event", "") for clip in catalog["clips"]}
+    return clips, events
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--wot-root", default=r"C:\Games\World_of_Tanks_EU")
+    parser.add_argument("--project-root", default=str(Path(__file__).resolve().parents[3]))
+    parser.add_argument("--dump", help="wwiser text dump of the bank whose events must be verified")
+    parser.add_argument("--pattern", default=r"(?:ev_wt_)?vo_[a-z0-9_]+")
+    parser.add_argument("--show-unverified", action="store_true")
+    arguments = parser.parse_args()
+
+    wot_root = Path(arguments.wot_root)
+    scripts_package = wot_root / "res/packages/scripts.pkg"
+    if not scripts_package.exists():
+        print(f"scripts.pkg was not found under {wot_root}", file=sys.stderr)
+        return 2
+
+    packages = sorted((wot_root / "res/packages").glob("audioww-part*.pkg"))
+    if not packages:
+        print(f"audioww packages were not found under {wot_root}", file=sys.stderr)
+        return 2
+
+    candidates = collect_candidates(scripts_package, re.compile(arguments.pattern))
+    print(f"candidate names in client scripts: {len(candidates)}")
+
+    clips, events = declared_clips(Path(arguments.project_root))
+    print(f"already declared in audio_clips.json: {len(clips)} clips, {len(events)} events")
+
+    if arguments.dump:
+        dump = Path(arguments.dump)
+        if not dump.exists():
+            print(f"dump was not found: {dump}", file=sys.stderr)
+            return 2
+        hashes = read_event_hashes(dump)
+        print(f"event objects in {dump.name}: {len(hashes)}")
+        verified = sorted(name for name in candidates if fnv1(name) in hashes)
+        print(f"verified as Wwise events: {len(verified)}")
+        for name in verified:
+            mark = "declared" if name in events else "not declared"
+            print(f"  {fnv1(name):>10}  {name:<60} {mark}")
+        if arguments.show_unverified:
+            unverified = sorted(name for name in candidates if fnv1(name) not in hashes)
+            print(f"--- candidates that are not events in this bank: {len(unverified)} ---")
+            for name in unverified:
+                print(f"  {name}")
+    else:
+        print("no --dump given: names were collected but not verified against a bank")
+
+    language_ids = read_language_ids(packages)
+    print("--- voice banks per nation (Wwise language id / bank entry) ---")
+    for folder in sorted(language_ids):
+        entry = language_ids[folder].get("voiceover.bnk")
+        if entry is None:
+            continue
+        language_id, _ = entry
+        bank_entry = f"{folder}/voiceover.bnk"
+        mark = "extracted" if any(clip.startswith("crew_") or clip.startswith("battle_") for clip in clips) and folder == "ussr" else ""
+        print(f"  {folder:<10} languageId={language_id:<12} {bank_entry:<32} {mark}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

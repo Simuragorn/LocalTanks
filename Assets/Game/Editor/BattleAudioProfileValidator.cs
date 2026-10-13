@@ -20,6 +20,7 @@ namespace LocalTanks.Editor
     public static class BattleAudioProfileValidator
     {
         public const string SourcePath = BattleAudioProfileCatalog.SourcePath;
+        public const string CrewVoiceSourcePath = CrewVoiceProfileCatalog.SourcePath;
         public const string ClipCatalogPath = "Tools/WoTAudioPipeline/audio_clips.json";
         public const string TacticalSourceFolder = "Assets/Game/GameData/Maps";
 
@@ -34,9 +35,35 @@ namespace LocalTanks.Editor
                     "Battle audio profiles are invalid:\n- " + string.Join("\n- ", errors));
             }
 
-            string[] clipIds = catalog.profiles.SelectMany(profile => profile.ReferencedClipIds()).Distinct().ToArray();
+            string[] clipIds = catalog.profiles.SelectMany(profile => profile.ReferencedClipIds())
+                .Concat(LoadCrewVoiceSource().ReferencedClipIds())
+                .Distinct()
+                .ToArray();
             Debug.Log($"Local Tanks: battle audio profiles are valid " +
                       $"({catalog.profiles.Length} arena(s), {clipIds.Length} referenced clips).");
+
+            // Where each language in use comes from, so extending the set later is a data edit plus one
+            // pipeline run with a known bank and language ID instead of a new investigation.
+            CrewVoiceProfileCatalog crew = LoadCrewVoiceSource();
+            foreach (string language in crew.UsedLanguages())
+            {
+                if (crew.TryGetLanguage(language, out CrewVoiceLanguage entry))
+                {
+                    Debug.Log($"Local Tanks: crew voice language '{entry.id}' ({entry.displayName}) comes from " +
+                              $"{entry.bankEntry} with Wwise language ID {entry.wwiseLanguageId}.");
+                }
+            }
+        }
+
+        public static CrewVoiceProfileCatalog LoadCrewVoiceSource()
+        {
+            string path = Path.GetFullPath(CrewVoiceSourcePath);
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException("Crew voice profile JSON was not found.", CrewVoiceSourcePath);
+            }
+
+            return CrewVoiceProfileCatalog.Parse(File.ReadAllText(path));
         }
 
         public static BattleAudioProfileCatalog LoadSource()
@@ -92,6 +119,29 @@ namespace LocalTanks.Editor
             {
                 errors.Add($"Clip catalog declares '{duplicate.Key}' {duplicate.Count()} times; " +
                            "one clip ID must name exactly one event.");
+            }
+
+            CrewVoiceProfileCatalog crew = LoadCrewVoiceSource();
+            errors.AddRange(crew.Validate());
+            foreach (string clipId in crew.ReferencedClipIds())
+            {
+                if (!declaredSet.Contains(clipId))
+                {
+                    // This is the guard that keeps a nation from pointing at a language whose clips were
+                    // never extracted: flipping Germany to `de` fails here until the German set is declared
+                    // and the pipeline ran.
+                    errors.Add($"Crew voice references the undeclared clip '{clipId}'; declare it in " +
+                               $"{ClipCatalogPath} and run the pipeline, or point the nation at a language " +
+                               $"that already exists. Languages in use: {string.Join(", ", crew.UsedLanguages())}.");
+                }
+            }
+
+            foreach (string language in crew.UsedLanguages())
+            {
+                if (!crew.TryGetLanguage(language, out _))
+                {
+                    errors.Add($"Crew voice language '{language}' is used by a nation but not declared.");
+                }
             }
 
             return errors.ToArray();

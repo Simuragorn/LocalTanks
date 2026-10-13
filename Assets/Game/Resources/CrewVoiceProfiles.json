@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "defaultLanguage": "ru",
+  "volume": 0.9,
+  "languages": [
+    {
+      "id": "ru",
+      "displayName": "Русский",
+      "wwiseLanguageId": "3110496415",
+      "bankEntry": "ussr/voiceover.bnk"
+    },
+    {
+      "id": "de",
+      "displayName": "Немецкий",
+      "wwiseLanguageId": "665432976",
+      "bankEntry": "germany/voiceover.bnk"
+    },
+    {
+      "id": "en",
+      "displayName": "Английский",
+      "wwiseLanguageId": "3035750793",
+      "bankEntry": "usa/voiceover.bnk"
+    }
+  ],
+  "nations": [
+    {
+      "nation": "USSR",
+      "language": "ru"
+    },
+    {
+      "nation": "Germany",
+      "language": "ru"
+    },
+    {
+      "nation": "USA",
+      "language": "ru"
+    }
+  ],
+  "roles": [
+    {
+      "role": "BattleStart",
+      "clipIdPattern": "battle_start_{lang}",
+      "description": "начало боя"
+    },
+    {
+      "role": "BaseCaptured",
+      "clipIdPattern": "base_captured_{lang}",
+      "description": "база захвачена"
+    },
+    {
+      "role": "BaseLost",
+      "clipIdPattern": "crew_base_lost_{lang}",
+      "description": "база потеряна"
+    },
+    {
+      "role": "Penetrated",
+      "clipIdPattern": "crew_penetrated_{lang}",
+      "description": "пробил"
+    },
+    {
+      "role": "NotPenetrated",
+      "clipIdPattern": "crew_not_penetrated_{lang}",
+      "description": "не пробил"
+    },
+    {
+      "role": "Ricochet",
+      "clipIdPattern": "crew_ricochet_{lang}",
+      "description": "рикошет"
+    },
+    {
+      "role": "EnemyDestroyedByPlayer",
+      "clipIdPattern": "crew_enemy_destroyed_{lang}",
+      "description": "противник уничтожен нами"
+    },
+    {
+      "role": "EnemyDestroyed",
+      "clipIdPattern": "crew_enemy_destroyed_by_ally_{lang}",
+      "description": "противник уничтожен союзником"
+    },
+    {
+      "role": "AllyDestroyed",
+      "clipIdPattern": "crew_ally_destroyed_{lang}",
+      "description": "союзник уничтожен нами"
+    },
+    {
+      "role": "VehicleDestroyed",
+      "clipIdPattern": "crew_vehicle_destroyed_{lang}",
+      "description": "наша машина уничтожена"
+    }
+  ]
+}

@@ -261,6 +261,94 @@
       "usage": "voice"
     },
     {
+      "clipId": "crew_not_penetrated_ru",
+      "group": "Universal/CrewVoice/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_armor_not_pierced_by_player",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "crew_ricochet_ru",
+      "group": "Universal/CrewVoice/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_armor_ricochet_by_player",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "crew_penetrated_ru",
+      "group": "Universal/CrewVoice/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_enemy_hp_damaged_by_projectile_by_player",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "crew_enemy_destroyed_ru",
+      "group": "Universal/CrewVoice/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_enemy_killed_by_player",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "crew_enemy_destroyed_by_ally_ru",
+      "group": "Universal/CrewVoice/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_enemy_killed",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "crew_ally_destroyed_ru",
+      "group": "Universal/CrewVoice/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_ally_killed_by_player",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "crew_vehicle_destroyed_ru",
+      "group": "Universal/CrewVoice/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_vehicle_destroyed",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "crew_base_lost_ru",
+      "group": "Universal/CrewVoice/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_target_lost",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
       "clipId": "battle_start_ru",
       "group": "Universal/BattleFlow/Russian",
       "bank": "ussr_voiceover",

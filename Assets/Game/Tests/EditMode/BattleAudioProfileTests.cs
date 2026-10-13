@@ -37,25 +37,138 @@ namespace LocalTanks.Tests
             Assert.That(profile.music.draw, Is.Not.Empty);
             Assert.That(profile.music.defeat, Is.Not.Empty);
             Assert.That(profile.ambienceClipId, Is.Not.Empty);
-            Assert.That(profile.battleStartClipId, Is.Not.Empty);
             Assert.That(profile.captureProgressClipId, Is.Not.Empty);
-            Assert.That(profile.baseCapturedClipId, Is.Not.Empty);
             Assert.That(profile.battleEndByLastKillClipId, Is.Not.Empty);
             Assert.That(profile.battleEndByCaptureClipId, Is.Not.Empty);
+        }
+
+        [Test]
+        public void CrewVoice_CoversEveryRoleAndNation()
+        {
+            CrewVoiceProfileCatalog crew = BattleAudioProfileValidator.LoadCrewVoiceSource();
+
+            Assert.That(crew.Validate(), Is.Empty);
+            foreach (string role in System.Enum.GetNames(typeof(CrewVoiceRole)))
+            {
+                Assert.That(crew.PatternFor((CrewVoiceRole)System.Enum.Parse(typeof(CrewVoiceRole), role)),
+                    Is.Not.Empty, $"Role '{role}' must have a clip ID pattern.");
+            }
+
+            // Adding a nation to the game must force a decision about its crew voice instead of silently
+            // falling back to whatever language happens to be default.
+            foreach (string nation in System.Enum.GetNames(typeof(TankNation)))
+            {
+                Assert.That(crew.LanguageFor((TankNation)System.Enum.Parse(typeof(TankNation), nation)),
+                    Is.Not.Empty, $"Nation '{nation}' must map to a voice language.");
+            }
+        }
+
+        [Test]
+        public void CrewVoice_CurrentlySpeaksRussianForEveryNation()
+        {
+            CrewVoiceProfileCatalog crew = BattleAudioProfileValidator.LoadCrewVoiceSource();
+
+            foreach (TankNation nation in System.Enum.GetValues(typeof(TankNation)))
+            {
+                Assert.That(crew.LanguageFor(nation), Is.EqualTo("ru"),
+                    "Only the Russian set is extracted, so every nation must point at it for now.");
+            }
+
+            Assert.That(crew.ReferencedClipIds(), Does.Contain("crew_not_penetrated_ru"));
+            Assert.That(crew.ReferencedClipIds(), Does.Contain("crew_vehicle_destroyed_ru"));
+            Assert.That(crew.ReferencedClipIds(), Does.Contain("battle_start_ru"),
+                "Battle start and base capture are crew lines, so they resolve through the same nation map.");
+            Assert.That(crew.ReferencedClipIds(), Does.Contain("base_captured_ru"));
+        }
+
+        [Test]
+        public void CrewVoice_ResolvesTheLanguageSuffixFromTheNation()
+        {
+            CrewVoiceProfileCatalog crew = BattleAudioProfileValidator.LoadCrewVoiceSource();
+
+            Assert.That(crew.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.Germany), Is.EqualTo("crew_ricochet_ru"));
+
+            // Point Germany at German and the very same role asks for a different recording; nothing else
+            // in the game changes, which is the whole point of the scaffolding.
+            CrewVoiceProfileCatalog german = new CrewVoiceProfileCatalog
+            {
+                defaultLanguage = "ru",
+                languages = crew.languages,
+                roles = crew.roles,
+                nations = new[]
+                {
+                    new CrewVoiceNationLanguage { nation = "Germany", language = "de" },
+                    new CrewVoiceNationLanguage { nation = "USSR", language = "ru" },
+                    new CrewVoiceNationLanguage { nation = "USA", language = "ru" }
+                }
+            };
+
+            Assert.That(german.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.Germany), Is.EqualTo("crew_ricochet_de"));
+            Assert.That(german.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.USSR), Is.EqualTo("crew_ricochet_ru"));
+        }
+
+        [Test]
+        public void CrewVoice_RejectsAnUnknownNationOrLanguage()
+        {
+            CrewVoiceProfileCatalog crew = new CrewVoiceProfileCatalog
+            {
+                defaultLanguage = "ru",
+                languages = new[] { new CrewVoiceLanguage { id = "ru", wwiseLanguageId = "1", bankEntry = "ussr/voiceover.bnk" } },
+                roles = new[] { new CrewVoiceRoleBinding { role = "Ricochet", clipIdPattern = "crew_ricochet_{lang}" } },
+                nations = new[]
+                {
+                    new CrewVoiceNationLanguage { nation = "Germany", language = "ru" },
+                    new CrewVoiceNationLanguage { nation = "USSR", language = "ru" },
+                    new CrewVoiceNationLanguage { nation = "USA", language = "fr" }
+                }
+            };
+
+            string[] errors = crew.Validate();
+
+            Assert.That(errors.Any(error => error.Contains("undeclared language 'fr'")), Is.True);
+            Assert.That(errors.Any(error => error.Contains("role 'BaseLost' has no clip ID pattern")), Is.True,
+                "Every role must be declared, or a battle would silently lose a line.");
+        }
+
+        [Test]
+        public void CrewVoice_RejectsAPatternWithoutTheLanguagePlaceholder()
+        {
+            CrewVoiceProfileCatalog crew = new CrewVoiceProfileCatalog
+            {
+                defaultLanguage = "ru",
+                languages = new[] { new CrewVoiceLanguage { id = "ru", wwiseLanguageId = "1", bankEntry = "ussr/voiceover.bnk" } },
+                roles = new[] { new CrewVoiceRoleBinding { role = "Ricochet", clipIdPattern = "crew_ricochet_ru" } },
+                nations = new[]
+                {
+                    new CrewVoiceNationLanguage { nation = "Germany", language = "ru" },
+                    new CrewVoiceNationLanguage { nation = "USSR", language = "ru" },
+                    new CrewVoiceNationLanguage { nation = "USA", language = "ru" }
+                }
+            };
+
+            Assert.That(crew.Validate().Any(error => error.Contains("{lang}")), Is.True,
+                "A hardcoded language in the pattern would defeat the whole scaffold.");
         }
 
         [Test]
         public void EveryReferencedClip_IsDeclaredByTheLocalPipeline()
         {
             string[] declared = BattleAudioProfileValidator.DeclaredClipIds();
-            BattleAudioProfile profile = BattleAudioProfileValidator.LoadSource().Find(MinesArenaId);
-
             Assert.That(declared, Is.Not.Empty, "The clip catalog must exist and declare clips.");
+
+            BattleAudioProfile profile = BattleAudioProfileValidator.LoadSource().Find(MinesArenaId);
             foreach (string clipId in profile.ReferencedClipIds())
             {
                 Assert.That(declared, Does.Contain(clipId),
                     $"Clip '{clipId}' is referenced by the arena profile but not declared in " +
                     BattleAudioProfileValidator.ClipCatalogPath);
+            }
+
+            foreach (string clipId in BattleAudioProfileValidator.LoadCrewVoiceSource().ReferencedClipIds())
+            {
+                Assert.That(declared, Does.Contain(clipId),
+                    $"Crew voice clip '{clipId}' is not declared in {BattleAudioProfileValidator.ClipCatalogPath}; " +
+                    "extract it before pointing a nation at that language.");
             }
         }
 

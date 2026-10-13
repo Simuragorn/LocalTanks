@@ -212,13 +212,21 @@ namespace LocalTanks
             {
                 text.AppendLine($"Атмосфера: {(flow.IsAmbiencePlaying ? Show(flow.AmbienceClipId) : "не играет")}");
                 text.AppendLine($"Захват: {(flow.IsCaptureLoopPlaying ? $"цикл играет ({flow.CapturingBaseCount} баз)" : "цикл остановлен")}; " +
-                                $"реплик {flow.VoicePlayCount}, сигналов {flow.SignalPlayCount}; последнее: {flow.LastReason}");
+                                $"сигналов {flow.SignalPlayCount}; последнее: {flow.LastReason}");
+            }
+
+            CrewVoiceController crew = audio.Crew;
+            if (crew != null)
+            {
+                text.AppendLine($"Экипаж: {(crew.IsActive ? $"язык {crew.Language}" : "нет машины игрока")}; " +
+                                $"реплик {crew.PlayCount}; подавлено дублей {crew.SuppressedDuplicates}");
+                text.AppendLine($"Последняя реплика: {Show(crew.LastClipId)} — {crew.LastRole}");
             }
 
             if (audio.Profile != null)
             {
                 text.AppendLine($"Уровни профиля: музыка {Percent(audio.Profile.musicVolume)}, атмосфера {Percent(audio.Profile.ambienceVolume)}, " +
-                                $"сигналы {Percent(audio.Profile.signalVolume)}, голос {Percent(audio.Profile.voiceVolume)}");
+                                $"сигналы {Percent(audio.Profile.signalVolume)}");
                 text.AppendLine($"Каналы игрока: музыка {Percent(PlayerSettingsStore.MusicMultiplier)}, голос {Percent(PlayerSettingsStore.VoiceMultiplier)}");
             }
 

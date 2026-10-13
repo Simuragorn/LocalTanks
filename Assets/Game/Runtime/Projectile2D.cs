@@ -17,6 +17,7 @@ namespace LocalTanks
         private int remainingRicochets;
         private Transform ownerRoot;
         private ShellAudioProfile audioProfile;
+        private CrewVoiceController crewVoice;
         private Collider2D temporarilyIgnoredCollider;
         private bool initialized;
         private readonly ProjectileTravelBudget travelBudget = new ProjectileTravelBudget();
@@ -63,6 +64,9 @@ namespace LocalTanks
             ricochetPenetrationMultiplier = Mathf.Clamp01(shell.ricochetPenetrationMultiplier);
             remainingRicochets = Mathf.Max(0, shell.maximumRicochets);
             audioProfile = shell.audio;
+            // Only the player's machine carries a crew voice controller, so a bot's shell resolves this
+            // to nothing and its impacts stay silent without any further check.
+            crewVoice = newOwnerRoot != null ? newOwnerRoot.GetComponentInChildren<CrewVoiceController>() : null;
         }
 
         private void FixedUpdate()
@@ -107,6 +111,11 @@ namespace LocalTanks
                     return;
                 }
 
+                // The crew is told about the victim before the impact is resolved: damage is applied inside
+                // ResolveImpact, so a machine this shell destroys reports its own destruction first and the
+                // generic "enemy destroyed" line has to yield to the player's own line for the same victim.
+                crewVoice?.MarkIncomingHit(armor);
+
                 ImpactResult result = armor.ResolveImpact(
                     direction,
                     hit.point,
@@ -120,6 +129,10 @@ namespace LocalTanks
                     remainingRicochets);
 
                 CombatAudioEmitter.PlayImpact(audioProfile, result.Outcome, hit.point);
+
+                TankHealth victimHealth = armor.GetComponent<TankHealth>();
+                crewVoice?.ReportShotResult(armor, result.Outcome,
+                    victimHealth != null && victimHealth.IsDestroyed);
 
                 if (result.Outcome != ImpactOutcome.Ricocheted)
                 {
