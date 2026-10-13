@@ -1,17 +1,17 @@
 ---
 name: wot-tank-audio
-description: Resolve, extract and wire local World of Tanks Wwise audio for a LocalTanks tank — engine, main gun, turret mechanism, tracks, reload, hit impacts and destruction — into stable clip IDs under Assets/LocalOnly/Resources/WoTAudio and the tank JSON audio profile, so TankAudioController can load them by ID at runtime. Use when a tank needs an audio profile, when a new Wwise event must be added or re-resolved, or when the local audio cache must be regenerated. Do not commit extracted clips, banks or manifests.
-whenToUse: Use when adding or repairing sound for a vehicle whose gameplay parameters already exist or are being added in the same task; skip it when only sprite art or combat numbers change.
+description: Resolve, extract and wire local World of Tanks Wwise audio for LocalTanks — vehicle effects, map music and ambience, battle flow, base capture and localized quick commands — into stable grouped clip IDs under Assets/LocalOnly/Resources/WoTAudio. Use when a tank needs an audio profile, a map or universal event set is requested, a Wwise event must be re-resolved, or the local cache must be regenerated. Do not commit extracted clips, banks or manifests.
+whenToUse: Use for any WoT Wwise extraction or integration task in LocalTanks; skip it when only sprite art or combat numbers change.
 ---
 
-# WoT tank audio for LocalTanks
+# WoT audio for LocalTanks
 
 Extract only the Wwise events the project actually names, decode them to WAV in the ignored local Unity folder, and bind them to a tank through stable clip IDs. All raw and derived audio stays out of Git.
 
 ## Sources of truth
 
 - `Tools/WoTAudioPipeline/README.md` — maintained commands and storage contract.
-- `Tools/WoTAudioPipeline/audio_clips.json` — the single list of named events; this is the only place a new event is declared.
+- `Tools/WoTAudioPipeline/audio_clips.json` — the single list of named vehicle, map and universal events; this is the only place a new event is declared.
 - `Tools/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1` — extraction, bank-version detection, TXTP generation, decoding and manifest.
 - `Tools/WoTAudioPipeline/Scripts/Setup-WoTAudioPipeline.ps1` — pinned third-party tools.
 - `Tools/WoTAudioPipeline/wwnames.txt` — Wwise name hints copied into the work bank folder.
@@ -22,7 +22,7 @@ Read the scripts before changing anything; the repository wins over this summary
 
 ## Current local cache
 
-`audio_clips.json` presently declares twelve clips. Reuse these IDs instead of declaring duplicates whenever the selected modules genuinely match:
+The vehicle group currently declares thirteen clips. Reuse these IDs instead of declaring duplicates whenever the selected modules genuinely match; map and universal clips are catalogued in the same file and grouped separately:
 
 | Kind | Clip IDs |
 |---|---|
@@ -42,11 +42,12 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
 
 1. **Resolve the module/event mapping.** Work from the same top configuration used for the sprite and the combat profile — it is recorded in the canonical manifest under `Assets/LocalOnly/WoTGenerated/<vehicle-id>/<vehicle-id>_manifest.json` and in `Docs/WOT_TOP_CONFIG_SNAPSHOT.md`. Map WoT module IDs to Wwise events using the local client (`Docs/WOT_MEDIA_AUDIT.md` records the proven method and toolchain); do not guess an event name.
 
-2. **Declare missing events once.** Add one entry per new event to `Tools/WoTAudioPipeline/audio_clips.json`:
+2. **Declare missing events once.** Add one entry per new event to `Tools/WoTAudioPipeline/audio_clips.json` schema 2:
 
    ```json
    {
      "clipId": "gun_wpn_small_pc",
+     "group": "Vehicles",
      "bank": "wpn",
      "event": "wpn_small_pc",
      "variantIndex": 0,
@@ -54,7 +55,7 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
    }
    ```
 
-   `clipId` must match `^[a-z0-9_]+$` and encode the kind and event, so a shared engine or gun class is obvious from the ID. `usage` is `loop` or `oneShot`. Add `"mediaBank": "<bank>"` only when the media lives in a different bank than the event, as `destruction_expl_crew_death_s_npc` does with `streams`.
+   `clipId` must match `^[a-z0-9_]+$` and encode the role. `group` controls the output folder; `Vehicles` deliberately stays flat for the runtime provider, while map and universal material uses groups such as `Mines/Music` and `Universal/QuickCommands/Russian`. Use `bankEntry` for nested localized banks, `languageId` for their numeric Wwise language ID, `mediaEntries` for multipart media, `mediaEntriesFrom` to reuse such a list, and `trimTrailingSilenceDb` only for proven long near-silent tails. Add `mediaBank` when media lives in a different set from the event bank.
 
 3. **Run the pipeline.**
 
@@ -91,14 +92,15 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
 - **`-Force` is required when an event mapping changes.** Without it, existing TXTP folders and WAV files are reused and the manifest keeps the old selection.
 - **Variants differ per event.** `variantIndex` selects one decoded variant out of however many the event produced; the pipeline fails loudly when the requested index does not exist. Record the chosen variant and its count in the manifest for reproducibility.
 - **Bank-version detection uses a candidate list.** If it throws after a WoT client update, the client's bank version appeared outside the known candidates; extend the list deliberately rather than guessing.
-- **`mediaBank` changes where media are extracted and decoded from.** Setting it requires the corresponding `.pck`, which the script extracts with QuickBMS.
+- **`mediaBank` changes where media are extracted and decoded from.** `mediaEntries` may list multiple PCK parts; they are merged with hard links rather than copied. Nested localized banks also require their exact `languageId` or wwiser may silently select no usable event.
+- **Some Wwise events are controls, not audio.** Do not register a generated WAV that is digital silence; for example `base_capture_2` in the current client is a stop/control event and is intentionally omitted.
 - **A committed prefab must never hold a local `AudioClip` GUID.** `TankAudioController` resolves clips by stable ID through `ITankAudioClipProvider` at runtime. Missing local clips must degrade to silence, never to broken references.
 - **`TankAudioController.LoadClips` loads every configured ID.** An empty or missing clip ID reaching the provider is an error in tests with strict fake providers; keep the JSON block complete and consistent.
 
 ## Validation gate
 
 1. The pipeline exits successfully and reports the detected bank version and generated clip count.
-2. `Assets/LocalOnly/Resources/WoTAudio/audio_manifest.json` lists every declared clip with `variantCount`, selected TXTP and SHA-256; each `Clips/<clipId>.wav` exists and matches its hash.
+2. `Assets/LocalOnly/Resources/WoTAudio/audio_manifest.json` lists every declared clip with `group`, `relativePath`, `variantCount`, selected TXTP and SHA-256; every file exists and matches its hash.
 3. Every clip ID referenced by any tank JSON resolves to a manifest entry and a WAV file.
 4. Reimporting combat definitions succeeds; the Edit Mode audio definition tests pass.
 5. Play Mode confirms the engine and gun sources load and react to an actual shot (see `TankAudioPlayModeTests`).

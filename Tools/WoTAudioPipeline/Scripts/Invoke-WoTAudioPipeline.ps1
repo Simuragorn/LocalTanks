@@ -39,20 +39,47 @@ New-Item -ItemType Directory -Force -Path $bankRoot, $mediaRoot, $txtpRoot, $cli
 Copy-Item -LiteralPath (Join-Path $pipelineRoot "wwnames.txt") -Destination (Join-Path $bankRoot "wwnames.txt") -Force
 
 $profile = Get-Content -Raw -LiteralPath (Join-Path $pipelineRoot "audio_clips.json") | ConvertFrom-Json
-if ($profile.schemaVersion -ne 1) { throw "Unsupported audio profile schema: $($profile.schemaVersion)" }
+if ($profile.schemaVersion -notin @(1, 2)) { throw "Unsupported audio profile schema: $($profile.schemaVersion)" }
 
-$eventBankNames = @($profile.clips | ForEach-Object { $_.bank } | Sort-Object -Unique)
-$mediaBankNames = @($profile.clips | ForEach-Object {
-    if ([string]::IsNullOrWhiteSpace($_.mediaBank)) { $_.bank } else { $_.mediaBank }
-} | Sort-Object -Unique)
-$bankNames = @($eventBankNames + $mediaBankNames | Sort-Object -Unique)
-$requiredEntries = @("Init.bnk")
-foreach ($bankName in $eventBankNames) {
-    $requiredEntries += "$bankName.bnk"
+$clipsById = @{}
+foreach ($clip in $profile.clips) {
+    if ($clipsById.ContainsKey($clip.clipId)) { throw "Duplicate clipId '$($clip.clipId)'." }
+    $clipsById[$clip.clipId] = $clip
 }
-foreach ($bankName in $mediaBankNames) {
-    $requiredEntries += "$bankName.pck"
+
+function Get-BankEntry($Clip) {
+    if (-not [string]::IsNullOrWhiteSpace($Clip.bankEntry)) { return [string]$Clip.bankEntry }
+    return "$($Clip.bank).bnk"
 }
+
+function Get-MediaBank($Clip) {
+    if (-not [string]::IsNullOrWhiteSpace($Clip.mediaBank)) { return [string]$Clip.mediaBank }
+    return [string]$Clip.bank
+}
+
+function Get-MediaEntries($Clip, [string[]]$Trail = @()) {
+    if ($Trail -contains $Clip.clipId) {
+        throw "Circular mediaEntriesFrom reference: $($Trail -join ' -> ') -> $($Clip.clipId)"
+    }
+    if ($null -ne $Clip.mediaEntries -and @($Clip.mediaEntries).Count -gt 0) {
+        return @($Clip.mediaEntries | ForEach-Object { [string]$_ })
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Clip.mediaEntriesFrom)) {
+        if (-not $clipsById.ContainsKey($Clip.mediaEntriesFrom)) {
+            throw "Clip '$($Clip.clipId)' references unknown media source '$($Clip.mediaEntriesFrom)'."
+        }
+        return @(Get-MediaEntries $clipsById[$Clip.mediaEntriesFrom] ($Trail + $Clip.clipId))
+    }
+    return @("$(Get-MediaBank $Clip).pck")
+}
+
+function Get-SafeFileKey([string]$Value) {
+    return ($Value -replace '[^A-Za-z0-9_.-]', '_')
+}
+
+$eventBankEntries = @($profile.clips | ForEach-Object { Get-BankEntry $_ } | Sort-Object -Unique)
+$mediaEntries = @($profile.clips | ForEach-Object { Get-MediaEntries $_ } | Sort-Object -Unique)
+$requiredEntries = @("Init.bnk") + $eventBankEntries
 
 $packages = @(Get-ChildItem -LiteralPath $packageRoot -Filter "audioww-part*.pkg" | Sort-Object Name)
 if ($packages.Count -eq 0) { throw "No audioww packages were found in $packageRoot" }
@@ -73,6 +100,8 @@ function Export-PackageEntry([string]$EntryName, [bool]$Required = $true) {
             } | Select-Object -First 1
             if ($null -eq $entry) { continue }
 
+            $targetDirectory = Split-Path -Parent $target
+            New-Item -ItemType Directory -Force -Path $targetDirectory | Out-Null
             [IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $target, $true)
             return $target
         }
@@ -89,8 +118,12 @@ function Export-PackageEntry([string]$EntryName, [bool]$Required = $true) {
 
 $sourceFiles = @{}
 foreach ($entryName in $requiredEntries) {
-    $isOptionalMedia = $entryName.EndsWith(".pck", [StringComparison]::OrdinalIgnoreCase)
-    $sourceFiles[$entryName] = Export-PackageEntry $entryName (-not $isOptionalMedia)
+    $sourceFiles[$entryName] = Export-PackageEntry $entryName $true
+}
+foreach ($entryName in $mediaEntries) {
+    if (-not $sourceFiles.ContainsKey($entryName)) {
+        $sourceFiles[$entryName] = Export-PackageEntry $entryName $false
+    }
 }
 
 function Write-XorPad([uint32]$EncryptedVersion, [uint32]$PlainVersion) {
@@ -135,12 +168,23 @@ function Resolve-BankVersion {
 $bankVersion = Resolve-BankVersion
 Write-Host "Detected Wwise bank version $bankVersion."
 
-foreach ($bankName in $bankNames) {
-    $marker = Join-Path $mediaRoot "$bankName.extracted"
-    $packagePath = $sourceFiles["$bankName.pck"]
-    if ($null -ne $packagePath -and ($Force -or -not (Test-Path -LiteralPath $marker))) {
-        $log = Join-Path $workRoot "quickbms-$bankName.log"
-        $errorLog = Join-Path $workRoot "quickbms-$bankName.error.log"
+$xorPadPath = Join-Path $bankRoot "xorpad.bin"
+foreach ($bankEntry in $eventBankEntries) {
+    $bankDirectory = Split-Path -Parent $sourceFiles[$bankEntry]
+    if (-not $bankDirectory.Equals($bankRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        Copy-Item -LiteralPath $xorPadPath -Destination (Join-Path $bankDirectory "xorpad.bin") -Force
+    }
+}
+
+foreach ($entryName in $mediaEntries) {
+    $packagePath = $sourceFiles[$entryName]
+    if ($null -eq $packagePath) { continue }
+
+    $entryKey = Get-SafeFileKey ([IO.Path]::GetFileNameWithoutExtension($entryName))
+    $marker = Join-Path $mediaRoot "$entryKey.extracted"
+    if ($Force -or -not (Test-Path -LiteralPath $marker)) {
+        $log = Join-Path $workRoot "quickbms-$entryKey.log"
+        $errorLog = Join-Path $workRoot "quickbms-$entryKey.error.log"
         $arguments = @(
             "-o",
             "`"$pckScript`"",
@@ -149,19 +193,45 @@ foreach ($bankName in $bankNames) {
         )
         $process = Start-Process -FilePath $quickBms -ArgumentList $arguments -Wait -PassThru `
             -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $errorLog
-        if ($process.ExitCode -ne 0) { throw "QuickBMS failed for $bankName.pck. See $log and $errorLog" }
+        if ($process.ExitCode -ne 0) { throw "QuickBMS failed for $entryName. See $log and $errorLog" }
         Set-Content -LiteralPath $marker -Value "ok"
     }
+}
 
-    $bankMediaRoot = Join-Path $mediaRoot $bankName
+foreach ($clip in $profile.clips) {
+    $mediaBank = Get-MediaBank $clip
+    $bankMediaRoot = Join-Path $mediaRoot $mediaBank
     New-Item -ItemType Directory -Force -Path $bankMediaRoot | Out-Null
-    $bankPath = $sourceFiles["$bankName.bnk"]
-    if ($null -eq $bankPath) {
-        $bankPath = Export-PackageEntry "$bankName.bnk" $false
-        $sourceFiles["$bankName.bnk"] = $bankPath
-    }
-    if ($null -ne $bankPath) {
-        Copy-Item -LiteralPath $bankPath -Destination (Join-Path $bankMediaRoot "$bankName.bnk") -Force
+
+    $bankEntry = Get-BankEntry $clip
+    $bankPath = $sourceFiles[$bankEntry]
+    Copy-Item -LiteralPath $bankPath -Destination (Join-Path $bankMediaRoot ([IO.Path]::GetFileName($bankEntry))) -Force
+
+    foreach ($mediaEntry in @(Get-MediaEntries $clip)) {
+        if ($null -eq $sourceFiles[$mediaEntry]) { continue }
+        $extractedFolderName = [IO.Path]::GetFileNameWithoutExtension($mediaEntry)
+        $extractedRoot = Join-Path $mediaRoot $extractedFolderName
+        if (-not (Test-Path -LiteralPath $extractedRoot) -or
+            $extractedRoot.Equals($bankMediaRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            continue
+        }
+
+        foreach ($wem in Get-ChildItem -LiteralPath $extractedRoot -Filter "*.wem" -File -Recurse) {
+            $linkPath = Join-Path $bankMediaRoot $wem.Name
+            if (Test-Path -LiteralPath $linkPath) {
+                $existing = Get-Item -LiteralPath $linkPath
+                if ($existing.Length -ne $wem.Length) {
+                    throw "Media ID collision while merging '$mediaEntry': $($wem.Name)"
+                }
+                continue
+            }
+            try {
+                New-Item -ItemType HardLink -Path $linkPath -Target $wem.FullName | Out-Null
+            }
+            catch {
+                Copy-Item -LiteralPath $wem.FullName -Destination $linkPath
+            }
+        }
     }
 }
 
@@ -184,13 +254,30 @@ foreach ($clip in $profile.clips) {
 
     $txtpFiles = @(Get-ChildItem -LiteralPath $eventRoot -Filter "*.txtp" | Sort-Object Name)
     if ($txtpFiles.Count -eq 0) {
-        $bankPath = $sourceFiles["$($clip.bank).bnk"]
-        $mediaBank = if ([string]::IsNullOrWhiteSpace($clip.mediaBank)) { $clip.bank } else { $clip.mediaBank }
+        $bankEntry = Get-BankEntry $clip
+        $bankPath = $sourceFiles[$bankEntry]
+        $mediaBank = Get-MediaBank $clip
         $mediaPath = (Resolve-Path -LiteralPath (Join-Path $mediaRoot $mediaBank)).Path
-        & python $wwiser $sourceFiles["Init.bnk"] $bankPath -g -gf $clip.event `
-            -go $eventRoot -gw $mediaPath -nl (Join-Path $bankRoot "wwnames.txt") -nd $namesDb
+        $wwiserArguments = @(
+            $wwiser,
+            $sourceFiles["Init.bnk"],
+            $bankPath,
+            "-g", "-gf", $clip.event,
+            "-go", $eventRoot,
+            "-gw", $mediaPath,
+            "-nl", (Join-Path $bankRoot "wwnames.txt"),
+            "-nd", $namesDb
+        )
+        if (-not [string]::IsNullOrWhiteSpace($clip.languageId)) {
+            $wwiserArguments += @("-gl", [string]$clip.languageId)
+        }
+        & python @wwiserArguments
         if ($LASTEXITCODE -ne 0) { throw "wwiser failed for event '$($clip.event)'." }
         $txtpFiles = @(Get-ChildItem -LiteralPath $eventRoot -Filter "*.txtp" | Sort-Object Name)
+    }
+
+    if ($txtpFiles.Count -eq 0) {
+        throw "Event '$($clip.event)' in bank '$(Get-BankEntry $clip)' produced no TXTP variants. Verify the event name and bank mapping."
     }
 
     $variantIndex = [int]$clip.variantIndex
@@ -199,31 +286,48 @@ foreach ($clip in $profile.clips) {
     }
 
     $selected = $txtpFiles[$variantIndex]
-    $destination = Join-Path $clipRoot "$($clip.clipId).wav"
+    $group = if ([string]::IsNullOrWhiteSpace($clip.group)) { "Vehicles" } else { [string]$clip.group }
+    if ([IO.Path]::IsPathRooted($group) -or $group -match '(^|[\\/])\.\.([\\/]|$)') {
+        throw "Invalid output group '$group' for '$($clip.clipId)'."
+    }
+    $destinationRoot = if ($group -eq "Vehicles") { $clipRoot } else { Join-Path $clipRoot $group }
+    New-Item -ItemType Directory -Force -Path $destinationRoot | Out-Null
+    $destination = Join-Path $destinationRoot "$($clip.clipId).wav"
     if ($Force -or -not (Test-Path -LiteralPath $destination)) {
         & $vgmstream -i -o $destination $selected.FullName
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $destination)) {
             throw "vgmstream failed for '$($clip.clipId)'."
         }
     }
+    if ($null -ne $clip.trimTrailingSilenceDb) {
+        & python (Join-Path $PSScriptRoot "trim_wav_silence.py") $destination `
+            --threshold-db ([string]$clip.trimTrailingSilenceDb) --tail-ms 150
+        if ($LASTEXITCODE -ne 0) { throw "Silence trimming failed for '$($clip.clipId)'." }
+    }
 
     $file = Get-Item -LiteralPath $destination
     $manifestClips += [ordered]@{
         clipId = $clip.clipId
+        group = $group.Replace('\', '/')
         bank = $clip.bank
-        mediaBank = if ([string]::IsNullOrWhiteSpace($clip.mediaBank)) { $clip.bank } else { $clip.mediaBank }
+        bankEntry = Get-BankEntry $clip
+        mediaBank = Get-MediaBank $clip
+        mediaEntries = @(Get-MediaEntries $clip)
+        languageId = if ([string]::IsNullOrWhiteSpace($clip.languageId)) { $null } else { [string]$clip.languageId }
         event = $clip.event
         variantIndex = $variantIndex
         variantCount = $txtpFiles.Count
         selectedTxtp = $selected.Name
         usage = $clip.usage
+        trimTrailingSilenceDb = if ($null -eq $clip.trimTrailingSilenceDb) { $null } else { [double]$clip.trimTrailingSilenceDb }
+        relativePath = $destination.Substring($outputRoot.TrimEnd('\').Length + 1).Replace('\', '/')
         bytes = $file.Length
         sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash.ToLowerInvariant()
     }
 }
 
 $manifest = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     generatedUtc = [DateTime]::UtcNow.ToString("o")
     sourceRoot = $WoTRoot
     wwiseBankVersion = $bankVersion

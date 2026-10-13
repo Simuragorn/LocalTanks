@@ -1,8 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "clips": [
     {
       "clipId": "engine_eng_gaz_aa_pc",
+      "group": "Vehicles",
       "bank": "engines",
       "event": "eng_gaz_aa_pc",
       "variantIndex": 0,
@@ -10,6 +11,7 @@
     },
     {
       "clipId": "gun_wpn_small_pc",
+      "group": "Vehicles",
       "bank": "wpn",
       "event": "wpn_small_pc",
       "variantIndex": 0,
@@ -17,6 +19,7 @@
     },
     {
       "clipId": "gun_wpn_automatic_pc",
+      "group": "Vehicles",
       "bank": "wpn",
       "event": "wpn_automatic_pc",
       "variantIndex": 0,
@@ -24,6 +27,7 @@
     },
     {
       "clipId": "turret_tur_man_trav_01",
+      "group": "Vehicles",
       "bank": "turret",
       "event": "tur_man_trav_01",
       "variantIndex": 0,
@@ -31,6 +35,7 @@
     },
     {
       "clipId": "turret_tur_man_trav_04",
+      "group": "Vehicles",
       "bank": "turret",
       "event": "tur_man_trav_04",
       "variantIndex": 0,
@@ -38,6 +43,7 @@
     },
     {
       "clipId": "turret_tur_man_trav_05",
+      "group": "Vehicles",
       "bank": "turret",
       "event": "tur_man_trav_05",
       "variantIndex": 0,
@@ -45,6 +51,7 @@
     },
     {
       "clipId": "tracks_trds_med_npc",
+      "group": "Vehicles",
       "bank": "treads_npc",
       "event": "trds_med_npc",
       "variantIndex": 0,
@@ -52,6 +59,7 @@
     },
     {
       "clipId": "tracks_trds_chf_npc",
+      "group": "Vehicles",
       "bank": "treads_npc",
       "event": "trds_chf_npc",
       "variantIndex": 0,
@@ -59,6 +67,7 @@
     },
     {
       "clipId": "reload_gun_rld_20_45mm",
+      "group": "Vehicles",
       "bank": "gun_reload",
       "event": "gun_rld_20_45mm",
       "variantIndex": 0,
@@ -66,6 +75,7 @@
     },
     {
       "clipId": "impact_small_pierced",
+      "group": "Vehicles",
       "bank": "impacts_full",
       "event": "imp_small_pierce_AP_NPC_NPC",
       "variantIndex": 0,
@@ -73,6 +83,7 @@
     },
     {
       "clipId": "impact_small_blocked",
+      "group": "Vehicles",
       "bank": "impacts_full",
       "event": "imp_small_not_pierce_AP_NPC_NPC",
       "variantIndex": 0,
@@ -80,6 +91,7 @@
     },
     {
       "clipId": "impact_small_ricochet",
+      "group": "Vehicles",
       "bank": "impacts_full",
       "event": "imp_small_ricochet_AP_NPC_NPC",
       "variantIndex": 0,
@@ -87,11 +99,186 @@
     },
     {
       "clipId": "destruction_expl_crew_death_s_npc",
+      "group": "Vehicles",
       "bank": "expl",
       "mediaBank": "streams",
       "event": "expl_crew_death_s_NPC",
       "variantIndex": 0,
       "usage": "oneShot"
+    },
+    {
+      "clipId": "mines_music_loading",
+      "group": "Mines/Music",
+      "bank": "music_interactive",
+      "mediaEntries": [
+        "music_interactive_part_01.pck",
+        "music_interactive_part_02.pck",
+        "music_interactive_part_03.pck",
+        "music_interactive_part_04.pck",
+        "music_interactive_part_05.pck",
+        "music_interactive_part_06.pck",
+        "music_interactive_part_07.pck",
+        "music_interactive_part_08.pck",
+        "music_interactive_part_09.pck",
+        "music_interactive_part_10.pck",
+        "music_interactive_part_11.pck",
+        "music_interactive_part_12.pck"
+      ],
+      "event": "music_mines_loading_screen",
+      "variantIndex": 0,
+      "usage": "music"
+    },
+    {
+      "clipId": "mines_music_battle_intensive",
+      "group": "Mines/Music",
+      "bank": "music_interactive",
+      "mediaEntriesFrom": "mines_music_loading",
+      "event": "music_mines_dron_intensive",
+      "variantIndex": 0,
+      "usage": "music"
+    },
+    {
+      "clipId": "mines_music_battle_relaxed",
+      "group": "Mines/Music",
+      "bank": "music_interactive",
+      "mediaEntriesFrom": "mines_music_loading",
+      "event": "music_mines_dron_relaxed",
+      "variantIndex": 0,
+      "usage": "music"
+    },
+    {
+      "clipId": "mines_music_result_victory",
+      "group": "Mines/Music",
+      "bank": "music_interactive",
+      "mediaEntriesFrom": "mines_music_loading",
+      "event": "music_mines_result_win",
+      "variantIndex": 0,
+      "usage": "music"
+    },
+    {
+      "clipId": "mines_music_result_draw",
+      "group": "Mines/Music",
+      "bank": "music_interactive",
+      "mediaEntriesFrom": "mines_music_loading",
+      "event": "music_mines_result_drawn",
+      "variantIndex": 0,
+      "usage": "music"
+    },
+    {
+      "clipId": "mines_music_result_defeat",
+      "group": "Mines/Music",
+      "bank": "music_interactive",
+      "mediaEntriesFrom": "mines_music_loading",
+      "event": "music_mines_result_defeat",
+      "variantIndex": 0,
+      "usage": "music"
+    },
+    {
+      "clipId": "mines_ambient_wind_summer",
+      "group": "Mines/Ambience",
+      "bank": "ambient_2D",
+      "event": "amb_map_10_hills_wind_summer",
+      "variantIndex": 0,
+      "usage": "loop"
+    },
+    {
+      "clipId": "base_capture_progress_loop",
+      "group": "Universal/BaseCapture",
+      "bank": "gui",
+      "event": "base_capture_1",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
+      "clipId": "battle_end_by_base_capture",
+      "group": "Universal/BaseCapture",
+      "bank": "gui",
+      "event": "end_battle_capture_base",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
+      "clipId": "battle_end_by_last_kill",
+      "group": "Universal/BattleFlow",
+      "bank": "gui",
+      "event": "end_battle_last_kill",
+      "variantIndex": 0,
+      "usage": "oneShot"
+    },
+    {
+      "clipId": "quick_command_affirmative_ru",
+      "group": "Universal/QuickCommands/Russian",
+      "bank": "ussr_inbattle_communication_pc",
+      "bankEntry": "ussr/inbattle_communication_pc.bnk",
+      "languageId": "3110496415",
+      "event": "ibc_vo_pc_reply_affirmative",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "quick_command_need_help_ru",
+      "group": "Universal/QuickCommands/Russian",
+      "bank": "ussr_inbattle_communication_pc",
+      "bankEntry": "ussr/inbattle_communication_pc.bnk",
+      "languageId": "3110496415",
+      "event": "ibc_vo_pc_request_sos",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "quick_command_supporting_ru",
+      "group": "Universal/QuickCommands/Russian",
+      "bank": "ussr_inbattle_communication_pc",
+      "bankEntry": "ussr/inbattle_communication_pc.bnk",
+      "languageId": "3110496415",
+      "event": "ibc_vo_pc_reply_sos",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "quick_command_retreat_ru",
+      "group": "Universal/QuickCommands/Russian",
+      "bank": "ussr_inbattle_communication_pc",
+      "bankEntry": "ussr/inbattle_communication_pc.bnk",
+      "languageId": "3110496415",
+      "event": "ibc_vo_pc_request_retreat",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "quick_command_thanks_ru",
+      "group": "Universal/QuickCommands/Russian",
+      "bank": "ussr_inbattle_communication_pc",
+      "bankEntry": "ussr/inbattle_communication_pc.bnk",
+      "languageId": "3110496415",
+      "event": "ibc_vo_pc_reply_thank_you",
+      "variantIndex": 0,
+      "trimTrailingSilenceDb": -45,
+      "usage": "voice"
+    },
+    {
+      "clipId": "battle_start_ru",
+      "group": "Universal/BattleFlow/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_start_battle",
+      "variantIndex": 0,
+      "usage": "voice"
+    },
+    {
+      "clipId": "base_captured_ru",
+      "group": "Universal/BaseCapture/Russian",
+      "bank": "ussr_voiceover",
+      "bankEntry": "ussr/voiceover.bnk",
+      "languageId": "3110496415",
+      "event": "vo_target_captured",
+      "variantIndex": 0,
+      "usage": "voice"
     }
   ]
 }
