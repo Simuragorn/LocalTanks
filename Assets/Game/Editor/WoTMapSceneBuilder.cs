@@ -22,6 +22,19 @@ namespace LocalTanks.Editor
         private const string GeneratedRoot = "Assets/Game/Generated/WoTMap";
         private const string ClassIconsRoot = "Assets/Game/Generated/UI/VehicleClasses";
         private const float GroundSortingOrder = -20f;
+
+        /// <summary>
+        /// The navigation wash sits just above the surface image and below every object, so it can be read
+        /// without hiding the ground it describes.
+        /// </summary>
+        private const float NavigationOverlaySortingOrder = -19f;
+
+        /// <summary>
+        /// The arena's own surface image, produced by the environment library from the game client. It
+        /// covers the whole map in one sprite, so it is not a tile: see <see cref="CreateGround"/>.
+        /// </summary>
+        private const string AerialSurfacePath =
+            "Assets/LocalOnly/WoTEnvironmentGenerated/Ground/mines_aerial.png";
         private const float ObstacleSortingOrder = -5f;
 
         [MenuItem("Local Tanks/Build WoT Map Scene (Mines)")]
@@ -94,28 +107,90 @@ namespace LocalTanks.Editor
         /// the arena is 208 units across at a four-unit grid, and a tile per cell would add thousands of
         /// objects for a single flat colour. Real surface art arrives later as textures over this sheet.
         /// </summary>
+        /// <summary>
+        /// The arena floor. It is the map's own surface image, taken from the game client, drawn as one
+        /// sprite across the whole playable area.
+        /// <para>
+        /// The alternative was a tilemap of flat colours keyed to the navigation grid, which is a
+        /// debugging view rather than a place to fight: it showed the routing cells and told a player
+        /// nothing about the ground. The surface image is the real thing - fields, treelines, stony
+        /// shores and the road network of Mines - and covering the map with a single sprite means there
+        /// are no tile seams at all.
+        /// </para>
+        /// <para>
+        /// Its limit is resolution. The source is 4096 square over an 800-metre arena, about five pixels
+        /// per metre, which is generous from a distance and soft close up. That is what the material
+        /// surfaces are for: they sit on top and give the close view detail the aerial image lacks.
+        /// </para>
+        /// </summary>
         private static void CreateGround(WoTMapAsset asset)
         {
-            GameObject grid = new GameObject("Ground");
-            SceneManager.MoveGameObjectToScene(grid, SceneManager.GetActiveScene());
+            GameObject root = new GameObject("Ground");
+            SceneManager.MoveGameObjectToScene(root, SceneManager.GetActiveScene());
+
+            Sprite surface = AssetDatabase.LoadAssetAtPath<Sprite>(AerialSurfacePath);
+            if (surface == null)
+            {
+                Debug.LogWarning($"The arena surface was not found at {AerialSurfacePath}. The ground will " +
+                                 "have no image; rebuild the environment library to restore it.");
+                return;
+            }
+
+            GameObject floor = new GameObject("Surface");
+            floor.transform.SetParent(root.transform, false);
+            floor.transform.position = asset.worldCenter;
+            SpriteRenderer renderer = floor.AddComponent<SpriteRenderer>();
+            renderer.sprite = surface;
+            renderer.sortingOrder = Mathf.RoundToInt(GroundSortingOrder);
+
+            // Scaled to the playable area rather than left at its pixel size, so the picture and the
+            // collision world describe the same ground. Uniform, because the source is square and the
+            // arena is square: a mismatch here would stretch the map itself.
+            Vector2 drawn = surface.bounds.size;
+            if (drawn.x > 0.0001f && drawn.y > 0.0001f)
+            {
+                floor.transform.localScale = new Vector3(
+                    asset.playableSize.x / drawn.x,
+                    asset.playableSize.y / drawn.y,
+                    1f);
+            }
+
+            CreateNavigationOverlay(root.transform, asset);
+        }
+
+        /// <summary>
+        /// A faint colour wash over the ground showing the navigation grid. It is a diagnostic layer, not
+        /// the arena floor: the cells are four metres across and routing only, so drawn at full strength
+        /// they hid the map behind a checkerboard. At low alpha they are readable when looked for and
+        /// invisible when not.
+        /// </summary>
+        private static void CreateNavigationOverlay(Transform parent, WoTMapAsset asset)
+        {
+            GameObject grid = new GameObject("NavigationOverlay");
+            grid.transform.SetParent(parent, false);
             Grid gridComponent = grid.AddComponent<Grid>();
             gridComponent.cellSize = new Vector3(asset.navigationCellSize, asset.navigationCellSize, 1f);
             gridComponent.transform.position = asset.worldCenter - asset.playableSize * 0.5f;
 
-            Tilemap ground = CreateTilemapLayer(grid.transform, "Ground", GroundSortingOrder, false);
-            Tile tile = CreateGroundTile(new Color(0.24f, 0.34f, 0.21f));
+            Tilemap overlay = CreateTilemapLayer(grid.transform, "Cells", NavigationOverlaySortingOrder, false);
+            Tile tile = CreateGroundTile(Color.white);
+            const float wash = 0.18f;
             for (int row = 0; row < asset.navigationRows; row++)
             {
                 for (int column = 0; column < asset.navigationColumns; column++)
                 {
                     int index = row * asset.navigationColumns + column;
-                    TerrainKind kind = (TerrainKind)asset.navigationTerrain[index];
-                    tile.color = GroundColor(kind);
-                    ground.SetTile(new Vector3Int(column, row, 0), tile);
+                    Color colour = GroundColor((TerrainKind)asset.navigationTerrain[index]);
+                    tile.color = new Color(colour.r, colour.g, colour.b, wash);
+                    overlay.SetTile(new Vector3Int(column, row, 0), tile);
                 }
             }
         }
 
+        /// <summary>
+        /// Terrain colour used by the navigation wash. Cover is drawn as dry ground rather than as a wall,
+        /// because a tank drives through it and is only slowed.
+        /// </summary>
         private static Color GroundColor(TerrainKind kind)
         {
             return kind switch
@@ -123,7 +198,6 @@ namespace LocalTanks.Editor
                 TerrainKind.Road => new Color(0.42f, 0.34f, 0.22f),
                 TerrainKind.Mud => new Color(0.29f, 0.21f, 0.12f),
                 TerrainKind.ShallowWater => new Color(0.13f, 0.34f, 0.45f),
-                // Cover is drawn as dry ground, not as a wall: a tank drives through it and is slowed.
                 TerrainKind.Obstacle => new Color(0.31f, 0.32f, 0.20f),
                 TerrainKind.Blocked => new Color(0.16f, 0.16f, 0.15f),
                 _ => new Color(0.24f, 0.34f, 0.21f)

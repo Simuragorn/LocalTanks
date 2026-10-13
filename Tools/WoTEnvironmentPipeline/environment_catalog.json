@@ -131,6 +131,8 @@
     {"id": "mines_rubble", "displayName": "Mines rubble and debris", "terrainId": "rubble", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_rock13_debris_AM.dds"},
     {"id": "mines_ground", "displayName": "Mines ground", "terrainId": "ground", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_Ground_37_AM.dds"},
     {"id": "mines_cracked_earth", "displayName": "Mines cracked earth", "terrainId": "cracked_earth", "tileable": true, "sourcePackage": "shared_content_sandbox-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Ground_cracks_01_AM.dds"},
-    {"id": "mines_sand", "displayName": "Mines sand", "terrainId": "sand", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_sand_river_water_AM.dds"}
+    {"id": "mines_sand", "displayName": "Mines sand", "terrainId": "sand", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_sand_river_water_AM.dds"},
+
+    {"id": "mines_aerial", "displayName": "Mines surface, whole arena", "terrainId": "aerial", "tileable": false, "sourcePackage": "10_hills.pkg", "sourcePath": "spaces/10_hills/global_AM.dds", "treatAsWholeMap": true}
   ]
 }
