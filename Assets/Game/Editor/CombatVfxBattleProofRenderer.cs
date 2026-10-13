@@ -224,10 +224,12 @@ namespace LocalTanks.Editor
             // The track overlay is a runtime visual: its sprite and tint are set by the track animator while
             // the game runs, so in an editor composition it would be drawn as a magenta rectangle. Nothing
             // in this frame is about tracks drawn on the hull, so it is simply switched off.
-            Transform overlay = tank.transform.Find("TrackOverlay");
-            if (overlay != null)
+            foreach (Transform child in tank.GetComponentsInChildren<Transform>(true))
             {
-                overlay.gameObject.SetActive(false);
+                if (child.name == "TrackOverlay")
+                {
+                    child.gameObject.SetActive(false);
+                }
             }
 
             // A machine also carries renderers whose sprite is chosen while the game runs, such as the
@@ -459,6 +461,7 @@ namespace LocalTanks.Editor
             // images would show flat white where the game shows light.
             Camera camera = cameraObject.AddComponent<Camera>();
             CombatVfxGlowSetup.EnsurePostProcessing(cameraObject);
+            CombatVfxGlowSetup.EnsureGlobalLight();
             camera.orthographic = true;
             camera.orthographicSize = 2.45f;
             camera.aspect = (float)ImageWidth / ImageHeight;

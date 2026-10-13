@@ -121,6 +121,7 @@ namespace LocalTanks.Editor
             // images would show flat white where the game shows light.
             Camera camera = cameraObject.AddComponent<Camera>();
             CombatVfxGlowSetup.EnsurePostProcessing(cameraObject);
+            CombatVfxGlowSetup.EnsureGlobalLight();
             camera.orthographic = true;
             camera.orthographicSize = Rows * CellSize * 0.5f + 0.3f;
             camera.aspect = (float)ImageWidth / ImageHeight;

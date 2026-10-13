@@ -39,13 +39,18 @@ namespace LocalTanks.Editor
         public const float BloomIntensity = 0.85f;
         public const float BloomScatter = 0.55f;
 
+        /// <summary>Name of the root object that carries the scene's global light.</summary>
+        public const string GlobalLightName = "VfxGlobalLight";
+
         [MenuItem("Local Tanks/Diagnostics/Enable Vfx Glow")]
         public static void Apply()
         {
             ApplyProfile();
             int cameras = ApplyToScenes();
+            int lights = ApplyGlobalLightToScenes();
             Debug.Log($"[vfxglow] bloom {BloomIntensity} at threshold {BloomThreshold}, neutral tonemapping, " +
-                      $"post processing enabled on {cameras} camera(s) in battle scenes.");
+                      $"post processing enabled on {cameras} camera(s) and a global light added to {lights} " +
+                      "battle scene(s).");
         }
 
         /// <summary>Sets the bloom and tonemapping values the bright effects are authored against.</summary>
@@ -119,6 +124,64 @@ namespace LocalTanks.Editor
 
             AssetDatabase.SaveAssets();
             return changed;
+        }
+
+        /// <summary>
+        /// Adds a white global light to every battle scene. It multiplies the scene by one, so it changes
+        /// nothing by itself; it exists so that the point lights of a flash and a fire have a lit scene to
+        /// add to, instead of depending on the renderer's implicit fallback.
+        /// </summary>
+        public static int ApplyGlobalLightToScenes()
+        {
+            int changed = 0;
+            foreach (string path in BattleScenePaths())
+            {
+                Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                if (FindGlobalLight(scene) == null)
+                {
+                    CreateGlobalLight();
+                    EditorSceneManager.MarkSceneDirty(scene);
+                    EditorSceneManager.SaveScene(scene);
+                    changed++;
+                }
+            }
+
+            AssetDatabase.SaveAssets();
+            return changed;
+        }
+
+        /// <summary>Creates the global light in the scene that is currently open.</summary>
+        public static Light2D CreateGlobalLight()
+        {
+            GameObject root = new GameObject(GlobalLightName);
+            Light2D light = root.AddComponent<Light2D>();
+            light.lightType = Light2D.LightType.Global;
+            light.color = Color.white;
+            light.intensity = 1f;
+            light.blendStyleIndex = 0;   // the multiply style: this is the scene's ambient light
+            light.shadowsEnabled = false;
+            return light;
+        }
+
+        /// <summary>Makes sure the current scene has a global light, and returns it.</summary>
+        public static Light2D EnsureGlobalLight()
+        {
+            Light2D existing = FindGlobalLight(SceneManager.GetActiveScene());
+            return existing != null ? existing : CreateGlobalLight();
+        }
+
+        private static Light2D FindGlobalLight(Scene scene)
+        {
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                Light2D light = root.GetComponentInChildren<Light2D>(true);
+                if (light != null)
+                {
+                    return light;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>

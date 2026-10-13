@@ -5,6 +5,7 @@ using System.Linq;
 using LocalTanks;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering;
 
 namespace LocalTanks.Editor
@@ -457,6 +458,9 @@ namespace LocalTanks.Editor
 
             ParticleSystem spikes = AddSystem(root, "Spikes", materials["spark"], SparkSortingOrder, seconds + 0.08f, 0.05f, 0.11f, 0.22f, 0.45f);
             SetHotColor(spikes, 3.4f, 2.9f, 2f);
+            // Warm and short: the light follows the burst, and the pool switches the whole instance off
+            // when the flash is over, so the light is brief without any code to fade it.
+            AddLight(root, "FlashLight", new Color(1f, 0.74f, 0.42f), 1.7f, 0.08f, 2.6f, 0.55f);
             SetBurst(spikes, 5);
             // Spikes leave the bore, so their spread along the barrel is narrow and their side spread tiny.
             SetPlanarVelocity(spikes, -0.25f, 0.25f, 1.2f, 2.6f);
@@ -611,6 +615,11 @@ namespace LocalTanks.Editor
             SetPlanarVelocity(ember, -0.7f, 0.7f, 0.7f, 1.9f);
             SetSizeOverLifetime(ember, 1f, 0.3f);
             SetFade(ember, 0.1f);
+
+            // A wreck lights its own surroundings for as long as it burns, which is what makes a burning
+            // machine visible from across the map and what turns the fire into something in the world
+            // rather than a picture drawn on top of it.
+            AddLight(root, "FireLight", new Color(1f, 0.52f, 0.2f), 1.7f, 0.25f, 3.4f, 0.45f);
         }
 
         /// <summary>
@@ -658,6 +667,13 @@ namespace LocalTanks.Editor
             SetFade(exhaust, 0.2f);
         }
 
+        /// <summary>
+        /// Index of the additive light blend style in <c>Assets/Settings/Renderer2D.asset</c>. The renderer
+        /// declares four styles, two multiply and two additive; light meant to be seen as a glow has to use
+        /// an additive one, otherwise it would multiply the scene towards black.
+        /// </summary>
+        private const int AdditiveLightBlendStyle = 1;
+
         private static ParticleSystem AddSystem(
             GameObject root,
             string name,
@@ -671,6 +687,36 @@ namespace LocalTanks.Editor
             bool animated = false)
         {
             return AddSystem(root, name, material, sortingOrder, duration, lifetimeMin, lifetimeMax, sizeMin, sizeMax, 0f, 0f, animated);
+        }
+
+        /// <summary>
+        /// Adds a 2D light to an effect. A muzzle flash and a fire do not only draw, they light what is
+        /// around them, and that is most of what makes a shot read as a shot: the hull and the ground
+        /// brighten for a moment. Blend style one is the additive style of this project's 2D renderer,
+        /// which adds light on top of the scene instead of replacing its colour.
+        /// </summary>
+        private static void AddLight(
+            GameObject root,
+            string name,
+            Color color,
+            float intensity,
+            float innerRadius,
+            float outerRadius,
+            float falloff)
+        {
+            GameObject child = new GameObject(name);
+            child.transform.SetParent(root.transform, false);
+            Light2D light = child.AddComponent<Light2D>();
+            light.lightType = Light2D.LightType.Point;
+            light.color = color;
+            light.intensity = intensity;
+            light.pointLightInnerRadius = innerRadius;
+            light.pointLightOuterRadius = outerRadius;
+            light.pointLightInnerAngle = 360f;
+            light.pointLightOuterAngle = 360f;
+            light.falloffIntensity = falloff;
+            light.blendStyleIndex = AdditiveLightBlendStyle;
+            light.shadowsEnabled = false;
         }
 
         /// <summary>
