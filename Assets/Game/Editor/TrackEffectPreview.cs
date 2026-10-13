@@ -21,27 +21,32 @@ namespace LocalTanks.Editor
         private static readonly string[] PrefabPaths =
         {
             "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
-            "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab"
+            "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
+            "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab",
+            "Assets/Game/Prefabs/Tanks/T1Cunningham_Player.prefab"
         };
 
-        /// <summary>Zoom levels: the battle camera, a middle view and a close look at the links.</summary>
-        private static readonly float[] BattleZooms = { 13f, 2f, 1f };
+        /// <summary>
+        /// Zoom levels: the battle camera, two closer views and an extreme one that fills the frame
+        /// with a single track band, where the links themselves can be judged.
+        /// </summary>
+        private static readonly float[] BattleZooms = { 13f, 4f, 1f, 0.35f };
 
         /// <summary>Tread feature spacing in model metres, over the plausible range.</summary>
         private static readonly float[] TreadPitches = { 0.22f };
 
         /// <summary>
         /// Candidate looks: lighten strength, darken strength, how much darkening survives on the
-        /// darkest art, and the weight of the coarse glint against the fine links.
+        /// darkest art, and the gain of the coarse links that replace the fine ones at a distance.
         /// </summary>
         private static readonly Vector4[] Looks =
         {
-            new Vector4(0.35f, 0.55f, 0.5f, 0.22f),
-            new Vector4(0.26f, 0.42f, 0.5f, 0.12f),
-            new Vector4(0.5f, 0.7f, 0.45f, 0.35f),
+            new Vector4(0.32f, 0.45f, 0.5f, 1f),
+            new Vector4(0.5f, 0.65f, 0.45f, 1f),
+            new Vector4(0.65f, 0.85f, 0.45f, 1f),
             // Gaps only, exaggerated: this must visibly darken the band, because additive blending
             // silently clamped exactly this half of the pattern away.
-            new Vector4(0f, 1.2f, 0.7f, 0f)
+            new Vector4(0f, 1.2f, 0.7f, 1f)
         };
 
         private static readonly float[] Phases = { 0f, 0.5f };
@@ -84,6 +89,16 @@ namespace LocalTanks.Editor
                     foreach (float zoom in BattleZooms)
                     {
                         camera.orthographicSize = zoom;
+
+                        // A battle view wants the whole machine, but a close view is useless centred on
+                        // the hull: the track band sits at its outer edge and would leave the frame. From
+                        // the middle zoom inwards the camera therefore follows the starboard band.
+                        float centre = tank.transform.position.x;
+                        Vector3 position = camera.transform.position;
+                        position.x = zoom <= 4f ? centre - overlay.bounds.extents.x * 0.85f : centre;
+                        position.y = tank.transform.position.y;
+                        camera.transform.position = position;
+
                         CaptureWithoutOverlay(camera, overlay, name, zoom);
                         CapturePhases(camera, overlay, hull, name, zoom);
                     }

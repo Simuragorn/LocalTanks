@@ -58,7 +58,7 @@ namespace LocalTanks
         [SerializeField] private float forwardSign = -1f;
 
         /// <summary>x lightens a tread plate, y darkens the gap between two links.</summary>
-        [SerializeField] private Vector2 strength = new Vector2(0.35f, 0.55f);
+        [SerializeField] private Vector2 strength = new Vector2(0.5f, 0.65f);
 
         private MaterialPropertyBlock properties;
         private Vector2 previousPosition;
@@ -80,7 +80,7 @@ namespace LocalTanks
         /// multipliers around one. Deliberately low: the tread is a movement cue, not a conveyor
         /// belt, and the pattern is fine enough that a strong contrast would look painted on.
         /// </summary>
-        public static Vector2 DefaultStrength => new Vector2(0.35f, 0.55f);
+        public static Vector2 DefaultStrength => new Vector2(0.5f, 0.65f);
 
         /// <summary>
         /// Splits the hull's real motion into the distance each track travelled over the ground.

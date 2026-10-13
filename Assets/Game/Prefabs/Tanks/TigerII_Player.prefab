@@ -510,7 +510,7 @@ MonoBehaviour:
   treadPitchUnits: 0.05737886
   maskHeightUnits: 1.9247999
   forwardSign: -1
-  strength: {x: 0.35, y: 0.55}
+  strength: {x: 0.5, y: 0.65}
 --- !u!114 &5283889550324467700
 MonoBehaviour:
   m_ObjectHideFlags: 0

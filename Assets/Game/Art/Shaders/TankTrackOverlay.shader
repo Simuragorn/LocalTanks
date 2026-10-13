@@ -17,7 +17,7 @@ Shader "LocalTanks/TankTrackOverlay"
 
         // x lightens a tread plate, y darkens the gap between two links. Both are multipliers around
         // one, so 0.2 means twenty percent brighter and 0.3 thirty percent darker.
-        _TrackStrength ("Lighten and darken strength", Vector) = (0.35, 0.55, 0, 0)
+        _TrackStrength ("Lighten and darken strength", Vector) = (0.5, 0.65, 0, 0)
 
         // x is how many links span the mask and y how many coarse sweeps span it.
         _TrackParams ("Link repeats, sweep repeats", Vector) = (8, 2.2, 0, 0)
@@ -31,8 +31,8 @@ Shader "LocalTanks/TankTrackOverlay"
         _HullRect ("Hull rectangle in that texture", Vector) = (0, 0, 1, 1)
 
         // x is how much of the darkening survives on the darkest art, z is the luma gain of the hull
-        // response and w is the weight of the coarse glint against the fine links.
-        _HullLighting ("Darkening floor, unused, luma gain, glint weight", Vector) = (0.5, 0, 1.5, 0.22)
+        // response and w is the gain of the coarse links that replace the fine ones at a distance.
+        _HullLighting ("Darkening floor, unused, luma gain, coarse gain", Vector) = (0.5, 0, 1.5, 1)
 
         [MaterialToggle] PixelSnap ("Pixel snap", Float) = 0
         [HideInInspector] _RendererColor ("RendererColor", Color) = (1, 1, 1, 1)
@@ -87,12 +87,11 @@ Shader "LocalTanks/TankTrackOverlay"
             float4 _HullRect;
             float4 _HullLighting;
 
-            #define TRACK_TWO_PI 6.2831853071795865
-
             // One link per period: a plate with a thin gap at its end, centred on zero so the same
             // term both lightens the plate and darkens the gap. The gap shifts and deepens unevenly
             // from link to link and a slow wear term runs along the whole track, so a long run does
-            // not look printed.
+            // not look printed. The same profile is used at two frequencies: fine links for a close
+            // camera and coarse ones for a distant one.
             float TrackLinkProfile(float phase, float seed)
             {
                 float link = floor(phase);
@@ -101,14 +100,6 @@ Shader "LocalTanks/TankTrackOverlay"
                 float f = frac(phase) - (noise - 0.5) * 0.06;
                 float gap = smoothstep(0.78, 0.88, f) * (1.0 - smoothstep(0.94, 1.04, f));
                 return ((1.0 - gap) * 1.7 - 1.0) * (0.78 + 0.36 * noise) * (0.9 + 0.16 * wear);
-            }
-
-            // A narrow glint instead of a broad glow: metal catches a thin line of light, while a
-            // wide smooth band is exactly what reads as plastic.
-            float TrackGlint(float phase)
-            {
-                float wave = saturate(sin(phase * TRACK_TWO_PI));
-                return wave * wave * wave * 1.6 - 0.34;
             }
 
             fixed4 TrackOverlayFragment(v2f IN) : SV_Target
@@ -131,17 +122,19 @@ Shader "LocalTanks/TankTrackOverlay"
                 float sweeps = _TrackParams.y;
 
                 // How many links one screen pixel covers. A link smaller than a couple of pixels
-                // cannot be drawn as a link any more, so its contrast fades out. The window is wide on
-                // purpose: at the battle zoom a quarter of the link contrast still reads as track
-                // texture, and cutting it off there left only the smooth glint, which is precisely
-                // what looks like plastic.
+                // cannot be drawn as a link any more, so the fine pattern fades out and the coarse one
+                // takes over. Both are the same segmented pattern, so a distant machine keeps reading
+                // as a track instead of as a smooth glow, and the movement stays trackable: a band
+                // that changes brightness without moving is what looks plastic.
                 float linksPerPixel = max(fwidth(left * links), 1e-5);
                 float resolvable = saturate(1.0 - (linksPerPixel - 0.25) / 0.5);
+                float coarseShare = (1.0 - resolvable) * _HullLighting.w;
 
-                float leftDetail = TrackLinkProfile(left * links, 0.0) * mask.r;
-                float rightDetail = TrackLinkProfile(right * links, 17.0) * mask.g;
-                float detail = (leftDetail + rightDetail) * resolvable;
-                float glint = TrackGlint(left * sweeps) * mask.r + TrackGlint(right * sweeps) * mask.g;
+                float fine = TrackLinkProfile(left * links, 0.0) * mask.r
+                             + TrackLinkProfile(right * links, 17.0) * mask.g;
+                float coarse = TrackLinkProfile(left * sweeps, 3.0) * mask.r
+                               + TrackLinkProfile(right * sweeps, 29.0) * mask.g;
+                float detail = fine * resolvable + coarse * coarseShare;
 
                 // The mask sprite lines up with the hull rectangle of the source texture, so the
                 // hull's own pixels are one fetch away. Art that is already dark cannot be darkened
@@ -150,8 +143,7 @@ Shader "LocalTanks/TankTrackOverlay"
                 float hullLuma = saturate(dot(hullRgb, float3(0.299, 0.587, 0.114)) * _HullLighting.z);
                 float darkening = lerp(_HullLighting.x, 1.0, hullLuma);
 
-                float profile = coverage *
-                    (detail * (1.0 - _HullLighting.w) + glint * _HullLighting.w);
+                float profile = coverage * detail;
                 float modulation = profile >= 0.0
                     ? profile * _TrackStrength.x
                     : profile * _TrackStrength.y * darkening;
