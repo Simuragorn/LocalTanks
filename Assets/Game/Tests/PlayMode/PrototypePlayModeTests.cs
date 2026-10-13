@@ -80,8 +80,14 @@ namespace LocalTanks.Tests
         /// The key cycles 1, 3, 10 and then back, and the slider can dial any rate in that range. Ten
         /// times is the whole point on an eight-hundred-metre map, where an approach takes a minute to
         /// watch; raising the time scale alone would look like a slideshow, so the controller also raises
-        /// the captured frame delta. The physics step must stay untouched or the trajectories stop
-        /// describing the real game.
+        /// the captured frame delta.
+        /// <para>
+        /// Two things must not change. The physics step, or fast runs describe a different game. And at
+        /// normal speed the captured delta must be switched off entirely: capturing a fixed delta makes
+        /// every frame simulate exactly that much whatever the frame really cost, so on any machine not
+        /// hitting the physics rate the battle runs at the wrong speed and tanks appear to drive faster.
+        /// That is a real defect this check now guards.
+        /// </para>
         /// </summary>
         [UnityTest]
         public IEnumerator DeveloperTimeScale_CyclesUpToTenTimesWithoutTouchingThePhysicsStep()
@@ -91,21 +97,33 @@ namespace LocalTanks.Tests
             float fixedStep = Time.fixedDeltaTime;
             yield return null;
 
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            Assert.That(Time.captureDeltaTime, Is.Zero,
+                "At normal speed the captured frame delta must be off, or the battle runs at the wrong speed.");
+
             controller.Toggle();
             Assert.That(Time.timeScale, Is.EqualTo(3f), "the first press should reach three times");
+            Assert.That(Time.captureDeltaTime, Is.GreaterThan(0f), "a raised rate needs a captured delta");
             controller.Toggle();
             Assert.That(Time.timeScale, Is.EqualTo(10f), "the second press should reach ten times");
             controller.Toggle();
             Assert.That(Time.timeScale, Is.EqualTo(1f), "the cycle should return to normal");
+            Assert.That(Time.captureDeltaTime, Is.Zero,
+                "Returning to normal speed must switch the captured delta off again.");
 
             controller.SetScale(7f);
             Assert.That(Time.timeScale, Is.EqualTo(7f), "the slider sets an arbitrary rate");
             Assert.That(Time.fixedDeltaTime, Is.EqualTo(fixedStep),
                 "the physics step must never change, or fast runs describe a different game");
 
+            controller.SetScale(1f);
+            Assert.That(Time.captureDeltaTime, Is.Zero);
+
             Object.Destroy(root);
             yield return null;
             Assert.That(Time.timeScale, Is.EqualTo(1f));
+            Assert.That(Time.captureDeltaTime, Is.Zero,
+                "Leaving the scene must not leave a captured delta behind for the next battle.");
         }
 
         [UnityTest]

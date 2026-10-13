@@ -105,8 +105,13 @@ namespace LocalTanks
             multiplier = Mathf.Clamp(wanted, 1f, MaximumMultiplier);
             Time.timeScale = multiplier;
             // A captured delta larger than the frame budget would stall the loop, so it is capped and the
-            // remaining speedup comes from timeScale, which does not change step size.
-            Time.captureDeltaTime = Mathf.Min(Time.fixedDeltaTime * multiplier, MaximumCaptureDelta);
+            // remaining speedup comes from timeScale, which does not change step size. At normal speed it is
+            // switched off: capturing a fixed delta makes every frame simulate exactly that much whatever the
+            // frame really cost, which runs the battle at the wrong speed on any machine that is not already
+            // hitting the physics rate.
+            Time.captureDeltaTime = multiplier <= 1f
+                ? 0f
+                : Mathf.Min(Time.fixedDeltaTime * multiplier, MaximumCaptureDelta);
         }
 
         /// <summary>Restores the rates that were in force before this clock applied its own.</summary>

@@ -100,14 +100,23 @@ namespace LocalTanks
         }
 
         /// <summary>
-        /// Applies a multiplier without touching the physics step. The captured delta is capped, and the
-        /// remainder of the speedup comes from the time scale, which never changes step size.
+        /// Applies a multiplier without touching the physics step.
+        /// <para>
+        /// At normal speed the captured delta is switched off rather than set to the frame time. Asking the
+        /// engine to capture a fixed delta makes every frame simulate exactly that much, regardless of how
+        /// long the frame really took, so on anything other than 50 frames per second the battle runs at the
+        /// wrong speed - that is what made tanks appear faster after this control was added. Above normal
+        /// speed the delta is raised deliberately, and capped, with the rest of the speedup coming from the
+        /// time scale, which never changes step size.
+        /// </para>
         /// </summary>
         private static void ApplyScale(float scale)
         {
             float multiplier = Mathf.Max(NormalScale, scale);
             Time.timeScale = multiplier;
-            Time.captureDeltaTime = Mathf.Min(Time.fixedDeltaTime * multiplier, MaximumCaptureDelta);
+            Time.captureDeltaTime = multiplier <= NormalScale
+                ? 0f
+                : Mathf.Min(Time.fixedDeltaTime * multiplier, MaximumCaptureDelta);
         }
     }
 }
