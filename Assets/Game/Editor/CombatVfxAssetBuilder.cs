@@ -257,6 +257,17 @@ namespace LocalTanks.Editor
             return materials;
         }
 
+        /// <summary>
+        /// Creates one particle material in the exact state the URP particle shader needs.
+        /// </summary>
+        /// <remarks>
+        /// Setting blend factors is not enough on its own. The first build ran headless, and the materials
+        /// it produced were still opaque variants: `_SURFACE_TYPE_TRANSPARENT` was missing, so the shader
+        /// compiled its opaque pass, ignored blending and left a depth-only and shadow-caster pass enabled.
+        /// Smoke and dust drew as hard white blobs. Rendering the proof on a real device let Unity resolve
+        /// the keywords and passes, and those resolved values are written here so a headless rebuild
+        /// produces the same material instead of quietly regressing to opaque.
+        /// </remarks>
         private static Material CreateMaterial(Shader shader, string materialName, Texture2D texture, bool additive)
         {
             string path = $"{MaterialFolder}/{materialName}.mat";
@@ -272,14 +283,29 @@ namespace LocalTanks.Editor
             if (material.HasProperty("_BaseMap")) material.SetTexture("_BaseMap", texture);
             if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", Color.white);
             if (material.HasProperty("_Color")) material.SetColor("_Color", Color.white);
+
+            // Transparent surface, whichever way the effect blends.
             if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
             if (material.HasProperty("_Blend")) material.SetFloat("_Blend", additive ? 2f : 0f);
-            if (material.HasProperty("_SrcBlend"))
-                material.SetFloat("_SrcBlend", (float)(additive ? BlendMode.One : BlendMode.SrcAlpha));
-            if (material.HasProperty("_DstBlend"))
-                material.SetFloat("_DstBlend", (float)(additive ? BlendMode.One : BlendMode.OneMinusSrcAlpha));
             if (material.HasProperty("_ZWrite")) material.SetFloat("_ZWrite", 0f);
             if (material.HasProperty("_AlphaClip")) material.SetFloat("_AlphaClip", 0f);
+
+            // Additive keeps the source alpha so a spark fades out instead of blowing out to white.
+            Vector2 sourceBlend = new Vector2((float)BlendMode.SrcAlpha, (float)BlendMode.One);
+            Vector2 destinationBlend = additive
+                ? new Vector2((float)BlendMode.One, (float)BlendMode.One)
+                : new Vector2((float)BlendMode.OneMinusSrcAlpha, (float)BlendMode.OneMinusSrcAlpha);
+            if (material.HasProperty("_SrcBlend")) material.SetFloat("_SrcBlend", sourceBlend.x);
+            if (material.HasProperty("_DstBlend")) material.SetFloat("_DstBlend", destinationBlend.x);
+            if (material.HasProperty("_SrcBlendAlpha")) material.SetFloat("_SrcBlendAlpha", sourceBlend.y);
+            if (material.HasProperty("_DstBlendAlpha")) material.SetFloat("_DstBlendAlpha", destinationBlend.y);
+
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.SetShaderPassEnabled("DepthOnly", false);
+            material.SetShaderPassEnabled("SHADOWCASTER", false);
             material.renderQueue = (int)RenderQueue.Transparent;
             material.enableInstancing = true;
             EditorUtility.SetDirty(material);
