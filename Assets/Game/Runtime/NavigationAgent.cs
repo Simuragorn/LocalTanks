@@ -217,6 +217,11 @@ namespace LocalTanks
             {
                 motor = GetComponent<TankMotor>();
             }
+
+            // A tank that appears after the battle started, or in a scene with no director, still honours
+            // command line overrides. Without this a swept value would apply to some machines and not
+            // others, which is worse than not sweeping at all.
+            LocalTanksOverrides.ApplyToComponent(this);
         }
 
         private void Start()

@@ -153,6 +153,15 @@ namespace LocalTanks
             if (DiagnosticsOverlay == null) DiagnosticsOverlay = gameObject.AddComponent<BattleDiagnosticsOverlay>();
             DiagnosticsOverlay.Configure(this);
 
+            // A batch run that asked for a recording gets one; in a normal battle this returns null and
+            // costs nothing. Same idea for the simulation rate: a test that asked to run fast gets a
+            // controller, and a played battle keeps the real-time settings.
+            BattleTelemetry.AttachWhenRequested(this);
+            BattleSimulationClock.AttachWhenRequested(this);
+            // Command line overrides are applied after spawning, so they cover every member that exists
+            // when the first frame runs. Components that appear later apply them for themselves.
+            LocalTanksOverrides.ApplyToLoadedScenes();
+
             LivingCountsChanged?.Invoke(TeamId.Neutral, TeamAAlive, TeamBAlive);
         }
 
