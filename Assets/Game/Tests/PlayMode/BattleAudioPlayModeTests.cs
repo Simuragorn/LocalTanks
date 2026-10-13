@@ -252,7 +252,7 @@ namespace LocalTanks.Tests
             {
                 host.AddComponent<AudioListener>();
                 CrewVoiceController crew = host.AddComponent<CrewVoiceController>();
-                CrewVoiceProfileCatalog catalog = CrewVoiceProfileCatalog.Load();
+                CrewVoiceProfileCatalog catalog = BuildCatalog();
                 Assert.That(catalog.roles.Length, Is.EqualTo(10),
                     "The committed crew voice catalog must declare every role.");
 
@@ -335,7 +335,7 @@ namespace LocalTanks.Tests
             {
                 host.AddComponent<AudioListener>();
                 CrewVoiceController crew = host.AddComponent<CrewVoiceController>();
-                CrewVoiceProfileCatalog catalog = CrewVoiceProfileCatalog.Load();
+                CrewVoiceProfileCatalog catalog = BuildCatalog();
                 TeamMember player = BuildMember("GermanTank", TeamId.TeamA, TankNation.Germany, spawned);
 
                 // Flip the data only: the German machine now asks for German clips. They are not extracted
@@ -375,6 +375,113 @@ namespace LocalTanks.Tests
             }
 
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator CrewVoice_BelongsToThePlayersMachineAndNowhereElse()
+        {
+            GameObject host = new GameObject("CrewVoicePlacementHost");
+            List<AudioClip> clips = new List<AudioClip>();
+            List<Object> spawned = new List<Object>();
+            try
+            {
+                host.AddComponent<AudioListener>();
+                CrewVoiceProfileCatalog catalog = BuildCatalog();
+                TeamMember player = BuildMember("PlayerMachine", TeamId.TeamA, TankNation.Germany, spawned);
+                TeamMember bot = BuildMember("BotMachine", TeamId.TeamB, TankNation.USSR, spawned);
+
+                CrewVoiceController crew = CrewVoiceController.AttachTo(player, BuildLibrary(clips), catalog, new[] { player, bot });
+
+                // The component must live on the machine itself: a projectile finds its crew by walking the
+                // shooter, so a crew attached to the battle would never hear the player's own shell.
+                Assert.That(crew, Is.Not.Null);
+                Assert.That(player.GetComponent<CrewVoiceController>(), Is.SameAs(crew));
+                Assert.That(Projectile2D.FindCrewVoice(player.transform), Is.SameAs(crew));
+                Assert.That(Projectile2D.FindCrewVoice(bot.transform), Is.Null,
+                    "A bot has no crew voice, so its shells must stay silent.");
+                Assert.That(Projectile2D.FindCrewVoice(null), Is.Null);
+                Assert.That(CrewVoiceController.AttachTo(null, BuildLibrary(clips), catalog), Is.Null);
+                Assert.That(crew.IsActive, Is.True);
+                Assert.That(crew.Language, Is.EqualTo("ru"));
+            }
+            finally
+            {
+                Object.Destroy(host);
+                foreach (Object spawnedObject in spawned)
+                {
+                    Object.Destroy(spawnedObject);
+                }
+
+                foreach (AudioClip clip in clips)
+                {
+                    Object.Destroy(clip);
+                }
+            }
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator CrewVoice_SkipsARepeatedPhraseWhileTheGunKeepsFiring()
+        {
+            GameObject host = new GameObject("CrewVoiceSpamHost");
+            List<AudioClip> clips = new List<AudioClip>();
+            List<Object> spawned = new List<Object>();
+            try
+            {
+                host.AddComponent<AudioListener>();
+                CrewVoiceController crew = host.AddComponent<CrewVoiceController>();
+                TeamMember player = BuildMember("SpamPlayer", TeamId.TeamA, TankNation.USSR, spawned);
+
+                // An automatic gun lands several hits inside a second. The routing tests zero the pacing, so
+                // this one turns it on to prove the phrase is skipped rather than repeated.
+                CrewVoiceProfileCatalog pacing = BuildCatalog(repeatCooldown: 30f, speechCooldown: 0f);
+                crew.Configure(player, BuildLibrary(clips), pacing, new[] { player });
+
+                Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.True);
+                Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.False,
+                    "The same phrase inside its cooldown must be skipped, not repeated.");
+                Assert.That(crew.RepeatSuppressedCount, Is.EqualTo(1));
+                Assert.That(crew.Play(CrewVoiceRole.NotPenetrated), Is.True,
+                    "A different phrase is not a repetition.");
+
+                // Talking over itself is the other half of the same problem.
+                CrewVoiceProfileCatalog speechPacing = BuildCatalog(repeatCooldown: 0f, speechCooldown: 30f);
+                crew.Configure(player, BuildLibrary(clips), speechPacing, new[] { player });
+                Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.True);
+                Assert.That(crew.Play(CrewVoiceRole.NotPenetrated), Is.False);
+                Assert.That(crew.SpeechSuppressedCount, Is.EqualTo(1));
+
+                // Losing the machine is always reported, whatever the pacing says.
+                Assert.That(crew.Play(CrewVoiceRole.VehicleDestroyed), Is.True);
+            }
+            finally
+            {
+                Object.Destroy(host);
+                foreach (Object spawnedObject in spawned)
+                {
+                    Object.Destroy(spawnedObject);
+                }
+
+                foreach (AudioClip clip in clips)
+                {
+                    Object.Destroy(clip);
+                }
+            }
+
+            yield return null;
+        }
+
+        /// <summary>
+        /// The committed crew catalog with its pacing replaced. Routing tests play many lines inside one
+        /// frame, where any cooldown would suppress most of them; the pacing itself has its own test.
+        /// </summary>
+        private static CrewVoiceProfileCatalog BuildCatalog(float repeatCooldown = 0f, float speechCooldown = 0f)
+        {
+            CrewVoiceProfileCatalog catalog = CrewVoiceProfileCatalog.Load();
+            catalog.repeatCooldownSeconds = repeatCooldown;
+            catalog.speechCooldownSeconds = speechCooldown;
+            return catalog;
         }
 
         private static TeamMember BuildMember(string name, TeamId team, TankNation nation, List<Object> spawned)

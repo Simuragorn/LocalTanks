@@ -2,6 +2,8 @@
   "schemaVersion": 1,
   "defaultLanguage": "ru",
   "volume": 0.9,
+  "repeatCooldownSeconds": 3.0,
+  "speechCooldownSeconds": 1.2,
   "languages": [
     {
       "id": "ru",

@@ -71,6 +71,20 @@ namespace LocalTanks
         /// <summary>Level of every crew line; the player's `Voice` channel scales it further.</summary>
         [Range(0f, 1f)] public float volume = 0.9f;
 
+        /// <summary>
+        /// The same phrase sooner than this after the previous one is skipped. An automatic gun puts a
+        /// dozen shells into a target within seconds, and a crew that repeats "не пробил" for every one
+        /// of them says nothing useful.
+        /// </summary>
+        [Min(0f)] public float repeatCooldownSeconds = 3f;
+
+        /// <summary>
+        /// Any line sooner than this after the previous one is skipped, so the crew never talks over
+        /// itself. The loss of the player's own machine ignores both limits: that is one thing the crew
+        /// must always report.
+        /// </summary>
+        [Min(0f)] public float speechCooldownSeconds = 1.2f;
+
         public CrewVoiceLanguage[] languages = Array.Empty<CrewVoiceLanguage>();
         public CrewVoiceNationLanguage[] nations = Array.Empty<CrewVoiceNationLanguage>();
         public CrewVoiceRoleBinding[] roles = Array.Empty<CrewVoiceRoleBinding>();
@@ -214,6 +228,10 @@ namespace LocalTanks
                 errors.Add($"Crew voice profile has unsupported schemaVersion {schemaVersion}.");
             if (volume < 0f || volume > 1f)
                 errors.Add($"Crew voice volume is outside 0..1 ({volume}).");
+            if (repeatCooldownSeconds < 0f)
+                errors.Add($"Crew voice repeat cooldown cannot be negative ({repeatCooldownSeconds}).");
+            if (speechCooldownSeconds < 0f)
+                errors.Add($"Crew voice speech cooldown cannot be negative ({speechCooldownSeconds}).");
             if (string.IsNullOrWhiteSpace(defaultLanguage))
                 errors.Add("Crew voice profile has no default language.");
             else if (!TryGetLanguage(defaultLanguage, out CrewVoiceLanguage _))

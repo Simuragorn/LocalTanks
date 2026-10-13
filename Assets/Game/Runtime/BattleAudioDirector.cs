@@ -91,19 +91,24 @@ namespace LocalTanks
             }
 
             // Crew voice depends on the player's machine, which only exists once the battle spawned, and
-            // it is not tied to an arena: a map without an audio profile still gets its crew lines.
-            Crew ??= gameObject.AddComponent<CrewVoiceController>();
-            Crew.Configure(director, library);
+            // it is not tied to an arena: a map without an audio profile still gets its crew lines. The
+            // component goes on that machine, because its own projectiles look for their crew there.
+            Crew = CrewVoiceController.AttachTo(
+                director != null ? director.PlayerMember : null,
+                library,
+                null,
+                director != null ? director.SpawnedMembers : null,
+                director != null ? director.Bases : null);
 
             if (profile == null)
             {
-                status = Crew.IsActive ? "звучит только экипаж: у арены нет профиля звука" : status;
+                status = Crew != null ? "звучит только экипаж: у арены нет профиля звука" : status;
                 return;
             }
 
             Music.BeginBattle(Time.time);
             Flow.StartAmbience();
-            Crew.PlayBattleStart();
+            Crew?.PlayBattleStart();
             status = "бой звучит";
         }
 
@@ -202,6 +207,9 @@ namespace LocalTanks
             {
                 return;
             }
+
+            // A battle that spawns machines late still has to give their crew the new victims to report.
+            Crew?.Watch(member);
 
             WeaponController weapon = member.GetComponent<WeaponController>();
             if (weapon != null)

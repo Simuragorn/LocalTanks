@@ -22,6 +22,7 @@ namespace LocalTanks
     public sealed class CrewVoiceController : MonoBehaviour
     {
         private readonly List<System.Action> unsubscribers = new List<System.Action>();
+        private readonly Dictionary<CrewVoiceRole, float> lastPlayedAt = new Dictionary<CrewVoiceRole, float>();
 
         private WotAudioClipLibrary library;
         private CrewVoiceProfileCatalog catalog;
@@ -30,6 +31,7 @@ namespace LocalTanks
         private TeamId playerTeam = TeamId.Neutral;
         private TankNation playerNation = TankNation.USSR;
         private TeamMember markedVictim;
+        private float lastLineAt = float.NegativeInfinity;
         private bool playerDestroyed;
 
         public bool IsActive => playerMember != null;
@@ -37,7 +39,15 @@ namespace LocalTanks
         public string LastClipId { get; private set; } = string.Empty;
         public string LastRole { get; private set; } = "реплик ещё не было";
         public int PlayCount { get; private set; }
+
+        /// <summary>The player's own shell destroyed the machine the crew just shot at.</summary>
         public int SuppressedDuplicates { get; private set; }
+
+        /// <summary>The same phrase came up again inside its cooldown, as an automatic gun keeps hitting.</summary>
+        public int RepeatSuppressedCount { get; private set; }
+
+        /// <summary>The crew would have talked over itself, so the line waited for nothing and was dropped.</summary>
+        public int SpeechSuppressedCount { get; private set; }
 
         /// <summary>The crew voice level: the profile's own volume under the player's `Voice` channel.</summary>
         public float Volume => catalog != null
@@ -69,6 +79,39 @@ namespace LocalTanks
         }
 
         /// <summary>
+        /// Puts the crew on the machine that hears it. The component belongs to the player's tank rather
+        /// than to the battle, because the projectile of that machine finds its own crew by walking the
+        /// shooter, and because a bot simply has no crew voice to find.
+        /// </summary>
+        public static CrewVoiceController AttachTo(
+            TeamMember player,
+            WotAudioClipLibrary clipLibrary,
+            CrewVoiceProfileCatalog crewCatalog = null,
+            IEnumerable<TeamMember> members = null,
+            IEnumerable<CaptureBase> bases = null)
+        {
+            if (player == null)
+            {
+                return null;
+            }
+
+            CrewVoiceController crew = player.GetComponent<CrewVoiceController>();
+            if (crew == null)
+            {
+                crew = player.gameObject.AddComponent<CrewVoiceController>();
+            }
+
+            crew.Configure(player, clipLibrary, crewCatalog, members, bases);
+            return crew;
+        }
+
+        /// <summary>Starts listening to one more machine, for a battle that spawns machines late.</summary>
+        public void Watch(TeamMember member)
+        {
+            HookMember(member);
+        }
+
+        /// <summary>
         /// Wires the crew of one machine. The player's machine and the machines and bases that can produce
         /// a line are passed in, so the controller is testable without a whole battle scene.
         /// </summary>
@@ -85,6 +128,8 @@ namespace LocalTanks
             voiceSource ??= CreateSource();
             playerDestroyed = false;
             markedVictim = null;
+            lastPlayedAt.Clear();
+            lastLineAt = float.NegativeInfinity;
             playerMember = player;
 
             if (playerMember == null)
@@ -189,7 +234,9 @@ namespace LocalTanks
         /// <summary>Reports a base changing hands from the player's point of view.</summary>
         public void ReportBaseCaptured(TeamId previousOwner, TeamId newOwner)
         {
-            if (!IsActive)
+            // A dead crew has nothing left to say, so losing a base after the player's machine is gone
+            // stays silent; the battle itself continues without them.
+            if (!IsActive || playerDestroyed)
             {
                 return;
             }
@@ -219,6 +266,27 @@ namespace LocalTanks
                 return false;
             }
 
+            // The loss of the player's own machine is the one line that overrides pacing: a crew that
+            // stays quiet while its tank burns would be worse than a repeated phrase.
+            bool critical = role == CrewVoiceRole.VehicleDestroyed;
+            float now = Time.time;
+            if (!critical && catalog.repeatCooldownSeconds > 0f &&
+                lastPlayedAt.TryGetValue(role, out float playedAt) &&
+                now - playedAt < catalog.repeatCooldownSeconds)
+            {
+                RepeatSuppressedCount++;
+                LastRole = $"{role}: повтор пропущен, фраза звучала {now - playedAt:0.0} с назад";
+                return false;
+            }
+
+            if (!critical && catalog.speechCooldownSeconds > 0f &&
+                now - lastLineAt < catalog.speechCooldownSeconds)
+            {
+                SpeechSuppressedCount++;
+                LastRole = $"{role}: пропущено, экипаж говорил {now - lastLineAt:0.0} с назад";
+                return false;
+            }
+
             AudioClip clip = library != null ? library.Load(clipId) : null;
             LastClipId = clipId;
             LastRole = $"{role} ({catalog.DescriptionFor(role)})";
@@ -229,6 +297,8 @@ namespace LocalTanks
             }
 
             voiceSource.PlayOneShot(clip, Mathf.Clamp01(Volume));
+            lastPlayedAt[role] = now;
+            lastLineAt = now;
             PlayCount++;
             return true;
         }
@@ -260,6 +330,7 @@ namespace LocalTanks
         {
             HookMember(member);
         }
+
 
         private void HookMember(TeamMember member)
         {

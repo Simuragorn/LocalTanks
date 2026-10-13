@@ -61,6 +61,13 @@ namespace LocalTanks.Tests
                 Assert.That(crew.LanguageFor((TankNation)System.Enum.Parse(typeof(TankNation), nation)),
                     Is.Not.Empty, $"Nation '{nation}' must map to a voice language.");
             }
+
+            // Pacing is data too: an automatic gun fires several shells a second, and a crew that repeats
+            // one phrase for each of them says nothing useful.
+            Assert.That(crew.repeatCooldownSeconds, Is.GreaterThan(0f),
+                "The same phrase must not be repeated immediately.");
+            Assert.That(crew.speechCooldownSeconds, Is.GreaterThan(0f),
+                "The crew must not talk over itself.");
         }
 
         [Test]

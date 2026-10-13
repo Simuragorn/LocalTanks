@@ -44,8 +44,7 @@ namespace LocalTanks
         }
 
         public void Initialize(Vector2 travelDirection, ShellDefinition shell, Transform newOwnerRoot)
-        {
-            if (shell == null)
+        {            if (shell == null)
             {
                 throw new System.ArgumentNullException(nameof(shell));
             }
@@ -64,9 +63,16 @@ namespace LocalTanks
             ricochetPenetrationMultiplier = Mathf.Clamp01(shell.ricochetPenetrationMultiplier);
             remainingRicochets = Mathf.Max(0, shell.maximumRicochets);
             audioProfile = shell.audio;
-            // Only the player's machine carries a crew voice controller, so a bot's shell resolves this
-            // to nothing and its impacts stay silent without any further check.
-            crewVoice = newOwnerRoot != null ? newOwnerRoot.GetComponentInChildren<CrewVoiceController>() : null;
+            crewVoice = FindCrewVoice(newOwnerRoot);
+        }
+
+        /// <summary>
+        /// The crew voice of the machine that fired, or null when it has none. Only the player's machine
+        /// carries one, so a bot's shell resolves to nothing and its impacts stay silent.
+        /// </summary>
+        public static CrewVoiceController FindCrewVoice(Transform ownerRoot)
+        {
+            return ownerRoot != null ? ownerRoot.GetComponentInChildren<CrewVoiceController>() : null;
         }
 
         private void FixedUpdate()

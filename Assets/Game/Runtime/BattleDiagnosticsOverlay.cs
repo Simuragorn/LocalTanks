@@ -216,7 +216,11 @@ namespace LocalTanks
             }
 
             CrewVoiceController crew = audio.Crew;
-            if (crew != null)
+            if (crew == null)
+            {
+                text.AppendLine("Экипаж: нет машины игрока, реплик не будет");
+            }
+            else
             {
                 text.AppendLine($"Экипаж: {(crew.IsActive ? $"язык {crew.Language}" : "нет машины игрока")}; " +
                                 $"реплик {crew.PlayCount}; подавлено дублей {crew.SuppressedDuplicates}");
