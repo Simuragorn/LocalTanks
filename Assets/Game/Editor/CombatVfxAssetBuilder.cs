@@ -5,7 +5,6 @@ using System.Linq;
 using LocalTanks;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering;
 
 namespace LocalTanks.Editor
@@ -261,9 +260,7 @@ namespace LocalTanks.Editor
             foreach (string textureName in VfxTextureLibrary.All)
             {
                 string assetPath = TextureAssetPath(textureName);
-                Texture2D texture = VfxTextureLibrary.IsAnimated(textureName)
-                ? VfxTextureLibrary.CreateSheet(textureName)
-                : VfxTextureLibrary.Create(textureName);
+                Texture2D texture = VfxTextureLibrary.Create(textureName);
                 byte[] png = texture.EncodeToPNG();
                 UnityEngine.Object.DestroyImmediate(texture);
 
@@ -443,24 +440,18 @@ namespace LocalTanks.Editor
             // petals, and thin spikes thrown along the bore. The rig rotates and scales the whole thing a
             // little on every shot, so a burst of fire never looks like one sprite repeated.
             ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder + 1, seconds + 0.06f, 0.04f, 0.07f, 0.16f, 0.28f);
-            SetHotColor(core, 4.6f, 3.9f, 2.8f);
             SetBurst(core, 1);
             SetPlanarVelocity(core, -0.1f, 0.1f, 0.4f, 1.0f);
             SetSizeOverLifetime(core, 1.1f, 0.5f);
             SetFade(core, 0.06f);
 
             ParticleSystem petals = AddSystem(root, "Petals", materials["petals"], FlashSortingOrder, seconds + 0.1f, 0.06f, 0.12f, 0.55f, 0.95f);
-            SetHotColor(petals, 2.6f, 2f, 1.2f);
             SetBurst(petals, 1);
             SetPlanarVelocity(petals, -0.2f, 0.2f, 0.7f, 1.6f);
             SetSizeOverLifetime(petals, 1f, 0.5f);
             SetFade(petals, 0.08f);
 
             ParticleSystem spikes = AddSystem(root, "Spikes", materials["spark"], SparkSortingOrder, seconds + 0.08f, 0.05f, 0.11f, 0.22f, 0.45f);
-            SetHotColor(spikes, 3.4f, 2.9f, 2f);
-            // Warm and short: the light follows the burst, and the pool switches the whole instance off
-            // when the flash is over, so the light is brief without any code to fade it.
-            AddLight(root, "FlashLight", new Color(1f, 0.74f, 0.42f), 1.1f, 0.08f, 2.2f, 0.6f);
             SetBurst(spikes, 5);
             // Spikes leave the bore, so their spread along the barrel is narrow and their side spread tiny.
             SetPlanarVelocity(spikes, -0.25f, 0.25f, 1.2f, 2.6f);
@@ -487,7 +478,7 @@ namespace LocalTanks.Editor
         {
             float seconds = Max(catalog.weaponProfiles, profile => profile.smokeSeconds);
             int burst = Mathf.Max(1, Max(catalog.weaponProfiles, profile => profile.smokeBurst));
-            ParticleSystem smoke = AddSystem(root, "Smoke", materials["smoke"], MuzzleSmokeSortingOrder, seconds, 0.5f, 1.0f, 0.24f, 0.42f, true);
+            ParticleSystem smoke = AddSystem(root, "Smoke", materials["smoke"], MuzzleSmokeSortingOrder, seconds, 0.5f, 1.0f, 0.24f, 0.42f);
             SetBurst(smoke, burst);
             SetPlanarVelocity(smoke, -0.4f, 0.4f, 0.6f, 1.7f);
             SetSizeOverLifetime(smoke, 0.7f, 1.7f);
@@ -586,16 +577,14 @@ namespace LocalTanks.Editor
             // Four layers: a warm glow that carries the brightness, soft tongues, a hot core and embers.
             // Lifetimes are short and sizes small, so the shape shimmers instead of showing one large
             // silhouette, and turbulence keeps every particle moving differently.
-            ParticleSystem glow = AddSystem(root, "Glow", materials["fire_glow"], FireSortingOrder, 3f, 0.35f, 0.6f, 0.3f, 0.55f, 0.18f, 0.3f, true);
-            SetHotColor(glow, 2.8f, 1.5f, 0.5f);
+            ParticleSystem glow = AddSystem(root, "Glow", materials["fire_glow"], FireSortingOrder, 3f, 0.35f, 0.6f, 0.3f, 0.55f, 0.18f, 0.3f);
             SetRate(glow, 16f);
             SetPlanarVelocity(glow, -0.15f, 0.15f, 0.2f, 0.6f);
             SetSizeOverLifetime(glow, 0.85f, 1.2f);
             SetFade(glow, 0.22f);
             SetTurbulence(glow, 0.12f, 0.7f);
 
-            ParticleSystem tongues = AddSystem(root, "Tongues", materials["flame"], FireSortingOrder + 1, 3f, 0.26f, 0.48f, 0.28f, 0.48f, 0.18f, 0.3f, true);
-            SetHotColor(tongues, 2.4f, 1.3f, 0.35f);
+            ParticleSystem tongues = AddSystem(root, "Tongues", materials["flame"], FireSortingOrder + 1, 3f, 0.26f, 0.48f, 0.28f, 0.48f, 0.18f, 0.3f);
             SetRate(tongues, 20f);
             SetPlanarVelocity(tongues, -0.1f, 0.1f, 0.35f, 0.95f);
             SetStartRotation(tongues, -0.55f, 0.55f);
@@ -610,27 +599,10 @@ namespace LocalTanks.Editor
             SetFade(core, 0.15f);
 
             ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.6f, 1.3f, 0.04f, 0.09f, 0.14f, 0.22f);
-            SetHotColor(ember, 3.6f, 2.6f, 1.2f);
             SetRate(ember, 9f);
             SetPlanarVelocity(ember, -0.7f, 0.7f, 0.7f, 1.9f);
             SetSizeOverLifetime(ember, 1f, 0.3f);
             SetFade(ember, 0.1f);
-
-            // A wreck lights its own surroundings for as long as it burns, which is what makes a burning
-            // machine visible from across the map and what turns the fire into something in the world
-            // rather than a picture drawn on top of it.
-            AddLight(root, "FireLight", new Color(1f, 0.52f, 0.2f), 0.8f, 0.25f, 2.4f, 0.5f);
-        }
-
-        /// <summary>
-        /// Authors a layer above white. Values over one are what the bloom pass picks up, so a flash core
-        /// glows instead of clipping to a flat white spot; the tone mapper in the volume profile brings
-        /// them back into range for the screen.
-        /// </summary>
-        private static void SetHotColor(ParticleSystem system, float red, float green, float blue)
-        {
-            ParticleSystem.MainModule main = system.main;
-            main.startColor = new Color(red, green, blue, 1f);
         }
 
         /// <summary>Limits how far a particle may be rotated, so tongues point along the plume.</summary>
@@ -667,13 +639,6 @@ namespace LocalTanks.Editor
             SetFade(exhaust, 0.2f);
         }
 
-        /// <summary>
-        /// Index of the additive light blend style in <c>Assets/Settings/Renderer2D.asset</c>. The renderer
-        /// declares four styles, two multiply and two additive; light meant to be seen as a glow has to use
-        /// an additive one, otherwise it would multiply the scene towards black.
-        /// </summary>
-        private const int AdditiveLightBlendStyle = 1;
-
         private static ParticleSystem AddSystem(
             GameObject root,
             string name,
@@ -683,59 +648,9 @@ namespace LocalTanks.Editor
             float lifetimeMin,
             float lifetimeMax,
             float sizeMin,
-            float sizeMax,
-            bool animated = false)
+            float sizeMax)
         {
-            return AddSystem(root, name, material, sortingOrder, duration, lifetimeMin, lifetimeMax, sizeMin, sizeMax, 0f, 0f, animated);
-        }
-
-        /// <summary>
-        /// Adds a 2D light to an effect. A muzzle flash and a fire do not only draw, they light what is
-        /// around them, and that is most of what makes a shot read as a shot: the hull and the ground
-        /// brighten for a moment. Blend style one is the additive style of this project's 2D renderer,
-        /// which adds light on top of the scene instead of replacing its colour.
-        /// </summary>
-        private static void AddLight(
-            GameObject root,
-            string name,
-            Color color,
-            float intensity,
-            float innerRadius,
-            float outerRadius,
-            float falloff)
-        {
-            GameObject child = new GameObject(name);
-            child.transform.SetParent(root.transform, false);
-            Light2D light = child.AddComponent<Light2D>();
-            light.lightType = Light2D.LightType.Point;
-            light.color = color;
-            light.intensity = intensity;
-            light.pointLightInnerRadius = innerRadius;
-            light.pointLightOuterRadius = outerRadius;
-            light.pointLightInnerAngle = 360f;
-            light.pointLightOuterAngle = 360f;
-            light.falloffIntensity = falloff;
-            light.blendStyleIndex = AdditiveLightBlendStyle;
-            light.shadowsEnabled = false;
-        }
-
-        /// <summary>
-        /// Plays an animated sheet over the particle's own life, so a flame or a cloud of smoke changes
-        /// inside itself instead of being one still picture that drifts.
-        /// </summary>
-        private static void SetAnimatedSheet(ParticleSystem system)
-        {
-            ParticleSystem.TextureSheetAnimationModule sheet = system.textureSheetAnimation;
-            sheet.enabled = true;
-            sheet.mode = ParticleSystemAnimationMode.Grid;
-            sheet.numTilesX = VfxTextureLibrary.SheetColumns;
-            sheet.numTilesY = VfxTextureLibrary.SheetColumns;
-            sheet.animation = ParticleSystemAnimationType.WholeSheet;
-            sheet.timeMode = ParticleSystemAnimationTimeMode.Lifetime;
-            sheet.cycleCount = 1;
-            sheet.frameOverTime = new ParticleSystem.MinMaxCurve(
-                1f,
-                new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 1f)));
+            return AddSystem(root, name, material, sortingOrder, duration, lifetimeMin, lifetimeMax, sizeMin, sizeMax, 0f, 0f);
         }
 
         /// <summary>
@@ -758,8 +673,7 @@ namespace LocalTanks.Editor
             float sizeMin,
             float sizeMax,
             float spreadX,
-            float spreadY,
-            bool animated = false)
+            float spreadY)
         {
             GameObject child = new GameObject(name);
             child.transform.SetParent(root.transform, false);
@@ -798,11 +712,6 @@ namespace LocalTanks.Editor
             renderer.sortingOrder = sortingOrder;
             renderer.receiveShadows = false;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
-            if (animated)
-            {
-                SetAnimatedSheet(system);
-            }
-
             return system;
         }
 

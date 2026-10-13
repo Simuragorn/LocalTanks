@@ -44,11 +44,6 @@ namespace LocalTanks.Editor
             TrackMarkLight, TrackMarkMedium, TrackMarkHeavy
         };
 
-        /// <summary>Frames per side of an animated sheet; sixteen frames of a moving effect.</summary>
-        public const int SheetColumns = 4;
-
-
-
         /// <summary>True for the print patterns, which are imported as sprites rather than textures.</summary>
         public static bool IsTrackMark(string textureName)
         {
@@ -56,54 +51,9 @@ namespace LocalTanks.Editor
         }
 
         /// <summary>Draws one texture. Every entry of <see cref="All"/> has a case here.</summary>
-        /// <summary>
-        /// Textures that are drawn as an animated sheet rather than as one still picture. A fire, a puff of
-        /// smoke or a cloud of dust that never changes inside the particle is the ceiling this stage exists
-        /// to break.
-        /// </summary>
-        public static bool IsAnimated(string textureName) => textureName switch
-        {
-            SmokePuff => true,
-            DustPuff => true,
-            ExhaustSmoke => true,
-            Flame => true,
-            FireGlow => true,
-            _ => false
-        };
-
-        /// <summary>Draws one animated sheet: the same routine over a scrolling noise field, frame by frame.</summary>
-        public static Texture2D CreateSheet(string textureName)
-        {
-            int frameSize = Size / 1;   // one tile is drawn at the detail the still picture uses
-            VfxPixelCanvas sheet = new VfxPixelCanvas(frameSize * SheetColumns);
-            for (int frame = 0; frame < SheetColumns * SheetColumns; frame++)
-            {
-                VfxPixelCanvas tile = new VfxPixelCanvas(frameSize);
-                // Three units of scroll per sheet: enough that consecutive frames differ clearly without
-                // the sequence jumping to unrelated shapes.
-                tile.NoiseOffset = new Vector2(0f, frame / (float)(SheetColumns * SheetColumns) * 3f);
-                Draw(tile, textureName);
-                int column = frame % SheetColumns;
-                int row = frame / SheetColumns;
-                // Rows run bottom-up in texture space, so the first frame sits in the bottom-left cell.
-                sheet.Blit(tile, column * frameSize, row * frameSize);
-            }
-
-            Texture2D texture = sheet.CreateTexture();
-            texture.name = $"{textureName}_{SheetColumns}x{SheetColumns}";
-            return texture;
-        }
-
         public static Texture2D Create(string textureName)
         {
             VfxPixelCanvas canvas = new VfxPixelCanvas(Size);
-            Draw(canvas, textureName);
-            return canvas.CreateTexture();
-        }
-
-        /// <summary>Draws one named texture into a canvas at that canvas's current noise offset.</summary>
-        private static void Draw(VfxPixelCanvas canvas, string textureName)
-        {
             switch (textureName)
             {
                 case SmokePuff: DrawSmokePuff(canvas); break;
@@ -124,6 +74,8 @@ namespace LocalTanks.Editor
                 case TrackMarkHeavy: DrawTrackPrint(canvas, 7, 0.44f, 0.075f, 0.024f, 1f); break;
                 default: throw new System.InvalidOperationException($"Unknown VFX texture '{textureName}'.");
             }
+
+            return canvas.CreateTexture();
         }
 
         private static void DrawSmokePuff(VfxPixelCanvas canvas)
@@ -365,12 +317,6 @@ namespace LocalTanks.Editor
         private readonly int size;
         private readonly Color[] pixels;
 
-        /// <summary>
-        /// Scrolled between the frames of an animated sheet. Every drawing routine reads its noise through
-        /// this offset, so one routine produces a whole sequence instead of a single still picture.
-        /// </summary>
-        public Vector2 NoiseOffset { get; set; }
-
         public VfxPixelCanvas(int size)
         {
             this.size = Mathf.Max(1, size);
@@ -435,11 +381,7 @@ namespace LocalTanks.Editor
                     float falloff = Mathf.Pow(1f - distance, Mathf.Max(0.05f, power));
                     if (noiseAmount > 0f)
                     {
-                        float noise = VfxNoise.Fbm(
-                (x + 0.5f) / size * 6f + NoiseOffset.x,
-                (y + 0.5f) / size * 6f + NoiseOffset.y,
-                seed,
-                3);
+                        float noise = VfxNoise.Fbm((x + 0.5f) / size * 6f, (y + 0.5f) / size * 6f, seed, 3);
                         falloff *= Mathf.Lerp(1f, noise, Mathf.Clamp01(noiseAmount));
                     }
 
@@ -451,30 +393,6 @@ namespace LocalTanks.Editor
                     Color source = color;
                     source.a = color.a * falloff;
                     Blend(x, y, source);
-                }
-            }
-        }
-
-        /// <summary>Copies another canvas into this one at a pixel offset, used to compose a sheet.</summary>
-        public void Blit(VfxPixelCanvas source, int left, int bottom)
-        {
-            for (int y = 0; y < source.size; y++)
-            {
-                int targetY = bottom + y;
-                if (targetY < 0 || targetY >= size)
-                {
-                    continue;
-                }
-
-                for (int x = 0; x < source.size; x++)
-                {
-                    int targetX = left + x;
-                    if (targetX < 0 || targetX >= size)
-                    {
-                        continue;
-                    }
-
-                    pixels[targetY * size + targetX] = source.pixels[y * source.size + x];
                 }
             }
         }

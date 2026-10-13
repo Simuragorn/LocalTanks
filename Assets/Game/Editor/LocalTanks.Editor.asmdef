@@ -5,10 +5,7 @@
     "LocalTanks.Core",
     "LocalTanks.Runtime",
     "Unity.2D.Sprite.Editor",
-    "Newtonsoft.Json",
-    "Unity.RenderPipelines.Core.Runtime",
-    "Unity.RenderPipelines.Universal.Runtime",
-    "Unity.RenderPipelines.Universal.2D.Runtime"
+    "Newtonsoft.Json"
   ],
   "includePlatforms": [
     "Editor"
