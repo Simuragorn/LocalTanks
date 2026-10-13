@@ -54,7 +54,13 @@ namespace LocalTanks
             IsSilent = silent;
             if (string.IsNullOrWhiteSpace(manifestJson))
             {
-                Report("manifest-missing", "Local WoT audio manifest was not found; every clip resolves to silence.");
+                // A batchmode run passes no manifest on purpose. Warning about it there would report the
+                // test harness's own decision as a missing file.
+                if (!silent)
+                {
+                    Report("manifest-missing", "Local WoT audio manifest was not found; every clip resolves to silence.");
+                }
+
                 return;
             }
 
