@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
@@ -95,5 +96,66 @@ namespace LocalTanks.Tests
                     $"Rule names sprite '{spriteId}' which the environment library does not contain.");
             }
         }
+
+        /// <summary>
+        /// Obstacles and plants draw from separate families. Vegetation art on a rock reads as debris a
+        /// player expects to drive through, which is exactly the confusion seen on the converted arena,
+        /// while structure art used as concealment promises cover that is not there.
+        /// </summary>
+        [Test]
+        public void Families_SplitTheLibraryIntoWallsAndPlants()
+        {
+            List<string> structures = MapSpriteMatcher.OfFamily(Families, vegetation: false);
+            List<string> plants = MapSpriteMatcher.OfFamily(Families, vegetation: true);
+
+            Assert.That(structures, Is.EquivalentTo(new[]
+            {
+                "village_cowshed", "village_wood_shed", "village_windmill",
+                "rock_sandstone", "wood_fence", "haystack", "log_pile"
+            }));
+            Assert.That(plants, Is.EquivalentTo(new[] { "dry_bush", "burnt_tree", "fallen_tree_root" }));
+            Assert.That(structures.Concat(plants), Is.EquivalentTo(Library),
+                "Every library object must be classified, or it silently disappears from the map.");
+            Assert.That(structures.Intersect(plants), Is.Empty,
+                "A sprite usable on both a wall and a plant is the mix-up this split exists to prevent.");
+        }
+
+        /// <summary>
+        /// A sprite resolved for an obstacle may never be vegetation, whatever the resource path says.
+        /// This is the guard that keeps a burnt tree off a boulder.
+        /// </summary>
+        [Test]
+        public void ObstacleResolution_NeverReachesVegetationArt()
+        {
+            List<string> structures = MapSpriteMatcher.OfFamily(Families, vegetation: false);
+
+            foreach (string resource in new[]
+                     {
+                         "content/Environment/hd_env_UNI_073_BurntTree.primitives",
+                         "content/Environment/hd_env_EU_001_FallenTree.primitives",
+                         "content/Environment/env_19_05_Bush_Dry.primitives",
+                         "content/Buildings/hd_bld_SU_002_Cowshed.primitives"
+                     })
+            {
+                string resolved = MapSpriteMatcher.Resolve(resource, "obstacle", structures);
+                Assert.That(resolved, Is.Not.EqualTo("burnt_tree"), resource);
+                Assert.That(resolved, Is.Not.EqualTo("dry_bush"), resource);
+                Assert.That(resolved, Is.Not.EqualTo("fallen_tree_root"), resource);
+            }
+        }
+
+        private static readonly KeyValuePair<string, string>[] Families =
+        {
+            new KeyValuePair<string, string>("village_cowshed", "building"),
+            new KeyValuePair<string, string>("village_wood_shed", "building"),
+            new KeyValuePair<string, string>("village_windmill", "building"),
+            new KeyValuePair<string, string>("rock_sandstone", "rock"),
+            new KeyValuePair<string, string>("wood_fence", "destructible_cover"),
+            new KeyValuePair<string, string>("haystack", "destructible_cover"),
+            new KeyValuePair<string, string>("log_pile", "destructible_cover"),
+            new KeyValuePair<string, string>("dry_bush", "vegetation"),
+            new KeyValuePair<string, string>("fallen_tree_root", "vegetation"),
+            new KeyValuePair<string, string>("burnt_tree", "vegetation")
+        };
     }
 }

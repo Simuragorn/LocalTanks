@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LocalTanks
@@ -28,6 +30,13 @@ namespace LocalTanks
 
             [Tooltip("Physical size of the drawn object in source metres, used to scale it to its footprint.")]
             public Vector2 worldSizeMeters;
+
+            /// <summary>
+            /// What the library object is: a building, a rock, or vegetation. Obstacles and plants are
+            /// drawn from separate families, so a tree can never stand in for a boulder. That mix-up is
+            /// what put burnt-tree art on rocks, where it read as debris that could not be driven through.
+            /// </summary>
+            public string family;
         }
 
         [SerializeField] private WoTMapAsset map;
@@ -147,7 +156,8 @@ namespace LocalTanks
                     target.AddComponent<VisionBlocker>();
                 }
 
-                AddSprite(target, obstacle.sourceResource, obstacle.category, obstacle.size);
+                AddSprite(target, obstacle.sourceResource, obstacle.category, obstacle.size,
+                    allowVegetation: false);
 
                 BuiltObstacles++;
             }
@@ -160,9 +170,23 @@ namespace LocalTanks
         /// at its true physical size, so the scale is the ratio of wanted to drawn size rather than a
         /// constant, which lets one sprite serve small and large instances of a family.
         /// </summary>
-        private void AddSprite(GameObject target, string sourceResource, string category, Vector2 wantedSize)
+        /// <param name="allowVegetation">
+        /// Whether vegetation art may be used. Plants allow it and obstacles do not, so a boulder can never
+        /// be drawn as a burnt tree. Keeping the two families apart is what stopped debris art appearing on
+        /// solid rocks, where it promised an obstacle the art did not show.
+        /// </param>
+        private void AddSprite(
+            GameObject target,
+            string sourceResource,
+            string category,
+            Vector2 wantedSize,
+            bool allowVegetation)
         {
-            string spriteId = MapSpriteMatcher.Resolve(sourceResource, category, spriteLookup.Keys);
+            List<string> allowed = MapSpriteMatcher.OfFamily(
+                spriteLookup.Select(entry => new KeyValuePair<string, string>(entry.Key, entry.Value.family)),
+                allowVegetation);
+
+            string spriteId = MapSpriteMatcher.Resolve(sourceResource, category, allowed);
             if (spriteId == null || !spriteLookup.TryGetValue(spriteId, out SpriteBinding binding))
             {
                 return;
@@ -172,9 +196,8 @@ namespace LocalTanks
             visual.transform.SetParent(target.transform, false);
             SpriteRenderer renderer = visual.AddComponent<SpriteRenderer>();
             renderer.sprite = binding.sprite;
-            // Buildings and rocks draw over ground clutter, plants draw last so vegetation overlaps the
-            // obstacles it grows against.
-            renderer.sortingOrder = category == "house" || category == "rock" ? -4 : -3;
+            // Walls draw under the units that pass them, vegetation draws over them so cover reads as cover.
+            renderer.sortingOrder = allowVegetation ? -3 : -4;
 
             Vector2 drawn = binding.sprite.bounds.size;
             if (drawn.x > 0.0001f && drawn.y > 0.0001f && wantedSize.x > 0.0001f && wantedSize.y > 0.0001f)
@@ -185,11 +208,6 @@ namespace LocalTanks
             SpritesApplied++;
         }
 
-        /// <summary>
-        /// Whether an obstacle is a physical wall rather than something a tank pushes through. This
-        /// mirrors the routing rule so that what stops a tank and what steers a route agree: scatter,
-        /// fences, vines, logs and carts are removable clutter, while buildings and cliffs are solid.
-        /// </summary>
         /// <summary>
         /// Adds the collider matching the measured footprint. A rectangle becomes a box, a rounded rock
         /// becomes a circle, and an object that neither stops a tank nor blocks sight is a trigger so it
@@ -234,7 +252,7 @@ namespace LocalTanks
                 circle.isTrigger = !plant.destructible;
 
                 AddSprite(target, plant.sourceResource, plant.kind == MapCoverKind.Tree ? "tree" : "bush",
-                    new Vector2(plant.radius * 2f, plant.radius * 2f));
+                    new Vector2(plant.radius * 2f, plant.radius * 2f), allowVegetation: true);
                 BuiltPlants++;
             }
         }

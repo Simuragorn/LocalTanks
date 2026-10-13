@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -143,7 +143,10 @@ namespace LocalTanks.Editor
             builder.ConfigureSprites(LoadSpriteBindings(asset));
         }
 
-        /// <summary>Ids the library is known to hold; the matcher refuses to name anything outside them.</summary>
+        /// <summary>
+        /// Every id the library is known to hold. The family table below classifies each one, so a sprite
+        /// is either usable on a wall or on a plant and never both by accident.
+        /// </summary>
         private static readonly string[] LibrarySpriteIds =
         {
             "village_cowshed", "village_wood_shed", "village_windmill", "rock_sandstone",
@@ -191,6 +194,9 @@ namespace LocalTanks.Editor
                 {
                     spriteId = spriteId,
                     sprite = sprite,
+                    // The library's own category is the authority on what a sprite depicts, so obstacles
+                    // and plants draw from separate families instead of sharing one pool.
+                    family = (string)entry["category"],
                     worldSizeMeters = size != null && size.Length >= 2
                         ? new Vector2(size[0], size[1])
                         : Vector2.zero
@@ -204,21 +210,42 @@ namespace LocalTanks.Editor
         private static IEnumerable<string> NeededSpriteIds(WoTMapAsset asset)
         {
             HashSet<string> ids = new HashSet<string>();
+            List<string> structures = MapSpriteMatcher.OfFamily(Families, vegetation: false);
+            List<string> vegetation = MapSpriteMatcher.OfFamily(Families, vegetation: true);
             foreach (WoTMapObstacle obstacle in asset.obstacles)
             {
-                string id = MapSpriteMatcher.Resolve(obstacle.sourceResource, obstacle.category, LibrarySpriteIds);
+                string id = MapSpriteMatcher.Resolve(obstacle.sourceResource, obstacle.category, structures);
                 if (id != null) ids.Add(id);
             }
 
             foreach (WoTMapVegetation plant in asset.vegetation)
             {
                 string id = MapSpriteMatcher.Resolve(
-                    plant.sourceResource, plant.kind == MapCoverKind.Tree ? "tree" : "bush", LibrarySpriteIds);
+                    plant.sourceResource, plant.kind == MapCoverKind.Tree ? "tree" : "bush", vegetation);
                 if (id != null) ids.Add(id);
             }
 
             return ids;
         }
+
+        /// <summary>
+        /// Every library id this arena may use, paired with what it depicts. The library's family is the
+        /// authority on whether a sprite belongs on a wall or on a plant; that one fact is what keeps a
+        /// burnt tree off a rock.
+        /// </summary>
+        private static readonly KeyValuePair<string, string>[] Families =
+        {
+            new KeyValuePair<string, string>("village_cowshed", "building"),
+            new KeyValuePair<string, string>("village_wood_shed", "building"),
+            new KeyValuePair<string, string>("village_windmill", "building"),
+            new KeyValuePair<string, string>("rock_sandstone", "rock"),
+            new KeyValuePair<string, string>("wood_fence", "destructible_cover"),
+            new KeyValuePair<string, string>("haystack", "destructible_cover"),
+            new KeyValuePair<string, string>("log_pile", "destructible_cover"),
+            new KeyValuePair<string, string>("dry_bush", "vegetation"),
+            new KeyValuePair<string, string>("fallen_tree_root", "vegetation"),
+            new KeyValuePair<string, string>("burnt_tree", "vegetation")
+        };
 
         /// <summary>
         /// Two capture bases, one per team, with a ring of spawn slots each. The source arena provides a

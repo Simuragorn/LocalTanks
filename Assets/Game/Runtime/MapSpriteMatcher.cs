@@ -60,6 +60,26 @@ namespace LocalTanks
         };
 
         /// <summary>
+        /// Narrows a sprite set to one family. Obstacles and plants must not share a pool: a burnt tree
+        /// drawn where a tank cannot drive reads as debris the player expects to pass, and a boulder drawn
+        /// as concealment promises cover that is not there. Unknown families count as structures, so a new
+        /// library object appears on a wall until it is classified rather than vanishing from the map.
+        /// </summary>
+        public static List<string> OfFamily(IEnumerable<KeyValuePair<string, string>> families, bool vegetation)
+        {
+            List<string> allowed = new List<string>();
+            if (families == null) return allowed;
+            foreach (KeyValuePair<string, string> entry in families)
+            {
+                bool isVegetation = string.Equals(
+                    entry.Value, "vegetation", System.StringComparison.OrdinalIgnoreCase);
+                if (isVegetation == vegetation) allowed.Add(entry.Key);
+            }
+
+            return allowed;
+        }
+
+        /// <summary>
         /// Sprite id for one source resource, or null when nothing in the library can stand in for it.
         /// The caller decides what to do with a miss; this never invents a sprite.
         /// </summary>
