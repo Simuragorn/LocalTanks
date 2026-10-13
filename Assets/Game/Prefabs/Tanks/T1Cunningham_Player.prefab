@@ -58,7 +58,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1085c79f920c80d4091edf5ac370eab4, type: 2}
+  - {fileID: 2100000, guid: 7cbc1db1e17b420489b75077ca0c27d8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -705,11 +705,13 @@ MonoBehaviour:
   body: {fileID: 3428103410032590794}
   health: {fileID: 8292484632409986661}
   overlay: {fileID: 1508049922165870816}
+  hull: {fileID: 5933150708435374113}
+  hullTextureRect: {x: 0.060913704, y: 0.05106383, z: 0.49492386, w: 0.8978723}
   halfGaugeUnits: 0.20565104
   treadPitchUnits: 0.05737886
   maskHeightUnits: 1.008303
   forwardSign: -1
-  strength: {x: 0.14, y: 0.1}
+  strength: {x: 0.35, y: 0.55}
 --- !u!114 &833540394501085365
 MonoBehaviour:
   m_ObjectHideFlags: 0

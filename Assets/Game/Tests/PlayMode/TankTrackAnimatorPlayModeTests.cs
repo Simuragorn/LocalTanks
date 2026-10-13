@@ -179,6 +179,12 @@ namespace LocalTanks.Tests
                 overlay.transform.SetParent(root.transform, false);
                 SpriteRenderer renderer = overlay.AddComponent<SpriteRenderer>();
 
+                // The hull sprite is what the shader reads for its metal response; a rig without one
+                // must still animate, which is what this test checks.
+                GameObject hull = new GameObject("HullVisual");
+                hull.transform.SetParent(root.transform, false);
+                SpriteRenderer hullRenderer = hull.AddComponent<SpriteRenderer>();
+
                 // TankHealth only needs a definition for the destroyed path; the other tests drive the
                 // animator without one, which is exactly how a prefab without audio or armor behaves.
                 TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
@@ -191,6 +197,8 @@ namespace LocalTanks.Tests
                     body,
                     health,
                     renderer,
+                    hullRenderer,
+                    new Vector4(0f, 0f, 1f, 1f),
                     HalfGaugeUnits,
                     TreadPitchUnits,
                     MaskHeightUnits,

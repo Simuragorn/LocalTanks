@@ -522,20 +522,31 @@ namespace LocalTanks.Editor
         /// <para>
         /// The overlay is a child of the hull visual, so it inherits the hull's uniform scale and
         /// its 180 degree source-art rotation, which is what keeps it aligned with the hull sprite.
+        /// The hull renderer and its rectangle inside the source texture are recorded as well,
+        /// because the shader reads those pixels to make the tread lighten what is already painted.
         /// </para>
         /// </summary>
         private static TankTrackAnimator CreateTrackOverlay(
-            GameObject root, Transform hullVisual, TankBuildSpec spec, TankHealth health, Rigidbody2D body)
+            GameObject root, GameObject hullVisual, TankBuildSpec spec, TankHealth health, Rigidbody2D body)
         {
             Sprite mask = ConfigureTrackMaskTexture(spec.TrackMaskPath);
             Material material = EnsureTrackOverlayMaterial();
 
             GameObject overlay = new GameObject("TrackOverlay");
-            overlay.transform.SetParent(hullVisual, false);
+            overlay.transform.SetParent(hullVisual.transform, false);
             SpriteRenderer renderer = overlay.AddComponent<SpriteRenderer>();
             renderer.sprite = mask;
             renderer.sharedMaterial = material;
             renderer.sortingOrder = TrackOverlaySortingOrder;
+
+            SpriteRenderer hullRenderer = hullVisual.GetComponent<SpriteRenderer>();
+            Rect hullTextureRect = hullRenderer.sprite.textureRect;
+            Texture2D hullTexture = hullRenderer.sprite.texture;
+            Vector4 normalizedHullRect = new Vector4(
+                hullTextureRect.x / hullTexture.width,
+                hullTextureRect.y / hullTexture.height,
+                hullTextureRect.width / hullTexture.width,
+                hullTextureRect.height / hullTexture.height);
 
             TrackLayoutJson tracks = spec.Tracks;
             float maskHeightUnits = tracks.mask.height / 100f * spec.VisualScale.y;
@@ -544,6 +555,8 @@ namespace LocalTanks.Editor
                 body,
                 health,
                 renderer,
+                hullRenderer,
+                normalizedHullRect,
                 tracks.bandSeparationMetres * 0.5f / MetresPerUnit,
                 tracks.treadPitchMetres / MetresPerUnit,
                 maskHeightUnits,
@@ -708,7 +721,7 @@ namespace LocalTanks.Editor
                 armor.Configure(definition, health);
                 TankDestroyedState destroyedState = root.AddComponent<TankDestroyedState>();
                 destroyedState.Configure(health, motor, aiming, weapon, input);
-                CreateTrackOverlay(root, hullVisual.transform, spec, health, body);
+                CreateTrackOverlay(root, hullVisual, spec, health, body);
 
                 // Where a machine breathes out is a fact of its model, not of its mass or class, so the
                 // outlet is an anchor measured from the canonical sprite and carried in the prefab. The rig

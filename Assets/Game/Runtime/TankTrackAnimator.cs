@@ -23,6 +23,8 @@ namespace LocalTanks
         private static readonly int TrackTravelId = Shader.PropertyToID("_TrackTravel");
         private static readonly int TrackParamsId = Shader.PropertyToID("_TrackParams");
         private static readonly int TrackStrengthId = Shader.PropertyToID("_TrackStrength");
+        private static readonly int HullTexId = Shader.PropertyToID("_HullTex");
+        private static readonly int HullRectId = Shader.PropertyToID("_HullRect");
 
         /// <summary>
         /// How many coarse sweeps span the mask. The sweep is the part of the pattern that survives a
@@ -34,6 +36,14 @@ namespace LocalTanks
         [SerializeField] private Rigidbody2D body;
         [SerializeField] private TankHealth health;
         [SerializeField] private SpriteRenderer overlay;
+
+        /// <summary>
+        /// The hull sprite the overlay sits on, plus the rectangle it occupies inside its own
+        /// texture. The shader reads those pixels so the tread lightens what is already painted
+        /// instead of laying a flat sheen over the sprite.
+        /// </summary>
+        [SerializeField] private SpriteRenderer hull;
+        [SerializeField] private Vector4 hullTextureRect = new Vector4(0f, 0f, 1f, 1f);
 
         /// <summary>Half the distance between the two track centre lines, in Unity units.</summary>
         [SerializeField] private float halfGaugeUnits = 0.1f;
@@ -47,8 +57,8 @@ namespace LocalTanks
         /// <summary>+1 when the machine's front points towards increasing sprite V, otherwise -1.</summary>
         [SerializeField] private float forwardSign = -1f;
 
-        /// <summary>x lights the middle of a tread link, y darkens the seam between two links.</summary>
-        [SerializeField] private Vector2 strength = new Vector2(0.14f, 0.1f);
+        /// <summary>x lightens a tread plate, y darkens the gap between two links.</summary>
+        [SerializeField] private Vector2 strength = new Vector2(0.35f, 0.55f);
 
         private MaterialPropertyBlock properties;
         private Vector2 previousPosition;
@@ -66,11 +76,11 @@ namespace LocalTanks
         public float RightTravel => rightTravel;
 
         /// <summary>
-        /// Link highlight and seam strength used by the generated prefabs and by the shared
-        /// material. Deliberately low: the tread is a movement cue, not a conveyor belt, and the
-        /// pattern is fine enough that a strong highlight would look painted on.
+        /// How strongly a tread plate is lightened and the gap between two links is darkened, as
+        /// multipliers around one. Deliberately low: the tread is a movement cue, not a conveyor
+        /// belt, and the pattern is fine enough that a strong contrast would look painted on.
         /// </summary>
-        public static Vector2 DefaultStrength => new Vector2(0.14f, 0.1f);
+        public static Vector2 DefaultStrength => new Vector2(0.35f, 0.55f);
 
         /// <summary>
         /// Splits the hull's real motion into the distance each track travelled over the ground.
@@ -152,6 +162,8 @@ namespace LocalTanks
             Rigidbody2D trackedBody,
             TankHealth tankHealth,
             SpriteRenderer trackOverlay,
+            SpriteRenderer hullRenderer,
+            Vector4 hullRect,
             float halfGauge,
             float treadPitch,
             float maskHeight,
@@ -161,6 +173,8 @@ namespace LocalTanks
             body = trackedBody != null ? trackedBody : GetComponent<Rigidbody2D>();
             health = tankHealth;
             overlay = trackOverlay;
+            hull = hullRenderer;
+            hullTextureRect = hullRect;
             halfGaugeUnits = Mathf.Max(0.0001f, halfGauge);
             treadPitchUnits = Mathf.Max(0.0001f, treadPitch);
             maskHeightUnits = Mathf.Max(0.0001f, maskHeight);
@@ -217,6 +231,16 @@ namespace LocalTanks
                 new Vector4(LinkRepeats(maskHeightUnits, treadPitchUnits), SweepRepeats, 0f, 0f));
             properties.SetVector(TrackTravelId, new Vector4(leftTravel, rightTravel, 0f, 0f));
             properties.SetVector(TrackStrengthId, new Vector4(strength.x, strength.y, 0f, 0f));
+            properties.SetVector(HullRectId, hullTextureRect);
+
+            // The hull texture is bound per instance rather than owned by the material, so one
+            // shared material still serves machines with different artwork.
+            Texture hullTexture = hull != null && hull.sprite != null ? hull.sprite.texture : null;
+            if (hullTexture != null)
+            {
+                properties.SetTexture(HullTexId, hullTexture);
+            }
+
             overlay.SetPropertyBlock(properties);
         }
 

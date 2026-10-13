@@ -24,18 +24,24 @@ namespace LocalTanks.Editor
             "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab"
         };
 
-        /// <summary>Zoom levels: the battle camera and a close look at the pixels.</summary>
-        private static readonly float[] BattleZooms = { 13f, 2f };
+        /// <summary>Zoom levels: the battle camera, a middle view and a close look at the links.</summary>
+        private static readonly float[] BattleZooms = { 13f, 2f, 1f };
 
         /// <summary>Tread feature spacing in model metres, over the plausible range.</summary>
         private static readonly float[] TreadPitches = { 0.22f };
 
-        /// <summary>Highlight and seam strength, from the restrained end to a visible one.</summary>
-        private static readonly Vector2[] Strengths =
+        /// <summary>
+        /// Candidate looks: lighten strength, darken strength, how much darkening survives on the
+        /// darkest art, and the weight of the coarse glint against the fine links.
+        /// </summary>
+        private static readonly Vector4[] Looks =
         {
-            new Vector2(0.1f, 0.07f),
-            new Vector2(0.14f, 0.1f),
-            new Vector2(0.18f, 0.12f)
+            new Vector4(0.35f, 0.55f, 0.5f, 0.22f),
+            new Vector4(0.26f, 0.42f, 0.5f, 0.12f),
+            new Vector4(0.5f, 0.7f, 0.45f, 0.35f),
+            // Gaps only, exaggerated: this must visibly darken the band, because additive blending
+            // silently clamped exactly this half of the pattern away.
+            new Vector4(0f, 1.2f, 0.7f, 0f)
         };
 
         private static readonly float[] Phases = { 0f, 0.5f };
@@ -68,7 +74,8 @@ namespace LocalTanks.Editor
                     tank.transform.position = Vector3.zero;
                     tank.transform.rotation = Quaternion.identity;
                     SpriteRenderer overlay = tank.transform.Find("HullVisual/TrackOverlay")?.GetComponent<SpriteRenderer>();
-                    if (overlay == null)
+                    SpriteRenderer hull = tank.transform.Find("HullVisual")?.GetComponent<SpriteRenderer>();
+                    if (overlay == null || hull == null)
                     {
                         Debug.LogWarning($"Track preview found no overlay on {prefabPath}");
                         continue;
@@ -78,7 +85,7 @@ namespace LocalTanks.Editor
                     {
                         camera.orthographicSize = zoom;
                         CaptureWithoutOverlay(camera, overlay, name, zoom);
-                        CapturePhases(camera, overlay, name, zoom);
+                        CapturePhases(camera, overlay, hull, name, zoom);
                     }
 
                     UnityEngine.Object.DestroyImmediate(tank);
@@ -112,17 +119,31 @@ namespace LocalTanks.Editor
             }
         }
 
-        private static void CapturePhases(Camera camera, SpriteRenderer overlay, string name, float zoom)
+        private static void CapturePhases(
+            Camera camera, SpriteRenderer overlay, SpriteRenderer hull, string name, float zoom)
         {
             MaterialPropertyBlock properties = new MaterialPropertyBlock();
             overlay.GetPropertyBlock(properties);
             float maskHeightUnits = overlay.bounds.size.y;
 
+            // The animator is not running in the editor, so the preview supplies what its Awake would
+            // have written, including the hull pixels the shader reads.
+            Rect hullRect = hull.sprite.textureRect;
+            Texture2D hullTexture = hull.sprite.texture;
+            properties.SetVector(
+                "_HullRect",
+                new Vector4(
+                    hullRect.x / hullTexture.width,
+                    hullRect.y / hullTexture.height,
+                    hullRect.width / hullTexture.width,
+                    hullRect.height / hullTexture.height));
+            properties.SetTexture("_HullTex", hullTexture);
+
             foreach (float pitchMetres in TreadPitches)
             {
                 float links = TankTrackAnimator.LinkRepeats(
                     maskHeightUnits, pitchMetres / PrototypeSetup.MetresPerUnit);
-                foreach (Vector2 strength in Strengths)
+                foreach (Vector4 look in Looks)
                 {
                     foreach (float phase in Phases)
                     {
@@ -130,12 +151,13 @@ namespace LocalTanks.Editor
                         float travel = phase / links;
                         properties.SetVector(
                             "_TrackParams", new Vector4(links, TankTrackAnimator.SweepRepeats, 0f, 0f));
-                        properties.SetVector("_TrackStrength", new Vector4(strength.x, strength.y, 0f, 0f));
+                        properties.SetVector("_TrackStrength", new Vector4(look.x, look.y, 0f, 0f));
+                        properties.SetVector("_HullLighting", new Vector4(look.z, 0f, 1.5f, look.w));
                         properties.SetVector("_TrackTravel", new Vector4(travel, travel, 0f, 0f));
                         overlay.SetPropertyBlock(properties);
                         Render(
                             camera,
-                            $"{name}_zoom{zoom:0.##}_pitch{pitchMetres:0.##}_s{strength.x:0.00}_phase{phase:0.00}.png");
+                            $"{name}_zoom{zoom:0.##}_pitch{pitchMetres:0.##}_h{look.x:0.00}s{look.y:0.00}_phase{phase:0.00}.png");
                     }
                 }
             }
