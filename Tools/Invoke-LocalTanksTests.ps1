@@ -1,17 +1,26 @@
-# Runs a LocalTanks Unity test platform in batch mode and reports the tally.
+# Runs a LocalTanks Unity test platform in the background and reports the tally.
 #
-# The point of this wrapper over calling Unity directly is the diagnostic switches it can pass
-# through: a PlayMode battle can be recorded, run faster than real time, and have its tuning
-# constants overridden, all without rebuilding anything. See Docs/AI_TESTING.md.
+# This script no longer knows how to start Unity: it describes the run and hands it to
+# Tools/Unity/Invoke-UnityBackground.ps1, which owns the editor path, the arguments, the queue, the private
+# desktop, the log file and the exit code. What is left here is the test-specific part: which platform, which
+# switches, and which files the results land in.
+#
+# Both platforms run headless, because a test proves what it proves from data, logs and telemetry:
 #
 #   ./Tools/Invoke-LocalTanksTests.ps1 -Platform PlayMode -Filter WoTMapPlayabilityTests -Run
 #
-#   -Run alone runs the suite as usual. Add -Telemetry to record the battle, -Speed to run it
-#   faster, and -Override to sweep a field:
+#   -Run alone runs the suite as usual. Add -Telemetry to record the battle, -Speed to run it faster, and
+#   -Override to sweep a field:
 #
 #   -Run -Telemetry -Speed 20 -Override NavigationAgent.avoidanceRadius=0.9
 #
 # A recorded run writes JSON next to the results; query it instead of reading the log.
+#
+# -Mode exists for diagnosing the launcher, not for normal use. Auto, the default, is Headless for both
+# platforms; Graphical starts Unity with a real graphics device, which a test suite has no use for and which
+# slows a run down. If a check really needs pixels, it is a diagnostic renderer with its own registry entry:
+#
+#   ./Tools/Unity/Invoke-UnityBackground.ps1 -Operation RenderCombatVfxProof -Run
 
 param(
     [ValidateSet('EditMode', 'PlayMode')]
@@ -44,84 +53,64 @@ param(
     [string[]]$Override = @(),
 
     # Random seed for the run, so a sweep can tell a real effect from run-to-run spread.
-    [int]$Seed = 0
+    [int]$Seed = 0,
+
+    # Auto follows the operation registry. Headless and Graphical exist for diagnosing the harness.
+    [ValidateSet('Auto', 'Headless', 'Graphical')]
+    [string]$Mode = 'Auto'
 )
 
 $ErrorActionPreference = 'Stop'
-$project = Split-Path -Parent $PSScriptRoot
-$unity = 'C:\Program Files\Unity\Hub\Editor\6000.6.4f1\Editor\Unity.exe'
 
-if (-not (Test-Path $unity)) {
-    throw "Unity was not found at $unity. Update this script if the editor moved."
+$launcher = Join-Path $PSScriptRoot 'Unity/Invoke-UnityBackground.ps1'
+if (-not (Test-Path $launcher)) {
+    throw "The Unity launcher was not found at $launcher. It is the only supported way to start Unity."
 }
 
 if ([string]::IsNullOrWhiteSpace($Xml)) {
-    $Xml = Join-Path $project "TestResults/$Platform-results.xml"
-}
-if ([string]::IsNullOrWhiteSpace($Log)) {
-    $Log = Join-Path $project "TestResults/$Platform.log"
+    $Xml = "TestResults/$Platform-results.xml"
 }
 
-$arguments = @(
-    '-batchmode', '-nographics',
-    '-projectPath', "`"$project`"",
-    '-runTests', '-testPlatform', $Platform,
-    '-testResults', "`"$Xml`"",
-    '-logFile', "`"$Log`""
-)
-if (-not [string]::IsNullOrWhiteSpace($Filter)) {
-    $arguments += @('-testFilter', "`"$Filter`"")
+if ([string]::IsNullOrWhiteSpace($Log)) {
+    $Log = "TestResults/$Platform.log"
 }
+
+$request = @{
+    # The registry names the test operations EditModeTests and PlayModeTests, and decides their mode.
+    Operation = "${Platform}Tests"
+    Mode = $Mode
+    ResultsPath = $Xml
+    LogPath = $Log
+    ReportPath = "TestResults/$Platform-run.json"
+    Run = [bool]$Run
+}
+
+if (-not [string]::IsNullOrWhiteSpace($Filter)) {
+    $request.Filter = $Filter
+}
+
 if ($Telemetry) {
-    $arguments += @('-localtanksTelemetry')
+    $request.Telemetry = $true
     if (-not [string]::IsNullOrWhiteSpace($TelemetryOut)) {
-        $arguments += @('-localtanksTelemetryOut', "`"$TelemetryOut`"")
+        $request.TelemetryOut = $TelemetryOut
     }
 }
+
 if ($Speed -gt 1) {
-    $arguments += @('-localtanksSpeed', $Speed)
+    $request.Speed = $Speed
 }
+
 if ($Seconds -gt 0) {
-    $arguments += @('-localtanksSeconds', $Seconds)
+    $request.Seconds = $Seconds
 }
-foreach ($item in $Override) {
-    $arguments += @('-localtanksParam', $item)
+
+if ($Override.Count -gt 0) {
+    $request.Override = $Override
 }
+
 if ($Seed -ne 0) {
-    $arguments += @('-localtanksSeed', $Seed)
+    $request.Seed = $Seed
 }
 
-$command = "& `"$unity`" $($arguments -join ' ')"
-if (-not $Run) {
-    Write-Output 'Nothing was run. Add -Run to execute:'
-    Write-Output $command
-    return
-}
-
-Write-Output "Running $Platform$(if ($Filter) { " filtered by '$Filter'" })..."
-$psi = New-Object System.Diagnostics.ProcessStartInfo
-$psi.FileName = $unity
-$psi.Arguments = $arguments -join ' '
-$psi.UseShellExecute = $false
-$psi.WorkingDirectory = $project
-$process = [System.Diagnostics.Process]::Start($psi)
-$process.WaitForExit()
-
-if (-not (Test-Path $Xml)) {
-    Write-Output "Unity exited with $($process.ExitCode) and wrote no results. Check $Log."
-    exit 1
-}
-
-[xml]$results = Get-Content $Xml
-# Deliberately not named $run: that is the script's own switch, and PowerShell would try to treat the
-# assignment as setting it.
-$summary = $results.'test-run'
-Write-Output ("{0}: total={1} passed={2} failed={3} skipped={4}" -f `
-    $Platform, $summary.total, $summary.passed, $summary.failed, $summary.skipped)
-$results.SelectNodes('//test-case') | Where-Object { $_.result -ne 'Passed' } | ForEach-Object {
-    Write-Output ("  {0}: {1}" -f $_.result, $_.Name)
-}
-if ($Telemetry) {
-    Write-Output 'The battle recording is beside the results; query it rather than reading the log.'
-}
-if ($summary.failed -gt 0) { exit 1 }
+& $launcher @request
+exit $LASTEXITCODE

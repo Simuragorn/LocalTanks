@@ -1,0 +1,240 @@
+{
+  "schemaVersion": 1,
+  "note": "The operations an agent may run in Unity, and whether each one needs a real graphics device. Invoke-UnityBackground.ps1 reads this file to choose the mode in -Auto, and UnityLauncherRegistryTests checks it against the editor assembly, so a new entry point cannot silently fall back to the wrong mode. An operation marked requiresGraphics runs with -batchmode and without -nographics and must write its evidence to a file.",
+  "operations": [
+    {
+      "name": "EditModeTests",
+      "kind": "Tests",
+      "testPlatform": "EditMode",
+      "requiresGraphics": false,
+      "timeoutSeconds": 3600,
+      "description": "The Edit Mode suite: data, prefabs, configuration and generators."
+    },
+    {
+      "name": "PlayModeTests",
+      "kind": "Tests",
+      "testPlatform": "PlayMode",
+      "requiresGraphics": false,
+      "timeoutSeconds": 3600,
+      "description": "The Play Mode suite: battle logic, AI, telemetry and simulations."
+    },
+    {
+      "name": "BuildCombatAssets",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.PrototypeSetup.BuildCombatAssets",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Rebuild the combat prefabs, including their hull colliders.",
+      "outputs": ["Assets/Game/Prefabs/Tanks"]
+    },
+    {
+      "name": "BuildTestRange",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.PrototypeSetup.BuildAll",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Rebuild the test range scene and its prototype assets.",
+      "outputs": ["Assets/Game/Scenes/Battle_TestRange.unity"]
+    },
+    {
+      "name": "BuildNavigationRange",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.NavigationRangeSetup.Build",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Rebuild the navigation range scene.",
+      "outputs": ["Assets/Game/Scenes/Battle_NavigationRange.unity"]
+    },
+    {
+      "name": "BuildRiverCrossingMap",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.RiverCrossingSetup.Build",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Rebuild the River Crossing map, its scenes and its rules from the map source.",
+      "outputs": ["Assets/Game/Generated/RiverCrossing"]
+    },
+    {
+      "name": "BuildWotMapScene",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.WoTMapSceneBuilder.BuildDefaultMapScene",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Rebuild the Mines battle scene from the converted WoT arena.",
+      "outputs": ["Assets/Game/Scenes/Battle_10_hills.unity"]
+    },
+    {
+      "name": "BuildWotMapTacticalAnalysis",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.WoTMapTacticalDescriptorBuilder.BuildDefault",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Rebuild the tactical descriptor of the Mines arena.",
+      "outputs": ["Assets/Game/GameData/Generated/Tactical"]
+    },
+    {
+      "name": "ImportWotMap",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.WoTMapImporter.ImportDefaultMap",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Reimport the converted Mines arena asset.",
+      "outputs": ["Assets/Game/GameData/Generated/Maps"]
+    },
+    {
+      "name": "BuildCombatVfxAssets",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.CombatVfxAssetBuilder.Build",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Draw the combat effect textures and build their materials and prefabs from the profiles. It must produce the same files here as in the editor, which is why it is headless.",
+      "outputs": ["Assets/Game/Art/Vfx/Generated", "Assets/Game/Resources/CombatVfx"]
+    },
+    {
+      "name": "ReimportCombatDefinitions",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.CombatDefinitionImporter.Reimport",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Reimport the tank, weapon and shell definitions into generated assets.",
+      "outputs": ["Assets/Game/GameData/Generated"]
+    },
+    {
+      "name": "ReimportBattleScenario",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.BattleScenarioImporter.Reimport",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Reimport the battle scenario into its generated asset.",
+      "outputs": ["Assets/Game/GameData/Generated/Scenarios"]
+    },
+    {
+      "name": "ReimportAiDuelLabScenario",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.BattleScenarioImporter.ReimportDuelLab",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Reimport the AI duel lab scenario into its generated asset.",
+      "outputs": ["Assets/Game/GameData/Generated/Scenarios"]
+    },
+    {
+      "name": "ReimportAiDuelLabCases",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.AiDuelLabCatalogImporter.Reimport",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Reimport the AI duel lab case catalogue from its source.",
+      "outputs": ["Assets/Game/GameData/Generated/Scenarios"]
+    },
+    {
+      "name": "RebuildTacticalMapAnalysis",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.TacticalMapDescriptorImporter.Reimport",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Rebuild the tactical map analysis from the arena primitives, and the document that describes it.",
+      "outputs": ["Assets/Game/GameData/Generated/Tactical", "Docs/MAP_TACTICS.md"]
+    },
+    {
+      "name": "UpdateTankBalanceDocument",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.TankBalanceDocumentGenerator.WriteCurrent",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Regenerate the tank balance document from the combat definitions.",
+      "outputs": ["Docs/TANK_BALANCE.md"]
+    },
+    {
+      "name": "ValidateCombatDefinitions",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.CombatDefinitionImporter.ValidateMenu",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Validate the tank, weapon and shell definitions; throws with every problem it finds."
+    },
+    {
+      "name": "ValidateBattleScenario",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.BattleScenarioImporter.ValidateMenu",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Validate the battle scenario against the definitions."
+    },
+    {
+      "name": "ValidateTacticalMapAnalysis",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.TacticalMapDescriptorImporter.ValidateMenu",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Validate the tactical map analysis against its source."
+    },
+    {
+      "name": "ValidateCombatVfxProfiles",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.CombatVfxProfileValidator.ValidateMenu",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Validate the combat effect profiles."
+    },
+    {
+      "name": "ValidateCombatVfxAssets",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.CombatVfxAssetBuilder.ValidateMenu",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Validate that the generated effect assets match the effect list."
+    },
+    {
+      "name": "ValidateBattleAudioProfiles",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.BattleAudioProfileValidator.ValidateMenu",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Validate the battle audio profile against the clip catalogue."
+    },
+    {
+      "name": "InspectCombatVfxSprites",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.CombatVfxSpriteInspector.Inspect",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Report the imported format and pixels of every generated effect texture. It reads pixel data on the CPU, so it never needs a graphics device."
+    },
+    {
+      "name": "RenderCombatVfxProof",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.CombatVfxProofRenderer.Render",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render every combat effect and print pattern into one sheet at the moment it covers the most of the frame. A null graphics device discards every draw call, so this is the only way to see what the effect library looks like.",
+      "outputs": ["Docs/Media/CombatVfx.png"]
+    },
+    {
+      "name": "RenderCombatVfxBattleProof",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.CombatVfxBattleProofRenderer.Render",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the effects on real machines at battle scale, which is the only way to judge their size against a hull.",
+      "outputs": ["Docs/Media/CombatVfxBattle.png"]
+    },
+    {
+      "name": "CaptureTrackEffectPreview",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.TrackEffectPreview.Capture",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the tank tread overlay at four zoom levels and two phases, with the overlay off for comparison.",
+      "outputs": ["TestResults/TrackPreview"]
+    },
+    {
+      "name": "CaptureRiverCrossingPreview",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.RiverCrossingSetup.CapturePreview",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the River Crossing map from the battle camera.",
+      "outputs": ["Docs/Media/RiverCrossing.png"]
+    }
+  ]
+}

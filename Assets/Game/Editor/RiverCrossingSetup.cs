@@ -184,7 +184,9 @@ namespace LocalTanks.Editor
                 .FirstOrDefault();
         }
 
-        [MenuItem("Local Tanks/Capture River Crossing Preview")]
+        // Grouped under Diagnostics like every other renderer: UnityLauncherRegistryTests requires each
+        // diagnostic menu item to have a launcher operation, and that check reads this prefix.
+        [MenuItem("Local Tanks/Diagnostics/Capture River Crossing Preview")]
         public static void CapturePreview()
         {
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
