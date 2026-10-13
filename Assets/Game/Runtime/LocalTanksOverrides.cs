@@ -39,8 +39,47 @@ namespace LocalTanks
         }
 
         private static readonly List<Override> Pending = new List<Override>();
+        private static readonly List<Override> Transient = new List<Override>();
         private static readonly HashSet<string> Reported = new HashSet<string>();
         private static bool parsed;
+
+        /// <summary>
+        /// Sets a field for everything created from now on, without a command line and without a rebuild.
+        /// A sweep calls this before each run, and a tuning slider calls it as it is dragged, which is the
+        /// whole point of having a single path for runtime tuning.
+        /// </summary>
+        public static void SetTransient(string name, float value)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return;
+            int dot = name.LastIndexOf('.');
+            Transient.RemoveAll(item => string.Equals(item.FieldName, dot > 0 ? name.Substring(dot + 1) : name,
+                StringComparison.OrdinalIgnoreCase));
+            Transient.Add(new Override
+            {
+                TypeName = dot > 0 ? name.Substring(0, dot) : null,
+                FieldName = dot > 0 ? name.Substring(dot + 1) : name,
+                Raw = value.ToString("R", CultureInfo.InvariantCulture)
+            });
+        }
+
+        /// <summary>Forgets a field set by <see cref="SetTransient"/>.</summary>
+        public static void ClearTransient(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return;
+            int dot = name.LastIndexOf('.');
+            string field = dot > 0 ? name.Substring(dot + 1) : name;
+            Transient.RemoveAll(item =>
+                string.Equals(item.FieldName, field, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>Whether anything will be overridden, from either the command line or a caller.</summary>
+        public static bool HasAny => Pending.Count > 0 || Transient.Count > 0;
+
+        /// <summary>Names currently overridden, for a diagnostic display or a log line.</summary>
+        public static IEnumerable<string> Active()
+        {
+            return Pending.Concat(Transient).Select(Describe).Distinct().ToArray();
+        }
 
         /// <summary>Reads the command line once and remembers what was asked for.</summary>
         public static void ParseCommandLine()
@@ -108,7 +147,7 @@ namespace LocalTanks
         public static void ApplyToLoadedScenes()
         {
             ParseCommandLine();
-            if (Pending.Count == 0) return;
+            if (!HasAny) return;
 
             MonoBehaviour[] behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -129,7 +168,7 @@ namespace LocalTanks
         public static int ApplyTo(IEnumerable<MonoBehaviour> behaviours)
         {
             ParseCommandLine();
-            if (Pending.Count == 0) return 0;
+            if (!HasAny) return 0;
 
             int applied = 0;
             foreach (MonoBehaviour behaviour in behaviours)
@@ -144,11 +183,11 @@ namespace LocalTanks
         /// <summary>Applies the overrides that name this component's type.</summary>
         public static int ApplyToComponent(MonoBehaviour behaviour)
         {
-            if (behaviour == null || Pending.Count == 0) return 0;
+            if (behaviour == null || !HasAny) return 0;
 
             Type type = behaviour.GetType();
             int applied = 0;
-            foreach (Override item in Pending)
+            foreach (Override item in Pending.Concat(Transient).ToArray())
             {
                 if (!string.IsNullOrEmpty(item.TypeName) &&
                     !string.Equals(item.TypeName, type.Name, StringComparison.OrdinalIgnoreCase) &&

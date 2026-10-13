@@ -9,6 +9,27 @@ using UnityEngine;
 namespace LocalTanks
 {
     /// <summary>
+    /// End state of a recorded battle, for callers that compare runs rather than read a file.
+    /// </summary>
+    public struct BattleOutcome
+    {
+        public float Seconds;
+        public int TeamAAlive;
+        public int TeamBAlive;
+        public int TeamAHealth;
+        public int TeamBHealth;
+        public float ClosestApproach;
+        public int Samples;
+        public int Events;
+
+        /// <summary>Health both sides started with, so damage can be told from an untouched battle.</summary>
+        public int StartingHealth;
+
+        /// <summary>Health lost across both sides. Zero means nobody was hit at all.</summary>
+        public int DamageTaken => Mathf.Max(0, StartingHealth - (TeamAHealth + TeamBHealth));
+    }
+
+    /// <summary>
     /// Records a battle as a time series so its behaviour can be queried instead of watched.
     /// <para>
     /// Investigating why bots stalled took many full battles, each one read by eye out of a log. With a
@@ -54,6 +75,7 @@ namespace LocalTanks
         /// down and the clock has already restarted, which produced a negative battle length.
         /// </summary>
         private float elapsedAtLastSample;
+        private int startingHealth;
         private bool recording;
         private string outputPath;
 
@@ -91,6 +113,58 @@ namespace LocalTanks
 
         /// <summary>Whether state is being recorded right now.</summary>
         public bool IsRecording => recording;
+
+        /// <summary>
+        /// Where the next recording is written. A sweep sets this before each run so one process can
+        /// produce one file per parameter value instead of overwriting a single result.
+        /// </summary>
+        public void SetOutputPath(string path)
+        {
+            outputPath = path;
+        }
+
+        /// <summary>
+        /// Simulated seconds recorded so far, and the end state of the battle. A sweep reads these to
+        /// compare runs without parsing the JSON it just wrote.
+        /// </summary>
+        public BattleOutcome Outcome()
+        {
+            BattleDirector battle = director;
+            int healthA = 0;
+            int healthB = 0;
+            int aliveA = 0;
+            int aliveB = 0;
+            float closest = float.MaxValue;
+            if (battle != null)
+            {
+                foreach (TeamMember member in battle.SpawnedMembers)
+                {
+                    if (member == null) continue;
+                    int hp = member.Health != null ? member.Health.CurrentHitPoints : 0;
+                    if (member.Team == TeamId.TeamA) { healthA += hp; if (member.IsAlive) aliveA++; }
+                    else { healthB += hp; if (member.IsAlive) aliveB++; }
+                    foreach (TeamMember other in battle.SpawnedMembers)
+                    {
+                        if (other == null || other.Team == member.Team) continue;
+                        closest = Mathf.Min(closest,
+                            Vector2.Distance(member.transform.position, other.transform.position));
+                    }
+                }
+            }
+
+            return new BattleOutcome
+            {
+                Seconds = elapsedAtLastSample,
+                TeamAAlive = aliveA,
+                TeamBAlive = aliveB,
+                TeamAHealth = healthA,
+                TeamBHealth = healthB,
+                ClosestApproach = closest == float.MaxValue ? 0f : closest,
+                Samples = samples.Count,
+                Events = events.Count,
+                StartingHealth = startingHealth
+            };
+        }
 
         public int SampleCount => samples.Count;
         public int EventCount => events.Count;
@@ -134,6 +208,11 @@ namespace LocalTanks
             nextSampleAt = 0f;
             recording = true;
             CollectTracks();
+            startingHealth = 0;
+            foreach (TeamMember member in director.SpawnedMembers)
+            {
+                if (member != null && member.Health != null) startingHealth += member.Health.MaximumHitPoints;
+            }
         }
 
         /// <summary>Stops recording and returns the recording as JSON text.</summary>

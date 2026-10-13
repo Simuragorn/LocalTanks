@@ -76,6 +76,38 @@ namespace LocalTanks.Tests
             Assert.That(Time.timeScale, Is.EqualTo(1f));
         }
 
+        /// <summary>
+        /// The key cycles 1, 3, 10 and then back, and the slider can dial any rate in that range. Ten
+        /// times is the whole point on an eight-hundred-metre map, where an approach takes a minute to
+        /// watch; raising the time scale alone would look like a slideshow, so the controller also raises
+        /// the captured frame delta. The physics step must stay untouched or the trajectories stop
+        /// describing the real game.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator DeveloperTimeScale_CyclesUpToTenTimesWithoutTouchingThePhysicsStep()
+        {
+            GameObject root = new GameObject("DeveloperTimeScale");
+            DeveloperTimeScaleController controller = root.AddComponent<DeveloperTimeScaleController>();
+            float fixedStep = Time.fixedDeltaTime;
+            yield return null;
+
+            controller.Toggle();
+            Assert.That(Time.timeScale, Is.EqualTo(3f), "the first press should reach three times");
+            controller.Toggle();
+            Assert.That(Time.timeScale, Is.EqualTo(10f), "the second press should reach ten times");
+            controller.Toggle();
+            Assert.That(Time.timeScale, Is.EqualTo(1f), "the cycle should return to normal");
+
+            controller.SetScale(7f);
+            Assert.That(Time.timeScale, Is.EqualTo(7f), "the slider sets an arbitrary rate");
+            Assert.That(Time.fixedDeltaTime, Is.EqualTo(fixedStep),
+                "the physics step must never change, or fast runs describe a different game");
+
+            Object.Destroy(root);
+            yield return null;
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+        }
+
         [UnityTest]
         public IEnumerator AiDuelLab_LoadsDeterministicOneVersusOneWithoutStrategicLlm()
         {
