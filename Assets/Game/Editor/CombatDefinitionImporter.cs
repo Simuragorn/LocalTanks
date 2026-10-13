@@ -114,6 +114,7 @@ namespace LocalTanks.Editor
         public int schemaVersion;
         public string id;
         public string displayName;
+        public float caliberMm;
         public float reloadSeconds;
         public int magazineSize = 1;
         public float shotIntervalSeconds;
@@ -195,6 +196,7 @@ namespace LocalTanks.Editor
             {
                 ValidateCommon(weapon.schemaVersion, weapon.id, weapon.displayName, "Weapon", allIds, errors);
                 weaponIds.Add(weapon.id ?? string.Empty);
+                RequirePositive(weapon.caliberMm, $"Weapon '{weapon.id}'.caliberMm", errors);
                 RequirePositive(weapon.reloadSeconds, $"Weapon '{weapon.id}'.reloadSeconds", errors);
                 RequireRange(weapon.magazineSize, 1, 100, $"Weapon '{weapon.id}'.magazineSize", errors);
                 RequireNonNegative(weapon.shotIntervalSeconds, $"Weapon '{weapon.id}'.shotIntervalSeconds", errors);
@@ -604,6 +606,7 @@ namespace LocalTanks.Editor
             WeaponDefinition target = LoadOrCreate<WeaponDefinition>(path);
             target.id = source.id;
             target.displayName = source.displayName;
+            target.caliberMm = source.caliberMm;
             target.reloadSeconds = source.reloadSeconds;
             target.magazineSize = source.magazineSize;
             target.shotIntervalSeconds = source.shotIntervalSeconds;

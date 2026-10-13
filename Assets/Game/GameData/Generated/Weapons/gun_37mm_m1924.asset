@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponDefinition
   id: gun_37mm_m1924
   displayName: 37 mm Gun M1924
+  caliberMm: 37
   reloadSeconds: 8
   magazineSize: 5
   shotIntervalSeconds: 0.5

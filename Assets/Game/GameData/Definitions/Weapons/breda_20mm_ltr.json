@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "breda_20mm_ltr",
   "displayName": "2 cm Breda",
+  "caliberMm": 20,
   "reloadSeconds": 4.7,
   "magazineSize": 12,
   "shotIntervalSeconds": 0.25,

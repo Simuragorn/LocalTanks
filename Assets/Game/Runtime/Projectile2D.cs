@@ -100,6 +100,9 @@ namespace LocalTanks
                     DestructibleObstacle obstacle = hit.collider.GetComponentInParent<DestructibleObstacle>();
                     obstacle?.ApplyDamage(damage);
                     CombatAudioEmitter.PlayImpact(audioProfile, ImpactOutcome.Blocked, hit.point);
+                    // The map answers with dust, chips or a splash. The projectile does not know which
+                    // surface it landed on; the effect layer resolves that from the battle's map.
+                    CombatVfxEmitter.ShellImpact(hit.point, hit.normal, radius);
                     Destroy(gameObject);
                     return;
                 }

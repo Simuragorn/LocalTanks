@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$BlenderExecutable = 'C:\Program Files\Blender Foundation\Blender 4.3\blender.exe',
     [string]$WotRoot = 'C:\Games\World_of_Tanks_EU'
@@ -60,6 +60,8 @@ $config = [ordered]@{
         gapPixels = 24
         shadowless = $true
         saveBlend = $true
+        trackMask = $true
+        trackFeaturePitchMetres = 0.22
     }
 }
 $config | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $configPath -Encoding utf8

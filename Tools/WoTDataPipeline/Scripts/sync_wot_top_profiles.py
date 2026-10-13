@@ -303,6 +303,7 @@ def extract_profile(archive: zipfile.ZipFile, entry: dict, conversion: dict) -> 
             "burstSize": max(1, int(number(gun_base, "burst/count", 1))),
             "roundsPerMinuteInsideMagazine": clip_rate,
             "shell": shell_ref.tag,
+            "caliberMm": caliber,
             "shellDamage": damage,
             "shellPenetrationAt50mMm": shell_penetration[0],
             "shellPenetrationAtMaximumRangeMm": shell_penetration[-1],
@@ -354,6 +355,9 @@ def extract_profile(archive: zipfile.ZipFile, entry: dict, conversion: dict) -> 
             "weapon": {
                 "id": entry["weaponId"],
                 "displayName": entry["weaponDisplayName"],
+                # Bore diameter decides which visual effect band a shot uses, so it travels with the gun
+                # instead of being repeated in a per-machine visual table.
+                "caliberMm": round_value(caliber, 1),
                 "reloadSeconds": round_value(overlay_number(gun_override, gun_base, "reloadTime")),
                 "magazineSize": magazine_size,
                 "shotIntervalSeconds": round_value(shot_interval),

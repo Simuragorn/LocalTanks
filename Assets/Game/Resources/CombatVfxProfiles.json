@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 1,
+  "weaponProfiles": [
+    {
+      "id": "autocannon",
+      "displayName": "Автоматическая пушка до 25 мм",
+      "maxCaliberMm": 25,
+      "flashScale": 0.3,
+      "flashSeconds": 0.05,
+      "smokeScale": 0.35,
+      "smokeSeconds": 0.9,
+      "smokeBurst": 5,
+      "recoilDistance": 0.02,
+      "lightIntensity": 0.45,
+      "lightRadius": 1.2,
+      "lightSeconds": 0.04
+    },
+    {
+      "id": "light_gun",
+      "displayName": "Лёгкое орудие до 50 мм",
+      "maxCaliberMm": 50,
+      "flashScale": 0.42,
+      "flashSeconds": 0.055,
+      "smokeScale": 0.5,
+      "smokeSeconds": 1.1,
+      "smokeBurst": 8,
+      "recoilDistance": 0.032,
+      "lightIntensity": 0.6,
+      "lightRadius": 1.6,
+      "lightSeconds": 0.048
+    },
+    {
+      "id": "medium_gun",
+      "displayName": "Среднее орудие до 90 мм",
+      "maxCaliberMm": 90,
+      "flashScale": 0.6,
+      "flashSeconds": 0.065,
+      "smokeScale": 0.75,
+      "smokeSeconds": 1.5,
+      "smokeBurst": 12,
+      "recoilDistance": 0.055,
+      "lightIntensity": 0.85,
+      "lightRadius": 2.2,
+      "lightSeconds": 0.056
+    },
+    {
+      "id": "heavy_gun",
+      "displayName": "Тяжёлое орудие до 130 мм",
+      "maxCaliberMm": 130,
+      "flashScale": 0.85,
+      "flashSeconds": 0.08,
+      "smokeScale": 1.05,
+      "smokeSeconds": 2.0,
+      "smokeBurst": 17,
+      "recoilDistance": 0.085,
+      "lightIntensity": 1.1,
+      "lightRadius": 2.9,
+      "lightSeconds": 0.068
+    },
+    {
+      "id": "siege_gun",
+      "displayName": "Орудие крупного калибра",
+      "maxCaliberMm": 1000,
+      "flashScale": 1.15,
+      "flashSeconds": 0.1,
+      "smokeScale": 1.45,
+      "smokeSeconds": 2.6,
+      "smokeBurst": 24,
+      "recoilDistance": 0.13,
+      "lightIntensity": 1.4,
+      "lightRadius": 3.8,
+      "lightSeconds": 0.085
+    }
+  ],
+  "movementProfiles": [
+    {
+      "id": "light",
+      "displayName": "Лёгкая машина до 20 т",
+      "maxMassTonnes": 20,
+      "dustOpacity": 0.26,
+      "dustSizeFraction": 0.5,
+      "dustRate": 5.0,
+      "dustSpeed": 1.0,
+      "exhaustIdleRate": 1.2,
+      "exhaustLoadedRate": 5.0,
+      "markOpacity": 0.3,
+      "markSpacingFraction": 0.11,
+      "markLengthFraction": 0.15,
+      "markWidthFraction": 0.26,
+      "markFadeSeconds": 6.0,
+      "markLimit": 40,
+      "sprayRate": 8.0
+    },
+    {
+      "id": "medium",
+      "displayName": "Средняя машина до 45 т",
+      "maxMassTonnes": 45,
+      "dustOpacity": 0.32,
+      "dustSizeFraction": 0.55,
+      "dustRate": 6.5,
+      "dustSpeed": 1.0,
+      "exhaustIdleRate": 1.5,
+      "exhaustLoadedRate": 6.5,
+      "markOpacity": 0.36,
+      "markSpacingFraction": 0.12,
+      "markLengthFraction": 0.16,
+      "markWidthFraction": 0.26,
+      "markFadeSeconds": 6.5,
+      "markLimit": 48,
+      "sprayRate": 10.0
+    },
+    {
+      "id": "heavy",
+      "displayName": "Тяжёлая машина",
+      "maxMassTonnes": 1000,
+      "dustOpacity": 0.38,
+      "dustSizeFraction": 0.6,
+      "dustRate": 8.0,
+      "dustSpeed": 1.05,
+      "exhaustIdleRate": 2.0,
+      "exhaustLoadedRate": 8.5,
+      "markOpacity": 0.42,
+      "markSpacingFraction": 0.13,
+      "markLengthFraction": 0.17,
+      "markWidthFraction": 0.27,
+      "markFadeSeconds": 7.5,
+      "markLimit": 56,
+      "sprayRate": 12.0
+    }
+  ],
+  "damageProfiles": [
+    {
+      "id": "damaged",
+      "displayName": "Повреждённая машина",
+      "minHealthFraction": 0.66,
+      "wreck": false,
+      "smokeRate": 2.0,
+      "smokeOpacity": 0.2,
+      "smokeSizeFraction": 0.6,
+      "smokeRise": 0.9,
+      "fire": false
+    },
+    {
+      "id": "heavily_damaged",
+      "displayName": "Тяжело повреждённая машина",
+      "minHealthFraction": 0.25,
+      "wreck": false,
+      "smokeRate": 5.0,
+      "smokeOpacity": 0.3,
+      "smokeSizeFraction": 0.8,
+      "smokeRise": 1.0,
+      "fire": false
+    },
+    {
+      "id": "burning",
+      "displayName": "Критически повреждённая машина",
+      "minHealthFraction": 0.0,
+      "wreck": false,
+      "smokeRate": 9.0,
+      "smokeOpacity": 0.4,
+      "smokeSizeFraction": 1.0,
+      "smokeRise": 1.15,
+      "fire": true
+    },
+    {
+      "id": "wreck",
+      "displayName": "Остов",
+      "minHealthFraction": 0.0,
+      "wreck": true,
+      "smokeRate": 11.0,
+      "smokeOpacity": 0.5,
+      "smokeSizeFraction": 1.2,
+      "smokeRise": 1.25,
+      "fire": true
+    }
+  ],
+  "impactProfiles": [
+    {
+      "id": "penetrated",
+      "displayName": "Пробитие",
+      "outcome": "penetrated",
+      "flashScale": 0.4,
+      "sparkCount": 8,
+      "sparkSpeed": 3.2,
+      "dustScale": 0.3,
+      "debrisCount": 2,
+      "seconds": 0.45
+    },
+    {
+      "id": "blocked",
+      "displayName": "Непробитие",
+      "outcome": "blocked",
+      "flashScale": 0.55,
+      "sparkCount": 14,
+      "sparkSpeed": 4.6,
+      "dustScale": 0.4,
+      "debrisCount": 1,
+      "seconds": 0.55
+    },
+    {
+      "id": "ricocheted",
+      "displayName": "Рикошет",
+      "outcome": "ricocheted",
+      "flashScale": 0.7,
+      "sparkCount": 20,
+      "sparkSpeed": 6.0,
+      "dustScale": 0.15,
+      "debrisCount": 0,
+      "seconds": 0.65
+    },
+    {
+      "id": "ground",
+      "displayName": "Попадание в карту",
+      "outcome": "ground",
+      "flashScale": 0.2,
+      "sparkCount": 0,
+      "sparkSpeed": 0.0,
+      "dustScale": 0.85,
+      "debrisCount": 3,
+      "seconds": 1.1
+    }
+  ],
+  "surfaceProfiles": [
+    {
+      "id": "grass",
+      "displayName": "Грунт и трава",
+      "terrain": "Grass",
+      "dustTint": { "r": 0.6, "g": 0.58, "b": 0.38, "a": 1.0 },
+      "dustRateMultiplier": 1.0,
+      "markOpacityMultiplier": 1.0,
+      "splash": false
+    },
+    {
+      "id": "road",
+      "displayName": "Дорога",
+      "terrain": "Road",
+      "dustTint": { "r": 0.52, "g": 0.5, "b": 0.46, "a": 1.0 },
+      "dustRateMultiplier": 0.45,
+      "markOpacityMultiplier": 0.25,
+      "splash": false
+    },
+    {
+      "id": "mud",
+      "displayName": "Грязь",
+      "terrain": "Mud",
+      "dustTint": { "r": 0.42, "g": 0.34, "b": 0.24, "a": 1.0 },
+      "dustRateMultiplier": 1.35,
+      "markOpacityMultiplier": 1.25,
+      "splash": false
+    },
+    {
+      "id": "water",
+      "displayName": "Вода",
+      "terrain": "ShallowWater",
+      "dustTint": { "r": 0.72, "g": 0.8, "b": 0.84, "a": 1.0 },
+      "dustRateMultiplier": 0.0,
+      "markOpacityMultiplier": 0.0,
+      "splash": true
+    },
+    {
+      "id": "obstacle",
+      "displayName": "Захламление",
+      "terrain": "Obstacle",
+      "dustTint": { "r": 0.5, "g": 0.44, "b": 0.34, "a": 1.0 },
+      "dustRateMultiplier": 0.8,
+      "markOpacityMultiplier": 0.8,
+      "splash": false
+    },
+    {
+      "id": "impassable",
+      "displayName": "Непроходимая клетка",
+      "terrain": "Blocked",
+      "dustTint": { "r": 0.55, "g": 0.52, "b": 0.5, "a": 1.0 },
+      "dustRateMultiplier": 0.6,
+      "markOpacityMultiplier": 0.6,
+      "splash": false
+    }
+  ],
+  "limits": {
+    "maxPooledInstances": 192,
+    "qualityScale": 1.0
+  }
+}

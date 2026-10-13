@@ -6,13 +6,22 @@ import argparse
 import json
 import math
 import os
+import re
 import subprocess
 import sys
+from array import array
 from pathlib import Path
 
 import bpy
 from bpy_extras.object_utils import world_to_camera_view
 from mathutils import Vector
+
+# WoT chassis meshes and materials name their track sides explicitly, for example
+# `track_L_Shape` with `track_mat_L_skinned`. The trailing lookahead keeps names
+# such as `tracklink` from being read as a left track.
+TRACK_SIDE_PATTERN = re.compile(
+    r"track(?:[\s_\-.]*mat)?[\s_\-.]*([lr])(?=[\s_\-.]|shape|split|skinned|\d|$)"
+)
 
 
 def arguments() -> argparse.Namespace:
@@ -239,6 +248,248 @@ def material_report(root) -> list[dict]:
     return result
 
 
+def part_map(root) -> dict:
+    part_for_object = {}
+    for obj in descendants(root):
+        current = obj
+        part = None
+        while current is not None and current != root:
+            if "wot_part" in current:
+                part = current["wot_part"]
+                break
+            current = current.parent
+        part_for_object[obj] = part
+    return part_for_object
+
+
+def track_side(name: str):
+    """Return 'left', 'right' or None for one WoT object or material name."""
+    match = TRACK_SIDE_PATTERN.search(name.casefold())
+    if match is None:
+        return None
+    return "left" if match.group(1) == "l" else "right"
+
+
+def classify_track_meshes(root, part_for_object: dict) -> tuple[list, list, list]:
+    """Split chassis meshes into track sides by object name, then by material name."""
+    left: list = []
+    right: list = []
+    ambiguous: list = []
+    for obj in mesh_objects(root):
+        if part_for_object.get(obj) not in {"Chassis", "Hull"}:
+            continue
+        side = track_side(obj.name)
+        if side is None:
+            for slot in obj.material_slots:
+                material = slot.material
+                if material is not None:
+                    side = track_side(material.name)
+                    if side is not None:
+                        break
+        if side == "left":
+            left.append(obj)
+        elif side == "right":
+            right.append(obj)
+        elif "track" in obj.name.casefold():
+            ambiguous.append(obj.name)
+    return left, right, ambiguous
+
+
+def projected_direction(scene, camera, resolution: int, origin: Vector, direction: Vector) -> dict:
+    """Project a world direction into image pixels with y measured downward from the top."""
+    step = 0.5
+    start = world_to_camera_view(scene, camera, origin)
+    end = world_to_camera_view(scene, camera, origin + direction.normalized() * step)
+    return {
+        "xPixels": float((end.x - start.x) * resolution),
+        "yPixels": float(-(end.y - start.y) * resolution),
+    }
+
+
+def measure_vehicle_axes(root, part_for_object: dict, scene, camera, resolution: int, turret_root) -> dict:
+    """
+    Derive the image-space forward and starboard directions from the model itself.
+
+    Model axis conventions differ between imported vehicles, so neither direction is assumed:
+    the gun points forward, and the starboard side follows from forward and the scene up axis.
+    The result is projected through the camera, which is what decides the rendered sides.
+    """
+    if turret_root is None:
+        return {"sideSource": "unavailable", "reason": "the imported vehicle has no turret part"}
+
+    joint = turret_root.matrix_world.translation
+    gun_objects = [obj for obj in mesh_objects(root) if part_for_object.get(obj) == "Gun"]
+    if not gun_objects:
+        return {"sideSource": "unavailable", "reason": "the imported vehicle has no gun part"}
+
+    farthest = None
+    farthest_distance = -1.0
+    for obj in gun_objects:
+        matrix = obj.matrix_world
+        for vertex in obj.data.vertices:
+            world = matrix @ vertex.co
+            distance = math.hypot(world.x - joint.x, world.y - joint.y)
+            if distance > farthest_distance:
+                farthest_distance = distance
+                farthest = world
+    if farthest is None or farthest_distance <= 0.0:
+        return {"sideSource": "unavailable", "reason": "the gun mesh has no usable vertices"}
+
+    forward = Vector((farthest.x - joint.x, farthest.y - joint.y, 0.0)).normalized()
+    # Right-handed world with Z up: the tank's starboard side is forward cross up.
+    starboard = Vector((forward.y, -forward.x, 0.0))
+    forward_image = projected_direction(scene, camera, resolution, joint, forward)
+    starboard_image = projected_direction(scene, camera, resolution, joint, starboard)
+    lateral = abs(starboard_image["xPixels"]) / max(
+        math.hypot(starboard_image["xPixels"], starboard_image["yPixels"]), 1e-6
+    )
+    if lateral < 0.9:
+        return {
+            "sideSource": "unavailable",
+            "reason": "the projected starboard direction is not lateral in the top view",
+            "forwardImage": forward_image,
+            "starboardImage": starboard_image,
+        }
+    return {
+        "sideSource": "gunDirection",
+        "turretJoint": [float(joint.x), float(joint.y), float(joint.z)],
+        "gunMuzzle": [float(farthest.x), float(farthest.y), float(farthest.z)],
+        "forwardImage": forward_image,
+        "starboardImage": starboard_image,
+    }
+
+
+def projected_pixel_bounds(objects: list, scene, camera, resolution: int) -> tuple[int, int, int, int]:
+    """Pixel rectangle (left, top, right, bottom) covering the projected objects, clamped."""
+    minimum_x = float(resolution)
+    minimum_y = float(resolution)
+    maximum_x = -1.0
+    maximum_y = -1.0
+    for obj in objects:
+        matrix = obj.matrix_world
+        for corner in obj.bound_box:
+            normalized = world_to_camera_view(scene, camera, matrix @ Vector(corner))
+            x = normalized.x * resolution
+            y = (1.0 - normalized.y) * resolution
+            minimum_x = min(minimum_x, math.floor(x) - 1.0)
+            maximum_x = max(maximum_x, math.ceil(x) + 1.0)
+            minimum_y = min(minimum_y, math.floor(y) - 1.0)
+            maximum_y = max(maximum_y, math.ceil(y) + 1.0)
+    return (
+        max(0, int(minimum_x)),
+        max(0, int(minimum_y)),
+        min(resolution - 1, int(maximum_x)),
+        min(resolution - 1, int(maximum_y)),
+    )
+
+
+def build_track_mask(
+    left: list,
+    right: list,
+    scene,
+    camera,
+    resolution: int,
+    orthographic_scale: float,
+    center: Vector,
+    ceiling: float,
+    output: Path,
+) -> dict:
+    """
+    Mark every pixel whose first surface hit from above is a track mesh.
+
+    A mudguard or a side skirt hides part of the track belt in a straight top-down view, and a
+    tread highlight must not be drawn on top of it. A renderer holdout cannot answer that question:
+    EEVEE's holdout is a screen-space stencil that also cuts geometry merely lying *below* the
+    track, which erased almost every tracked vehicle completely. One ray per pixel from the camera
+    gives the exact first hit instead, and the later bicubic crop to the sprite scale supplies the
+    anti-aliased edge.
+    """
+    sides = {obj.name: "left" for obj in left}
+    sides.update({obj.name: "right" for obj in right})
+    bounds_left, bounds_top, bounds_right, bounds_bottom = projected_pixel_bounds(
+        left + right, scene, camera, resolution
+    )
+    metres_per_pixel = orthographic_scale / resolution
+    half = resolution * 0.5
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    pixels = array("f", bytes(4 * 4 * resolution * resolution))
+    samples = 0
+    hits = 0
+    for y in range(bounds_top, bounds_bottom + 1):
+        world_y = center.y + (y + 0.5 - half) * metres_per_pixel
+        for x in range(bounds_left, bounds_right + 1):
+            world_x = center.x - (x + 0.5 - half) * metres_per_pixel
+            samples += 1
+            result, _location, _normal, _index, hit, _matrix = scene.ray_cast(
+                depsgraph, Vector((world_x, world_y, ceiling)), Vector((0.0, 0.0, -1.0))
+            )
+            if not result or hit is None:
+                continue
+            side = sides.get(hit.name)
+            if side is None:
+                continue
+            hits += 1
+            offset = ((resolution - 1 - y) * resolution + x) * 4
+            if side == "left":
+                pixels[offset] = 1.0
+            else:
+                pixels[offset + 1] = 1.0
+            pixels[offset + 3] = 1.0
+
+    image = bpy.data.images.new("LocalTanksTrackMask", width=resolution, height=resolution, alpha=True)
+    image.pixels.foreach_set(pixels)
+    image.filepath_raw = str(output)
+    image.file_format = "PNG"
+    image.save()
+    bpy.data.images.remove(image)
+    return {
+        "image": output.name,
+        "raySamples": samples,
+        "rayHits": hits,
+        "pixelBounds": [bounds_left, bounds_top, bounds_right, bounds_bottom],
+    }
+
+
+def render_track_mask(
+    root, scene, camera, resolution: int, render_root: Path, part_for_object: dict, center: Vector, ceiling: float
+) -> dict:
+    """
+    Identify the tracked meshes and mark the track surface that a top-down view can see.
+
+    The mask shares the camera and resolution of the hull layer, so composing it with the same
+    alpha bounds aligns it with the hull sprite pixel for pixel.
+    """
+    left, right, ambiguous = classify_track_meshes(root, part_for_object)
+    info = {
+        "detected": bool(left) and bool(right),
+        "leftObjects": [obj.name for obj in left],
+        "rightObjects": [obj.name for obj in right],
+        "ambiguousObjects": ambiguous,
+        "image": None,
+    }
+    if not info["detected"]:
+        info["reason"] = (
+            "no left and right track meshes were identified by object or material name; "
+            "the sprite pipeline falls back to the outer bands of the hull silhouette"
+        )
+        return info
+
+    info.update(
+        build_track_mask(
+            left,
+            right,
+            scene,
+            camera,
+            resolution,
+            camera.data.ortho_scale,
+            center,
+            ceiling,
+            render_root / "tracks.png",
+        )
+    )
+    return info
+
+
 def world_bounds(objects: list) -> tuple[Vector, Vector]:
     points = [obj.matrix_world @ Vector(corner) for obj in objects for corner in obj.bound_box]
     if not points:
@@ -317,16 +568,7 @@ def render_layers(root, render_root: Path, config: dict) -> dict:
             "yPixels": float((1.0 - normalized.y) * resolution),
         }
 
-    part_for_object = {}
-    for obj in descendants(root):
-        current = obj
-        part = None
-        while current is not None and current != root:
-            if "wot_part" in current:
-                part = current["wot_part"]
-                break
-            current = current.parent
-        part_for_object[obj] = part
+    part_for_object = part_map(root)
 
     render_root.mkdir(parents=True, exist_ok=True)
     layers = {
@@ -347,6 +589,15 @@ def render_layers(root, render_root: Path, config: dict) -> dict:
         scene.render.filepath = str(output)
         bpy.ops.render.render(write_still=True)
         counts[layer_name] = visible_count
+
+    axes = measure_vehicle_axes(root, part_for_object, scene, camera, resolution, turret_root)
+    track_info = {"detected": False, "image": None, "reason": "track mask rendering is disabled"}
+    if bool(config["render"].get("trackMask", True)):
+        track_info = render_track_mask(
+            root, scene, camera, resolution, render_root, part_for_object, center, float(maximum.z) + 1.0
+        )
+    track_info.update(axes)
+
     metadata = {
         "resolution": resolution,
         "intermediatePixelsPerMeter": pixels_per_meter,
@@ -354,6 +605,7 @@ def render_layers(root, render_root: Path, config: dict) -> dict:
         "worldBounds": {"min": list(minimum), "max": list(maximum)},
         "meshCounts": counts,
         "turretPivot": turret_pivot,
+        "trackMask": track_info,
     }
     write_json(render_root / "render_metadata.json", metadata)
     return metadata

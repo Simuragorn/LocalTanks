@@ -18,6 +18,15 @@ namespace LocalTanks.Editor
         private const string SettingsOverlayUxmlPath = "Assets/Game/UI/SettingsOverlay.uxml";
         private const string SettingsOverlayUssPath = "Assets/Game/UI/SettingsOverlay.uss";
         private const string SettingsPanelSettingsPath = "Assets/Game/Generated/UI/SettingsPanelSettings.asset";
+        private const string TrackOverlayShaderPath = "Assets/Game/Art/Shaders/TankTrackOverlay.shader";
+        private const string TrackOverlayMaterialPath = "Assets/Game/Generated/Materials/TankTrackOverlay.mat";
+
+        /// <summary>
+        /// The tread overlay sits directly above the hull sprite at 5 and far below the turret at
+        /// 10, the selection outline at hull + 20 and the class icon at 100, so a moving highlight
+        /// is always covered by the parts that are physically above the tracks.
+        /// </summary>
+        private const int TrackOverlaySortingOrder = 6;
 
         private static readonly TankBuildSpec[] TankSpecs =
         {
@@ -68,13 +77,15 @@ namespace LocalTanks.Editor
                     return;
                 }
 
-                if (TankSpecs.All(spec => AssetDatabase.LoadAssetAtPath<GameObject>(spec.PrefabPath) != null))
+                if (TankSpecs.All(HasTrackOverlay))
                 {
                     return;
                 }
 
-                // A newly added build spec has no prefab yet, so this guard only skips the build
-                // when every configured tank is already present.
+                // A newly added build spec has no prefab yet, and a prefab built before the tread
+                // overlay existed has no animator, so either case rebuilds the combat assets once
+                // when the project is opened. The check is derived from the prefabs themselves, so
+                // there is no second list of machines to keep in sync.
                 try
                 {
                     BuildCombatAssets();
@@ -84,6 +95,13 @@ namespace LocalTanks.Editor
                     Debug.LogException(exception);
                 }
             };
+        }
+
+        /// <summary>True when a tank prefab exists and already carries its tread overlay.</summary>
+        private static bool HasTrackOverlay(TankBuildSpec spec)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(spec.PrefabPath);
+            return prefab != null && prefab.GetComponentInChildren<TankTrackAnimator>(true) != null;
         }
 
         [MenuItem("Local Tanks/Build Test Range")]
@@ -118,6 +136,7 @@ namespace LocalTanks.Editor
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             Debug.Log($"Local Tanks combat assets created with {tankPrefabs.Length} tank prefabs.");
             LogHullOutlineSummary();
+            LogTrackMaskSummary();
         }
 
         /// <summary>
@@ -203,6 +222,7 @@ namespace LocalTanks.Editor
             {
                 spec.LoadCanonicalLayout();
                 ValidateHullOutline(spec);
+                ValidateTrackLayout(spec);
                 ConfigureTankTexture(spec);
             }
 
@@ -329,6 +349,205 @@ namespace LocalTanks.Editor
             }
         }
 
+        /// <summary>
+        /// Fails the build when a measured track block cannot drive the tread overlay.
+        /// <para>
+        /// The mask is drawn as a second sprite on top of the hull, so it only lines up when it was
+        /// cropped to exactly the hull rectangle. A mask of another size still imports, still
+        /// renders and still animates; the only symptom is a highlight sliding across the hull in
+        /// the wrong place, which no compiler and no other test notices.
+        /// </para>
+        /// </summary>
+        private static void ValidateTrackLayout(TankBuildSpec spec)
+        {
+            TrackLayoutJson tracks = spec.Tracks;
+            if (tracks.schemaVersion != 1)
+            {
+                throw new System.InvalidOperationException(
+                    $"Track block of '{spec.DisplayName}' declares schema {tracks.schemaVersion}, expected 1. " +
+                    "Re-run Tools\\WoTSpritePipeline for this vehicle.");
+            }
+
+            if (!Mathf.Approximately(tracks.mask.width, spec.HullRect.width) ||
+                !Mathf.Approximately(tracks.mask.height, spec.HullRect.height))
+            {
+                throw new System.InvalidOperationException(
+                    $"Track mask of '{spec.DisplayName}' is {tracks.mask.width:0} by {tracks.mask.height:0} pixels " +
+                    $"but its hull sprite rectangle is {spec.HullRect.width:0} by {spec.HullRect.height:0}. The mask " +
+                    "must be cropped exactly like the hull layer, otherwise the moving highlight does not follow " +
+                    "the tracks.");
+            }
+
+            if (!Mathf.Approximately(tracks.outputPixelsPerMeter, PixelsPerMetre))
+            {
+                throw new System.InvalidOperationException(
+                    $"Track block of '{spec.DisplayName}' was measured at {tracks.outputPixelsPerMeter:0.###} pixels " +
+                    $"per metre but the fleet is built at {PixelsPerMetre:0.###}. Re-render the sprite.");
+            }
+
+            float hullWidthMetres = spec.HullRect.width / PixelsPerMetre;
+            if (tracks.bandSeparationMetres <= 0f || tracks.bandSeparationMetres > hullWidthMetres)
+            {
+                throw new System.InvalidOperationException(
+                    $"Track bands of '{spec.DisplayName}' are reported {tracks.bandSeparationMetres:0.###} m apart, " +
+                    $"which is outside the {hullWidthMetres:0.###} m width of its hull. The measured mask is not " +
+                    "usable as a differential.");
+            }
+
+            if (tracks.treadPitchMetres <= 0f || tracks.treadPitchMetres >= tracks.mask.height / PixelsPerMetre)
+            {
+                throw new System.InvalidOperationException(
+                    $"Tread pitch of '{spec.DisplayName}' is {tracks.treadPitchMetres:0.###} m against a mask " +
+                    $"{tracks.mask.height / PixelsPerMetre:0.###} m long. One feature must fit on the hull at least " +
+                    "once; lower the pitch in the track override or the pipeline configuration.");
+            }
+
+            if (!Mathf.Approximately(Mathf.Abs(tracks.forwardSignV), 1f))
+            {
+                throw new System.InvalidOperationException(
+                    $"Track block of '{spec.DisplayName}' records forwardSignV {tracks.forwardSignV}, but the scroll " +
+                    "direction must be either +1 or -1.");
+            }
+        }
+
+        /// <summary>
+        /// Prints the measured track block of every tank. The overlay is invisible in a build log, so
+        /// this is the record that makes a wrong mask diagnosable without opening a scene.
+        /// </summary>
+        private static void LogTrackMaskSummary()
+        {
+            foreach (TankBuildSpec spec in TankSpecs)
+            {
+                TrackLayoutJson tracks = spec.Tracks;
+                Debug.Log($"Track mask '{spec.DisplayName}': source {tracks.source}, sides {tracks.sideSource}" +
+                          (tracks.channelsSwapped ? " (channels swapped)" : string.Empty) +
+                          $", mask {tracks.mask.width:0}x{tracks.mask.height:0}, " +
+                          $"bands {tracks.bandSeparationMetres:0.###} m apart and {tracks.bandWidthMetres:0.###} m " +
+                          $"wide, tread pitch {tracks.treadPitchMetres:0.###} m, forward sign {tracks.forwardSignV:0}, " +
+                          $"diagnostic {tracks.diagnostic}." +
+                          (string.IsNullOrEmpty(tracks.fallbackReason) ? string.Empty : $" {tracks.fallbackReason}"));
+            }
+        }
+
+        /// <summary>
+        /// Imports the generated track mask as one sprite that covers its whole texture.
+        /// <para>
+        /// The overlay is a second sprite drawn over the hull sprite, so it only lines up when its
+        /// mesh spans the complete rectangle: a tight mesh would trim the transparent border and
+        /// shift the mask against the hull. Centring the pivot and keeping the 100 pixels per unit
+        /// of the strip keeps both sprites at the same world size and at the same position.
+        /// </para>
+        /// </summary>
+        private static Sprite ConfigureTrackMaskTexture(string path)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
+            {
+                throw new System.IO.FileNotFoundException("Track mask texture was not found.", path);
+            }
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 100f;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+
+            TextureImporterSettings settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteMeshType = SpriteMeshType.FullRect;
+            settings.spriteAlignment = (int)SpriteAlignment.Center;
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+
+            Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null)
+            {
+                throw new System.InvalidOperationException($"Track mask did not import as a sprite: {path}");
+            }
+
+            return sprite;
+        }
+
+        /// <summary>
+        /// Returns the one shared material every tread overlay uses, creating it on first use.
+        /// Machine-specific values never reach this asset: they travel in a property block, so the
+        /// fleet shares a single material, a single shader and a single draw setup.
+        /// </summary>
+        private static Material EnsureTrackOverlayMaterial()
+        {
+            Shader shader = AssetDatabase.LoadAssetAtPath<Shader>(TrackOverlayShaderPath);
+            if (shader == null)
+            {
+                throw new System.InvalidOperationException($"Track overlay shader was not found: {TrackOverlayShaderPath}");
+            }
+
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(TrackOverlayMaterialPath);
+            if (material != null)
+            {
+                if (material.shader != shader)
+                {
+                    material.shader = shader;
+                    EditorUtility.SetDirty(material);
+                }
+
+                return material;
+            }
+
+            const string materialDirectory = "Assets/Game/Generated/Materials";
+            if (!AssetDatabase.IsValidFolder(materialDirectory))
+            {
+                AssetDatabase.CreateFolder("Assets/Game/Generated", "Materials");
+            }
+
+            material = new Material(shader) { name = Path.GetFileNameWithoutExtension(TrackOverlayMaterialPath) };
+            // Defaults only: a human may tune these in the generated material and the build keeps
+            // the edited values, because they are never overwritten here.
+            material.SetColor("_TrackHighlight", new Color(1f, 0.99f, 0.96f, 1f));
+            material.SetVector(
+                "_TrackStrength",
+                new Vector4(TankTrackAnimator.DefaultStrength.x, TankTrackAnimator.DefaultStrength.y, 0f, 0f));
+            AssetDatabase.CreateAsset(material, TrackOverlayMaterialPath);
+            return material;
+        }
+
+        /// <summary>
+        /// Adds the tread overlay child and its animator to a tank root.
+        /// <para>
+        /// The overlay is a child of the hull visual, so it inherits the hull's uniform scale and
+        /// its 180 degree source-art rotation, which is what keeps it aligned with the hull sprite.
+        /// </para>
+        /// </summary>
+        private static TankTrackAnimator CreateTrackOverlay(
+            GameObject root, Transform hullVisual, TankBuildSpec spec, TankHealth health, Rigidbody2D body)
+        {
+            Sprite mask = ConfigureTrackMaskTexture(spec.TrackMaskPath);
+            Material material = EnsureTrackOverlayMaterial();
+
+            GameObject overlay = new GameObject("TrackOverlay");
+            overlay.transform.SetParent(hullVisual, false);
+            SpriteRenderer renderer = overlay.AddComponent<SpriteRenderer>();
+            renderer.sprite = mask;
+            renderer.sharedMaterial = material;
+            renderer.sortingOrder = TrackOverlaySortingOrder;
+
+            TrackLayoutJson tracks = spec.Tracks;
+            float maskHeightUnits = tracks.mask.height / 100f * spec.VisualScale.y;
+            TankTrackAnimator animator = root.AddComponent<TankTrackAnimator>();
+            animator.Configure(
+                body,
+                health,
+                renderer,
+                tracks.bandSeparationMetres * 0.5f / MetresPerUnit,
+                tracks.treadPitchMetres / MetresPerUnit,
+                maskHeightUnits,
+                tracks.forwardSignV,
+                TankTrackAnimator.DefaultStrength);
+            return animator;
+        }
+
         private static TankDefinition LoadDefinition(TankBuildSpec spec)
         {
             TankDefinition definition = AssetDatabase.LoadAssetAtPath<TankDefinition>(spec.DefinitionPath);
@@ -453,7 +672,6 @@ namespace LocalTanks.Editor
 
                 GameObject hullVisual = CreateSpriteChild(root.transform, "HullVisual", hullSprite, 5, spec.VisualScale);
                 hullVisual.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
-
                 GameObject turretPivot = new GameObject("TurretPivot");
                 turretPivot.transform.SetParent(root.transform, false);
                 turretPivot.transform.localPosition = CalculateTurretMountPosition(spec);
@@ -486,6 +704,13 @@ namespace LocalTanks.Editor
                 armor.Configure(definition, health);
                 TankDestroyedState destroyedState = root.AddComponent<TankDestroyedState>();
                 destroyedState.Configure(health, motor, aiming, weapon, input);
+                CreateTrackOverlay(root, hullVisual.transform, spec, health, body);
+
+                // The rig carries no asset references, so it is safe in a committed prefab: it loads the
+                // generated effect prefabs at play time and resolves every look from the committed
+                // profile table. The test range therefore shows one machine's effects in isolation.
+                TankVfxRig vfx = root.AddComponent<TankVfxRig>();
+                vfx.Configure(definition, motor, health, weapon);
 
                 return PrefabUtility.SaveAsPrefabAsset(root, spec.PrefabPath);
             }
@@ -866,6 +1091,12 @@ namespace LocalTanks.Editor
             public float MuzzleDistance { get; private set; }
             public Vector2[] HullOutline { get; }
 
+            /// <summary>Measured tracks block of the canonical layout.</summary>
+            public TrackLayoutJson Tracks { get; private set; }
+
+            /// <summary>Absolute path of the generated track mask texture.</summary>
+            public string TrackMaskPath { get; private set; }
+
             public void LoadCanonicalLayout()
             {
                 string directory = Path.GetDirectoryName(TexturePath)?.Replace('\\', '/');
@@ -876,14 +1107,31 @@ namespace LocalTanks.Editor
                     throw new System.InvalidOperationException($"Canonical sprite layout was not found: {layoutPath}");
 
                 SpriteLayoutJson layout = JsonUtility.FromJson<SpriteLayoutJson>(File.ReadAllText(absolutePath));
-                if (layout == null || layout.schemaVersion != 2 || layout.hull == null || layout.turret == null)
-                    throw new InvalidDataException($"Unsupported or incomplete sprite layout: {layoutPath}");
+                if (layout == null || layout.schemaVersion != 3 || layout.hull == null || layout.turret == null ||
+                    layout.tracks == null || layout.tracks.mask == null)
+                {
+                    throw new InvalidDataException(
+                        $"Unsupported or incomplete sprite layout: {layoutPath}. Schema 3 with a measured " +
+                        "tracks block is required; re-run Tools\\WoTSpritePipeline for this vehicle instead " +
+                        "of editing the layout by hand.");
+                }
 
                 HullRect = layout.hull.ToRect();
                 TurretRect = layout.turret.ToRect();
                 TurretPivot = layout.turret.pivot.ToVector2();
                 HullTurretMount = layout.hull.turretMount.ToVector2();
                 MuzzleDistance = layout.turret.height * TurretPivot.y / 100f * VisualScale.y;
+
+                Tracks = layout.tracks;
+                string maskPath = $"{directory}/{layout.tracks.maskFile}";
+                if (string.IsNullOrWhiteSpace(layout.tracks.maskFile) || !File.Exists(Path.GetFullPath(maskPath)))
+                {
+                    throw new InvalidDataException(
+                        $"The track mask declared by {layoutPath} does not exist: {maskPath}. Re-run " +
+                        "Tools\\WoTSpritePipeline for this vehicle.");
+                }
+
+                TrackMaskPath = maskPath;
             }
 
             /// <summary>
@@ -899,6 +1147,40 @@ namespace LocalTanks.Editor
             public int schemaVersion;
             public SpriteLayoutPartJson hull;
             public SpriteLayoutPartJson turret;
+            public TrackLayoutJson tracks;
+        }
+
+        /// <summary>
+        /// The track block of the canonical layout. The sprite pipeline measures it from the 3D
+        /// model and from the pixels it actually drew, so Unity never guesses a track position or
+        /// a scroll direction from the artwork.
+        /// </summary>
+        [System.Serializable]
+        private sealed class TrackLayoutJson
+        {
+            public int schemaVersion;
+            public string source;
+            public string maskFile;
+            public SpriteLayoutSizeJson mask;
+            public float outputPixelsPerMeter;
+            public string sideSource;
+            public bool geometryVerified;
+            public bool channelsSwapped;
+            public float forwardSignV;
+            public float bandSeparationPixels;
+            public float bandSeparationMetres;
+            public float bandWidthPixels;
+            public float bandWidthMetres;
+            public float treadPitchMetres;
+            public string diagnostic;
+            public string fallbackReason;
+        }
+
+        [System.Serializable]
+        private sealed class SpriteLayoutSizeJson
+        {
+            public float width;
+            public float height;
         }
 
         [System.Serializable]

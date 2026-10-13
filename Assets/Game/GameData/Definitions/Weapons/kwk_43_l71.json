@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "kwk_43_l71",
   "displayName": "8.8 cm KwK 43 L/71",
+  "caliberMm": 88,
   "reloadSeconds": 8.0,
   "magazineSize": 1,
   "shotIntervalSeconds": 0.0,

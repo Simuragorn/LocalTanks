@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "id": "gun_20_k_45mm",
   "displayName": "45 mm mod. 1932",
+  "caliberMm": 45,
   "reloadSeconds": 2.9,
   "magazineSize": 1,
   "shotIntervalSeconds": 0.0,

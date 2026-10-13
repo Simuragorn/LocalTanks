@@ -1,16 +1,16 @@
 ---
 name: render-wot-tank-sprite
-description: Render a named World of Tanks vehicle from the locally installed 3D packages into the canonical LocalTanks top-down sprite bundle (separated hull and turret layers plus layout and manifest sidecars) under Assets/LocalOnly/WoTGenerated, preserving model geometry and shared scale. Use when a LocalTanks tank needs new or refreshed artwork, or when an existing render manifest still records stock or intermediate modules. Do not use for an attached raster reference, and do not use it for combat JSON, prefab or roster integration — that is add-localtanks-tank.
+description: Render a named World of Tanks vehicle from the locally installed 3D packages into the canonical LocalTanks top-down sprite bundle (separated hull and turret layers plus layout, measured track mask and manifest sidecars) under Assets/LocalOnly/WoTGenerated, preserving model geometry and shared scale. Use when a LocalTanks tank needs new or refreshed artwork, or when an existing render manifest still records stock or intermediate modules. Do not use for an attached raster reference, and do not use it for combat JSON, prefab or roster integration — that is add-localtanks-tank.
 whenToUse: Use when tank art must be produced or replaced from the local WoT client before gameplay integration; skip it when a canonical sprite with a top-configuration manifest already exists.
 ---
 
 # Render a WoT tank sprite
 
-Turn an ordinary vehicle name or internal WoT vehicle ID into the canonical LocalTanks vehicle-art bundle under `Assets/LocalOnly/WoTGenerated`: hull on the left, turret with its complete gun on the right, plus layout and provenance sidecars. The 3D model is an intermediate source only; the game stays 2D.
+Turn an ordinary vehicle name or internal WoT vehicle ID into the canonical LocalTanks vehicle-art bundle under `Assets/LocalOnly/WoTGenerated`: hull on the left, turret with its complete gun on the right, plus layout, measured track mask and provenance sidecars. The 3D model is an intermediate source only; the game stays 2D.
 
 ## Scope
 
-- This skill owns artwork only. It produces the sprite, module/render manifest, Unity slice layout and optional diagnostic Blender scene, and stops before combat JSON, prefabs or battle rosters. Those belong to `add-localtanks-tank`.
+- This skill owns artwork only. It produces the sprite, module/render manifest, Unity slice layout, the measured track mask and optional diagnostic Blender scene, and stops before combat JSON, prefabs or battle rosters. Those belong to `add-localtanks-tank`.
 - Unless the user explicitly asks for another configuration, always render the current client's last/highest chassis, turret and gun. Never preserve stock indices merely because an older manifest used them.
 - Preserve the imported mesh, proportions, textures and one shared pixels-per-metre scale. Produce Full HD-class output at the maintained 108 output pixels per model metre. Do not stretch the naturally sized transparent sheet to a fixed 16:9 canvas, do not repaint the vehicle, and do not scale hull and turret independently.
 - Do not invoke this skill for a supplied raster image; handle that separate extraction task directly.
@@ -68,6 +68,9 @@ Run every command from the project root `C:\UnityProjects\LocalTanks`.
    - `turret.pivot` at the physical ring inside the turret crop and `hull.turretMount` at the matching ring position on the hull, both normalized inside `[0, 1]` and both rectangles fitting the texture;
    - for Unity integration, a turret rotation of at least 90° leaves the turret body centred on the ring instead of orbiting the hull centre or the mantlet — a transform-only check is not enough;
    - no missing-texture white planes, magenta materials, black blocks, detached geometry, unexpected decals, excessive glare or opaque background patches;
+   - the track diagnostic image `Local\Renders\<vehicle-id>\tracks_mask_diagnostic.png` shows both bands on the tracks of the hull layer, green on the side the model's own starboard direction projects to, red on the other, the front arrow at the machine's front and no band on the hull centre;
+   - `tracks.source` is `trackMeshes` for a normal vehicle, and either fallback is explained rather than accepted silently: `hullSideBands` means the whole track is hidden from above by mudguards, which is a real property of some models and not automatically a bug;
+   - `tracks.mask.width/height` equal the hull rectangle of the same layout, `tracks.forwardSignV` is exactly ±1, and `tracks.starboardImageXPixels` is non-zero;
    - `git status --short --ignored` shows every source and derived output still ignored.
 
    The established Tiger II proof is a 769×1079 texture with a 419×802 hull and a 278×1031 turret layer at 108 output pixels per metre; with the evaluated camera it resolves to approximately `hull.turretMount = (0.49503, 0.49005)`, `turret.pivot = (0.49857, 0.77531)` and `(0.0050, 0.0192)` as the rotated Unity child offset. These numbers validate one vehicle only — read each new layout instead of reusing its rectangles.
@@ -82,6 +85,11 @@ Run every command from the project root `C:\UnityProjects\LocalTanks`.
 - After creating or moving the orthographic camera, call `bpy.context.view_layer.update()` before `world_to_camera_view`. Without that evaluation Blender may project the correct 3D joint through a stale camera matrix and return plausible but wrong coordinates.
 - Project the imported hull `HP_turretJoint` once and convert it into two Unity bottom-left coordinates: `turret.pivot` inside the turret crop and `hull.turretMount` inside the hull crop. Never estimate them independently.
 - Unity keeps the hull sprite pivot at its geometric centre for collider alignment, so its `TurretPivot` child must be translated from the hull centre to `hull.turretMount`, including the source sprite's 180° visual rotation. Setting the child to `(0, 0)` is valid only when the mount is exactly `(0.5, 0.5)`.
+- The track mask is the surface a straight top-down view can see, so it comes from one camera ray per pixel over the track bounding box, not from a renderer pass. A holdout material is not an option: EEVEE's holdout is a screen-space stencil that also cuts geometry lying below the track, which erased nearly every vehicle completely.
+- The mask shares the hull camera and resolution and is cropped with the hull alpha bounds, so its size must equal the hull rectangle of the layout. Any other size silently shifts the tread highlight against the hull sprite.
+- Red always marks the left track and green the right one, proved against the projected starboard direction taken from the gun. A mirrored mask changes nothing that is visible in a still image and only shows up as tracks scrolling the wrong way in a turn.
+- The blue channel carries how far a masked pixel sits from its own band edge, and the overlay multiplies the moving pattern by it. Without it a wide fallback band ends in a straight edge and the effect reads as a painted rectangle; with the fade removed entirely, a narrow band loses its core.
+- A tread link pitch is a visual spacing, not a measurement: at 108 output pixels per metre a literal link would be about one pixel and would strobe. Keep the default near `0.22` m and judge the result with `Local Tanks > Diagnostics > Capture Track Effect Preview`, which renders the affected machines at the battle zoom and close up with the overlay off and on.
 - The final background stays transparent with no ground plane and no cast shadow outside the vehicle.
 
 If a constant intentionally changes, update the project config example, setup defaults, README, manifest behaviour, this skill and the relevant project documentation together.
@@ -92,13 +100,16 @@ For `<vehicle-id>` expect:
 
 - `Tools\WoTSpritePipeline\Local\Renders\<vehicle-id>\hull.png`
 - `Tools\WoTSpritePipeline\Local\Renders\<vehicle-id>\turret.png`
+- `Tools\WoTSpritePipeline\Local\Renders\<vehicle-id>\tracks.png` — the raw camera-ray mask at intermediate resolution
+- `Tools\WoTSpritePipeline\Local\Renders\<vehicle-id>\tracks_mask_diagnostic.png` — human-readable proof of the track recognition
 - `Tools\WoTSpritePipeline\Local\Renders\<vehicle-id>\render_metadata.json`
 - `Tools\WoTSpritePipeline\Local\Renders\<vehicle-id>\<vehicle-id>.blend` when diagnostic saving is enabled
 - `Assets\LocalOnly\WoTGenerated\<vehicle-id>\<vehicle-id>_strip2.png`
 - `Assets\LocalOnly\WoTGenerated\<vehicle-id>\<vehicle-id>_layout.json`
+- `Assets\LocalOnly\WoTGenerated\<vehicle-id>\<vehicle-id>_tracks_mask.png` — red left track, green right track, alpha coverage, blue lateral weight
 - `Assets\LocalOnly\WoTGenerated\<vehicle-id>\<vehicle-id>_manifest.json`
 
-The layout uses Unity bottom-left rectangle coordinates and records both anchors. The manifest records the catalog entry, exact selected module names and indices, Blender version, add-on revision, bounds, scale and material list. Read both instead of measuring rectangles or guessing anchors by hand.
+The layout uses Unity bottom-left rectangle coordinates and records both anchors plus the measured `tracks` block. The manifest records the catalog entry, exact selected module names and indices, Blender version, add-on revision, bounds, scale, material list and which track meshes were recognised. Read both instead of measuring rectangles or guessing anchors by hand.
 
 ## Recovery
 
@@ -109,7 +120,9 @@ The layout uses Unity bottom-left rectangle coordinates and records both anchors
 - Parts disagree in scale or proportion: fix the shared camera and composition math. Never compensate by resizing the turret alone.
 - The turret slides or orbits: do not hand-tune the anchors. Confirm the Blender view layer was updated after camera setup, that one projected 3D ring point produced both anchors, and that Unity applied the hull-mount offset together with the source-art rotation.
 - Materials are wrong: use the saved `.blend` and the manifest material list to identify the offending material, then implement a reproducible fix in the tracked Blender pipeline. Never patch only the ignored third-party clone, paint over the final PNG or hide the failure with image generation.
-- After any tracked pipeline change, rerun PowerShell parsing, Python compilation, a catalog probe, one full render, a project-scoped `git diff --check` and visual inspection.
+- The track mask is empty or nearly empty: check `render_metadata.json` → `trackMask.rayHits`. A low count for a vehicle whose side bands clearly show tracks in the hull layer means the mudguards cover the belt; leave the fallback in place. A low count together with `ambiguousObjects` means the track meshes were never recognised, so extend the name pattern instead of accepting the fallback.
+- The tread highlight appears on the mudguards instead of the tracks: the mask fell back to `hullSideBands`. Either accept it and say so, or switch the vehicle back with `forceFallback: false` in `Local/Tracks/<vehicle-id>.json` and re-run the compose step.
+- After any tracked pipeline change, rerun PowerShell parsing, Python compilation, a catalog probe, one full render, a project-scoped `git diff --check` and visual inspection of both the sprite and the track diagnostic.
 
 ## Local-art boundary
 
@@ -121,4 +134,4 @@ Preserve pre-existing dirty files, especially scenes. If nothing tracked changed
 
 ## Report
 
-Show the final sprite and report the ordinary name, resolved internal ID, chosen chassis/turret/gun, output dimensions, canonical sprite and sidecar paths, the validation results and every remaining anomaly. State explicitly whether gameplay integration is still pending.
+Show the final sprite and the track diagnostic image, and report the ordinary name, resolved internal ID, chosen chassis/turret/gun, output dimensions, canonical sprite, mask and sidecar paths, the track mask source with its band separation and tread pitch, the validation results and every remaining anomaly. State explicitly whether gameplay integration is still pending, and state the visible share of the track surface whenever a fallback mask was used.

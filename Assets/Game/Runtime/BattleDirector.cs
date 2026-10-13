@@ -51,6 +51,7 @@ namespace LocalTanks
         public BotStrategicCoordinator StrategicCoordinator { get; private set; }
         public BattleDiagnosticsOverlay DiagnosticsOverlay { get; private set; }
         public BattleAudioDirector AudioDirector { get; private set; }
+        public CombatVfxSystem VfxSystem { get; private set; }
         public BattleScenario Scenario => scenario;
         public CombatDatabase CombatDatabase => combatDatabase;
         public NavigationMap NavigationMap => navigationMap;
@@ -86,6 +87,9 @@ namespace LocalTanks
             // from the serialised descriptor, and a laboratory that replaces its scenario at runtime
             // never replaces the map.
             AudioDirector = BattleAudioDirector.Attach(this);
+            // The visual layer is attached here for the same reason: it owns one pool and one profile
+            // catalog for the whole battle, so no machine and no scene has to hold a second copy.
+            VfxSystem = CombatVfxSystem.Attach(this);
         }
 
         private void Start()
@@ -195,11 +199,18 @@ namespace LocalTanks
             TerrainMotorModifier terrain = tank.GetComponent<TerrainMotorModifier>();
             if (terrain == null) terrain = tank.AddComponent<TerrainMotorModifier>();
             terrain.Configure(navigationMap, motor);
-
             TankVisibilityPresenter visibility = tank.GetComponent<TankVisibilityPresenter>();
             if (visibility == null) visibility = tank.AddComponent<TankVisibilityPresenter>();
             ApplyVisibilitySettings(visibility);
             spawnedVisibilityPresenters.Add(visibility);
+
+            // The rig reads only its own geometry and state, so it is configured from the same components
+            // every scene already gives a machine. A prefab built by the combat-asset tool carries one as
+            // well, which is what lets the test range show a single machine's effects.
+            TankVfxRig vfx = tank.GetComponent<TankVfxRig>();
+            if (vfx == null) vfx = tank.AddComponent<TankVfxRig>();
+            vfx.Configure(definition, motor, health, tank.GetComponent<WeaponController>(), terrain, visibility);
+
             Sprite classIcon = ResolveClassIcon(definition != null ? definition.vehicleClass : VehicleClass.HeavyTank);
             TankClassIconPresenter iconPresenter = tank.GetComponent<TankClassIconPresenter>();
             if (iconPresenter == null) iconPresenter = tank.AddComponent<TankClassIconPresenter>();

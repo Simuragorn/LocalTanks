@@ -12,6 +12,17 @@ namespace LocalTanks
 
         public event Action<TankArmor, ArmorImpactObservation> ImpactResolved;
 
+        /// <summary>
+        /// Contact point of the newest impact, in world space. The point and the normal are facts of one
+        /// collision, not of the threat a machine should remember: <see cref="ArmorImpactObservation"/>
+        /// stays the AI's threat record and carries no coordinates, so visual effects read the geometry
+        /// from here while an event handler runs.
+        /// </summary>
+        public Vector2 LastImpactPoint { get; private set; }
+
+        /// <summary>Surface normal of the newest impact, in world space.</summary>
+        public Vector2 LastImpactNormal { get; private set; } = Vector2.up;
+
         private void Awake()
         {
             if (health == null)
@@ -60,6 +71,9 @@ namespace LocalTanks
             {
                 health.ApplyDamage(damage);
             }
+
+            LastImpactPoint = impactPoint;
+            LastImpactNormal = surfaceNormal.sqrMagnitude > 0f ? surfaceNormal.normalized : Vector2.up;
 
             ImpactResolved?.Invoke(this, new ArmorImpactObservation(
                 -projectileDirection,
