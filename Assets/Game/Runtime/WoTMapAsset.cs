@@ -125,42 +125,46 @@ namespace LocalTanks
         public const float NavigationBlockerMetres = 10f;
 
         /// <summary>
-        /// Longest side, in source metres, at which an obstacle stops a tank physically. Collision is
-        /// deliberately laxer than routing: routing may keep a route away from a six-metre boulder, but a
-        /// boulder shorter than a hull should not wedge the tank driving past it.
+        /// Longest side, in source metres, at which an obstacle stands as a wall a tank cannot drive
+        /// through. Ten metres is about two and a half hull lengths of the smallest machine in the game
+        /// (the T1 Cunningham is 3.87 m), so anything reaching it reads as a barrier on sight, which is
+        /// exactly the rule the map should follow. Smaller clutter — one boulder, a cart, a low wall — is
+        /// driven past instead of collided with, because a tank wedged on gravel is worse than a rock it
+        /// rolls over.
         /// <para>
-        /// The threshold was fourteen metres until measurement showed the arena could not be crossed.
-        /// Tanks entered stall recovery 9 to 22 times per battle, about three seconds each, because 1319
-        /// solid objects littered the routes while the local avoidance radius is only 1.2 units. Mines is
-        /// a quarry: 1475 of its boulders are shorter than ten metres, so at hull scale they are gravel.
+        /// Destroyability is deliberately not part of this. A shed that a gun can knock down is still a
+        /// wall until it is knocked down, and tying solidity to destructibility is what made about a fifth
+        /// of the houses on Mines drive-through while their identical neighbours were not.
         /// </para>
         /// </summary>
-        public const float CollisionBlockerMetres = 24f;
+        public const float BlockerMetres = 10f;
 
         /// <summary>
-        /// Whether an obstacle is a wall a tank cannot drive through, as opposed to clutter it pushes
-        /// past. Collision uses a longer threshold than routing, so a route is steered around substantial
-        /// ground while a tank is not wedged by every rock along that route.
+        /// Whether an obstacle is a wall a tank cannot drive through. Collision and routing share one
+        /// threshold and one exception, so the two descriptions of a map cannot disagree: the only objects
+        /// a tank ignores are the small ones, and they are the same small ones a route may cross.
         /// </summary>
         public bool IsSolid(WoTMapObstacle obstacle)
         {
             if (obstacle == null || !obstacle.blocksMovement) return false;
-            switch (navigationPolicy)
-            {
-                case MapNavigationPolicy.Never:
-                    return false;
-                case MapNavigationPolicy.AllMovementBlockers:
-                    return true;
-                default:
-                    return !obstacle.destructible &&
-                           Mathf.Max(obstacle.size.x, obstacle.size.y) >= CollisionBlockerMetres / metresPerUnit;
-            }
+            if (navigationPolicy == MapNavigationPolicy.Never) return false;
+            if (navigationPolicy == MapNavigationPolicy.AllMovementBlockers) return true;
+            return IsSubstantial(obstacle);
         }
 
         /// <summary>
-        /// Whether an obstacle closes the ground under it for routing. This is the routing rule, and it is
-        /// deliberately stricter than <see cref="IsSolid"/> so a route never runs through a building even
-        /// though the tank could technically scrape past small rocks on the way.
+        /// Whether an obstacle is large enough to count as a barrier. One predicate serves collision,
+        /// routing and the art pass, so a tank never collides with something the route crosses and the
+        /// drawn map never shows a wall that is not there.
+        /// </summary>
+        public bool IsSubstantial(WoTMapObstacle obstacle)
+        {
+            return obstacle != null &&
+                   Mathf.Max(obstacle.size.x, obstacle.size.y) >= BlockerMetres / metresPerUnit;
+        }
+
+        /// <summary>
+        /// Whether an obstacle closes the ground under it for routing.
         /// </summary>
         public bool BlocksNavigation(WoTMapObstacle obstacle)
         {
@@ -173,8 +177,7 @@ namespace LocalTanks
                 case MapNavigationPolicy.AllMovementBlockers:
                     return true;
                 default:
-                    return !obstacle.destructible &&
-                           Mathf.Max(obstacle.size.x, obstacle.size.y) >= NavigationBlockerMetres / metresPerUnit;
+                    return IsSubstantial(obstacle);
             }
         }
 

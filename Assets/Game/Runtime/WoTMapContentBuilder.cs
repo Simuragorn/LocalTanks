@@ -112,6 +112,13 @@ namespace LocalTanks
             return root.transform;
         }
 
+        /// <summary>
+        /// Builds the obstacles that read as parts of the battlefield. Only barriers are built: a drawn
+        /// object implies a wall, so the map now shows exactly what a tank can and cannot drive through.
+        /// Small clutter — single boulders, carts, low walls, roughly a thousand and a half objects on
+        /// Mines — is left out entirely rather than drawn as scenery a player would expect to stop them.
+        /// Keeping collision, routing and art on one predicate is what makes that promise hold.
+        /// </summary>
         private void BuildObstacles()
         {
             WoTMapObstacle[] obstacles = map.obstacles;
@@ -120,14 +127,13 @@ namespace LocalTanks
             foreach (WoTMapObstacle obstacle in obstacles)
             {
                 if (obstacle == null || obstacle.size.x <= 0f || obstacle.size.y <= 0f) continue;
+                if (!map.IsSubstantial(obstacle)) continue;
 
                 GameObject target = new GameObject(obstacle.id);
                 target.transform.SetParent(obstacleRoot, false);
                 target.transform.localPosition = new Vector3(obstacle.center.x, obstacle.center.y, 0f);
                 target.transform.localRotation = Quaternion.Euler(0f, 0f, obstacle.rotationDegrees);
 
-                // Collision follows the same rule as routing, so a tank is never stopped by something a
-                // route may cross. That keeps the two descriptions of the map from disagreeing.
                 bool solid = map.IsSolid(obstacle);
                 AddShape(target, obstacle, !solid);
 
