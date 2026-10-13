@@ -78,6 +78,32 @@ namespace LocalTanks.Tests
                 Is.EqualTo(builder.BuiltPlants), "Every plant must conceal; that is all it does.");
         }
 
+        /// <summary>
+        /// A capture base marks ground a tank must be able to occupy. CaptureBase carries
+        /// RequireComponent for its zone, and a required collider is created solid, which once made each
+        /// base a wall the size of its ring and trapped tanks inside their own spawn.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ConvertedArena_CaptureZonesDoNotStopTanks()
+        {
+            if (!SceneExists) Assert.Ignore($"Scene '{SceneName}' is not in the build settings yet.");
+
+            SceneManager.LoadScene(SceneName);
+            yield return null;
+            yield return null;
+
+            CaptureBase[] bases = Object.FindObjectsByType<CaptureBase>(FindObjectsSortMode.None);
+            Assert.That(bases.Length, Is.EqualTo(2));
+
+            foreach (CaptureBase captureBase in bases)
+            {
+                Collider2D zone = captureBase.GetComponent<Collider2D>();
+                Assert.That(zone, Is.Not.Null, $"Base {captureBase.BaseId} must have a capture zone.");
+                Assert.That(zone.isTrigger, Is.True,
+                    $"Base {captureBase.BaseId} has a solid capture zone, so tanks cannot drive onto it.");
+            }
+        }
+
         [UnityTest]
         public IEnumerator ConvertedArena_HasGroundAndCollidersInTheWorld()
         {

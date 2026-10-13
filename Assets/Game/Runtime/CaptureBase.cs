@@ -52,6 +52,8 @@ namespace LocalTanks
 
         private void Awake()
         {
+            WarnIfTheZoneCanStopATank();
+
             if (spawnMarkers == null || spawnMarkers.Length == 0)
             {
                 spawnMarkers = GetComponentsInChildren<SpriteRenderer>(true);
@@ -59,6 +61,24 @@ namespace LocalTanks
 
             State = owner == TeamId.Neutral ? BaseCaptureState.Neutral : BaseCaptureState.Owned;
             UpdateVisuals();
+        }
+
+        /// <summary>
+        /// Reports a capture zone that would stop a tank. RequireComponent makes Unity add the collider
+        /// when this component is attached, and an added collider is solid by default; on a converted
+        /// arena that turned each base into a wall as large as its ring and trapped every tank inside its
+        /// own spawn. The collider itself cannot be fixed here without fighting serialised data, so this
+        /// says so loudly instead of leaving the fault to be discovered by driving into it.
+        /// </summary>
+        private void WarnIfTheZoneCanStopATank()
+        {
+            CircleCollider2D zone = GetComponent<CircleCollider2D>();
+            if (zone != null && !zone.isTrigger)
+            {
+                Debug.LogWarning(
+                    $"Capture base '{name}' has a solid circle collider, so it will stop tanks that should " +
+                    "be able to drive through it. Set the collider's Is Trigger, as the scene builders do.");
+            }
         }
 
         private void Update()
