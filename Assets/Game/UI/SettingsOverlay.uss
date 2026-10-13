@@ -1,6 +1,19 @@
 /* Settings overlay styles. Shared by every scene: the battle HUD and the test range both load this
    sheet, so the panel looks the same wherever it appears. */
 
+/* The battle HUD instantiates this document as a template, and a template container does not stretch:
+   an absolutely positioned overlay inside it resolves its insets against a zero-height box, which
+   squeezed every row to zero height and drew the labels over the next slider. The container therefore
+   fills the screen itself, and the standalone document (the test range, which has no HUD) is unaffected
+   because it has no template container. */
+.settings-instance {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
 .settings-overlay {
     position: absolute;
     left: 0;
@@ -9,64 +22,109 @@
     bottom: 0;
     align-items: center;
     justify-content: center;
-    background-color: rgba(4, 6, 5, 0.62);
+    background-color: rgba(4, 6, 5, 0.72);
 }
 
 .settings-overlay.hidden { display: none; }
 
 .settings-panel {
-    width: 460px;
-    padding: 18px 20px 16px 20px;
-    background-color: rgba(15, 18, 16, 0.96);
+    width: 470px;
+    padding: 18px 22px 18px 22px;
+    background-color: rgba(12, 15, 13, 0.97);
     border-radius: 6px;
     border-width: 1px;
-    border-color: rgba(200, 200, 190, 0.22);
+    border-color: rgba(210, 212, 202, 0.30);
+    /* Never shrink: a squeezed panel is exactly what made the labels collide with the next row. */
+    flex-shrink: 0;
 }
 
 .settings-title {
     font-size: 20px;
     -unity-font-style: bold;
+    color: rgb(240, 241, 236);
     margin-bottom: 14px;
+    flex-shrink: 0;
 }
 
 .settings-row {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 10px;
+    /* The text needs a real line box; a zero-height row draws its contents on top of the next one. */
+    min-height: 24px;
+    flex-shrink: 0;
+    margin-bottom: 8px;
 }
 
 .settings-label {
-    width: 150px;
+    width: 155px;
     font-size: 14px;
+    color: rgb(232, 233, 227);
+    flex-shrink: 0;
 }
 
 .settings-slider {
     flex-grow: 1;
-    margin-right: 10px;
+    height: 24px;
+    margin-right: 12px;
+}
+
+/* A visible handle: the default one is a hairline that disappears against a dark panel. */
+.settings-slider .unity-base-slider__dragger {
+    width: 14px;
+    background-color: rgb(228, 230, 222);
+    border-width: 1px;
+    border-color: rgba(20, 24, 20, 0.9);
+}
+
+.settings-slider .unity-base-slider__track {
+    background-color: rgba(6, 8, 6, 0.92);
+    border-width: 1px;
+    border-color: rgba(200, 202, 192, 0.28);
+}
+
+.settings-slider .unity-base-slider__input {
+    background-color: rgba(120, 169, 123, 0.85);
 }
 
 .settings-value {
-    width: 52px;
+    width: 56px;
     font-size: 14px;
+    color: rgb(232, 233, 227);
     -unity-text-align: upper-right;
+    flex-shrink: 0;
 }
 
-.settings-hint-row { margin-top: 2px; margin-bottom: 14px; }
+.settings-hint-row {
+    flex-shrink: 0;
+    margin-top: 4px;
+    margin-bottom: 16px;
+}
 
 .settings-hint {
-    font-size: 11px;
-    color: rgb(150, 152, 146);
+    font-size: 12px;
+    color: rgb(186, 189, 180);
     white-space: normal;
 }
 
 .settings-button-row {
     flex-direction: row;
     justify-content: flex-end;
+    flex-shrink: 0;
 }
 
 .settings-button {
-    width: 190px;
-    height: 30px;
-    margin-left: 8px;
+    width: 195px;
+    height: 32px;
+    margin-left: 10px;
+    padding: 0;
     font-size: 13px;
+    color: rgb(236, 238, 231);
+    background-color: rgba(62, 72, 64, 0.95);
+    border-width: 1px;
+    border-color: rgba(214, 216, 206, 0.35);
+    border-radius: 4px;
+    -unity-text-align: middle-center;
 }
+
+.settings-button:hover { background-color: rgba(78, 90, 80, 0.98); }
+.settings-button:active { background-color: rgba(46, 54, 48, 0.98); }

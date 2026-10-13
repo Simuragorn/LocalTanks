@@ -12,7 +12,10 @@
 
         <!-- The settings overlay is a template so its markup has one definition shared with the test
              range. It belongs to this document so it draws above the roster panels; a second
-             UIDocument would get its own panel and the order between panels would decide layering. -->
-        <ui:Instance template="SettingsOverlay" name="settings-instance" />
+             UIDocument would get its own panel and the order between panels would decide layering.
+             The instance carries a class because a template container does not stretch by itself: an
+             absolutely positioned overlay inside it would resolve its insets against a zero-height box
+             and squeeze every row on top of the next. -->
+        <ui:Instance template="SettingsOverlay" name="settings-instance" class="settings-instance" />
     </ui:VisualElement>
 </ui:UXML>

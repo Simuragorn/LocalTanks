@@ -19,6 +19,15 @@ namespace LocalTanks
 
         private void Update()
         {
+            // An overlay owns the pointer and the keyboard while it is open: dragging a settings slider
+            // must not fire the gun, and the turret must not follow the cursor across the panel. The
+            // motor is explicitly zeroed, because keeping the last input would drive the machine on.
+            if (ModalUiState.AnyOpen)
+            {
+                motor?.SetInput(0f, 0f);
+                return;
+            }
+
             Keyboard keyboard = Keyboard.current;
             Mouse mouse = Mouse.current;
 

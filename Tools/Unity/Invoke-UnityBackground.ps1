@@ -1152,6 +1152,13 @@ if ($entry.kind -eq 'ExecuteMethod') {
     }
 }
 
+# A test operation may name the tests it exists for, so the registry stays the single description of what
+# an operation does: 'CaptureSettingsPanel' must not silently become a full graphical suite.
+if ($entry.kind -eq 'Tests' -and [string]::IsNullOrWhiteSpace($Filter) -and
+    -not [string]::IsNullOrWhiteSpace($entry.filter)) {
+    $Filter = [string]$entry.filter
+}
+
 $graphics = [bool]$entry.requiresGraphics
 $resolvedMode = 'Graphical'
 if (-not $graphics) {

@@ -201,6 +201,16 @@
       "description": "Report the imported format and pixels of every generated effect texture. It reads pixel data on the CPU, so it never needs a graphics device."
     },
     {
+      "name": "CaptureSettingsPanel",
+      "kind": "Tests",
+      "testPlatform": "PlayMode",
+      "filter": "SettingsPanelPreviewTests",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the settings overlay at a normal and a short window size and write the pictures. UI Toolkit paints into a panel texture instead of going through a camera and needs frames to do it, so the capture runs as a Play Mode test with a real graphics device; the headless suite ignores it.",
+      "outputs": ["TestResults/SettingsPanel.png"]
+    },
+    {
       "name": "RenderCombatVfxProof",
       "kind": "ExecuteMethod",
       "executeMethod": "LocalTanks.Editor.CombatVfxProofRenderer.Render",

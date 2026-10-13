@@ -21,7 +21,11 @@ namespace LocalTanks
         private GUIStyle keyStyle;
         private GUIStyle footerStyle;
 
-        public static bool AnyModalVisible { get; private set; }
+        /// <summary>
+        /// True while any overlay owns the pointer and the keyboard, including this one. Readers that must
+        /// not act behind an open window call this instead of tracking each overlay separately.
+        /// </summary>
+        public static bool AnyModalVisible => ModalUiState.AnyOpen;
         public bool HelpVisible => helpVisible;
         public bool MapAnalysisVisible => mapAnalysisVisible;
 
@@ -57,7 +61,7 @@ namespace LocalTanks
         {
             helpVisible = false;
             mapAnalysisVisible = false;
-            AnyModalVisible = false;
+            ModalUiState.Set(this, false);
         }
 
         private void Update()
@@ -321,7 +325,7 @@ namespace LocalTanks
 
         private void RefreshModalState()
         {
-            AnyModalVisible = isActiveAndEnabled && (helpVisible || mapAnalysisVisible);
+            ModalUiState.Set(this, isActiveAndEnabled && (helpVisible || mapAnalysisVisible));
         }
 
         private void EnsureStyles()

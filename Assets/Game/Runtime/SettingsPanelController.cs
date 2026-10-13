@@ -46,6 +46,9 @@ namespace LocalTanks
         private void OnDisable()
         {
             Unbind();
+            // Closing the scene with the panel open must not leave the game believing an overlay still
+            // owns the pointer.
+            ModalUiState.Set(this, false);
         }
 
         private void Update()
@@ -74,6 +77,9 @@ namespace LocalTanks
         {
             styleSheet = styles;
             openOnStart = openAtStart;
+            // A caller configures the panel right after adding the component, when the document may already
+            // have bound itself and skipped the stylesheet: that silent miss left the panel unstyled.
+            ApplyStyleSheet();
         }
 
         public void Toggle()
@@ -98,6 +104,9 @@ namespace LocalTanks
             }
 
             overlay.EnableInClassList("hidden", !open);
+            // The panel is the one overlay that takes the mouse for dragging, so the tank has to know it
+            // is open; otherwise every slider drag fires the gun behind the panel.
+            ModalUiState.Set(this, open);
             if (open)
             {
                 RefreshLabels();
@@ -112,10 +121,7 @@ namespace LocalTanks
                 return;
             }
 
-            if (styleSheet != null && !source.rootVisualElement.styleSheets.Contains(styleSheet))
-            {
-                source.rootVisualElement.styleSheets.Add(styleSheet);
-            }
+            ApplyStyleSheet();
 
             overlay = source.rootVisualElement.Q<VisualElement>("settings-overlay");
             masterSlider = source.rootVisualElement.Q<Slider>("slider-master");
@@ -160,6 +166,25 @@ namespace LocalTanks
 
             overlay.EnableInClassList("hidden", !openOnStart);
             RefreshLabels();
+        }
+
+        /// <summary>
+        /// Adds the panel's stylesheet to the document root, whichever order the caller used. A stylesheet
+        /// that arrives after the document bound itself must still apply: silently missing it left the panel
+        /// with the default look, where rows overlap because nothing reserves their height.
+        /// </summary>
+        private void ApplyStyleSheet()
+        {
+            UIDocument source = document != null ? document : GetComponent<UIDocument>();
+            if (styleSheet == null || source == null || source.rootVisualElement == null)
+            {
+                return;
+            }
+
+            if (!source.rootVisualElement.styleSheets.Contains(styleSheet))
+            {
+                source.rootVisualElement.styleSheets.Add(styleSheet);
+            }
         }
 
         private void Unbind()
