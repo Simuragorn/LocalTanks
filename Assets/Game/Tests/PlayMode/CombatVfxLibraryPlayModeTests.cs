@@ -118,16 +118,19 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
-        public IEnumerator TrackMarkSprite_IsOneWorldUnitAcross()
+        public IEnumerator TrackMarkSprites_AreOneWorldUnitAcross()
         {
-            Sprite sprite = Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath);
+            foreach (string variant in CombatVfxEffects.MarkVariants)
+            {
+                Sprite sprite = Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath(variant));
 
-            Assert.That(sprite, Is.Not.Null,
-                $"The track print sprite is missing at Resources/{CombatVfxEffects.MarkSpritePath}; the emitter " +
-                "would lay no prints at all.");
-            Assert.That(sprite.bounds.size.x, Is.EqualTo(1f).Within(0.01f),
-                "The print sprite must be one world unit wide, so the emitter's scale is the print size.");
-            Assert.That(sprite.bounds.size.y, Is.EqualTo(1f).Within(0.01f));
+                Assert.That(sprite, Is.Not.Null,
+                    $"Print pattern '{variant}' is missing at Resources/{CombatVfxEffects.MarkSpritePath(variant)}; " +
+                    "the machines of that band would lay no prints at all.");
+                Assert.That(sprite.bounds.size.x, Is.EqualTo(1f).Within(0.01f),
+                    "A print pattern must be one world unit across, so the emitter's scale is the print size.");
+                Assert.That(sprite.bounds.size.y, Is.EqualTo(1f).Within(0.01f));
+            }
 
             yield return null;
         }
@@ -139,7 +142,9 @@ namespace LocalTanks.Tests
             try
             {
                 TankTrackMarkEmitter emitter = owner.AddComponent<TankTrackMarkEmitter>();
-                emitter.Configure(Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath), 8);
+                emitter.Configure(
+                    Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath(CombatVfxEffects.TrackMarkHeavy)),
+                    8);
 
                 emitter.Emit(Vector3.zero, Quaternion.identity, 0.12f, 0.16f, Color.white, 5f);
 
@@ -154,6 +159,89 @@ namespace LocalTanks.Tests
             }
 
             yield return null;
+        }
+
+        /// <summary>
+        /// The rig must attach every persistent effect of a real machine.
+        /// </summary>
+        /// <remarks>
+        /// This is the check that was missing. The first version looked for one particle system on the
+        /// root of each generated prefab, while the generator puts the systems on children, so every loop
+        /// effect was silently switched off: the machines raised no dust, showed no damage smoke, never
+        /// burned and had no exhaust, and the profile file, the prefabs and the asset checks all looked
+        /// correct. A test that counts what the rig actually attached is the only thing that notices.
+        /// </remarks>
+        [UnityTest]
+        public IEnumerator Rig_AttachesEveryGeneratedLoop()
+        {
+            // The library provider answers nothing in batchmode on purpose, so the test installs a provider
+            // that reads the real generated assets without that guard.
+            CombatVfxSystem system = CombatVfxSystem.Ensure(new LibraryAssetProvider());
+            GameObject tank = new GameObject("VfxRigProbe");
+            try
+            {
+                TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
+                definition.id = "probe";
+                definition.displayName = "Probe";
+                definition.massTonnes = 7f;
+                definition.maxHitPoints = 100;
+                definition.maxForwardSpeed = 2f;
+                definition.maxReverseSpeed = 1f;
+                definition.hullTurnSpeed = 40f;
+
+                tank.AddComponent<Rigidbody2D>().gravityScale = 0f;
+                PolygonCollider2D collider = tank.AddComponent<PolygonCollider2D>();
+                collider.points = new[]
+                {
+                    new Vector2(-0.25f, -0.5f), new Vector2(0.25f, -0.5f),
+                    new Vector2(0.25f, 0.5f), new Vector2(-0.25f, 0.5f)
+                };
+
+                TankMotor motor = tank.AddComponent<TankMotor>();
+                motor.Configure(definition);
+                TankHealth health = tank.AddComponent<TankHealth>();
+                health.Configure(definition);
+                GameObject muzzle = new GameObject("Muzzle");
+                muzzle.transform.SetParent(tank.transform, false);
+                WeaponController weapon = tank.AddComponent<WeaponController>();
+                weapon.Configure(definition, null, muzzle.transform);
+
+                TankVfxRig rig = tank.AddComponent<TankVfxRig>();
+                rig.Configure(definition, motor, health, weapon, trackSeparation: 0.4f);
+
+                yield return null;
+
+                Assert.That(rig.IsBuilt, Is.True);
+                // Two dust plumes, two sprays, damage smoke, the flame and its embers, the exhaust and the
+                // barrel plume. The count is a minimum, not an exact figure, so a richer prefab still passes.
+                Assert.That(rig.AttachedLoopSystems, Is.GreaterThanOrEqualTo(9),
+                    "The rig attached " + rig.AttachedLoopSystems + " of the persistent effect systems. When " +
+                    "this is zero the machine shows no dust, no damage smoke, no fire and no exhaust while " +
+                    "every asset check still passes.");
+
+                Object.Destroy(definition);
+            }
+            finally
+            {
+                Object.Destroy(tank);
+                Object.Destroy(system.gameObject);
+            }
+
+            yield return null;
+        }
+
+        /// <summary>Reads the generated library without the batchmode silence of the runtime provider.</summary>
+        private sealed class LibraryAssetProvider : ICombatVfxAssetProvider
+        {
+            public GameObject LoadPrefab(string effectId)
+            {
+                return Resources.Load<GameObject>($"{CombatVfxEffects.ResourceFolder}/{effectId}");
+            }
+
+            public Sprite LoadMarkSprite(string variant)
+            {
+                return Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath(variant));
+            }
         }
 
         private static GameObject Load(string effectId)

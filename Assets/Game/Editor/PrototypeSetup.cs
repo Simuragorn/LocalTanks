@@ -37,6 +37,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/TigerII_Player.prefab",
                 new Rect(24f, 139f, 419f, 802f), new Rect(467f, 24f, 278f, 1031f),
                 new Vector2(0.4985709f, 0.7753074f), new Vector2(0.4950269f, 0.4900504f),
+                new Vector2(0.597f, 0.975f),
                 7.38f, 1.41f,
                 CreateTigerHullOutline()),
             new TankBuildSpec(
@@ -46,6 +47,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/MS1_Player.prefab",
                 new Rect(24f, 24f, 192f, 476f), new Rect(240f, 117f, 120f, 289f),
                 new Vector2(0.5f, 0.6802735f), new Vector2(0.5f, 0.4236555f),
+                new Vector2(0.625f, 0.979f),
                 4.38f, 0.45f,
                 CreateMS1HullOutline()),
             new TankBuildSpec(
@@ -55,6 +57,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/Leichttraktor_Player.prefab",
                 new Rect(24f, 24f, 229f, 462f), new Rect(277f, 117f, 158f, 275f),
                 new Vector2(0.4986667f, 0.7045380f), new Vector2(0.5f, 0.6946704f),
+                new Vector2(0.074f, 0.805f),
                 4.35f, 0.48f,
                 CreateLeichttraktorHullOutline()),
             new TankBuildSpec(
@@ -64,6 +67,7 @@ namespace LocalTanks.Editor
                 "Assets/Game/Prefabs/Tanks/T1Cunningham_Player.prefab",
                 new Rect(24f, 24f, 195f, 422f), new Rect(243f, 134f, 127f, 202f),
                 new Vector2(0.5005221f, 0.6842200f), new Vector2(0.5025058f, 0.6974256f),
+                new Vector2(0.73f, 0.10f),
                 3.866f, 1.14f,
                 CreateT1CunninghamHullOutline())        };
 
@@ -674,7 +678,7 @@ namespace LocalTanks.Editor
                 hullVisual.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
                 GameObject turretPivot = new GameObject("TurretPivot");
                 turretPivot.transform.SetParent(root.transform, false);
-                turretPivot.transform.localPosition = CalculateTurretMountPosition(spec);
+                turretPivot.transform.localPosition = AnchorPosition(spec, spec.HullTurretMount);
                 TurretAiming aiming = turretPivot.AddComponent<TurretAiming>();
                 aiming.Configure(definition);
 
@@ -706,11 +710,34 @@ namespace LocalTanks.Editor
                 destroyedState.Configure(health, motor, aiming, weapon, input);
                 CreateTrackOverlay(root, hullVisual.transform, spec, health, body);
 
+                // Where a machine breathes out is a fact of its model, not of its mass or class, so the
+                // outlet is an anchor measured from the canonical sprite and carried in the prefab. The rig
+                // attaches the exhaust plume to it; a prefab without one falls back to the hull's rear.
+                GameObject exhaust = new GameObject(TankVfxRig.ExhaustAnchorName);
+                exhaust.transform.SetParent(root.transform, false);
+                exhaust.transform.localPosition = AnchorPosition(spec, spec.HullExhaust);
+
                 // The rig carries no asset references, so it is safe in a committed prefab: it loads the
                 // generated effect prefabs at play time and resolves every look from the committed
                 // profile table. The test range therefore shows one machine's effects in isolation.
                 TankVfxRig vfx = root.AddComponent<TankVfxRig>();
-                vfx.Configure(definition, motor, health, weapon);
+                float trackSeparation = spec.Tracks.bandSeparationMetres / MetresPerUnit;
+                if (trackSeparation <= 0f)
+                {
+                    throw new System.InvalidOperationException(
+                        $"The measured track gauge of {spec.DisplayName} is {spec.Tracks.bandSeparationMetres} m, " +
+                        "so the prints and the dust would be placed by guesswork. Re-run the sprite pipeline.");
+                }
+
+                vfx.Configure(
+                    definition,
+                    motor,
+                    health,
+                    weapon,
+                    newTerrain: null,
+                    newVisibility: null,
+                    trackSeparation: trackSeparation,
+                    newExhaustAnchor: exhaust.transform);
 
                 return PrefabUtility.SaveAsPrefabAsset(root, spec.PrefabPath);
             }
@@ -1035,11 +1062,16 @@ namespace LocalTanks.Editor
             };
         }
 
-        private static Vector3 CalculateTurretMountPosition(TankBuildSpec spec)
+        /// <summary>
+        /// Converts a point given in normalised coordinates of the hull sprite rectangle into the local
+        /// space of the machine. Both axes are negated because the hull artwork is drawn facing the other
+        /// way and the visual child carries a 180 degree rotation.
+        /// </summary>
+        private static Vector3 AnchorPosition(TankBuildSpec spec, Vector2 normalizedPoint)
         {
             Vector2 sourcePixelOffset = new Vector2(
-                (spec.HullTurretMount.x - 0.5f) * spec.HullRect.width,
-                (spec.HullTurretMount.y - 0.5f) * spec.HullRect.height);
+                (normalizedPoint.x - 0.5f) * spec.HullRect.width,
+                (normalizedPoint.y - 0.5f) * spec.HullRect.height);
             Vector2 scaledOffset = Vector2.Scale(sourcePixelOffset / 100f, spec.VisualScale);
             float localX = Mathf.Approximately(scaledOffset.x, 0f) ? 0f : -scaledOffset.x;
             float localY = Mathf.Approximately(scaledOffset.y, 0f) ? 0f : -scaledOffset.y;
@@ -1051,8 +1083,8 @@ namespace LocalTanks.Editor
             public TankBuildSpec(
                 string spritePrefix, string displayName, string texturePath,
                 string definitionPath, string prefabPath, Rect hullRect, Rect turretRect,
-                Vector2 turretPivot, Vector2 hullTurretMount, float hullLengthMetres, float muzzleDistance,
-                Vector2[] hullOutline)
+                Vector2 turretPivot, Vector2 hullTurretMount, Vector2 hullExhaust, float hullLengthMetres,
+                float muzzleDistance, Vector2[] hullOutline)
             {
                 SpritePrefix = spritePrefix;
                 DisplayName = displayName;
@@ -1063,6 +1095,7 @@ namespace LocalTanks.Editor
                 TurretRect = turretRect;
                 TurretPivot = turretPivot;
                 HullTurretMount = hullTurretMount;
+                HullExhaust = hullExhaust;
                 HullLengthMetres = hullLengthMetres;
                 MuzzleDistance = muzzleDistance;
                 HullOutline = hullOutline;
@@ -1077,6 +1110,16 @@ namespace LocalTanks.Editor
             public Rect TurretRect { get; private set; }
             public Vector2 TurretPivot { get; private set; }
             public Vector2 HullTurretMount { get; private set; }
+
+            /// <summary>
+            /// Where the machine's exhaust leaves the hull, in normalised coordinates of the hull sprite
+            /// rectangle, measured by looking at the canonical top-down artwork: the pipe on the MS-1 tail,
+            /// the corrugated pipe along the Leichttraktor's left side, the outlets on the Tiger II engine
+            /// deck and the mufflers under the T1 Cunningham's front deck. A single point cannot be derived
+            /// from mass, class or the hull box, so it is stated once per machine, next to the other
+            /// measured art facts, and the prefab carries it as the "Exhaust" anchor.
+            /// </summary>
+            public Vector2 HullExhaust { get; private set; }
             public float HullLengthMetres { get; }
 
             /// <summary>

@@ -165,7 +165,7 @@ namespace LocalTanks.Tests
 
             Assert.That(resources.LoadPrefab(EffectId), Is.Null,
                 "A headless run has no display, so it must not create particle systems for nobody.");
-            Assert.That(resources.LoadMarkSprite(), Is.Null);
+            Assert.That(resources.LoadMarkSprite(CombatVfxEffects.TrackMarkMedium), Is.Null);
 
             yield return null;
         }
@@ -264,7 +264,7 @@ namespace LocalTanks.Tests
                 return prefab;
             }
 
-            public Sprite LoadMarkSprite()
+            public Sprite LoadMarkSprite(string variant)
             {
                 return mark;
             }

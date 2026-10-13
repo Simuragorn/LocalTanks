@@ -31,7 +31,7 @@ namespace LocalTanks.Editor
         private const int ImageWidth = 1280;
         private const int ImageHeight = 960;
         private const int Columns = 4;
-        private const int Rows = 3;
+        private const int Rows = 4;
         private const float CellSize = 1.6f;
 
         /// <summary>
@@ -67,6 +67,14 @@ namespace LocalTanks.Editor
                     GameObject instance = UnityEngine.Object.Instantiate(prefab);
                     instance.transform.position = CellPosition(index);
                     instances.Add(instance);
+                }
+
+                // The prints are sprites in a world container rather than particles, so they would never
+                // appear in a sheet built only from effect prefabs. Their cell shows the two track lines and
+                // the relief of each pattern, which is exactly what the in-game look is judged on.
+                foreach (string variant in CombatVfxEffects.MarkVariants)
+                {
+                    instances.Add(CreatePrintDemo(variant, instances.Count));
                 }
 
                 Prepare(instances);
@@ -122,6 +130,70 @@ namespace LocalTanks.Editor
         }
 
         /// <summary>
+        /// A cell that shows one print pattern the way a machine presses it: a light patch of ground with
+        /// two track lines curving gently, so the relief of the pattern can be judged at all.
+        /// </summary>
+        private static GameObject CreatePrintDemo(string variant, int index)
+        {
+            GameObject owner = new GameObject($"PrintDemo_{variant}");
+            owner.transform.position = CellPosition(index);
+
+            // Prints are dark grooves with a lit rim: on the sheet's dark background they would be
+            // invisible, so each cell gets a patch of ground to lie on.
+            GameObject ground = new GameObject("Ground");
+            ground.transform.SetParent(owner.transform, false);
+            Sprite plate = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            SpriteRenderer plateRenderer = ground.AddComponent<SpriteRenderer>();
+            plateRenderer.sprite = plate;
+            plateRenderer.color = new Color(0.62f, 0.56f, 0.44f, 1f);
+            plateRenderer.sortingOrder = 0;
+            Vector2 plateSize = plate.bounds.size;
+            ground.transform.localScale = new Vector3(CellSize / plateSize.x, CellSize / plateSize.y, 1f);
+            Debug.Log($"[vfxprint] {variant}: plate sprite={plate.name} texture={plate.texture.name} " +
+                      $"shader={plateRenderer.sharedMaterial?.shader?.name} bounds={plate.bounds.size}");
+
+            TankTrackMarkEmitter emitter = owner.AddComponent<TankTrackMarkEmitter>();
+            Sprite markSprite = Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath(variant));
+            emitter.Configure(markSprite, 32);
+
+            // A print that renders as a light blob instead of a dark groove means the imported texture lost
+            // its colour, and the format is the only thing that says so from inside Unity.
+            Debug.Log($"[vfxprint] {variant}: sprite={markSprite?.name} " +
+                      $"texture={markSprite?.texture?.name} format={markSprite?.texture?.format}");
+
+            const float separation = 0.42f;
+            const float width = 0.17f;
+            const float length = 0.21f;
+            const int prints = 9;
+            // The same dark tint the rig uses: a print is a groove, and the colour comes from data because
+            // the sprite pipeline did not reproduce the texture's own dark pixels.
+            Color color = new Color(0.17f, 0.15f, 0.12f, 0.85f);
+            for (int step = 0; step < prints; step++)
+            {
+                float amount = step / (prints - 1f);
+                float y = Mathf.Lerp(-0.45f, 0.45f, amount);
+                float bend = Mathf.Lerp(-0.14f, 0.14f, amount * amount);
+                Quaternion rotation = Quaternion.Euler(0f, 0f, Mathf.Lerp(-9f, 19f, amount));
+                Vector3 centre = owner.transform.position + new Vector3(bend, y, 0f);
+                emitter.Emit(centre + new Vector3(-separation * 0.5f, 0f, 0f), rotation, width, length, color, 600f);
+                emitter.Emit(centre + new Vector3(separation * 0.5f, 0f, 0f), rotation, width, length, color, 600f);
+            }
+
+            GameObject container = GameObject.Find($"TrackMarks_{owner.name}");
+            SpriteRenderer[] drawn = container != null
+                ? container.GetComponentsInChildren<SpriteRenderer>()
+                : new SpriteRenderer[0];
+            SpriteRenderer firstRenderer = drawn.Length > 0 ? drawn[0] : null;
+            Debug.Log($"[vfxprint] {variant}: emitted={emitter.EmittedCount} skipped={emitter.SkippedCount} " +
+                      $"container={(container != null ? container.name : "missing")} renderers={drawn.Length} " +
+                      $"drawnSprite={firstRenderer?.sprite?.name} texture={firstRenderer?.sprite?.texture?.name} " +
+                      $"color={firstRenderer?.color} shader={firstRenderer?.sharedMaterial?.shader?.name} " +
+                      $"order={firstRenderer?.sortingOrder} scale={firstRenderer?.transform.localScale}");
+
+            return owner;
+        }
+
+        /// <summary>
         /// Shows every effect at the moment it covers the most of the frame, then leaves it there.
         /// </summary>
         /// <remarks>
@@ -140,6 +212,12 @@ namespace LocalTanks.Editor
             string[] effects = CombatVfxEffects.All();
             for (int index = 0; index < instances.Count; index++)
             {
+                // The print demonstrations place their own sprites and have no particle system to advance.
+                if (index >= effects.Length)
+                {
+                    continue;
+                }
+
                 string effectId = effects[index];
                 ParticleSystem[] systems = instances[index].GetComponentsInChildren<ParticleSystem>(true);
                 float window = CombatVfxEffects.IsLoop(effectId) ? LoopScanSeconds : BurstScanSeconds;

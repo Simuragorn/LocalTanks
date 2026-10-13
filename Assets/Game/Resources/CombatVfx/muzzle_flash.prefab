@@ -41,7 +41,7 @@ ParticleSystem:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5330286881879017481}
   serializedVersion: 8
-  lengthInSec: 0.15
+  lengthInSec: 0.18
   simulationSpeed: 1
   stopAction: 0
   cullingMode: 0
@@ -80,8 +80,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.09
-      minScalar: 0.05
+      scalar: 0.11
+      minScalar: 0.06
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -179,8 +179,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.34
-      minScalar: 0.22
+      scalar: 0.46
+      minScalar: 0.3
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -761,8 +761,8 @@ ParticleSystem:
     x:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.2
-      minScalar: -0.2
+      scalar: 0.25
+      minScalar: -0.25
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -778,8 +778,8 @@ ParticleSystem:
     y:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 2
-      minScalar: 1
+      scalar: 2.4
+      minScalar: 1.2
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -2361,7 +2361,7 @@ ParticleSystem:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5641783148983633213}
   serializedVersion: 8
-  lengthInSec: 0.2
+  lengthInSec: 0.22
   simulationSpeed: 1
   stopAction: 0
   cullingMode: 0
@@ -2400,8 +2400,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.07
-      minScalar: 0.04
+      scalar: 0.12
+      minScalar: 0.06
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -2499,8 +2499,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.8
-      minScalar: 0.5
+      scalar: 1.15
+      minScalar: 0.75
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -3081,8 +3081,8 @@ ParticleSystem:
     x:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.3
-      minScalar: -0.3
+      scalar: 0.35
+      minScalar: -0.35
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -3098,8 +3098,8 @@ ParticleSystem:
     y:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 1.4
-      minScalar: 0.6
+      scalar: 1.8
+      minScalar: 0.8
       maxCurve:
         serializedVersion: 2
         m_Curve: []

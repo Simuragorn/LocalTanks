@@ -31,13 +31,22 @@ namespace LocalTanks.Editor
         public const string WaterDrop = "water_drop";
         public const string Flame = "flame";
         public const string Ember = "ember";
-        public const string TrackMark = "track_mark";
+        public const string TrackMarkLight = "track_mark_light";
+        public const string TrackMarkMedium = "track_mark_medium";
+        public const string TrackMarkHeavy = "track_mark_heavy";
 
         public static readonly string[] All =
         {
             SmokePuff, SmokeWisp, DustPuff, ExhaustSmoke, Spark,
-            FlashStar, FlashCore, DirtChunk, WaterDrop, Flame, Ember, TrackMark
+            FlashStar, FlashCore, DirtChunk, WaterDrop, Flame, Ember,
+            TrackMarkLight, TrackMarkMedium, TrackMarkHeavy
         };
+
+        /// <summary>True for the print patterns, which are imported as sprites rather than textures.</summary>
+        public static bool IsTrackMark(string textureName)
+        {
+            return textureName == TrackMarkLight || textureName == TrackMarkMedium || textureName == TrackMarkHeavy;
+        }
 
         /// <summary>Draws one texture. Every entry of <see cref="All"/> has a case here.</summary>
         public static Texture2D Create(string textureName)
@@ -56,7 +65,9 @@ namespace LocalTanks.Editor
                 case WaterDrop: DrawWaterDrop(canvas); break;
                 case Flame: DrawFlame(canvas); break;
                 case Ember: DrawEmber(canvas); break;
-                case TrackMark: DrawTrackMark(canvas); break;
+                case TrackMarkLight: DrawTrackPrint(canvas, 5, 0.34f, 0.05f, 0.018f, 0.5f); break;
+                case TrackMarkMedium: DrawTrackPrint(canvas, 6, 0.4f, 0.065f, 0.021f, 0.75f); break;
+                case TrackMarkHeavy: DrawTrackPrint(canvas, 7, 0.44f, 0.075f, 0.024f, 1f); break;
                 default: throw new System.InvalidOperationException($"Unknown VFX texture '{textureName}'.");
             }
 
@@ -171,20 +182,47 @@ namespace LocalTanks.Editor
             canvas.SoftCircle(0.5f, 0.5f, 0.05f, Color.white, 1f, 0f, 143);
         }
 
-        private static void DrawTrackMark(VfxPixelCanvas canvas)
+        /// <summary>
+        /// One print pattern, drawn along +Y so the emitter's Y scale is the length of the print.
+        /// </summary>
+        /// <remarks>
+        /// A print is a groove, not a smear, and it reads as one only if it has a lit edge and a shaded
+        /// one: the first version was a flat dark bar and looked like painted stripes on the ground. The
+        /// lit rim sits on one side of the groove, the shadow on the other, and the tread bars are pressed
+        /// into the middle. Three of these exist so a fleet does not share one stamped tread; the width on
+        /// the ground comes from the machine's measured track gauge, not from the pattern.
+        /// </remarks>
+        private static void DrawTrackPrint(
+            VfxPixelCanvas canvas,
+            int bars,
+            float bodyHalfWidth,
+            float barHalfWidth,
+            float barThickness,
+            float relief)
         {
-            // The print runs along +Y, so the length of the mark is the Y scale applied at run time.
-            Color body = new Color(0.16f, 0.15f, 0.14f, 0.85f);
-            canvas.SoftEllipse(0.5f, 0.5f, 0.42f, 0.47f, body, 0.5f, 0.35f, 151);
-            for (int bar = 0; bar < 7; bar++)
-            {
-                float y = 0.12f + bar * 0.126f;
-                canvas.SoftEllipse(0.5f, y, 0.4f, 0.028f, new Color(0.08f, 0.07f, 0.07f, 0.9f), 0.6f, 0.2f, 160 + bar);
-            }
+            Color groove = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+            Color litRim = new Color(0.62f, 0.6f, 0.56f, 0.55f * relief);
+            Color shadowRim = new Color(0.02f, 0.02f, 0.02f, 0.7f * relief);
 
-            // The outer edges of a track bite deeper into the ground than its middle.
-            canvas.SoftEllipse(0.13f, 0.5f, 0.05f, 0.45f, new Color(0.06f, 0.06f, 0.06f, 0.8f), 0.6f, 0.3f, 170);
-            canvas.SoftEllipse(0.87f, 0.5f, 0.05f, 0.45f, new Color(0.06f, 0.06f, 0.06f, 0.8f), 0.6f, 0.3f, 171);
+            // The groove itself, running the whole length of the sprite so consecutive prints join into a
+            // continuous line instead of a row of beads, with a slightly wider soft edge around it.
+            canvas.SoftEllipse(0.5f, 0.5f, bodyHalfWidth, 0.52f, groove, 0.4f, 0.3f, 151);
+            canvas.SoftEllipse(0.5f, 0.5f, bodyHalfWidth * 1.12f, 0.5f, new Color(0.08f, 0.08f, 0.08f, 0.35f), 1.2f, 0.4f, 152);
+
+            // Relief: a lit rim on the left of the groove and a shadow on the right, so the print reads as
+            // pressed into the ground rather than painted on it.
+            canvas.SoftEllipse(0.5f - bodyHalfWidth * 0.92f, 0.5f, bodyHalfWidth * 0.16f, 0.46f, litRim, 0.8f, 0.3f, 153);
+            canvas.SoftEllipse(0.5f + bodyHalfWidth * 0.94f, 0.5f, bodyHalfWidth * 0.14f, 0.46f, shadowRim, 0.8f, 0.3f, 154);
+
+            // Tread bars, slightly wider than the groove so the pattern bites into the edges.
+            for (int bar = 0; bar < bars; bar++)
+            {
+                float spacing = 0.94f / bars;
+                float y = 0.03f + spacing * (bar + 0.5f);
+                canvas.SoftEllipse(0.5f, y, barHalfWidth * 1.06f, barThickness, new Color(0.03f, 0.03f, 0.03f, 0.85f), 0.6f, 0.25f, 160 + bar);
+                canvas.SoftEllipse(0.5f, y + barThickness * 1.1f, barHalfWidth, barThickness * 0.5f,
+                    new Color(0.5f, 0.48f, 0.45f, 0.28f * relief), 0.9f, 0.3f, 180 + bar);
+            }
         }
     }
 

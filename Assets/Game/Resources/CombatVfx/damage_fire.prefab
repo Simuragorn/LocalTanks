@@ -113,8 +113,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.6
-      minScalar: 0.35
+      scalar: 0.55
+      minScalar: 0.3
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -212,8 +212,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.6
-      minScalar: 0.35
+      scalar: 0.75
+      minScalar: 0.45
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -435,7 +435,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 3
       minMaxState: 0
-      scalar: 5
+      scalar: 8
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -772,8 +772,8 @@ ParticleSystem:
     x:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.15
-      minScalar: -0.15
+      scalar: 0.18
+      minScalar: -0.18
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -789,8 +789,8 @@ ParticleSystem:
     y:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.7
-      minScalar: 0.2
+      scalar: 0.8
+      minScalar: 0.25
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -2510,8 +2510,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.13
-      minScalar: 0.06
+      scalar: 0.1
+      minScalar: 0.05
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -2733,7 +2733,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 3
       minMaxState: 0
-      scalar: 2
+      scalar: 3
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -3070,8 +3070,8 @@ ParticleSystem:
     x:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.5
-      minScalar: -0.5
+      scalar: 0.6
+      minScalar: -0.6
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -3087,8 +3087,8 @@ ParticleSystem:
     y:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 1.4
-      minScalar: 0.5
+      scalar: 1.6
+      minScalar: 0.6
       maxCurve:
         serializedVersion: 2
         m_Curve: []

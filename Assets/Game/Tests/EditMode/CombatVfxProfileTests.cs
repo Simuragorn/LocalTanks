@@ -185,11 +185,22 @@ namespace LocalTanks.Tests
                     $"Assets/Game/Resources/{CombatVfxEffects.ResourceFolder}/{effectId}.prefab"));
             }
 
-            // The track print is loaded by name at run time, so its generated file must sit in the same
-            // Resources folder as the prefabs. A sprite in the art folder would look correct in the
-            // project window and never be found by the game.
-            Assert.That(CombatVfxAssetBuilder.MarkSpritePath(), Is.EqualTo(
-                $"Assets/Game/Resources/{CombatVfxEffects.MarkSpritePath}.png"));
+            // Each print pattern is loaded by name at run time, so every generated file must sit in the same
+            // Resources folder as the prefabs. A sprite in the art folder would look correct in the project
+            // window and never be found by the game.
+            foreach (string variant in CombatVfxEffects.MarkVariants)
+            {
+                Assert.That(CombatVfxAssetBuilder.MarkSpritePath(variant), Is.EqualTo(
+                    $"Assets/Game/Resources/{CombatVfxEffects.MarkSpritePath(variant)}.png"));
+            }
+
+            // Every movement band must resolve to a pattern that exists, or a machine silently lays no
+            // prints at all.
+            foreach (MovementVfxProfile movement in CombatVfxProfileValidator.LoadSource().movementProfiles)
+            {
+                Assert.That(CombatVfxEffects.MarkVariants, Does.Contain(CombatVfxEffects.MarkVariantFor(movement.id)),
+                    $"Movement band '{movement.id}' resolves to no print pattern.");
+            }
         }
 
         [Test]

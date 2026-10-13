@@ -75,9 +75,66 @@ namespace LocalTanks.Editor
                     "Combat VFX assets were built but are incomplete:\n- " + string.Join("\n- ", errors));
             }
 
+            int removed = DeleteStaleAssets();
             Debug.Log($"Local Tanks: built {CombatVfxEffects.All().Length} combat VFX prefabs, " +
                       $"{materials.Count} materials and {textures.Count} textures " +
-                      $"({catalog.weaponProfiles.Length} caliber bands, {catalog.surfaceProfiles.Length} surfaces).");
+                      $"({catalog.weaponProfiles.Length} caliber bands, {catalog.surfaceProfiles.Length} surfaces)" +
+                      (removed > 0 ? $", removed {removed} stale file(s)." : "."));
+        }
+
+        /// <summary>
+        /// Removes generated files that the current effect list no longer produces.
+        /// </summary>
+        /// <remarks>
+        /// A renamed effect leaves its old prefab or texture behind, and a stale asset that still loads is
+        /// worse than a missing one: the emitter keeps finding the old print pattern, or the pool keeps a
+        /// prefab nobody generates any more, and both look like the new work had no effect.
+        /// </remarks>
+        private static int DeleteStaleAssets()
+        {
+            HashSet<string> expected = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string effectId in CombatVfxEffects.All())
+            {
+                expected.Add(PrefabPath(effectId));
+            }
+
+            foreach (string variant in CombatVfxEffects.MarkVariants)
+            {
+                expected.Add(MarkSpritePath(variant));
+            }
+
+            foreach (string textureName in VfxTextureLibrary.All)
+            {
+                if (!VfxTextureLibrary.IsTrackMark(textureName))
+                {
+                    expected.Add(TextureAssetPath(textureName));
+                }
+            }
+
+            int removed = 0;
+            foreach (string folder in new[] { PrefabFolder, TextureFolder })
+            {
+                string absolute = Path.GetFullPath(folder);
+                if (!Directory.Exists(absolute))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.GetFiles(absolute, "*.png", SearchOption.TopDirectoryOnly)
+                             .Concat(Directory.GetFiles(absolute, "*.prefab", SearchOption.TopDirectoryOnly)))
+                {
+                    string assetPath = $"{folder}/{Path.GetFileName(file)}";
+                    if (expected.Contains(assetPath))
+                    {
+                        continue;
+                    }
+
+                    AssetDatabase.DeleteAsset(assetPath);
+                    removed++;
+                }
+            }
+
+            return removed;
         }
 
         [MenuItem("Local Tanks/Data/Validate Combat Vfx Assets")]
@@ -147,12 +204,23 @@ namespace LocalTanks.Editor
                 }
             }
 
-            Sprite markSprite = AssetDatabase.LoadAssetAtPath<Sprite>(MarkSpritePath());
-            if (markSprite != null && !Mathf.Approximately(markSprite.bounds.size.x, 1f))
+            foreach (string variant in CombatVfxEffects.MarkVariants)
             {
-                errors.Add($"Track mark sprite is {markSprite.bounds.size.x:0.###} world units wide. " +
-                           "Import it at " + VfxTextureLibrary.Size + " pixels per unit so the emitter's " +
-                           "scale is the print size in world units.");
+                Sprite markSprite = AssetDatabase.LoadAssetAtPath<Sprite>(MarkSpritePath(variant));
+                if (markSprite == null)
+                {
+                    errors.Add($"Track print sprite '{MarkSpritePath(variant)}' is missing.");
+                    continue;
+                }
+
+                if (!Mathf.Approximately(markSprite.bounds.size.x, 1f) ||
+                    !Mathf.Approximately(markSprite.bounds.size.y, 1f))
+                {
+                    errors.Add($"Track print sprite '{variant}' is {markSprite.bounds.size.x:0.###} by " +
+                               $"{markSprite.bounds.size.y:0.###} world units. Import it at " +
+                               VfxTextureLibrary.Size + " pixels per unit so the emitter's scale is the " +
+                               "print size in world units.");
+                }
             }
 
             return errors.ToArray();
@@ -168,21 +236,22 @@ namespace LocalTanks.Editor
         /// </summary>
         /// <remarks>
         /// Particle textures are referenced by the generated materials, so they belong with the rest of
-        /// the generated art. The track print is the exception: the emitter loads it by name at run time,
-        /// so it has to sit inside the <c>Resources</c> folder next to the effect prefabs. Writing it to
-        /// the art folder would generate a perfectly good texture that the game could never find.
+        /// the generated art. The print patterns are the exception: the emitter loads one of them by name
+        /// at run time, so they have to sit inside the <c>Resources</c> folder next to the effect prefabs.
+        /// Writing them to the art folder would generate perfectly good sprites that the game could never
+        /// find.
         /// </remarks>
         public static string TextureAssetPath(string textureName)
         {
-            return textureName == VfxTextureLibrary.TrackMark
+            return VfxTextureLibrary.IsTrackMark(textureName)
                 ? $"{PrefabFolder}/{textureName}.png"
                 : $"{TextureFolder}/{textureName}.png";
         }
 
-        /// <summary>The track print sprite, at the path the runtime provider asks for.</summary>
-        public static string MarkSpritePath()
+        /// <summary>One print pattern, at the path the runtime provider asks for.</summary>
+        public static string MarkSpritePath(string variant)
         {
-            return $"{PrefabFolder}/{VfxTextureLibrary.TrackMark}.png";
+            return $"{PrefabFolder}/{variant}.png";
         }
 
         private static Dictionary<string, Texture2D> BuildTextures()
@@ -204,7 +273,7 @@ namespace LocalTanks.Editor
                 }
 
                 AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
-                ConfigureTexture(assetPath, textureName == VfxTextureLibrary.TrackMark);
+                ConfigureTexture(assetPath, VfxTextureLibrary.IsTrackMark(textureName));
                 result[textureName] = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
             }
 
@@ -350,6 +419,7 @@ namespace LocalTanks.Editor
                     case CombatVfxEffects.DamageSmoke: BuildDamageSmoke(root, materials); break;
                     case CombatVfxEffects.DamageFire: BuildDamageFire(root, materials); break;
                     case CombatVfxEffects.ExhaustSmoke: BuildExhaustSmoke(root, materials); break;
+                    case CombatVfxEffects.BarrelSmoke: BuildBarrelSmoke(root, materials); break;
                     default: throw new InvalidOperationException($"No builder is defined for effect '{effectId}'.");
                 }
 
@@ -364,17 +434,34 @@ namespace LocalTanks.Editor
         private static void BuildMuzzleFlash(GameObject root, CombatVfxCatalog catalog, Dictionary<string, Material> materials)
         {
             float seconds = Max(catalog.weaponProfiles, profile => profile.flashSeconds);
-            ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder, seconds + 0.05f, 0.05f, 0.09f, 0.22f, 0.34f);
+            // The first pass was too modest to notice next to its own smoke, so the flash is now larger
+            // and lasts a few frames longer: a shot has to be readable as a shot, not only as a puff.
+            ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder, seconds + 0.08f, 0.06f, 0.11f, 0.3f, 0.46f);
             SetBurst(core, 1);
-            SetPlanarVelocity(core, -0.2f, 0.2f, 1.0f, 2.0f);
+            SetPlanarVelocity(core, -0.25f, 0.25f, 1.2f, 2.4f);
             SetSizeOverLifetime(core, 1.1f, 0.5f);
             SetFade(core, 0.05f);
 
-            ParticleSystem star = AddSystem(root, "Star", materials["flash"], SparkSortingOrder, seconds + 0.1f, 0.04f, 0.07f, 0.5f, 0.8f);
+            ParticleSystem star = AddSystem(root, "Star", materials["flash"], SparkSortingOrder, seconds + 0.12f, 0.06f, 0.12f, 0.75f, 1.15f);
             SetBurst(star, 1);
-            SetPlanarVelocity(star, -0.3f, 0.3f, 0.6f, 1.4f);
+            SetPlanarVelocity(star, -0.35f, 0.35f, 0.8f, 1.8f);
             SetSizeOverLifetime(star, 1f, 0.35f);
             SetFade(star, 0.05f);
+        }
+
+        /// <summary>
+        /// The plume that keeps leaving the barrel for a moment after the shot. It lives at the muzzle and
+        /// the rig opens it for a fraction of a second, which is what a gun actually does: the flash is
+        /// gone in a frame or two, the propellant smoke keeps drifting out behind it.
+        /// </summary>
+        private static void BuildBarrelSmoke(GameObject root, Dictionary<string, Material> materials)
+        {
+            ParticleSystem plume = AddSystem(root, "Plume", materials["exhaust"], MuzzleSmokeSortingOrder, 2f, 0.6f, 1.2f, 0.12f, 0.22f);
+            SetRate(plume, 7f);
+            // Local +Y is out of the bore, because the prefab is parented to the muzzle.
+            SetPlanarVelocity(plume, -0.18f, 0.18f, 0.3f, 0.9f);
+            SetSizeOverLifetime(plume, 0.7f, 2.1f);
+            SetFade(plume, 0.1f);
         }
 
         private static void BuildMuzzleSmoke(GameObject root, CombatVfxCatalog catalog, Dictionary<string, Material> materials)
@@ -392,12 +479,15 @@ namespace LocalTanks.Editor
         {
             float speed = Max(catalog.impactProfiles, profile => profile.sparkSpeed);
             int burst = Mathf.Max(1, Max(catalog.impactProfiles, profile => profile.sparkCount));
-            ParticleSystem spark = AddSystem(root, "Sparks", materials["spark"], SparkSortingOrder, 0.4f, 0.18f, 0.34f, 0.18f, 0.3f);
+            // Sparks were the one effect the first in-game look rejected outright: at a fifth of a tank's
+            // length each they read as flying pebbles. They are now small, thin and short-lived, which is
+            // what makes them read as sparks rather than as debris.
+            ParticleSystem spark = AddSystem(root, "Sparks", materials["spark"], SparkSortingOrder, 0.3f, 0.1f, 0.2f, 0.04f, 0.08f);
             SetBurst(spark, burst);
             // Sparks fly outward in the plane of the map: an omnidirectional burst in three dimensions
             // would look like a static dot from a top-down camera.
             SetPlanarVelocity(spark, -speed, speed, -speed, speed);
-            SetSizeOverLifetime(spark, 1f, 0.25f);
+            SetSizeOverLifetime(spark, 1f, 0.15f);
             SetFade(spark, 0.05f);
         }
 
@@ -473,15 +563,17 @@ namespace LocalTanks.Editor
 
         private static void BuildDamageFire(GameObject root, Dictionary<string, Material> materials)
         {
-            ParticleSystem flame = AddSystem(root, "Flame", materials["flame"], FireSortingOrder, 3f, 0.35f, 0.6f, 0.35f, 0.6f);
-            SetRate(flame, 5f);
-            SetPlanarVelocity(flame, -0.15f, 0.15f, 0.2f, 0.7f);
+            // The fire is the loudest state a machine has, so it is built to be seen from the battle zoom
+            // rather than to be subtle: a burning wreck that reads as a thin wisp is worse than none.
+            ParticleSystem flame = AddSystem(root, "Flame", materials["flame"], FireSortingOrder, 3f, 0.3f, 0.55f, 0.45f, 0.75f);
+            SetRate(flame, 8f);
+            SetPlanarVelocity(flame, -0.18f, 0.18f, 0.25f, 0.8f);
             SetSizeOverLifetime(flame, 1.1f, 0.7f);
             SetFade(flame, 0.15f);
 
-            ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.5f, 1.1f, 0.06f, 0.13f);
-            SetRate(ember, 2f);
-            SetPlanarVelocity(ember, -0.5f, 0.5f, 0.5f, 1.4f);
+            ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.5f, 1.1f, 0.05f, 0.1f);
+            SetRate(ember, 3f);
+            SetPlanarVelocity(ember, -0.6f, 0.6f, 0.6f, 1.6f);
             SetSizeOverLifetime(ember, 1f, 0.3f);
             SetFade(ember, 0.1f);
         }

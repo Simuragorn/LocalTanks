@@ -12,7 +12,6 @@ namespace LocalTanks
     public static class CombatVfxEffects
     {
         public const string ResourceFolder = "CombatVfx";
-        public const string MarkSpritePath = ResourceFolder + "/track_mark";
 
         public const string MuzzleFlash = "muzzle_flash";
         public const string MuzzleSmoke = "muzzle_smoke";
@@ -25,6 +24,15 @@ namespace LocalTanks
         public const string DamageSmoke = "damage_smoke";
         public const string DamageFire = "damage_fire";
         public const string ExhaustSmoke = "exhaust_smoke";
+        public const string BarrelSmoke = "barrel_smoke";
+
+        /// <summary>
+        /// Print patterns. Several exist so that a fleet does not share one stamped tread, and each is
+        /// reused by every machine of the band it belongs to rather than drawn per tank.
+        /// </summary>
+        public const string TrackMarkLight = "track_mark_light";
+        public const string TrackMarkMedium = "track_mark_medium";
+        public const string TrackMarkHeavy = "track_mark_heavy";
 
         /// <summary>Effects that are played once and returned to the pool.</summary>
         public static readonly string[] OneShots =
@@ -35,7 +43,13 @@ namespace LocalTanks
         /// <summary>Effects that live on a machine and are driven by its state.</summary>
         public static readonly string[] Loops =
         {
-            TrackDust, WaterSpray, DamageSmoke, DamageFire, ExhaustSmoke
+            TrackDust, WaterSpray, DamageSmoke, DamageFire, ExhaustSmoke, BarrelSmoke
+        };
+
+        /// <summary>Every print pattern, in a stable order.</summary>
+        public static readonly string[] MarkVariants =
+        {
+            TrackMarkLight, TrackMarkMedium, TrackMarkHeavy
         };
 
         /// <summary>Every effect the generator must produce, in a stable order.</summary>
@@ -51,6 +65,26 @@ namespace LocalTanks
         {
             return Array.IndexOf(Loops, effectId) >= 0;
         }
+
+        /// <summary>
+        /// Print pattern of a movement band. The band is the honest key: it already says how heavy the
+        /// machine is, and the pattern only has to differ between a light, a medium and a heavy track.
+        /// </summary>
+        public static string MarkVariantFor(string movementProfileId)
+        {
+            switch (movementProfileId)
+            {
+                case "light": return TrackMarkLight;
+                case "heavy": return TrackMarkHeavy;
+                default: return TrackMarkMedium;
+            }
+        }
+
+        /// <summary>Resource path of one print pattern, which is what the runtime provider loads.</summary>
+        public static string MarkSpritePath(string variant)
+        {
+            return $"{ResourceFolder}/{(string.IsNullOrWhiteSpace(variant) ? TrackMarkMedium : variant)}";
+        }
     }
 
     /// <summary>
@@ -60,7 +94,7 @@ namespace LocalTanks
     public interface ICombatVfxAssetProvider
     {
         GameObject LoadPrefab(string effectId);
-        Sprite LoadMarkSprite();
+        Sprite LoadMarkSprite(string variant);
     }
 
     /// <summary>
@@ -80,9 +114,9 @@ namespace LocalTanks
             return Resources.Load<GameObject>($"{CombatVfxEffects.ResourceFolder}/{effectId}");
         }
 
-        public Sprite LoadMarkSprite()
+        public Sprite LoadMarkSprite(string variant)
         {
-            return Application.isBatchMode ? null : Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath);
+            return Application.isBatchMode ? null : Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath(variant));
         }
     }
 

@@ -56,6 +56,13 @@ namespace LocalTanks
         public float smokeScale = 0.6f;
         public float smokeSeconds = 1.2f;
         public int smokeBurst = 8;
+
+        /// <summary>
+        /// How long the barrel keeps smoking after a shot. Propellant leaves the bore for a moment after
+        /// the flash is gone, and a longer gun breathes for longer.
+        /// </summary>
+        public float barrelSmokeSeconds = 0.5f;
+
         public float recoilDistance = 0.05f;
         public float lightIntensity = 0.7f;
         public float lightRadius = 1.8f;
@@ -97,8 +104,12 @@ namespace LocalTanks
         /// <summary>Length of one print as a fraction of the hull length.</summary>
         public float markLengthFraction = 0.16f;
 
-        /// <summary>Width of one print as a fraction of the hull width.</summary>
-        public float markWidthFraction = 0.26f;
+        /// <summary>
+        /// Width of one print as a fraction of the machine's track gauge, which the sprite pipeline
+        /// measures from the model. A heavier machine therefore presses a wider print without a number of
+        /// its own, and the two print lines stay on its tracks.
+        /// </summary>
+        public float markWidthFraction = 0.35f;
 
         public float markFadeSeconds = 6f;
 
@@ -169,6 +180,14 @@ namespace LocalTanks
         public string terrain;
 
         public VfxColor dustTint = new VfxColor(0.62f, 0.56f, 0.42f, 1f);
+
+        /// <summary>
+        /// Colour the track print is multiplied by. It is dark on purpose: a print is a groove pressed
+        /// into the ground, and the colour has to come from data rather than from the texture, because a
+        /// sprite renderer under the 2D render pipeline did not reproduce the texture's own dark pixels.
+        /// </summary>
+        public VfxColor markTint = new VfxColor(0.16f, 0.15f, 0.13f, 1f);
+
         public float dustRateMultiplier = 1f;
         public float markOpacityMultiplier = 1f;
         public bool splash;
@@ -444,6 +463,7 @@ namespace LocalTanks
                 RequireNonNegative(profile.smokeScale, field + ".smokeScale", errors);
                 RequirePositive(profile.smokeSeconds, field + ".smokeSeconds", errors);
                 RequireRange(profile.smokeBurst, 0, 64, field + ".smokeBurst", errors);
+                RequireNonNegative(profile.barrelSmokeSeconds, field + ".barrelSmokeSeconds", errors);
                 RequireNonNegative(profile.recoilDistance, field + ".recoilDistance", errors);
                 RequireNonNegative(profile.lightIntensity, field + ".lightIntensity", errors);
                 RequireNonNegative(profile.lightRadius, field + ".lightRadius", errors);
@@ -654,6 +674,11 @@ namespace LocalTanks
                 if (!profile.dustTint.IsFinite())
                 {
                     errors.Add($"{field}.dustTint must contain finite numbers.");
+                }
+
+                if (!profile.markTint.IsFinite())
+                {
+                    errors.Add($"{field}.markTint must contain finite numbers.");
                 }
 
                 RequireNonNegative(profile.dustRateMultiplier, field + ".dustRateMultiplier", errors);
