@@ -33,12 +33,10 @@
     "shotDispersionDegrees": 0.7907
   },
   "vision": {
-    "viewRange": 33.8,
     "stationaryConcealment": 0.263,
     "movementRevealPenalty": 0.065,
     "firingRevealPenalty": 0.198,
-    "firingRevealDuration": 4.5,
-    "guaranteedDetectionRange": 5.408
+    "firingRevealDuration": 4.5
   },
   "audio": {
     "engineClipId": "engine_eng_gaz_aa_pc",

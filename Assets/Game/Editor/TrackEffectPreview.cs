@@ -157,7 +157,7 @@ namespace LocalTanks.Editor
             foreach (float pitchMetres in TreadPitches)
             {
                 float links = TankTrackAnimator.LinkRepeats(
-                    maskHeightUnits, pitchMetres / PrototypeSetup.MetresPerUnit);
+                    maskHeightUnits, pitchMetres / GameScale.MetresPerUnit);
                 foreach (Vector4 look in Looks)
                 {
                     foreach (float phase in Phases)

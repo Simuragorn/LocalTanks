@@ -3,13 +3,11 @@
   "wotRoot": "C:\\Games\\World_of_Tanks_EU",
   "conversion": {
     "kilometresPerHourPerUnitySpeed": 13.9,
-    "viewRangeMetresPerUnityUnit": 32.0,
     "projectileSpeedDivisor": 55.0,
     "maximumProjectileRange": 40.0,
     "accelerationPowerToWeightDivisor": 48.0,
     "groundResistanceMultiplier": 1.25,
-    "firingRevealDuration": 4.5,
-    "guaranteedDetectionRange": 1.4
+    "firingRevealDuration": 4.5
   },
   "profiles": [
     {

@@ -53,12 +53,10 @@
     "shotDispersionDegrees": 1.3
   },
   "vision": {
-    "viewRange": 9.5,
     "stationaryConcealment": 0.08,
     "movementRevealPenalty": 0.04,
     "firingRevealPenalty": 0.20,
-    "firingRevealDuration": 6.0,
-    "guaranteedDetectionRange": 1.4
+    "firingRevealDuration": 6.0
   }
 }
 ```
@@ -87,13 +85,12 @@
 
 Поля обзора:
 
-- `viewRange` — положительная максимальная дальность обзора в игровых единицах;
+- **`viewRange` и `guaranteedDetectionRange` в файле машины не задаются.** Дальность обзора выводится из `vehicleClass` и `tier` по таблице `VisionRangeTable` (метры WoT, переведённые единым коэффициентом `GameScale.MetresPerUnit = 3.835`), а радиус гарантированного обнаружения — как доля `GuaranteedDetectionShare = 0.16` от неё (ADR-064). Импортёр отвергает файл по имени поля, если оно вернулось: `JsonUtility` молча игнорирует неизвестные поля, поэтому проверка идёт по тексту файла, а не по разобранной структуре;
 - `stationaryConcealment` — базовая маскировка от `0` до `0,95`;
 - `movementRevealPenalty` и `firingRevealPenalty` — вычитаемые из маскировки коэффициенты от `0` до `0,95`;
-- `firingRevealDuration` — неотрицательная длительность штрафа после выстрела в секундах;
-- `guaranteedDetectionRange` — положительная дистанция, не превышающая `viewRange`.
+- `firingRevealDuration` — неотрицательная длительность штрафа после выстрела в секундах.
 
-`vehicleClass` обязателен и принимает одно из пяти значений: `HeavyTank`, `MediumTank`, `LightTank`, `TankDestroyer` или `Artillery`. Класс определяет символ машины в мире и HUD, но сам по себе не меняет боевые характеристики.
+`vehicleClass` обязателен и принимает одно из пяти значений: `HeavyTank`, `MediumTank`, `LightTank`, `TankDestroyer` или `Artillery`. Класс определяет символ машины в мире и HUD, угол сектора обзора и — вместе с `tier` — дальность обзора; в остальном боевые характеристики он не меняет.
 
 `nation` обязателен и пока принимает `Germany` или `USSR`. `availableInGame` отделяет сохранённую в проекте технику от активного состава: недоступная машина может иметь данные, спрайт и префаб, но не попадает на полигон и запрещена в сценариях боя.
 

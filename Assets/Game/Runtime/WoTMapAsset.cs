@@ -190,7 +190,7 @@ namespace LocalTanks
 
         [Header("World placement")]
         [Tooltip("Unity units per source metre. The fleet scale is one world scale, so this stays uniform.")]
-        public float metresPerUnit = 3.835f;
+        public float metresPerUnit = GameScale.MetresPerUnit;
 
         [Tooltip("Centre of the playable area in Unity units. Placing the centre at the origin keeps " +
                  "coordinates small and lets the camera start on the action.")]

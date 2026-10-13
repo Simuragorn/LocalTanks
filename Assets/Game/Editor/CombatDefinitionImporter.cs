@@ -522,7 +522,8 @@ namespace LocalTanks.Editor
 
         public static CombatDefinitionSet LoadAndValidate()
         {
-            TankDefinitionJson[] tanks = LoadAll<TankDefinitionJson>(DefinitionsRoot + "/Tanks");
+            TankDefinitionJson[] tanks = ApplyDerivedVision(LoadAll<TankDefinitionJson>(
+                DefinitionsRoot + "/Tanks", "viewRange", "guaranteedDetectionRange"));
             WeaponDefinitionJson[] weapons = LoadAll<WeaponDefinitionJson>(DefinitionsRoot + "/Weapons");
             ShellDefinitionJson[] shells = LoadAll<ShellDefinitionJson>(DefinitionsRoot + "/Shells");
             CombatDefinitionSet source = new CombatDefinitionSet(tanks, weapons, shells);
@@ -535,7 +536,43 @@ namespace LocalTanks.Editor
             return source;
         }
 
-        private static T[] LoadAll<T>(string assetDirectory)
+        /// <summary>
+        /// View range and guaranteed detection are derived, not authored: the vehicle class and tier decide the
+        /// range and the guarantee is a fixed share of it (ADR-064). Computing them here means the validator,
+        /// the generated asset and every consumer read one value that comes from one place — the table — and a
+        /// hand-written range cannot creep back into the data.
+        /// </summary>
+        private static TankDefinitionJson[] ApplyDerivedVision(TankDefinitionJson[] tanks)
+        {
+            foreach (TankDefinitionJson tank in tanks)
+            {
+                if (tank.vision == null)
+                {
+                    continue;
+                }
+
+                // The class travels as text and is validated on its own; when it cannot be read there is no row
+                // to look up, so the range stays unset and the validator reports the class itself.
+                if (!Enum.TryParse(tank.vehicleClass, false, out VehicleClass vehicleClass))
+                {
+                    continue;
+                }
+
+                tank.vision.viewRange = VisionRangeTable.UnitsFor(vehicleClass, tank.tier);
+                tank.vision.guaranteedDetectionRange =
+                    VisionRangeTable.GuaranteedDetectionUnits(tank.vision.viewRange);
+            }
+
+            return tanks;
+        }
+
+        /// <summary>
+        /// Loads every definition in a directory. A field that must no longer be authored is named by the
+        /// caller and rejected by its text, because <see cref="JsonUtility"/> ignores unknown members: without
+        /// this check a restored field would simply be ignored and the value would look derived while the file
+        /// still claimed to set it.
+        /// </summary>
+        private static T[] LoadAll<T>(string assetDirectory, params string[] forbiddenFields)
         {
             string absoluteDirectory = Path.GetFullPath(assetDirectory);
             if (!Directory.Exists(absoluteDirectory))
@@ -547,6 +584,16 @@ namespace LocalTanks.Editor
             foreach (string file in Directory.GetFiles(absoluteDirectory, "*.json", SearchOption.TopDirectoryOnly).OrderBy(path => path, StringComparer.Ordinal))
             {
                 string json = File.ReadAllText(file);
+                foreach (string field in forbiddenFields)
+                {
+                    if (json.Contains($"\"{field}\""))
+                    {
+                        throw new InvalidDataException(
+                            $"'{file}' declares '{field}', which is derived from the vehicle class and tier. " +
+                            "Remove the field: its value comes from VisionRangeTable (see Docs/SPRINT_009.md, стадия 0).");
+                    }
+                }
+
                 T item;
                 try
                 {

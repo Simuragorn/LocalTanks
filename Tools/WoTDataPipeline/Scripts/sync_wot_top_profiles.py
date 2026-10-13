@@ -264,7 +264,6 @@ def extract_profile(archive: zipfile.ZipFile, entry: dict, conversion: dict) -> 
     shot_interval = 60.0 / clip_rate if magazine_size > 1 and clip_rate > 0 else 0.0
 
     speed_scale = conversion["kilometresPerHourPerUnitySpeed"]
-    view_scale = conversion["viewRangeMetresPerUnityUnit"]
     projectile_divisor = conversion["projectileSpeedDivisor"]
     projectile_range = conversion["maximumProjectileRange"]
     projectile_speed = shell_speed / projectile_divisor
@@ -344,13 +343,14 @@ def extract_profile(archive: zipfile.ZipFile, entry: dict, conversion: dict) -> 
                 "turretTraverseDispersionDegrees": round_value(turret_penalty),
                 "shotDispersionDegrees": round_value(shot_penalty),
             },
+            # View range and the guaranteed detection radius are deliberately absent: they are derived from
+            # the vehicle class and tier by the game (ADR-064, VisionRangeTable), so the file must not carry a
+            # second copy of them. The importer rejects the fields by name if they come back.
             "vision": {
-                "viewRange": round_value(number(turret, "circularVisionRadius") / view_scale),
                 "stationaryConcealment": round_value(still_camo),
                 "movementRevealPenalty": round_value(max(0.0, still_camo - moving_camo)),
                 "firingRevealPenalty": round_value(still_camo * (1.0 - shot_camo_factor)),
                 "firingRevealDuration": conversion["firingRevealDuration"],
-                "guaranteedDetectionRange": conversion["guaranteedDetectionRange"],
             },
             "weapon": {
                 "id": entry["weaponId"],
@@ -442,7 +442,8 @@ def markdown(version: str, profiles: list[dict], conversion: dict) -> str:
         "## Преобразования LocalTanks",
         "",
         f"- скорость машины: WoT км/ч ÷ {conversion['kilometresPerHourPerUnitySpeed']:g};",
-        f"- обзор: WoT метры ÷ {conversion['viewRangeMetresPerUnityUnit']:g};",
+        "- обзор и радиус гарантированного обнаружения не переносятся: их выводит игра из класса и уровня"
+        " техники (ADR-064, VisionRangeTable), а сырой circularVisionRadius остаётся в снимке справкой;",
         f"- визуальная скорость снаряда: WoT м/с ÷ {conversion['projectileSpeedDivisor']:g};",
         "- HP, броня, урон, начальное пробитие, перезарядка, сведение и скорости поворота переносятся напрямую;",
         "- масса — сумма выбранных модулей клиента; ускорение выводится из мощности на тонну, торможение — из brakeForce и массы;",

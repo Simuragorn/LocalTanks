@@ -169,12 +169,11 @@ namespace LocalTanks.Editor
         }
 
         /// <summary>
-        /// The one game scale every tank is built at, expressed as metres per Unity unit. It follows
-        /// from the reference machine: its 7.38 m hull measures 1.92 units, which the existing map,
-        /// camera, view ranges and collision distances already assume. The fleet is therefore fixed to
-        /// this scale rather than to whatever each author picked while adding a tank.
+        /// Where the fleet scale comes from: the reference machine's 7.38 m hull measures 1.92 units, which
+        /// the map, camera, view ranges and collision distances already assume. The value itself lives in
+        /// <see cref="GameScale.MetresPerUnit"/> and is not repeated here — a second copy of this coefficient
+        /// is exactly what let the editor and the arena disagree before ADR-064.
         /// </summary>
-        public const float MetresPerUnit = 7.38f / (0.24f * 802f / 100f);
 
         /// <summary>
         /// Sprite pixels per model metre produced by the render pipeline. The reference machine
@@ -222,7 +221,7 @@ namespace LocalTanks.Editor
         /// <summary>In-game hull length of a machine with the given real length, in Unity units.</summary>
         public static float GameLengthFor(float hullLengthMetres)
         {
-            return hullLengthMetres / MetresPerUnit;
+            return hullLengthMetres / GameScale.MetresPerUnit;
         }
 
         private static GameObject[] BuildCombatAssetsInternal()
@@ -312,7 +311,7 @@ namespace LocalTanks.Editor
         /// The second check is the one that keeps machines correct relative to each other. A sprite
         /// rendered at the wrong scale still matches its own collider, so nothing else notices, and
         /// the tank simply comes out too large or too small next to its neighbours. Comparing the
-        /// drawn hull against the documented real length at <see cref="MetresPerUnit"/> catches it.
+        /// drawn hull against the documented real length at <see cref="GameScale.MetresPerUnit"/> catches it.
         /// </para>
         /// </summary>
         private static void ValidateHullOutline(TankBuildSpec spec)
@@ -346,7 +345,7 @@ namespace LocalTanks.Editor
                 throw new System.InvalidOperationException(
                     $"Sprite for '{spec.DisplayName}' is drawn {drawnLengthMetres:0.###} m long but the machine is " +
                     $"{spec.HullLengthMetres:0.###} m ({deviation * 100f:0}% off), so it would not match the other " +
-                    $"machines. At {MetresPerUnit:0.###} m per unit the hull must measure " +
+                    $"machines. At {GameScale.MetresPerUnit:0.###} m per unit the hull must measure " +
                     $"{GameLengthFor(spec.HullLengthMetres):0.###} units. Re-render the sprite or correct the " +
                     "documented hull length; do not tune the scale of a single tank.");
             }
@@ -563,8 +562,8 @@ namespace LocalTanks.Editor
                 renderer,
                 hullRenderer,
                 normalizedHullRect,
-                tracks.bandSeparationMetres * 0.5f / MetresPerUnit,
-                tracks.treadPitchMetres / MetresPerUnit,
+                tracks.bandSeparationMetres * 0.5f / GameScale.MetresPerUnit,
+                tracks.treadPitchMetres / GameScale.MetresPerUnit,
                 maskHeightUnits,
                 tracks.forwardSignV,
                 TankTrackAnimator.DefaultStrength);
@@ -740,7 +739,7 @@ namespace LocalTanks.Editor
                 // generated effect prefabs at play time and resolves every look from the committed
                 // profile table. The test range therefore shows one machine's effects in isolation.
                 TankVfxRig vfx = root.AddComponent<TankVfxRig>();
-                float trackSeparation = spec.Tracks.bandSeparationMetres / MetresPerUnit;
+                float trackSeparation = spec.Tracks.bandSeparationMetres / GameScale.MetresPerUnit;
                 if (trackSeparation <= 0f)
                 {
                     throw new System.InvalidOperationException(
