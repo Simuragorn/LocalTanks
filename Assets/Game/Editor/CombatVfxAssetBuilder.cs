@@ -323,6 +323,7 @@ namespace LocalTanks.Editor
             materials["petals"] = CreateMaterial(shader, "vfx_petals", textures[VfxTextureLibrary.FlashPetals], true);
             materials["core"] = CreateMaterial(shader, "vfx_core", textures[VfxTextureLibrary.FlashCore], true);
             materials["flame"] = CreateMaterial(shader, "vfx_flame", textures[VfxTextureLibrary.Flame], true);
+            materials["fire_glow"] = CreateMaterial(shader, "vfx_fire_glow", textures[VfxTextureLibrary.FireGlow], true);
             materials["ember"] = CreateMaterial(shader, "vfx_ember", textures[VfxTextureLibrary.Ember], true);
             return materials;
         }
@@ -572,27 +573,58 @@ namespace LocalTanks.Editor
 
         private static void BuildDamageFire(GameObject root, Dictionary<string, Material> materials)
         {
-            // A wreck burns over its engine deck, not from a single point: every layer spreads its emission
-            // across a patch of the hull, and the layers are dense enough that the flame reads as fire
-            // rather than as a couple of bright slivers. Fire is the one effect that tells a player a
-            // machine is finished, so it is built to be unmistakable.
-            ParticleSystem flame = AddSystem(root, "Flame", materials["flame"], FireSortingOrder, 3f, 0.35f, 0.7f, 0.45f, 0.8f, 0.18f, 0.3f);
-            SetRate(flame, 22f);
-            SetPlanarVelocity(flame, -0.2f, 0.2f, 0.25f, 0.85f);
-            SetSizeOverLifetime(flame, 1.15f, 0.7f);
-            SetFade(flame, 0.15f);
+            // A fire is a body of light with tongues licking out of it, not a pile of flame-shaped sprites.
+            // Four layers: a warm glow that carries the brightness, soft tongues, a hot core and embers.
+            // Lifetimes are short and sizes small, so the shape shimmers instead of showing one large
+            // silhouette, and turbulence keeps every particle moving differently.
+            ParticleSystem glow = AddSystem(root, "Glow", materials["fire_glow"], FireSortingOrder, 3f, 0.35f, 0.6f, 0.3f, 0.55f, 0.18f, 0.3f);
+            SetRate(glow, 16f);
+            SetPlanarVelocity(glow, -0.15f, 0.15f, 0.2f, 0.6f);
+            SetSizeOverLifetime(glow, 0.85f, 1.2f);
+            SetFade(glow, 0.22f);
+            SetTurbulence(glow, 0.12f, 0.7f);
 
-            ParticleSystem core = AddSystem(root, "Core", materials["core"], FireSortingOrder + 1, 3f, 0.2f, 0.4f, 0.2f, 0.38f, 0.1f, 0.16f);
-            SetRate(core, 12f);
-            SetPlanarVelocity(core, -0.12f, 0.12f, 0.2f, 0.6f);
+            ParticleSystem tongues = AddSystem(root, "Tongues", materials["flame"], FireSortingOrder + 1, 3f, 0.26f, 0.48f, 0.28f, 0.48f, 0.18f, 0.3f);
+            SetRate(tongues, 20f);
+            SetPlanarVelocity(tongues, -0.1f, 0.1f, 0.35f, 0.95f);
+            SetStartRotation(tongues, -0.55f, 0.55f);
+            SetSizeOverLifetime(tongues, 1f, 0.55f);
+            SetFade(tongues, 0.18f);
+            SetTurbulence(tongues, 0.2f, 0.9f);
+
+            ParticleSystem core = AddSystem(root, "Core", materials["core"], FireSortingOrder + 2, 3f, 0.18f, 0.34f, 0.16f, 0.3f, 0.1f, 0.16f);
+            SetRate(core, 10f);
+            SetPlanarVelocity(core, -0.1f, 0.1f, 0.15f, 0.5f);
             SetSizeOverLifetime(core, 1.1f, 0.6f);
-            SetFade(core, 0.12f);
+            SetFade(core, 0.15f);
 
             ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.6f, 1.3f, 0.04f, 0.09f, 0.14f, 0.22f);
             SetRate(ember, 9f);
             SetPlanarVelocity(ember, -0.7f, 0.7f, 0.7f, 1.9f);
             SetSizeOverLifetime(ember, 1f, 0.3f);
             SetFade(ember, 0.1f);
+        }
+
+        /// <summary>Limits how far a particle may be rotated, so tongues point along the plume.</summary>
+        private static void SetStartRotation(ParticleSystem system, float minRadians, float maxRadians)
+        {
+            ParticleSystem.MainModule main = system.main;
+            main.startRotation = new ParticleSystem.MinMaxCurve(minRadians, maxRadians);
+        }
+
+        /// <summary>
+        /// Adds turbulence. Fire and smoke that only drift in straight lines look like sprites being moved;
+        /// the noise module is what makes them curl.
+        /// </summary>
+        private static void SetTurbulence(ParticleSystem system, float strength, float frequency)
+        {
+            ParticleSystem.NoiseModule noise = system.noise;
+            noise.enabled = true;
+            noise.strength = new ParticleSystem.MinMaxCurve(strength);
+            noise.frequency = frequency;
+            noise.scrollSpeed = 0.35f;
+            noise.damping = true;
+            noise.octaveCount = 2;
         }
 
         private static void BuildExhaustSmoke(GameObject root, Dictionary<string, Material> materials)

@@ -31,6 +31,7 @@ namespace LocalTanks.Editor
         public const string DirtChunk = "dirt_chunk";
         public const string WaterDrop = "water_drop";
         public const string Flame = "flame";
+        public const string FireGlow = "fire_glow";
         public const string Ember = "ember";
         public const string TrackMarkLight = "track_mark_light";
         public const string TrackMarkMedium = "track_mark_medium";
@@ -39,7 +40,7 @@ namespace LocalTanks.Editor
         public static readonly string[] All =
         {
             SmokePuff, SmokeWisp, DustPuff, ExhaustSmoke, Spark,
-            FlashStar, FlashCore, FlashPetals, DirtChunk, WaterDrop, Flame, Ember,
+            FlashStar, FlashCore, FlashPetals, DirtChunk, WaterDrop, Flame, FireGlow, Ember,
             TrackMarkLight, TrackMarkMedium, TrackMarkHeavy
         };
 
@@ -66,6 +67,7 @@ namespace LocalTanks.Editor
                 case DirtChunk: DrawDirtChunk(canvas); break;
                 case WaterDrop: DrawWaterDrop(canvas); break;
                 case Flame: DrawFlame(canvas); break;
+                case FireGlow: DrawFireGlow(canvas); break;
                 case Ember: DrawEmber(canvas); break;
                 case TrackMarkLight: DrawTrackPrint(canvas, 5, 0.34f, 0.05f, 0.018f, 0.5f); break;
                 case TrackMarkMedium: DrawTrackPrint(canvas, 6, 0.4f, 0.065f, 0.021f, 0.75f); break;
@@ -205,22 +207,49 @@ namespace LocalTanks.Editor
             canvas.SoftEllipse(0.5f, 0.55f, 0.14f, 0.2f, new Color(1f, 1f, 1f, 0.85f), 1.2f, 0.15f, 102);
         }
 
+        /// <summary>
+        /// One tongue of flame: a smooth silhouette that licks sideways as it rises, with a soft edge, a hot
+        /// base and a wispy tip.
+        /// </summary>
+        /// <remarks>
+        /// The first version stamped twenty-six wide ellipses up the sprite with a hard falloff, and the
+        /// result read as angular painted wedges rather than fire. The silhouette is now built from
+        /// sixty-four narrow, very soft stamps whose width follows a sine profile and whose sideways
+        /// position follows value noise, so the edge is irregular and the tip disappears into nothing.
+        /// </remarks>
         private static void DrawFlame(VfxPixelCanvas canvas)
         {
-            // A tongue of flame: wide at the base, pointed at the top, with a hot core.
-            for (int step = 0; step < 26; step++)
+            const int steps = 64;
+            for (int step = 0; step < steps; step++)
             {
-                float t = step / 25f;
-                float y = 0.12f + t * 0.76f;
-                float width = Mathf.Lerp(0.3f, 0.03f, Mathf.Pow(t, 0.75f));
+                float t = step / (steps - 1f);
+                float y = Mathf.Lerp(0.08f, 0.94f, t);
+                float profile = Mathf.Sin(Mathf.Pow(t, 0.55f) * Mathf.PI);
+                float lick = VfxNoise.Fbm(t * 5f, 1.7f, 301, 3) - 0.5f;
+                float x = 0.5f + lick * 0.18f * t;
+                float width = Mathf.Max(0.012f, 0.15f * profile * (0.7f + 0.6f * VfxNoise.Fbm(t * 7f, 3.1f, 302, 2)));
+                float alpha = (1f - t) * 0.42f + 0.06f;
                 Color colour = Color.Lerp(
-                    new Color(1f, 0.55f, 0.16f, 0.85f),
-                    new Color(1f, 0.85f, 0.4f, 0.5f),
-                    t);
-                canvas.SoftEllipse(0.5f, y, width * 0.5f, 0.075f, colour, 1.2f, 0.35f, 111 + step);
+                    new Color(1f, 0.86f, 0.48f),
+                    new Color(1f, 0.3f, 0.04f),
+                    Mathf.Clamp01(t * 1.4f));
+                canvas.SoftEllipse(x, y, width, 0.035f, new Color(colour.r, colour.g, colour.b, alpha), 2.4f, 0.4f, 300 + step);
             }
 
-            canvas.SoftEllipse(0.5f, 0.3f, 0.11f, 0.2f, new Color(1f, 0.93f, 0.62f, 0.8f), 1.3f, 0.2f, 131);
+            canvas.SoftEllipse(0.5f, 0.15f, 0.115f, 0.085f, new Color(1f, 0.93f, 0.66f, 0.55f), 2.2f, 0.3f, 370);
+            canvas.SoftEllipse(0.5f, 0.1f, 0.07f, 0.05f, new Color(1f, 0.98f, 0.86f, 0.6f), 1.8f, 0.2f, 371);
+        }
+
+        /// <summary>
+        /// The body of a fire: a soft blob with a hot middle, additive and warm, that sits under the
+        /// tongues and gives the flame something to be lit by.
+        /// </summary>
+        private static void DrawFireGlow(VfxPixelCanvas canvas)
+        {
+            canvas.SoftCircle(0.5f, 0.48f, 0.5f, new Color(1f, 0.42f, 0.07f, 0.45f), 2.6f, 0.5f, 201);
+            canvas.SoftCircle(0.5f, 0.5f, 0.34f, new Color(1f, 0.6f, 0.16f, 0.45f), 2.2f, 0.45f, 202);
+            canvas.SoftCircle(0.5f, 0.54f, 0.2f, new Color(1f, 0.82f, 0.42f, 0.5f), 1.8f, 0.35f, 203);
+            canvas.SoftCircle(0.5f, 0.56f, 0.1f, new Color(1f, 0.95f, 0.76f, 0.55f), 1.4f, 0.2f, 204);
         }
 
         private static void DrawEmber(VfxPixelCanvas canvas)
