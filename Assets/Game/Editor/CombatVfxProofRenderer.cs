@@ -116,7 +116,11 @@ namespace LocalTanks.Editor
         private static Camera CreateCamera()
         {
             GameObject cameraObject = new GameObject("VfxProofCamera");
+            // Bloom is what turns the HDR colours of a flash and a fire into a glow, and a camera only
+            // runs the post-processing stack when its URP data says so. Without this the proof
+            // images would show flat white where the game shows light.
             Camera camera = cameraObject.AddComponent<Camera>();
+            CombatVfxGlowSetup.EnsurePostProcessing(cameraObject);
             camera.orthographic = true;
             camera.orthographicSize = Rows * CellSize * 0.5f + 0.3f;
             camera.aspect = (float)ImageWidth / ImageHeight;

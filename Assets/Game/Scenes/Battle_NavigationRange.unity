@@ -164,7 +164,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fb51e712918060340b9a19f6c12498a6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.MapPrimitiveVisual
   kind: 0
 --- !u!19719996 &83215372
@@ -1899,7 +1899,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1b861edc07ec79c4495af62fae7cfd43, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankMotor
 --- !u!114 &190421969
 MonoBehaviour:
@@ -1911,7 +1911,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a565170901d438f45ab373b2c2362f39, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankHealthBar
   width: 72
   height: 8
@@ -1928,7 +1928,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4b204150dc5626448a65c503ff534e38, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.NavigationAgent
   map: {fileID: 1144387733}
   motor: {fileID: 190421968}
@@ -1937,11 +1937,13 @@ MonoBehaviour:
   - {x: -5.625, y: 4.875}
   clearanceCells: 1
   waypointTolerance: 0.3
+  minimumWaypointTolerance: 1.2
   avoidanceRadius: 1.2
   unstuckDuration: 1.8
   minimumProgressDistance: 0.18
   minimumProgressTurn: 8
   loopPatrol: 1
+  pathRecoveryDrift: 3
 --- !u!114 &190421971
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1952,7 +1954,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 82cfe735a8ba8b74597c08a645990d6c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TerrainMotorModifier
   map: {fileID: 1144387733}
   motor: {fileID: 190421968}
@@ -2077,7 +2079,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 18f64cfe529a91f4783efb31fec87035, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.DestructibleObstacle
   maximumHitPoints: 400
   map: {fileID: 1144387733}
@@ -2100,7 +2102,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fb51e712918060340b9a19f6c12498a6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.MapPrimitiveVisual
   kind: 1
 --- !u!61 &597622655
@@ -2192,7 +2194,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a993290b87ca6fe49ae37c7565dccf68, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.NavigationRangeInstructions
   wall: {fileID: 597622653}
 --- !u!4 &787464363
@@ -2302,7 +2304,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1b861edc07ec79c4495af62fae7cfd43, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankMotor
 --- !u!114 &1040113835
 MonoBehaviour:
@@ -2314,7 +2316,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a565170901d438f45ab373b2c2362f39, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankHealthBar
   width: 72
   height: 8
@@ -2331,7 +2333,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4b204150dc5626448a65c503ff534e38, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.NavigationAgent
   map: {fileID: 1144387733}
   motor: {fileID: 1040113834}
@@ -2340,11 +2342,13 @@ MonoBehaviour:
   - {x: 8.625, y: -4.875}
   clearanceCells: 1
   waypointTolerance: 0.3
+  minimumWaypointTolerance: 1.2
   avoidanceRadius: 1.2
   unstuckDuration: 1.8
   minimumProgressDistance: 0.18
   minimumProgressTurn: 8
   loopPatrol: 1
+  pathRecoveryDrift: 3
 --- !u!114 &1040113837
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2355,7 +2359,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 82cfe735a8ba8b74597c08a645990d6c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TerrainMotorModifier
   map: {fileID: 1144387733}
   motor: {fileID: 1040113834}
@@ -2386,7 +2390,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b0e101578a699824eb19ced4e99a2053, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.NavigationMap
   width: 40
   height: 24
@@ -5407,7 +5411,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3448ad1c023eb8349a28a60a005768de, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.GunDispersionController
 --- !u!114 &1347427532 stripped
 MonoBehaviour:
@@ -5418,7 +5422,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1b861edc07ec79c4495af62fae7cfd43, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankMotor
 --- !u!114 &1347427533 stripped
 MonoBehaviour:
@@ -5429,7 +5433,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0e929359c191d4448ac0419bc7833351, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.WeaponController
 --- !u!114 &1347427534 stripped
 MonoBehaviour:
@@ -5440,7 +5444,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 508d3bed0c7b7bf4ebcc99e9a7243c98, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TurretAiming
 --- !u!4 &1347427535 stripped
 Transform:
@@ -5462,7 +5466,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 82cfe735a8ba8b74597c08a645990d6c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TerrainMotorModifier
   map: {fileID: 1144387733}
   motor: {fileID: 1347427532}
@@ -5481,6 +5485,7 @@ GameObject:
   - component: {fileID: 1764731220}
   - component: {fileID: 1764731219}
   - component: {fileID: 1764731218}
+  - component: {fileID: 1764731225}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -5498,7 +5503,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 364203aa78c699d468fc3d67854fdaeb, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.NavigationDebugOverlay
   map: {fileID: 1144387733}
   visible: 1
@@ -5512,7 +5517,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2a2e0ace3a1493d4b98e504405edd0bf, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.PlayerAimReticle
   controlledTank: {fileID: 1347427535}
   turret: {fileID: 1347427534}
@@ -5528,7 +5533,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2a2e0ace3a1493d4b98e504405edd0bf, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.PlayerAimReticle
   controlledTank: {fileID: 1347427535}
   turret: {fileID: 1347427534}
@@ -5544,7 +5549,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 085dbdaddc829d145aca612788945885, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.CameraFollow2D
   target: {fileID: 1347427535}
   smoothTime: 0.15
@@ -5626,6 +5631,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1764731225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1764731217}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 1
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1 &1825808923
 GameObject:
   m_ObjectHideFlags: 0
@@ -15491,7 +15540,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1b861edc07ec79c4495af62fae7cfd43, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankMotor
 --- !u!114 &2122917377
 MonoBehaviour:
@@ -15503,7 +15552,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a565170901d438f45ab373b2c2362f39, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TankHealthBar
   width: 72
   height: 8
@@ -15520,7 +15569,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4b204150dc5626448a65c503ff534e38, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.NavigationAgent
   map: {fileID: 1144387733}
   motor: {fileID: 2122917376}
@@ -15529,11 +15578,13 @@ MonoBehaviour:
   - {x: -8.625, y: -4.875}
   clearanceCells: 1
   waypointTolerance: 0.3
+  minimumWaypointTolerance: 1.2
   avoidanceRadius: 1.2
   unstuckDuration: 1.8
   minimumProgressDistance: 0.18
   minimumProgressTurn: 8
   loopPatrol: 1
+  pathRecoveryDrift: 3
 --- !u!114 &2122917379
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15544,7 +15595,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 82cfe735a8ba8b74597c08a645990d6c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.TerrainMotorModifier
   map: {fileID: 1144387733}
   motor: {fileID: 2122917376}

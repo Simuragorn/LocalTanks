@@ -220,6 +220,39 @@ namespace LocalTanks.Editor
 
             GameObject tank = UnityEngine.Object.Instantiate(prefab, position, Quaternion.Euler(0f, 0f, rotationDegrees));
             spawned.Add(tank);
+
+            // The track overlay is a runtime visual: its sprite and tint are set by the track animator while
+            // the game runs, so in an editor composition it would be drawn as a magenta rectangle. Nothing
+            // in this frame is about tracks drawn on the hull, so it is simply switched off.
+            Transform overlay = tank.transform.Find("TrackOverlay");
+            if (overlay != null)
+            {
+                overlay.gameObject.SetActive(false);
+            }
+
+            // A machine also carries renderers whose sprite is chosen while the game runs, such as the
+            // selection outline and the track overlay. In an editor composition they still hold no sprite,
+            // and Unity draws a null sprite as a plain white square over the hull.
+            foreach (Renderer renderer in tank.GetComponentsInChildren<Renderer>(true))
+            {
+                Shader shader = renderer.sharedMaterial != null ? renderer.sharedMaterial.shader : null;
+                bool broken = shader == null ||
+                              shader.name.Contains("Error") ||
+                              shader.name.Contains("Fallback");
+                if (broken)
+                {
+                    Debug.Log($"[vfxbattle] hiding {renderer.GetType().Name} '{renderer.name}' on " +
+                              $"{tank.name}: shader={(shader != null ? shader.name : "none")}");
+                    renderer.gameObject.SetActive(false);
+                    continue;
+                }
+
+                if (renderer is SpriteRenderer sprite && sprite.sprite == null)
+                {
+                    sprite.gameObject.SetActive(false);
+                }
+            }
+
             return tank;
         }
 
@@ -421,7 +454,11 @@ namespace LocalTanks.Editor
         private static Camera CreateCamera()
         {
             GameObject cameraObject = new GameObject("VfxBattleCamera");
+            // Bloom is what turns the HDR colours of a flash and a fire into a glow, and a camera only
+            // runs the post-processing stack when its URP data says so. Without this the proof
+            // images would show flat white where the game shows light.
             Camera camera = cameraObject.AddComponent<Camera>();
+            CombatVfxGlowSetup.EnsurePostProcessing(cameraObject);
             camera.orthographic = true;
             camera.orthographicSize = 2.45f;
             camera.aspect = (float)ImageWidth / ImageHeight;
