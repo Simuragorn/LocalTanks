@@ -27,8 +27,9 @@ Preserve these invariants:
 - houses, rocks, obstacles, bridges, bushes, trees, water, terrain and both
   teams' bases must pass validation;
 - water affects route planning but never blocks projectiles or vision;
-- standing trees are destructible obstacles and their future fallen state is
-  bush-like concealment;
+- **vegetation never blocks movement or projectiles.** A tree is cover that
+  conceals, and knocked down it is bush-like concealment; its `destructible` flag
+  is for a future wreck or crushing rule and must not decide collision;
 - object category, destructibility and collision flags come from catalog rules
   and parsed physics metadata, not from preview colors;
 - package bytes, models, textures, packed XML, third-party checkouts and all
@@ -40,3 +41,82 @@ If a newer game client stops parsing, fail with a clear diagnostic, verify a
 new parser revision separately, update `Docs/DEPENDENCIES.md`, then change the
 pin. After tracked tooling or catalog changes, update project status/changelog
 and commit only scoped files as `Simuragorn <simuragorn@gmail.com>`.
+
+## Turning the converted map into a Unity arena
+
+The JSON above is only half the work. `Docs/ARCHITECTURE.md` describes the Unity
+side; the rules below were each learned from a defect that reached a playable
+scene, so treat them as contracts rather than suggestions. Every one now has a
+test in `Assets/Game/Tests`, because the faults were invisible to the compiler and
+to each other.
+
+## One predicate decides what counts as a barrier
+
+`WoTMapAsset.IsSubstantial` is the single answer to "is this object large enough to
+be a wall", used by collision (`IsSolid`), routing (`BlocksNavigation`) and the art
+pass. Two thresholds once disagreed, so an object could be solid to a tank and
+simultaneously crossable by a route, and the map looked arbitrary.
+
+- the threshold is `BlockerMetres`, ten source metres: about two and a half hull
+  lengths of the smallest machine in the game (the T1 Cunningham is 3.87 m);
+- destructibility is **not** part of it. Tying solidity to it made a fifth of the
+  houses on Mines drive-through while their identical neighbours were not;
+- only obstacles at or above the threshold are drawn. A drawn object implies a
+  wall, so the map shows exactly what a tank cannot cross; roughly fifteen hundred
+  small solid objects on Mines are omitted deliberately.
+
+## Colliders that must never stop a tank
+
+- **Capture zones are triggers.** `CaptureBase` carries
+  `[RequireComponent(typeof(CircleCollider2D))]`, and Unity creates a required
+  collider **solid**, the size of the whole base, exactly where the sides spawn.
+  Add the `CircleCollider2D` yourself with `isTrigger = true` before adding
+  `CaptureBase`, and take its radius from the same constant as the drawn ring. A
+  missing trigger trapped tanks inside their own spawn and read as broken AI.
+- **Vegetation colliders are triggers**, and each plant carries a
+  `ConcealmentZone`, which also fades the sprite as the player drives close so
+  cover never hides the player's own machine.
+- `CaptureBase` warns at load when its zone is solid; keep that warning.
+
+## Sprite families never mix
+
+The gallery manifest's own `category` is the authority on what a sprite depicts,
+not a resource path. Obstacles draw only from buildings, rocks and destructible
+cover; plants only from vegetation. `MapSpriteMatcher.OfFamily` performs the split
+for both the scene builder and the content builder so the two cannot drift. Without
+it a burnt tree stood on a boulder, promising an obstacle the art did not show. An
+unclassified family counts as a structure, so a new library object appears on a
+wall until someone classifies it instead of vanishing silently.
+
+## Routes must be walkable and outrank the strategic layer
+
+- drop route points whose navigation cell is closed and orient the lane by geometry
+  from the team's own base; assuming the direction sends a team across the map from
+  the enemy's side;
+- route advance uses the navigation agent's own waypoint tolerance
+  (`NavigationAgent.WaypointTolerance`), never a smaller constant, and skips points
+  the tank already stands on. A route starting on the spawn point otherwise offers
+  a destination the tank cannot satisfy, and it circles there for the whole battle
+  while reporting a valid path;
+- a route is a mission, so `ExecuteStrategicDirective` must not take the decision
+  while a route is unfinished and no enemy has been detected. When both acted
+  freely, the strategic layer overrode the route 240 times in 360 decisions and the
+  two deadlocked, leaving bots motionless with a valid path.
+
+## Verify by playing, and measure rather than reason
+
+Every defect above was found by measurement, none by reading code. The arena checks
+in `WoTMapScenePlayModeTests` load the scene and assert that no collider under
+`Vegetation` is solid, that each plant conceals, and that no capture zone stops a
+tank. `WoTMapPlayabilityTests` fights a battle and prints per-tank pace, route
+index, path shape and stall recoveries; keep those diagnostics, because they are
+what separated a routing fault from a collider fault after several wrong guesses.
+
+Two habits worth keeping:
+
+- **never edit non-ASCII source through PowerShell.** A round trip through
+  `Set-Content` read the file as Windows-1251 and turned one short Russian label
+  into nine thousand mojibake characters. Use the editor tooling instead;
+- when a change produces no measurable effect, suspect that the code never runs.
+  An advance fix once changed nothing because the route index it corrected was
+  never reached, and counters proved that in a single battle.
