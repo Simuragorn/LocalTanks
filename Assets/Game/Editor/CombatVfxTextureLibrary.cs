@@ -27,6 +27,7 @@ namespace LocalTanks.Editor
         public const string Spark = "spark";
         public const string FlashStar = "flash_star";
         public const string FlashCore = "flash_core";
+        public const string FlashPetals = "flash_petals";
         public const string DirtChunk = "dirt_chunk";
         public const string WaterDrop = "water_drop";
         public const string Flame = "flame";
@@ -38,7 +39,7 @@ namespace LocalTanks.Editor
         public static readonly string[] All =
         {
             SmokePuff, SmokeWisp, DustPuff, ExhaustSmoke, Spark,
-            FlashStar, FlashCore, DirtChunk, WaterDrop, Flame, Ember,
+            FlashStar, FlashCore, FlashPetals, DirtChunk, WaterDrop, Flame, Ember,
             TrackMarkLight, TrackMarkMedium, TrackMarkHeavy
         };
 
@@ -61,6 +62,7 @@ namespace LocalTanks.Editor
                 case Spark: DrawSpark(canvas); break;
                 case FlashStar: DrawFlashStar(canvas); break;
                 case FlashCore: DrawFlashCore(canvas); break;
+                case FlashPetals: DrawFlashPetals(canvas); break;
                 case DirtChunk: DrawDirtChunk(canvas); break;
                 case WaterDrop: DrawWaterDrop(canvas); break;
                 case Flame: DrawFlame(canvas); break;
@@ -101,8 +103,11 @@ namespace LocalTanks.Editor
 
         private static void DrawExhaustWisp(VfxPixelCanvas canvas)
         {
-            canvas.SoftCircle(0.5f, 0.44f, 0.4f, new Color(0.8f, 0.79f, 0.78f, 0.3f), 2.2f, 0.7f, 41);
-            canvas.SoftCircle(0.5f, 0.68f, 0.26f, new Color(0.76f, 0.75f, 0.74f, 0.22f), 2.4f, 0.8f, 42);
+            // Dense and dark enough to be read against dirt: an engine that is working has to show, and a
+            // faint grey smudge disappears completely at the battle zoom.
+            canvas.SoftCircle(0.5f, 0.42f, 0.42f, new Color(0.42f, 0.41f, 0.4f, 0.55f), 1.8f, 0.55f, 41);
+            canvas.SoftCircle(0.5f, 0.66f, 0.3f, new Color(0.36f, 0.35f, 0.34f, 0.45f), 2f, 0.65f, 42);
+            canvas.SoftCircle(0.42f, 0.3f, 0.22f, new Color(0.5f, 0.49f, 0.47f, 0.4f), 1.6f, 0.6f, 43);
         }
 
         private static void DrawSpark(VfxPixelCanvas canvas)
@@ -141,6 +146,49 @@ namespace LocalTanks.Editor
             canvas.SoftCircle(0.5f, 0.5f, 0.46f, new Color(1f, 0.85f, 0.5f, 0.55f), 2.2f, 0.25f, 81);
             canvas.SoftCircle(0.5f, 0.5f, 0.26f, new Color(1f, 0.95f, 0.78f, 0.85f), 1.4f, 0.15f, 82);
             canvas.SoftCircle(0.5f, 0.5f, 0.12f, Color.white, 1f, 0f, 83);
+        }
+
+        /// <summary>
+        /// The petals of a muzzle flash: an irregular bloom of unequal tongues rather than a symmetric
+        /// star. The first version was a six-point star and read as a drawn symbol pasted onto the barrel;
+        /// a real flash has no symmetry, so every petal here has its own length, width, angle and colour.
+        /// </summary>
+        private static void DrawFlashPetals(VfxPixelCanvas canvas)
+        {
+            // Angle in turns, length, half width, brightness.
+            float[,] petals =
+            {
+                { 0.02f, 0.46f, 0.10f, 1.0f },
+                { 0.16f, 0.30f, 0.07f, 0.8f },
+                { 0.29f, 0.38f, 0.09f, 0.9f },
+                { 0.44f, 0.22f, 0.06f, 0.7f },
+                { 0.55f, 0.34f, 0.08f, 0.85f },
+                { 0.68f, 0.26f, 0.06f, 0.75f },
+                { 0.79f, 0.40f, 0.09f, 0.95f },
+                { 0.92f, 0.20f, 0.05f, 0.65f }
+            };
+
+            for (int index = 0; index < petals.GetLength(0); index++)
+            {
+                float angle = petals[index, 0] * Mathf.PI * 2f;
+                float length = petals[index, 1];
+                float width = petals[index, 2];
+                float brightness = petals[index, 3];
+                Color colour = new Color(1f, 0.72f + 0.22f * brightness, 0.34f + 0.3f * brightness, 0.55f * brightness);
+                canvas.SoftEllipse(
+                    0.5f + Mathf.Cos(angle) * length * 0.45f,
+                    0.5f + Mathf.Sin(angle) * length * 0.45f,
+                    width,
+                    length * 0.5f,
+                    colour,
+                    1.1f,
+                    0.35f,
+                    90 + index,
+                    angle - Mathf.PI * 0.5f);
+            }
+
+            canvas.SoftCircle(0.5f, 0.5f, 0.3f, new Color(1f, 0.86f, 0.55f, 0.5f), 1.6f, 0.35f, 110);
+            canvas.SoftCircle(0.5f, 0.5f, 0.15f, new Color(1f, 0.97f, 0.86f, 0.85f), 1.2f, 0.15f, 111);
         }
 
         private static void DrawDirtChunk(VfxPixelCanvas canvas)

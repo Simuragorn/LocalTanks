@@ -75,6 +75,8 @@ namespace LocalTanks
         private float appliedSprayRate = -1f;
         private float appliedExhaustRate = -1f;
         private float barrelSmokeSecondsLeft;
+        private float exhaustPuffSecondsLeft;
+        private bool wasMoving;
         private TerrainKind appliedSurface = TerrainKind.Blocked;
         private DamageVfxProfile appliedDamage;
 
@@ -374,6 +376,23 @@ namespace LocalTanks
             }
 
             float exhaustRate = Mathf.Lerp(profile.exhaustIdleRate, profile.exhaustLoadedRate, load01);
+
+            // A machine that was standing still and is asked to move smokes hardest for a moment: the
+            // engine is cold, the fuel is rich and the plume is the one a player actually notices. The
+            // transition is read from the achieved speed, so a machine held against a wall stays quiet.
+            bool moving = Mathf.Abs(speed) > 0.05f;
+            if (moving && !wasMoving)
+            {
+                exhaustPuffSecondsLeft = Mathf.Max(0f, profile.exhaustStartPuffSeconds);
+            }
+
+            wasMoving = moving;
+            if (exhaustPuffSecondsLeft > 0f)
+            {
+                exhaustPuffSecondsLeft -= deltaTime;
+                exhaustRate = profile.exhaustLoadedRate * Mathf.Max(1f, profile.exhaustStartPuffMultiplier);
+            }
+
             if (RateChanged(exhaustRate, appliedExhaustRate))
             {
                 appliedExhaustRate = exhaustRate;
@@ -497,7 +516,7 @@ namespace LocalTanks
             SetEmission(rightSpray, 0f);
             SetEmission(exhaust, 0f);
             SetEmission(damageSmoke, 0f);
-            SetEmission(damageFire, 0f);
+            SetEmissionEnabled(damageFire, false);
             SetEmission(barrelSmoke, 0f);
         }
 
@@ -562,13 +581,11 @@ namespace LocalTanks
                 SetEmission(damageSmoke, profile.smokeRate);
             }
 
-            // Burning is decided by the band. A wreck burns for the rest of the battle, a critically
-            // damaged machine catches fire, and a lightly damaged one only smokes.
-            SetEmission(damageFire, profile.fire ? FireRate : 0f);
+            // Burning is decided by the band, and only the wreck band burns: a machine on its last legs
+            // smokes, and fire is what tells the player that this machine is finished. The layered rates
+            // belong to the generated prefab, so the rig only opens and closes the fire.
+            SetEmissionEnabled(damageFire, profile.fire);
         }
-
-        /// <summary>Rate of the generated flame, used when a band turns the fire on.</summary>
-        private const float FireRate = 6f;
 
         private void Subscribe()
         {
@@ -615,10 +632,23 @@ namespace LocalTanks
             }
 
             Quaternion rotation = CombatVfxSystem.PlaneRotation(muzzle.up);
-            system.Play(VfxEmission.At(CombatVfxEffects.MuzzleFlash, muzzle.position, rotation, profile.flashScale));
+            // No two shots are identical: the flash is rotated a little and its size varies, which is what
+            // keeps a burst of fire from looking like one stamped sprite repeated.
+            float spread = Random.Range(-16f, 16f);
+            float variation = Random.Range(0.85f, 1.2f);
+            rotation *= Quaternion.Euler(0f, 0f, spread);
+            system.Play(VfxEmission.At(
+                CombatVfxEffects.MuzzleFlash,
+                muzzle.position,
+                rotation,
+                profile.flashScale * variation));
             if (profile.smokeBurst > 0)
             {
-                system.Play(VfxEmission.At(CombatVfxEffects.MuzzleSmoke, muzzle.position, rotation, profile.smokeScale)
+                system.Play(VfxEmission.At(
+                        CombatVfxEffects.MuzzleSmoke,
+                        muzzle.position,
+                        rotation,
+                        profile.smokeScale * Random.Range(0.9f, 1.1f))
                     .WithCount(profile.smokeBurst));
             }
 
@@ -724,6 +754,24 @@ namespace LocalTanks
                 ParticleSystem.EmissionModule emission = system.emission;
                 emission.rateOverTime = Mathf.Max(0f, rate);
                 emission.enabled = rate > 0.01f;
+            }
+        }
+
+        /// <summary>
+        /// Opens or closes an effect without touching its rates. The fire is layered inside its generated
+        /// prefab, so enabling it keeps the balance between flame, core and embers that the builder chose.
+        /// </summary>
+        private static void SetEmissionEnabled(ParticleSystem[] systems, bool enabled)
+        {
+            if (systems == null)
+            {
+                return;
+            }
+
+            foreach (ParticleSystem system in systems)
+            {
+                ParticleSystem.EmissionModule emission = system.emission;
+                emission.enabled = enabled;
             }
         }
 

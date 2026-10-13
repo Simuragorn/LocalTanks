@@ -108,6 +108,9 @@ namespace LocalTanks.Tests
                 "A machine on the very edge of destruction still belongs to a live band.");
             Assert.That(catalog.ResolveDamage(0.1f, true).id, Is.EqualTo("wreck"),
                 "A destroyed machine smokes as a wreck regardless of the health it had left.");
+            Assert.That(catalog.ResolveDamage(0.1f, false).fire, Is.False,
+                "A machine on its last legs smokes; fire marks a machine as finished, so only a wreck burns.");
+            Assert.That(catalog.ResolveDamage(0f, true).fire, Is.True);
         }
 
         [Test]

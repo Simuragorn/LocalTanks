@@ -62,11 +62,6 @@ namespace LocalTanks
         /// the flash is gone, and a longer gun breathes for longer.
         /// </summary>
         public float barrelSmokeSeconds = 0.5f;
-
-        public float recoilDistance = 0.05f;
-        public float lightIntensity = 0.7f;
-        public float lightRadius = 1.8f;
-        public float lightSeconds = 0.05f;
     }
 
     /// <summary>
@@ -95,6 +90,13 @@ namespace LocalTanks
         /// <summary>Exhaust puffs per second at a standstill and at the machine's top speed.</summary>
         public float exhaustIdleRate = 1.5f;
         public float exhaustLoadedRate = 6f;
+
+        /// <summary>
+        /// A cold engine that is asked to move smokes hardest. This is the extra plume that follows the
+        /// first moments of pulling away, expressed as a multiplier of the loaded rate and a duration.
+        /// </summary>
+        public float exhaustStartPuffSeconds = 0.9f;
+        public float exhaustStartPuffMultiplier = 3.5f;
 
         [Range(0f, 1f)] public float markOpacity = 0.35f;
 
@@ -464,10 +466,6 @@ namespace LocalTanks
                 RequirePositive(profile.smokeSeconds, field + ".smokeSeconds", errors);
                 RequireRange(profile.smokeBurst, 0, 64, field + ".smokeBurst", errors);
                 RequireNonNegative(profile.barrelSmokeSeconds, field + ".barrelSmokeSeconds", errors);
-                RequireNonNegative(profile.recoilDistance, field + ".recoilDistance", errors);
-                RequireNonNegative(profile.lightIntensity, field + ".lightIntensity", errors);
-                RequireNonNegative(profile.lightRadius, field + ".lightRadius", errors);
-                RequirePositive(profile.lightSeconds, field + ".lightSeconds", errors);
             }
         }
 
@@ -511,6 +509,8 @@ namespace LocalTanks
                 RequireNonNegative(profile.dustSpeed, field + ".dustSpeed", errors);
                 RequireNonNegative(profile.exhaustIdleRate, field + ".exhaustIdleRate", errors);
                 RequireNonNegative(profile.exhaustLoadedRate, field + ".exhaustLoadedRate", errors);
+                RequireNonNegative(profile.exhaustStartPuffSeconds, field + ".exhaustStartPuffSeconds", errors);
+                RequireNonNegative(profile.exhaustStartPuffMultiplier, field + ".exhaustStartPuffMultiplier", errors);
                 RequireRange(profile.markOpacity, 0f, 1f, field + ".markOpacity", errors);
                 RequirePositive(profile.markSpacingFraction, field + ".markSpacingFraction", errors);
                 RequirePositive(profile.markLengthFraction, field + ".markLengthFraction", errors);

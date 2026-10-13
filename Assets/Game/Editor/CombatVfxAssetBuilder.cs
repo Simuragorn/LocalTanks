@@ -320,6 +320,7 @@ namespace LocalTanks.Editor
             materials["debris"] = CreateMaterial(shader, "vfx_debris", textures[VfxTextureLibrary.DirtChunk], false);
             materials["spark"] = CreateMaterial(shader, "vfx_spark", textures[VfxTextureLibrary.Spark], true);
             materials["flash"] = CreateMaterial(shader, "vfx_flash", textures[VfxTextureLibrary.FlashStar], true);
+            materials["petals"] = CreateMaterial(shader, "vfx_petals", textures[VfxTextureLibrary.FlashPetals], true);
             materials["core"] = CreateMaterial(shader, "vfx_core", textures[VfxTextureLibrary.FlashCore], true);
             materials["flame"] = CreateMaterial(shader, "vfx_flame", textures[VfxTextureLibrary.Flame], true);
             materials["ember"] = CreateMaterial(shader, "vfx_ember", textures[VfxTextureLibrary.Ember], true);
@@ -434,19 +435,27 @@ namespace LocalTanks.Editor
         private static void BuildMuzzleFlash(GameObject root, CombatVfxCatalog catalog, Dictionary<string, Material> materials)
         {
             float seconds = Max(catalog.weaponProfiles, profile => profile.flashSeconds);
-            // The first pass was too modest to notice next to its own smoke, so the flash is now larger
-            // and lasts a few frames longer: a shot has to be readable as a shot, not only as a puff.
-            ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder, seconds + 0.08f, 0.06f, 0.11f, 0.3f, 0.46f);
+            // Three layers instead of one symmetric star: a small white-hot core, an irregular bloom of
+            // petals, and thin spikes thrown along the bore. The rig rotates and scales the whole thing a
+            // little on every shot, so a burst of fire never looks like one sprite repeated.
+            ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder + 1, seconds + 0.06f, 0.04f, 0.07f, 0.16f, 0.28f);
             SetBurst(core, 1);
-            SetPlanarVelocity(core, -0.25f, 0.25f, 1.2f, 2.4f);
+            SetPlanarVelocity(core, -0.1f, 0.1f, 0.4f, 1.0f);
             SetSizeOverLifetime(core, 1.1f, 0.5f);
-            SetFade(core, 0.05f);
+            SetFade(core, 0.06f);
 
-            ParticleSystem star = AddSystem(root, "Star", materials["flash"], SparkSortingOrder, seconds + 0.12f, 0.06f, 0.12f, 0.75f, 1.15f);
-            SetBurst(star, 1);
-            SetPlanarVelocity(star, -0.35f, 0.35f, 0.8f, 1.8f);
-            SetSizeOverLifetime(star, 1f, 0.35f);
-            SetFade(star, 0.05f);
+            ParticleSystem petals = AddSystem(root, "Petals", materials["petals"], FlashSortingOrder, seconds + 0.1f, 0.06f, 0.12f, 0.55f, 0.95f);
+            SetBurst(petals, 1);
+            SetPlanarVelocity(petals, -0.2f, 0.2f, 0.7f, 1.6f);
+            SetSizeOverLifetime(petals, 1f, 0.5f);
+            SetFade(petals, 0.08f);
+
+            ParticleSystem spikes = AddSystem(root, "Spikes", materials["spark"], SparkSortingOrder, seconds + 0.08f, 0.05f, 0.11f, 0.22f, 0.45f);
+            SetBurst(spikes, 5);
+            // Spikes leave the bore, so their spread along the barrel is narrow and their side spread tiny.
+            SetPlanarVelocity(spikes, -0.25f, 0.25f, 1.2f, 2.6f);
+            SetSizeOverLifetime(spikes, 1f, 0.3f);
+            SetFade(spikes, 0.06f);
         }
 
         /// <summary>
@@ -563,35 +572,41 @@ namespace LocalTanks.Editor
 
         private static void BuildDamageFire(GameObject root, Dictionary<string, Material> materials)
         {
-            // The fire is the loudest state a machine has, so it is built to be seen from the battle zoom
-            // rather than to be subtle: a burning wreck that reads as a thin wisp is worse than none.
-            ParticleSystem flame = AddSystem(root, "Flame", materials["flame"], FireSortingOrder, 3f, 0.3f, 0.55f, 0.45f, 0.75f);
-            SetRate(flame, 8f);
-            SetPlanarVelocity(flame, -0.18f, 0.18f, 0.25f, 0.8f);
-            SetSizeOverLifetime(flame, 1.1f, 0.7f);
+            // A wreck burns over its engine deck, not from a single point: every layer spreads its emission
+            // across a patch of the hull, and the layers are dense enough that the flame reads as fire
+            // rather than as a couple of bright slivers. Fire is the one effect that tells a player a
+            // machine is finished, so it is built to be unmistakable.
+            ParticleSystem flame = AddSystem(root, "Flame", materials["flame"], FireSortingOrder, 3f, 0.35f, 0.7f, 0.45f, 0.8f, 0.42f, 0.55f);
+            SetRate(flame, 22f);
+            SetPlanarVelocity(flame, -0.2f, 0.2f, 0.25f, 0.85f);
+            SetSizeOverLifetime(flame, 1.15f, 0.7f);
             SetFade(flame, 0.15f);
 
-            ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.5f, 1.1f, 0.05f, 0.1f);
-            SetRate(ember, 3f);
-            SetPlanarVelocity(ember, -0.6f, 0.6f, 0.6f, 1.6f);
+            ParticleSystem core = AddSystem(root, "Core", materials["core"], FireSortingOrder + 1, 3f, 0.2f, 0.4f, 0.2f, 0.38f, 0.24f, 0.3f);
+            SetRate(core, 12f);
+            SetPlanarVelocity(core, -0.12f, 0.12f, 0.2f, 0.6f);
+            SetSizeOverLifetime(core, 1.1f, 0.6f);
+            SetFade(core, 0.12f);
+
+            ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.6f, 1.3f, 0.04f, 0.09f, 0.3f, 0.4f);
+            SetRate(ember, 9f);
+            SetPlanarVelocity(ember, -0.7f, 0.7f, 0.7f, 1.9f);
             SetSizeOverLifetime(ember, 1f, 0.3f);
             SetFade(ember, 0.1f);
         }
 
         private static void BuildExhaustSmoke(GameObject root, Dictionary<string, Material> materials)
         {
-            ParticleSystem exhaust = AddSystem(root, "Exhaust", materials["exhaust"], DustSortingOrder, 2f, 0.8f, 1.5f, 0.2f, 0.35f);
-            SetRate(exhaust, 1.5f);
-            SetPlanarVelocity(exhaust, -0.2f, 0.2f, 0.15f, 0.5f);
-            SetSizeOverLifetime(exhaust, 0.8f, 1.9f);
+            // The exhaust is the effect a player watches to read what a machine is doing, so it is dense
+            // and long lived: the rig raises the rate while the engine is loaded and multiplies it while a
+            // machine pulls away from a standstill.
+            ParticleSystem exhaust = AddSystem(root, "Exhaust", materials["exhaust"], DustSortingOrder, 2f, 1.0f, 1.9f, 0.26f, 0.46f);
+            SetRate(exhaust, 6f);
+            SetPlanarVelocity(exhaust, -0.22f, 0.22f, 0.2f, 0.65f);
+            SetSizeOverLifetime(exhaust, 0.8f, 2.1f);
             SetFade(exhaust, 0.2f);
         }
 
-        /// <summary>
-        /// Creates one particle system of an effect with the modules the runtime relies on already set:
-        /// no shape (so every particle starts at the transform), planar velocity, and billboard rendering
-        /// with an explicit draw order.
-        /// </summary>
         private static ParticleSystem AddSystem(
             GameObject root,
             string name,
@@ -602,6 +617,31 @@ namespace LocalTanks.Editor
             float lifetimeMax,
             float sizeMin,
             float sizeMax)
+        {
+            return AddSystem(root, name, material, sortingOrder, duration, lifetimeMin, lifetimeMax, sizeMin, sizeMax, 0f, 0f);
+        }
+
+        /// <summary>
+        /// Creates one particle system of an effect with the modules the runtime relies on already set:
+        /// no shape (so every particle starts at the transform), planar velocity, and billboard rendering
+        /// with an explicit draw order.
+        /// </summary>
+        /// <param name="spreadX">
+        /// Half width of the patch particles are born over. A fire spreads across the engine deck instead
+        /// of rising from a single point, and the shape is a plain box in the plane of the map.
+        /// </param>
+        private static ParticleSystem AddSystem(
+            GameObject root,
+            string name,
+            Material material,
+            int sortingOrder,
+            float duration,
+            float lifetimeMin,
+            float lifetimeMax,
+            float sizeMin,
+            float sizeMax,
+            float spreadX,
+            float spreadY)
         {
             GameObject child = new GameObject(name);
             child.transform.SetParent(root.transform, false);
@@ -619,10 +659,15 @@ namespace LocalTanks.Editor
             main.startColor = Color.white;
             main.gravityModifier = 0f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 128;
+            main.maxParticles = 256;
 
             ParticleSystem.ShapeModule shape = system.shape;
-            shape.enabled = false;
+            shape.enabled = spreadX > 0f && spreadY > 0f;
+            if (shape.enabled)
+            {
+                shape.shapeType = ParticleSystemShapeType.Box;
+                shape.scale = new Vector3(spreadX * 2f, spreadY * 2f, 0.001f);
+            }
 
             ParticleSystem.EmissionModule emission = system.emission;
             emission.enabled = true;

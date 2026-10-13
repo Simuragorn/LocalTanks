@@ -10,10 +10,6 @@
       "smokeScale": 0.35,
       "smokeSeconds": 0.9,
       "smokeBurst": 5,
-      "recoilDistance": 0.02,
-      "lightIntensity": 0.5,
-      "lightRadius": 1.2,
-      "lightSeconds": 0.04,
       "barrelSmokeSeconds": 0.3
     },
     {
@@ -25,10 +21,6 @@
       "smokeScale": 0.5,
       "smokeSeconds": 1.1,
       "smokeBurst": 8,
-      "recoilDistance": 0.032,
-      "lightIntensity": 0.7,
-      "lightRadius": 1.6,
-      "lightSeconds": 0.048,
       "barrelSmokeSeconds": 0.45
     },
     {
@@ -40,10 +32,6 @@
       "smokeScale": 0.75,
       "smokeSeconds": 1.5,
       "smokeBurst": 12,
-      "recoilDistance": 0.055,
-      "lightIntensity": 0.9,
-      "lightRadius": 2.2,
-      "lightSeconds": 0.056,
       "barrelSmokeSeconds": 0.7
     },
     {
@@ -55,10 +43,6 @@
       "smokeScale": 1.05,
       "smokeSeconds": 2.0,
       "smokeBurst": 17,
-      "recoilDistance": 0.085,
-      "lightIntensity": 1.2,
-      "lightRadius": 2.9,
-      "lightSeconds": 0.068,
       "barrelSmokeSeconds": 1.0
     },
     {
@@ -70,10 +54,6 @@
       "smokeScale": 1.45,
       "smokeSeconds": 2.6,
       "smokeBurst": 24,
-      "recoilDistance": 0.13,
-      "lightIntensity": 1.5,
-      "lightRadius": 3.8,
-      "lightSeconds": 0.085,
       "barrelSmokeSeconds": 1.3
     }
   ],
@@ -86,15 +66,17 @@
       "dustSizeFraction": 0.5,
       "dustRate": 5.0,
       "dustSpeed": 1.0,
-      "exhaustIdleRate": 1.2,
-      "exhaustLoadedRate": 5.0,
+      "exhaustIdleRate": 2.6,
+      "exhaustLoadedRate": 11.0,
       "markOpacity": 0.5,
       "markSpacingFraction": 0.125,
       "markLengthFraction": 0.26,
       "markWidthFraction": 0.42,
       "markFadeSeconds": 9.0,
       "markLimit": 40,
-      "sprayRate": 8.0
+      "sprayRate": 8.0,
+      "exhaustStartPuffSeconds": 0.9,
+      "exhaustStartPuffMultiplier": 3.5
     },
     {
       "id": "medium",
@@ -104,15 +86,17 @@
       "dustSizeFraction": 0.55,
       "dustRate": 6.5,
       "dustSpeed": 1.0,
-      "exhaustIdleRate": 1.5,
-      "exhaustLoadedRate": 6.5,
+      "exhaustIdleRate": 3.0,
+      "exhaustLoadedRate": 13.0,
       "markOpacity": 0.56,
       "markSpacingFraction": 0.125,
       "markLengthFraction": 0.26,
       "markWidthFraction": 0.44,
       "markFadeSeconds": 10.0,
       "markLimit": 48,
-      "sprayRate": 10.0
+      "sprayRate": 10.0,
+      "exhaustStartPuffSeconds": 0.9,
+      "exhaustStartPuffMultiplier": 3.5
     },
     {
       "id": "heavy",
@@ -122,15 +106,17 @@
       "dustSizeFraction": 0.6,
       "dustRate": 8.0,
       "dustSpeed": 1.05,
-      "exhaustIdleRate": 2.0,
-      "exhaustLoadedRate": 8.5,
+      "exhaustIdleRate": 3.4,
+      "exhaustLoadedRate": 16.0,
       "markOpacity": 0.62,
       "markSpacingFraction": 0.125,
       "markLengthFraction": 0.27,
       "markWidthFraction": 0.46,
       "markFadeSeconds": 11.0,
       "markLimit": 56,
-      "sprayRate": 12.0
+      "sprayRate": 12.0,
+      "exhaustStartPuffSeconds": 0.9,
+      "exhaustStartPuffMultiplier": 3.5
     }
   ],
   "damageProfiles": [
@@ -161,11 +147,11 @@
       "displayName": "Критически повреждённая машина",
       "minHealthFraction": 0.0,
       "wreck": false,
-      "smokeRate": 9.0,
-      "smokeOpacity": 0.4,
+      "smokeRate": 11.0,
+      "smokeOpacity": 0.44,
       "smokeSizeFraction": 1.0,
       "smokeRise": 1.15,
-      "fire": true
+      "fire": false
     },
     {
       "id": "wreck",
