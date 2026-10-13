@@ -124,6 +124,13 @@
     {"id": "wet_ground", "displayName": "Wet ground", "terrainId": "mud", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Ground_wet_01_AM.dds"},
     {"id": "fine_gravel", "displayName": "Fine gravel", "terrainId": "gravel", "tileable": true, "sourcePackage": "shared_content_sandbox-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Gravel_Sandy_Fine_14_AM.dds"},
     {"id": "damaged_soil", "displayName": "Damaged soil", "terrainId": "damaged_soil", "tileable": true, "sourcePackage": "shared_content_sandbox-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Soil_Damaged_Big_10_AM.dds"},
-    {"id": "earth", "displayName": "Packed earth", "terrainId": "earth", "tileable": true, "sourcePackage": "shared_content-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_Ground_10_2_AM.dds"}
+    {"id": "earth", "displayName": "Packed earth", "terrainId": "earth", "tileable": true, "sourcePackage": "shared_content-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_Ground_10_2_AM.dds"},
+
+    {"id": "mines_rock", "displayName": "Mines bedrock", "terrainId": "rock", "tileable": true, "sourcePackage": "shared_content_sandbox-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Rock_4_AM.dds"},
+    {"id": "mines_boulders", "displayName": "Mines boulders and scree", "terrainId": "stones", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_Stones_Big_AM.dds"},
+    {"id": "mines_rubble", "displayName": "Mines rubble and debris", "terrainId": "rubble", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_rock13_debris_AM.dds"},
+    {"id": "mines_ground", "displayName": "Mines ground", "terrainId": "ground", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_Ground_37_AM.dds"},
+    {"id": "mines_cracked_earth", "displayName": "Mines cracked earth", "terrainId": "cracked_earth", "tileable": true, "sourcePackage": "shared_content_sandbox-part1.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/Ground_cracks_01_AM.dds"},
+    {"id": "mines_sand", "displayName": "Mines sand", "terrainId": "sand", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_sand_river_water_AM.dds"}
   ]
 }
