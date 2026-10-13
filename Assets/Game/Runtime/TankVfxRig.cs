@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace LocalTanks
 {
@@ -62,6 +63,13 @@ namespace LocalTanks
         private ParticleSystem[] rightSpray;
         private ParticleSystem[] damageSmoke;
         private ParticleSystem[] damageFire;
+
+        /// <summary>
+        /// The lights the fire prefab carries. A light is not a particle: switching emission off leaves
+        /// it shining, and a machine that is not burning must not light the map, so it is switched with
+        /// the fire itself.
+        /// </summary>
+        private Light2D[] fireLights = System.Array.Empty<Light2D>();
         private ParticleSystem[] exhaust;
         private ParticleSystem[] barrelSmoke;
         private Transform exhaustAnchor;
@@ -218,6 +226,7 @@ namespace LocalTanks
             rightSpray = AttachLoop(provider, CombatVfxEffects.WaterSpray, "VfxSprayRight", halfTrackOffset, RearOffset());
             damageSmoke = AttachLoop(provider, CombatVfxEffects.DamageSmoke, "VfxDamageSmoke", hullSize.x * 0.12f, -hullSize.y * 0.26f);
             damageFire = AttachLoop(provider, CombatVfxEffects.DamageFire, "VfxDamageFire", -hullSize.x * 0.18f, -hullSize.y * 0.2f);
+            fireLights = CollectLights(damageFire);
             exhaust = AttachExhaust(provider);
             barrelSmoke = AttachBarrelSmoke(provider);
 
@@ -517,6 +526,7 @@ namespace LocalTanks
             SetEmission(exhaust, 0f);
             SetEmission(damageSmoke, 0f);
             SetEmissionEnabled(damageFire, false);
+            SetLightsEnabled(fireLights, false);
             SetEmission(barrelSmoke, 0f);
         }
 
@@ -585,6 +595,7 @@ namespace LocalTanks
             // smokes, and fire is what tells the player that this machine is finished. The layered rates
             // belong to the generated prefab, so the rig only opens and closes the fire.
             SetEmissionEnabled(damageFire, profile.fire);
+            SetLightsEnabled(fireLights, profile.fire);
         }
 
         private void Subscribe()
@@ -754,6 +765,31 @@ namespace LocalTanks
                 ParticleSystem.EmissionModule emission = system.emission;
                 emission.rateOverTime = Mathf.Max(0f, rate);
                 emission.enabled = rate > 0.01f;
+            }
+        }
+
+        /// <summary>The lights inside a generated effect prefab, if it has any.</summary>
+        private static Light2D[] CollectLights(ParticleSystem[] systems)
+        {
+            if (systems == null || systems.Length == 0)
+            {
+                return System.Array.Empty<Light2D>();
+            }
+
+            Transform root = systems[0].transform.parent;
+            return root != null
+                ? root.GetComponentsInChildren<Light2D>(true)
+                : System.Array.Empty<Light2D>();
+        }
+
+        private static void SetLightsEnabled(Light2D[] lights, bool enabled)
+        {
+            foreach (Light2D light in lights)
+            {
+                if (light != null)
+                {
+                    light.enabled = enabled;
+                }
             }
         }
 

@@ -460,7 +460,7 @@ namespace LocalTanks.Editor
             SetHotColor(spikes, 3.4f, 2.9f, 2f);
             // Warm and short: the light follows the burst, and the pool switches the whole instance off
             // when the flash is over, so the light is brief without any code to fade it.
-            AddLight(root, "FlashLight", new Color(1f, 0.74f, 0.42f), 1.7f, 0.08f, 2.6f, 0.55f);
+            AddLight(root, "FlashLight", new Color(1f, 0.74f, 0.42f), 1.1f, 0.08f, 2.2f, 0.6f);
             SetBurst(spikes, 5);
             // Spikes leave the bore, so their spread along the barrel is narrow and their side spread tiny.
             SetPlanarVelocity(spikes, -0.25f, 0.25f, 1.2f, 2.6f);
@@ -619,7 +619,7 @@ namespace LocalTanks.Editor
             // A wreck lights its own surroundings for as long as it burns, which is what makes a burning
             // machine visible from across the map and what turns the fire into something in the world
             // rather than a picture drawn on top of it.
-            AddLight(root, "FireLight", new Color(1f, 0.52f, 0.2f), 1.7f, 0.25f, 3.4f, 0.45f);
+            AddLight(root, "FireLight", new Color(1f, 0.52f, 0.2f), 0.8f, 0.25f, 2.4f, 0.5f);
         }
 
         /// <summary>

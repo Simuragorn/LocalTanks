@@ -36,7 +36,7 @@ namespace LocalTanks.Editor
         /// </summary>
         public const float BloomThreshold = 1.05f;
 
-        public const float BloomIntensity = 0.85f;
+        public const float BloomIntensity = 0.45f;
         public const float BloomScatter = 0.55f;
 
         /// <summary>Name of the root object that carries the scene's global light.</summary>
