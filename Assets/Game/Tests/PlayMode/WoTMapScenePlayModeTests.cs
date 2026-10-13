@@ -46,6 +46,38 @@ namespace LocalTanks.Tests
                 Is.EqualTo(2), "The arena has two bases.");
         }
 
+        /// <summary>
+        /// Vegetation is cover, so it must not stop a tank or a shell. A standing tree used to carry a
+        /// solid collider because it can be knocked down, which made forests block both movement and
+        /// shooting - the one thing cover must never do.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ConvertedArena_VegetationNeverBlocksMovementOrFire()
+        {
+            if (!SceneExists) Assert.Ignore($"Scene '{SceneName}' is not in the build settings yet.");
+
+            SceneManager.LoadScene(SceneName);
+            yield return null;
+            yield return null;
+
+            WoTMapContentBuilder builder = Object.FindAnyObjectByType<WoTMapContentBuilder>();
+            Assert.That(builder, Is.Not.Null);
+
+            GameObject vegetation = GameObject.Find("Vegetation");
+            Assert.That(vegetation, Is.Not.Null, "The arena must group its plants under one root.");
+
+            System.Collections.Generic.List<Collider2D> solid = vegetation
+                .GetComponentsInChildren<Collider2D>(true)
+                .Where(collider => !collider.isTrigger)
+                .ToList();
+            Assert.That(solid, Is.Empty,
+                $"{solid.Count} plants carry a solid collider, so they stop tanks and shells. " +
+                $"First offenders: {string.Join(", ", solid.Take(5).Select(item => item.name))}");
+
+            Assert.That(vegetation.GetComponentsInChildren<ConcealmentZone>(true).Length,
+                Is.EqualTo(builder.BuiltPlants), "Every plant must conceal; that is all it does.");
+        }
+
         [UnityTest]
         public IEnumerator ConvertedArena_HasGroundAndCollidersInTheWorld()
         {

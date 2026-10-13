@@ -55,6 +55,12 @@ namespace LocalTanks
         public int SpritesApplied { get; private set; }
         public WoTMapAsset Map => map;
 
+        /// <summary>How much concealment a bush gives. Matches the value the other arenas use.</summary>
+        private const float BushConcealmentBonus = 0.18f;
+
+        /// <summary>How much concealment a standing tree gives: it hides a hull outright.</summary>
+        private const float TreeConcealmentBonus = 0.45f;
+
         public void Configure(WoTMapAsset asset)
         {
             map = asset;
@@ -243,15 +249,24 @@ namespace LocalTanks
             foreach (WoTMapVegetation plant in plants)
             {
                 if (plant == null) continue;
-                GameObject target = new GameObject(plant.kind == MapCoverKind.Tree ? "Tree" : "Bush");
+                bool isTree = plant.kind == MapCoverKind.Tree;
+                GameObject target = new GameObject(isTree ? "Tree" : "Bush");
                 target.transform.SetParent(vegetationRoot, false);
                 target.transform.localPosition = new Vector3(plant.center.x, plant.center.y, 0f);
 
+                // Vegetation is cover, never a wall. Its collider is a trigger, exactly as the River
+                // Crossing arena builds its concealment, so a tank drives through and a shell flies
+                // through. A standing tree used to carry a solid collider because it can be knocked down,
+                // which made forests stop both movement and shooting - the one thing cover must not do.
                 CircleCollider2D circle = target.AddComponent<CircleCollider2D>();
                 circle.radius = Mathf.Max(0.2f, plant.radius);
-                circle.isTrigger = !plant.destructible;
+                circle.isTrigger = true;
 
-                AddSprite(target, plant.sourceResource, plant.kind == MapCoverKind.Tree ? "tree" : "bush",
+                // A tree hides a tank outright; a bush only shades it. The zone also fades the sprite as
+                // the player drives close, so cover cannot hide the player's own machine or the ground.
+                target.AddComponent<ConcealmentZone>().Configure(isTree ? TreeConcealmentBonus : BushConcealmentBonus);
+
+                AddSprite(target, plant.sourceResource, isTree ? "tree" : "bush",
                     new Vector2(plant.radius * 2f, plant.radius * 2f), allowVegetation: true);
                 BuiltPlants++;
             }
