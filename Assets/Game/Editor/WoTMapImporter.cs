@@ -34,7 +34,7 @@ namespace LocalTanks.Editor
 
         public static string PrimitivesPath(string mapId) => $"{PrimitivesRoot}/{mapId}/{mapId}_primitives.json";
         public static string AssetPath(string mapId) => $"{AssetRoot}/{mapId}_map.asset";
-        public static string ScenePath(string mapId) => $"Assets/Game/Scenes/Battle_{mapId}.unity";
+        public static string ScenePath(string mapId) => BattleSceneLayout.MapScenePath(mapId);
 
         /// <summary>
         /// Ids of every tank the game can field, taken from the combat database rather than from a list

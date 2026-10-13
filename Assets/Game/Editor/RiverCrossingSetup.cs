@@ -15,9 +15,12 @@ namespace LocalTanks.Editor
     public static class RiverCrossingSetup
     {
         private const string SourcePath = "Assets/Game/GameData/Maps/river_crossing.json";
-        private const string ScenePath = "Assets/Game/Scenes/Battle_RiverCrossing.unity";
-        private const string DuelScenePath = "Assets/Game/Scenes/Battle_AiDuelLab.unity";
-        private const string PlayerTestScenePath = "Assets/Game/Scenes/Battle_PlayerAiTestLab.unity";
+
+        // River Crossing is a playable map; the duel and player test laboratories are derived from it and
+        // stay service scenes. Both paths come from the scene layout, the only place that knows the split.
+        private static string ScenePath => BattleSceneLayout.Path(BattleSceneLayout.RiverCrossing);
+        private static string DuelScenePath => BattleSceneLayout.Path(BattleSceneLayout.AiDuelLab);
+        private static string PlayerTestScenePath => BattleSceneLayout.Path(BattleSceneLayout.PlayerAiTestLab);
         private const string GeneratedRoot = "Assets/Game/Generated/RiverCrossing";
         private const string TilesRoot = GeneratedRoot + "/Tiles";
         private const string LineMaterialPath = GeneratedRoot + "/MapLine.mat";
@@ -38,7 +41,7 @@ namespace LocalTanks.Editor
             EditorApplication.delayCall += () =>
             {
                 if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling ||
-                    AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) != null)
+                    BattleSceneLayout.Exists(BattleSceneLayout.RiverCrossing))
                 {
                     return;
                 }
@@ -57,6 +60,9 @@ namespace LocalTanks.Editor
         [MenuItem("Local Tanks/Build River Crossing Map")]
         public static void Build()
         {
+            BattleSceneLayout.EnsurePlaced(BattleSceneLayout.RiverCrossing);
+            BattleSceneLayout.EnsurePlaced(BattleSceneLayout.AiDuelLab);
+            BattleSceneLayout.EnsurePlaced(BattleSceneLayout.PlayerAiTestLab);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             MapSource source = LoadAndValidateSource();
             TacticalMapDescriptorImporter.Reimport();

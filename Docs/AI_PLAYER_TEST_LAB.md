@@ -8,7 +8,7 @@
 
 ## Запуск и настройка
 
-1. Открыть `Assets/Game/Scenes/Battle_PlayerAiTestLab.unity` и запустить Play Mode.
+1. Открыть `Assets/Game/Scenes/Labs/Battle_PlayerAiTestLab.unity` и запустить Play Mode.
 2. Выбрать машину игрока из всех `availableInGame` определений, имеющих префаб в сцене.
 3. Выбрать от 0 до 6 союзных ботов и от 1 до 7 противников.
 4. Выбрать уровень I–X для всей техники ботов.

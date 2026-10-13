@@ -14,7 +14,12 @@ namespace LocalTanks.Editor
     public static class PrototypeSetup
     {
         private const string ProjectilePrefabPath = "Assets/Game/Prefabs/Combat/PrototypeProjectile.prefab";
-        private const string ScenePath = "Assets/Game/Scenes/Battle_TestRange.unity";
+
+        /// <summary>
+        /// The test range is a service scene, so it lives under <c>Labs</c>. The path comes from the one
+        /// place that knows the layout instead of being written out again here.
+        /// </summary>
+        private static string ScenePath => BattleSceneLayout.Path(BattleSceneLayout.TestRange);
         private const string SettingsOverlayUxmlPath = "Assets/Game/UI/SettingsOverlay.uxml";
         private const string SettingsOverlayUssPath = "Assets/Game/UI/SettingsOverlay.uss";
         private const string SettingsPanelSettingsPath = "Assets/Game/Generated/UI/SettingsPanelSettings.asset";
@@ -112,6 +117,7 @@ namespace LocalTanks.Editor
         [MenuItem("Local Tanks/Build Sprint 002 Prototype")]
         public static void BuildAll()
         {
+            BattleSceneLayout.EnsurePlaced(BattleSceneLayout.TestRange);
             GameObject[] tankPrefabs = BuildCombatAssetsInternal();
             TankBuildSpec[] availableSpecs = TankSpecs
                 .Where(spec => LoadDefinition(spec).availableInGame)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -74,7 +74,7 @@ namespace LocalTanks.Editor
             EditorSceneManager.CloseScene(scene, true);
         }
 
-        private static string ScenePath => WoTMapImporter.ScenePath(DefaultMapId);
+        private static string ScenePath => BattleSceneLayout.EnsurePlaced(BattleSceneLayout.MapSceneName(DefaultMapId));
 
         private static string AssetPath => WoTMapImporter.AssetPath(DefaultMapId);
 
@@ -108,7 +108,9 @@ namespace LocalTanks.Editor
         public static void Build(string mapId)
         {
             WoTMapAsset asset = WoTMapImporter.ImportAsset(mapId);
-            string scenePath = WoTMapImporter.ScenePath(mapId);
+            // The arena is a playable map, so the scene belongs under Maps; placing it first means a scene
+            // that has not been moved yet is never rebuilt as a second copy next to the old one.
+            string scenePath = BattleSceneLayout.EnsurePlaced(BattleSceneLayout.MapSceneName(mapId));
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = $"Battle_{mapId}";
             SceneManager.SetActiveScene(scene);

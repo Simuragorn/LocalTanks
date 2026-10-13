@@ -14,7 +14,9 @@ namespace LocalTanks.Editor
     public static class NavigationRangeSetup
     {
         private const string SourcePath = "Assets/Game/GameData/Maps/navigation_range.json";
-        private const string ScenePath = "Assets/Game/Scenes/Battle_NavigationRange.unity";
+
+        /// <summary>The navigation range is a service scene, so its path comes from the scene layout.</summary>
+        private static string ScenePath => BattleSceneLayout.Path(BattleSceneLayout.NavigationRange);
         private const string GeneratedRoot = "Assets/Game/Generated/Navigation";
         private const string TilesRoot = GeneratedRoot + "/Tiles";
         private const string ShapeTexturePath = GeneratedRoot + "/WhiteSquare.png";
@@ -28,6 +30,7 @@ namespace LocalTanks.Editor
         [MenuItem("Local Tanks/Build Navigation Range")]
         public static void Build()
         {
+            BattleSceneLayout.EnsurePlaced(BattleSceneLayout.NavigationRange);
             NavigationMapSource source = LoadAndValidateSource();
             EnsureFolder("Assets/Game/Generated");
             EnsureFolder(GeneratedRoot);

@@ -37,7 +37,7 @@
       "timeoutSeconds": 1800,
       "description": "Rebuild the test range scene and its prototype assets.",
       "outputs": [
-        "Assets/Game/Scenes/Battle_TestRange.unity"
+        "Assets/Game/Scenes/Labs/Battle_TestRange.unity"
       ]
     },
     {
@@ -48,7 +48,19 @@
       "timeoutSeconds": 1800,
       "description": "Rebuild the navigation range scene.",
       "outputs": [
-        "Assets/Game/Scenes/Battle_NavigationRange.unity"
+        "Assets/Game/Scenes/Labs/Battle_NavigationRange.unity"
+      ]
+    },
+    {
+      "name": "MoveBattleScenesIntoMapsAndLabs",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.BattleSceneLayout.MoveScenesIntoPlace",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Apply the scene layout: move the battle scenes into Maps and Labs, repoint the build settings and the project template, and remove the unused sample scene.",
+      "outputs": [
+        "Assets/Game/Scenes/Maps",
+        "Assets/Game/Scenes/Labs"
       ]
     },
     {
@@ -70,7 +82,7 @@
       "timeoutSeconds": 1800,
       "description": "Rebuild the Mines battle scene from the converted WoT arena.",
       "outputs": [
-        "Assets/Game/Scenes/Battle_10_hills.unity"
+        "Assets/Game/Scenes/Maps/Battle_10_hills.unity"
       ]
     },
     {

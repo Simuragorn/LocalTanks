@@ -1,4 +1,5 @@
 using System.Linq;
+using LocalTanks.Editor;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -14,9 +15,11 @@ namespace LocalTanks.Tests
     /// </summary>
     public sealed class BattleVisibilitySceneSettingsTests
     {
-        private const string RiverCrossingScene = "Assets/Game/Scenes/Battle_RiverCrossing.unity";
-        private const string AiDuelLabScene = "Assets/Game/Scenes/Battle_AiDuelLab.unity";
-        private const string PlayerAiTestLabScene = "Assets/Game/Scenes/Battle_PlayerAiTestLab.unity";
+        // Paths come from the scene layout, so moving a scene between Maps and Labs cannot leave this test
+        // opening a folder that no longer exists.
+        private static string RiverCrossingScene => BattleSceneLayout.Path(BattleSceneLayout.RiverCrossing);
+        private static string AiDuelLabScene => BattleSceneLayout.Path(BattleSceneLayout.AiDuelLab);
+        private static string PlayerAiTestLabScene => BattleSceneLayout.Path(BattleSceneLayout.PlayerAiTestLab);
 
         [Test]
         public void RiverCrossing_HidesUnseenTanks()

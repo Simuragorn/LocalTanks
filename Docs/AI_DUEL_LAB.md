@@ -4,7 +4,7 @@
 
 ## Запуск и управление
 
-1. Открыть `Assets/Game/Scenes/Battle_AiDuelLab.unity`.
+1. Открыть `Assets/Game/Scenes/Labs/Battle_AiDuelLab.unity`.
 2. Запустить Play Mode.
 3. Использовать экранные кнопки либо горячие клавиши:
    - `Space` — пауза или продолжение;

@@ -152,6 +152,13 @@
 5. Оценить силу по кадрам превью и, если нужно, поправить `TankTrackAnimator.DefaultStrength`; шаг рисунка меняется в `Tools/WoTSpritePipeline/config.local.json` (`render.trackFeaturePitchMetres`) или в `Local/Tracks/<vehicle-id>.json` с повторной компоновкой нужной машины.
 6. Проверить производительность в бою 7×7: 14 машин добавляют 14 отрисовок наложения, каждый со своим `MaterialPropertyBlock`, и каждая читает текстуру корпуса.
 
+## Проверка структуры сцен
+
+- Edit Mode `BattleSceneLayoutTests` падает, если сцена лежит не в своей папке, потерялась из build settings, потеряла GUID, выключена в списке, оставила второй экземпляр в плоской папке, если шаблон проекта указывает не на `URP2DSceneTemplate` или если неиспользуемая `SampleScene` вернулась.
+- Раскладка применяется операцией `MoveBattleScenesIntoMapsAndLabs` (`Local Tanks > Maintenance > Move Battle Scenes Into Maps And Labs`), а не правкой YAML: `AssetDatabase.MoveAsset` сохраняет GUID, а именно GUID хранят build settings и ссылки сцен. Проверка GUID добавлена потому, что первая версия миграции записала пустые GUID при пересборке списка: путь выглядел верным, а ссылка держалась до следующего импорта.
+- Генератор сцены перед сборкой вызывает `BattleSceneLayout.EnsurePlaced`, поэтому сцена, которая ещё не переехала, переносится, а не создаётся второй копией рядом со старой.
+- Ручная проверка: открыть `Assets/Game/Scenes/Maps/Battle_RiverCrossing.unity` и `Assets/Game/Scenes/Labs/Battle_TestRange.unity`, запустить Play Mode и убедиться, что имена сцен не изменились — Play Mode наборы и `-sweepScene` обращаются к сцене по имени.
+
 ## Фоновый запуск Unity: Headless, Graphical Background и очередь
 
 Любой запуск Unity идёт через одну точку входа. Тесты вызывают её через `Tools/Invoke-LocalTanksTests.ps1`, диагностические рендеры — напрямую:
