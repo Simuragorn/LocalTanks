@@ -25,7 +25,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Rebuild the combat prefabs, including their hull colliders.",
-      "outputs": ["Assets/Game/Prefabs/Tanks"]
+      "outputs": [
+        "Assets/Game/Prefabs/Tanks"
+      ]
     },
     {
       "name": "BuildTestRange",
@@ -34,7 +36,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Rebuild the test range scene and its prototype assets.",
-      "outputs": ["Assets/Game/Scenes/Battle_TestRange.unity"]
+      "outputs": [
+        "Assets/Game/Scenes/Battle_TestRange.unity"
+      ]
     },
     {
       "name": "BuildNavigationRange",
@@ -43,7 +47,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Rebuild the navigation range scene.",
-      "outputs": ["Assets/Game/Scenes/Battle_NavigationRange.unity"]
+      "outputs": [
+        "Assets/Game/Scenes/Battle_NavigationRange.unity"
+      ]
     },
     {
       "name": "BuildRiverCrossingMap",
@@ -52,7 +58,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Rebuild the River Crossing map, its scenes and its rules from the map source.",
-      "outputs": ["Assets/Game/Generated/RiverCrossing"]
+      "outputs": [
+        "Assets/Game/Generated/RiverCrossing"
+      ]
     },
     {
       "name": "BuildWotMapScene",
@@ -61,7 +69,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Rebuild the Mines battle scene from the converted WoT arena.",
-      "outputs": ["Assets/Game/Scenes/Battle_10_hills.unity"]
+      "outputs": [
+        "Assets/Game/Scenes/Battle_10_hills.unity"
+      ]
     },
     {
       "name": "BuildWotMapTacticalAnalysis",
@@ -70,7 +80,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Rebuild the tactical descriptor of the Mines arena.",
-      "outputs": ["Assets/Game/GameData/Generated/Tactical"]
+      "outputs": [
+        "Assets/Game/GameData/Generated/Tactical"
+      ]
     },
     {
       "name": "ImportWotMap",
@@ -79,7 +91,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Reimport the converted Mines arena asset.",
-      "outputs": ["Assets/Game/GameData/Generated/Maps"]
+      "outputs": [
+        "Assets/Game/GameData/Generated/Maps"
+      ]
     },
     {
       "name": "BuildCombatVfxAssets",
@@ -88,7 +102,10 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Draw the combat effect textures and build their materials and prefabs from the profiles. It must produce the same files here as in the editor, which is why it is headless.",
-      "outputs": ["Assets/Game/Art/Vfx/Generated", "Assets/Game/Resources/CombatVfx"]
+      "outputs": [
+        "Assets/Game/Art/Vfx/Generated",
+        "Assets/Game/Resources/CombatVfx"
+      ]
     },
     {
       "name": "ReimportCombatDefinitions",
@@ -97,7 +114,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Reimport the tank, weapon and shell definitions into generated assets.",
-      "outputs": ["Assets/Game/GameData/Generated"]
+      "outputs": [
+        "Assets/Game/GameData/Generated"
+      ]
     },
     {
       "name": "ReimportBattleScenario",
@@ -106,7 +125,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Reimport the battle scenario into its generated asset.",
-      "outputs": ["Assets/Game/GameData/Generated/Scenarios"]
+      "outputs": [
+        "Assets/Game/GameData/Generated/Scenarios"
+      ]
     },
     {
       "name": "ReimportAiDuelLabScenario",
@@ -115,7 +136,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Reimport the AI duel lab scenario into its generated asset.",
-      "outputs": ["Assets/Game/GameData/Generated/Scenarios"]
+      "outputs": [
+        "Assets/Game/GameData/Generated/Scenarios"
+      ]
     },
     {
       "name": "ReimportAiDuelLabCases",
@@ -124,7 +147,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Reimport the AI duel lab case catalogue from its source.",
-      "outputs": ["Assets/Game/GameData/Generated/Scenarios"]
+      "outputs": [
+        "Assets/Game/GameData/Generated/Scenarios"
+      ]
     },
     {
       "name": "RebuildTacticalMapAnalysis",
@@ -133,7 +158,10 @@
       "requiresGraphics": false,
       "timeoutSeconds": 1800,
       "description": "Rebuild the tactical map analysis from the arena primitives, and the document that describes it.",
-      "outputs": ["Assets/Game/GameData/Generated/Tactical", "Docs/MAP_TACTICS.md"]
+      "outputs": [
+        "Assets/Game/GameData/Generated/Tactical",
+        "Docs/MAP_TACTICS.md"
+      ]
     },
     {
       "name": "UpdateTankBalanceDocument",
@@ -142,7 +170,9 @@
       "requiresGraphics": false,
       "timeoutSeconds": 900,
       "description": "Regenerate the tank balance document from the combat definitions.",
-      "outputs": ["Docs/TANK_BALANCE.md"]
+      "outputs": [
+        "Docs/TANK_BALANCE.md"
+      ]
     },
     {
       "name": "ValidateCombatDefinitions",
@@ -208,7 +238,9 @@
       "requiresGraphics": true,
       "timeoutSeconds": 1800,
       "description": "Render the settings overlay at a normal and a short window size and write the pictures. UI Toolkit paints into a panel texture instead of going through a camera and needs frames to do it, so the capture runs as a Play Mode test with a real graphics device; the headless suite ignores it.",
-      "outputs": ["TestResults/SettingsPanel.png"]
+      "outputs": [
+        "TestResults/SettingsPanel.png"
+      ]
     },
     {
       "name": "RenderCombatVfxProof",
@@ -217,7 +249,9 @@
       "requiresGraphics": true,
       "timeoutSeconds": 1800,
       "description": "Render every combat effect and print pattern into one sheet at the moment it covers the most of the frame. A null graphics device discards every draw call, so this is the only way to see what the effect library looks like.",
-      "outputs": ["Docs/Media/CombatVfx.png"]
+      "outputs": [
+        "Docs/Media/CombatVfx.png"
+      ]
     },
     {
       "name": "RenderCombatVfxBattleProof",
@@ -226,7 +260,9 @@
       "requiresGraphics": true,
       "timeoutSeconds": 1800,
       "description": "Render the effects on real machines at battle scale, which is the only way to judge their size against a hull.",
-      "outputs": ["Docs/Media/CombatVfxBattle.png"]
+      "outputs": [
+        "Docs/Media/CombatVfxBattle.png"
+      ]
     },
     {
       "name": "CaptureTrackEffectPreview",
@@ -235,7 +271,9 @@
       "requiresGraphics": true,
       "timeoutSeconds": 1800,
       "description": "Render the tank tread overlay at four zoom levels and two phases, with the overlay off for comparison.",
-      "outputs": ["TestResults/TrackPreview"]
+      "outputs": [
+        "TestResults/TrackPreview"
+      ]
     },
     {
       "name": "CaptureRiverCrossingPreview",
@@ -244,7 +282,20 @@
       "requiresGraphics": true,
       "timeoutSeconds": 1800,
       "description": "Render the River Crossing map from the battle camera.",
-      "outputs": ["Docs/Media/RiverCrossing.png"]
+      "outputs": [
+        "Docs/Media/RiverCrossing.png"
+      ]
+    },
+    {
+      "name": "CaptureWotMapPreview",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.WoTMapSceneBuilder.CapturePreview",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the Mines arena from above so the ground surface and the navigation wash can be judged from the image rather than from scene data.",
+      "outputs": [
+        "Docs/Media/WoTMapArena.png"
+      ]
     }
   ]
 }

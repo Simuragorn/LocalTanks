@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,6 +19,71 @@ namespace LocalTanks.Editor
     /// </summary>
     public static class WoTMapSceneBuilder
     {
+        /// <summary>
+        /// Renders the arena from above and saves it, so the ground can be judged by looking at it rather
+        /// than by reading scene data. A null graphics device discards every draw call, so this is the only
+        /// way to see whether the surface, the navigation wash and the art end up as intended.
+        /// </summary>
+        [MenuItem("Local Tanks/Capture WoT Map Preview")]
+        public static void CapturePreview()
+        {
+            UnityEngine.SceneManagement.Scene scene =
+                EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            Camera camera = UnityEngine.Object.FindAnyObjectByType<Camera>();
+            if (camera == null)
+            {
+                throw new InvalidOperationException("The arena scene has no camera to render from.");
+            }
+
+            WoTMapAsset asset = AssetDatabase.LoadAssetAtPath<WoTMapAsset>(AssetPath);
+            if (asset == null)
+            {
+                throw new InvalidOperationException($"The converted map asset is missing at {AssetPath}.");
+            }
+
+            // Seen from directly above the middle, framed to the playable area: the same view a player gets
+            // when zoomed out, which is where a wrong ground colour or a stray overlay shows up first.
+            camera.transform.position = new Vector3(asset.worldCenter.x, asset.worldCenter.y, -10f);
+            camera.transform.rotation = Quaternion.identity;
+            camera.orthographic = true;
+            camera.orthographicSize = asset.playableSize.y * 0.5f;
+
+            RenderTexture target = new RenderTexture(1600, 1200, 24, RenderTextureFormat.ARGB32);
+            Texture2D image = new Texture2D(1600, 1200, TextureFormat.RGB24, false);
+            RenderTexture previous = RenderTexture.active;
+            try
+            {
+                camera.targetTexture = target;
+                RenderTexture.active = target;
+                camera.Render();
+                image.ReadPixels(new Rect(0f, 0f, target.width, target.height), 0, 0);
+                image.Apply();
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(PreviewPath)) ?? ".");
+                File.WriteAllBytes(Path.GetFullPath(PreviewPath), image.EncodeToPNG());
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                Debug.Log($"WoT arena preview saved: {PreviewPath}");
+            }
+            finally
+            {
+                camera.targetTexture = null;
+                RenderTexture.active = previous;
+                UnityEngine.Object.DestroyImmediate(target);
+                UnityEngine.Object.DestroyImmediate(image);
+            }
+
+            EditorSceneManager.CloseScene(scene, true);
+        }
+
+        private static string ScenePath => WoTMapImporter.ScenePath(DefaultMapId);
+
+        private static string AssetPath => WoTMapImporter.AssetPath(DefaultMapId);
+
+        /// <summary>The arena these menu entries build and preview.</summary>
+        private const string DefaultMapId = "10_hills";
+
+        /// <summary>Where a rendered preview of the arena is written for inspection.</summary>
+        private const string PreviewPath = "Docs/Media/WoTMapArena.png";
+
         private const string GeneratedRoot = "Assets/Game/Generated/WoTMap";
         private const string ClassIconsRoot = "Assets/Game/Generated/UI/VehicleClasses";
         private const float GroundSortingOrder = -20f;
@@ -38,7 +103,7 @@ namespace LocalTanks.Editor
         private const float ObstacleSortingOrder = -5f;
 
         [MenuItem("Local Tanks/Build WoT Map Scene (Mines)")]
-        public static void BuildDefaultMapScene() => Build("10_hills");
+        public static void BuildDefaultMapScene() => Build(DefaultMapId);
 
         public static void Build(string mapId)
         {
@@ -383,7 +448,7 @@ namespace LocalTanks.Editor
                 captureZone.radius = BaseRingRadius;
                 captureZone.isTrigger = true;
                 CaptureBase capture = baseObject.AddComponent<CaptureBase>();
-                capture.Configure(baseId, $"База {baseId}", owner, new CaptureRules(), ring);
+                capture.Configure(baseId, $"Ð‘Ð°Ð·Ð° {baseId}", owner, new CaptureRules(), ring);
                 bases.Add(capture);
             }
 

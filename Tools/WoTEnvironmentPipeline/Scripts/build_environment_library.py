@@ -29,6 +29,26 @@ def write_json(path: Path, value: dict) -> None:
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def flatten_alpha(path: Path) -> None:
+    """Forces a PNG opaque, leaving its colour untouched.
+
+    Terrain surfaces come from BC3 sources, which always carry an alpha channel that the map itself does
+    not use. Left in place it multiplies the sprite and darkens the ground, so it is removed here rather
+    than compensated for later by whoever draws it.
+    """
+    from PIL import Image
+
+    with Image.open(path) as image:
+        if image.mode not in ("RGBA", "LA", "P"):
+            return
+        converted = image.convert("RGBA")
+        # Taking the colour and forcing alpha keeps it exact; compositing over an opaque colour would
+        # itself darken or tint the result.
+        opaque = Image.new("RGB", converted.size)
+        opaque.paste(converted.convert("RGB"))
+        opaque.save(path)
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -164,6 +184,12 @@ def build_surface(entry: dict, package_root: Path, work_root: Path, output_root:
         surfaces_root.mkdir(parents=True, exist_ok=True)
         result = surfaces_root / f"{entry['id']}.png"
         shutil.copy2(candidates[0], result)
+        # A terrain surface is ground, so it is opaque by definition. The client stores these as BC3, which
+        # always carries an alpha channel, and texconv preserves it; Unity then multiplies the sprite by
+        # that channel and the map renders dark wherever it happens to be low. On the Mines surface that is
+        # most of the image, which turns a normal photograph into a black field with pale blotches. The
+        # colour data is correct, so only the unused channel is forced opaque here.
+        flatten_alpha(result)
         width, height, color_type = png_dimensions(result)
         return {
             **entry,
