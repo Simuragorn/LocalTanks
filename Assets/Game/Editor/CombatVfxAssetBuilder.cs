@@ -477,7 +477,7 @@ namespace LocalTanks.Editor
         {
             float seconds = Max(catalog.weaponProfiles, profile => profile.smokeSeconds);
             int burst = Mathf.Max(1, Max(catalog.weaponProfiles, profile => profile.smokeBurst));
-            ParticleSystem smoke = AddSystem(root, "Smoke", materials["smoke"], MuzzleSmokeSortingOrder, seconds, 0.5f, 1.0f, 0.35f, 0.6f);
+            ParticleSystem smoke = AddSystem(root, "Smoke", materials["smoke"], MuzzleSmokeSortingOrder, seconds, 0.5f, 1.0f, 0.24f, 0.42f);
             SetBurst(smoke, burst);
             SetPlanarVelocity(smoke, -0.4f, 0.4f, 0.6f, 1.7f);
             SetSizeOverLifetime(smoke, 0.7f, 1.7f);
@@ -576,19 +576,19 @@ namespace LocalTanks.Editor
             // across a patch of the hull, and the layers are dense enough that the flame reads as fire
             // rather than as a couple of bright slivers. Fire is the one effect that tells a player a
             // machine is finished, so it is built to be unmistakable.
-            ParticleSystem flame = AddSystem(root, "Flame", materials["flame"], FireSortingOrder, 3f, 0.35f, 0.7f, 0.45f, 0.8f, 0.42f, 0.55f);
+            ParticleSystem flame = AddSystem(root, "Flame", materials["flame"], FireSortingOrder, 3f, 0.35f, 0.7f, 0.45f, 0.8f, 0.18f, 0.3f);
             SetRate(flame, 22f);
             SetPlanarVelocity(flame, -0.2f, 0.2f, 0.25f, 0.85f);
             SetSizeOverLifetime(flame, 1.15f, 0.7f);
             SetFade(flame, 0.15f);
 
-            ParticleSystem core = AddSystem(root, "Core", materials["core"], FireSortingOrder + 1, 3f, 0.2f, 0.4f, 0.2f, 0.38f, 0.24f, 0.3f);
+            ParticleSystem core = AddSystem(root, "Core", materials["core"], FireSortingOrder + 1, 3f, 0.2f, 0.4f, 0.2f, 0.38f, 0.1f, 0.16f);
             SetRate(core, 12f);
             SetPlanarVelocity(core, -0.12f, 0.12f, 0.2f, 0.6f);
             SetSizeOverLifetime(core, 1.1f, 0.6f);
             SetFade(core, 0.12f);
 
-            ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.6f, 1.3f, 0.04f, 0.09f, 0.3f, 0.4f);
+            ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.6f, 1.3f, 0.04f, 0.09f, 0.14f, 0.22f);
             SetRate(ember, 9f);
             SetPlanarVelocity(ember, -0.7f, 0.7f, 0.7f, 1.9f);
             SetSizeOverLifetime(ember, 1f, 0.3f);

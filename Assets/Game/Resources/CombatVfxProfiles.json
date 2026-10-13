@@ -226,9 +226,9 @@
       "markOpacityMultiplier": 1.0,
       "splash": false,
       "markTint": {
-        "r": 0.17,
-        "g": 0.15,
-        "b": 0.12,
+        "r": 0.22,
+        "g": 0.2,
+        "b": 0.16,
         "a": 1.0
       }
     },
@@ -266,9 +266,9 @@
       "markOpacityMultiplier": 1.25,
       "splash": false,
       "markTint": {
-        "r": 0.11,
-        "g": 0.09,
-        "b": 0.07,
+        "r": 0.15,
+        "g": 0.12,
+        "b": 0.09,
         "a": 1.0
       }
     },
@@ -306,9 +306,9 @@
       "markOpacityMultiplier": 0.8,
       "splash": false,
       "markTint": {
-        "r": 0.18,
-        "g": 0.16,
-        "b": 0.13,
+        "r": 0.22,
+        "g": 0.2,
+        "b": 0.16,
         "a": 1.0
       }
     },
