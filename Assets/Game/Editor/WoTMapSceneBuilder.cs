@@ -8,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using UnityEngine.UIElements;
 
 namespace LocalTanks.Editor
 {
@@ -39,7 +40,7 @@ namespace LocalTanks.Editor
             CreateContentRoots(asset);
             CaptureBase[] bases = CreateBases(asset);
             CameraFollow2D camera = CreateCamera(navigation, asset);
-            TeamVisionSystem vision = CreateBattleSystems();
+            TeamVisionSystem vision = CreateBattleSystems(bases);
             CreateBattleDirector(asset, navigation, vision, camera, bases);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -253,6 +254,15 @@ namespace LocalTanks.Editor
         /// </summary>
         private const float BaseRingRadius = 9f;
 
+        /// <summary>Shared line material, produced by the River Crossing arena and reused here.</summary>
+        private const string LineMaterialPath = "Assets/Game/Generated/RiverCrossing/MapLine.mat";
+
+        /// <summary>Panel settings and stylesheets shared with the other arenas.</summary>
+        private const string PanelSettingsPath = "Assets/Game/Generated/RiverCrossing/BattleHudPanelSettings.asset";
+        private const string BattleHudUxmlPath = "Assets/Game/UI/BattleHud.uxml";
+        private const string BattleHudUssPath = "Assets/Game/UI/BattleHud.uss";
+        private const string SettingsOverlayUssPath = "Assets/Game/UI/SettingsOverlay.uss";
+
         /// <summary>
         /// Two capture bases, one per team, with a ring of spawn slots each. The source arena provides a
         /// single spawn per side, while a battle needs a slot per tank, so the slots are placed on rings
@@ -421,7 +431,33 @@ namespace LocalTanks.Editor
             return follow;
         }
 
-        private static TeamVisionSystem CreateBattleSystems()
+        /// <summary>Shared line material for the vision arcs, created once and reused by every arena.</summary>
+        private static Material GetOrCreateLineMaterial()
+        {
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(LineMaterialPath);
+            if (material != null)
+            {
+                return material;
+            }
+
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader == null)
+            {
+                throw new InvalidOperationException("Sprites/Default shader was not found.");
+            }
+
+            material = new Material(shader) { color = Color.white };
+            AssetDatabase.CreateAsset(material, LineMaterialPath);
+            return material;
+        }
+
+        /// <summary>
+        /// Vision, HUD and the developer overlays. The converted arena originally carried only vision and
+        /// the hidden-unit setting, so none of the developer keys worked on it: no time acceleration, no
+        /// AI inspector, no roster and no HUD. The overlays are the same components every other arena adds,
+        /// so the keys documented in Docs/AI_TESTING.md behave identically here.
+        /// </summary>
+        private static TeamVisionSystem CreateBattleSystems(CaptureBase[] bases)
         {
             GameObject systems = new GameObject("BattleSystems");
             SceneManager.MoveGameObjectToScene(systems, SceneManager.GetActiveScene());
@@ -436,7 +472,52 @@ namespace LocalTanks.Editor
             TeamVisionSystem vision = systems.AddComponent<TeamVisionSystem>();
             vision.Configure(rules, TeamId.TeamA);
             systems.AddComponent<BattleVisibilitySettings>().Configure(false, 0.28f);
+            BattleRoster roster = systems.AddComponent<BattleRoster>();
+            roster.Configure(TeamId.TeamA, vision);
+            systems.AddComponent<VisionDebugOverlay>().Configure(vision);
+            systems.AddComponent<VisionArcPresenter>().Configure(vision, GetOrCreateLineMaterial());
+            systems.AddComponent<CombatAiDebugOverlay>();
+            systems.AddComponent<DeveloperTimeScaleController>();
+            CreateBattleHud(roster, bases);
             return vision;
+        }
+
+        /// <summary>
+        /// The battle interface and its settings overlay. It is built here rather than saved into the
+        /// scene so the panel settings and stylesheets stay one editable source shared by every arena.
+        /// </summary>
+        private static void CreateBattleHud(BattleRoster roster, CaptureBase[] bases)
+        {
+            PanelSettings panelSettings = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelSettingsPath);
+            if (panelSettings == null)
+            {
+                panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                AssetDatabase.CreateAsset(panelSettings, PanelSettingsPath);
+            }
+
+            panelSettings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panelSettings.referenceResolution = new Vector2Int(1920, 1080);
+            panelSettings.match = 0.5f;
+            EditorUtility.SetDirty(panelSettings);
+
+            VisualTreeAsset visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(BattleHudUxmlPath);
+            StyleSheet styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(BattleHudUssPath);
+            StyleSheet settingsStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(SettingsOverlayUssPath);
+            if (visualTree == null || styleSheet == null || settingsStyleSheet == null)
+            {
+                throw new InvalidOperationException("Battle HUD or settings UXML/USS could not be loaded.");
+            }
+
+            GameObject hud = new GameObject("BattleHUD");
+            UIDocument document = hud.AddComponent<UIDocument>();
+            document.panelSettings = panelSettings;
+            document.visualTreeAsset = visualTree;
+            document.sortingOrder = 100;
+            hud.AddComponent<BattleHudController>().Configure(
+                roster,
+                new[] { styleSheet, settingsStyleSheet },
+                bases.OrderBy(item => item.BaseId, StringComparer.Ordinal).ToArray());
+            hud.AddComponent<SettingsPanelController>();
         }
 
         /// <summary>

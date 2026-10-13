@@ -79,6 +79,36 @@ namespace LocalTanks.Tests
         }
 
         /// <summary>
+        /// The developer keys must work on every arena. The converted map originally carried only vision
+        /// and the hidden-unit setting, so F4 (AI inspector), F5 (time acceleration) and the roster were
+        /// all dead here while they worked everywhere else. This checks the whole documented set.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ConvertedArena_CarriesTheDeveloperOverlays()
+        {
+            if (!SceneExists) Assert.Ignore($"Scene '{SceneName}' is not in the build settings yet.");
+
+            SceneManager.LoadScene(SceneName);
+            yield return null;
+            yield return null;
+
+            Assert.That(Object.FindAnyObjectByType<CombatAiDebugOverlay>(), Is.Not.Null,
+                "Without this overlay F4 and Tab do nothing.");
+            Assert.That(Object.FindAnyObjectByType<DeveloperTimeScaleController>(), Is.Not.Null,
+                "Without this overlay F5 cannot accelerate time.");
+            Assert.That(Object.FindAnyObjectByType<VisionDebugOverlay>(), Is.Not.Null,
+                "Without this overlay F3 cannot show the vision model.");
+            Assert.That(Object.FindAnyObjectByType<BattleRoster>(), Is.Not.Null,
+                "Without a roster the AI inspector has no bots to switch between.");
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            Assert.That(director, Is.Not.Null);
+            Assert.That(director.DiagnosticsOverlay, Is.Not.Null,
+                "Without the diagnostics overlay F1 shows no help and F6 no map analysis.");
+            Assert.That(Object.FindAnyObjectByType<NavigationDebugOverlay>(), Is.Not.Null,
+                "Without this overlay F2 cannot show the navigation grid.");
+        }
+
+        /// <summary>
         /// A capture base marks ground a tank must be able to occupy. CaptureBase carries
         /// RequireComponent for its zone, and a required collider is created solid, which once made each
         /// base a wall the size of its ring and trapped tanks inside their own spawn.
