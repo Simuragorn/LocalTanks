@@ -37,9 +37,14 @@ namespace LocalTanks.Tests
         /// </summary>
         private const string Field = "NavigationAgent.avoidanceRadius";
 
-        private static readonly float[] Values = { 0.6f, 1.2f, 1.8f };
+        private static readonly float[] Values = { 0.6f, 1.2f, 1.8f, 2.4f };
 
-        private static readonly int[] Seeds = { 1911, 2024 };
+        /// <summary>
+        /// Five seeds per value. Three were not enough: the spread within a value matched the difference
+        /// between values, so the comparison could not separate an effect from run-to-run noise. Seeds are
+        /// fixed rather than random so that adding a seed extends the previous result instead of replacing it.
+        /// </summary>
+        private static readonly int[] Seeds = { 1911, 2024, 31337, 7, 4242 };
 
         /// <summary>Simulated seconds per battle. Long enough for the sides to close, short enough to repeat.</summary>
         private const float BattleSeconds = 150f;

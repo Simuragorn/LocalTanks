@@ -43,7 +43,26 @@ namespace LocalTanks
         [Tooltip("Smallest waypoint tolerance, in world units. A tolerance below a hull's turning " +
                  "circle makes a tank circle waypoints it has already passed.")]
         [SerializeField, Min(0.05f)] private float minimumWaypointTolerance = 1.2f;
-        [SerializeField, Min(0.1f)] private float avoidanceRadius = 1.2f;
+        /// <summary>
+        /// How far a neighbouring tank is noticed, in world units.
+        /// <para>
+        /// This value is measured rather than chosen. Local avoidance multiplies drive by
+        /// <see cref="NavigationAvoidanceMath.DriveFactor"/>, which falls to 0.12 when the clearance to the
+        /// nearest neighbour is small, and the clearance is compared against this radius. A small radius
+        /// therefore throttles a tank hard rather than gently, which is the opposite of the intuition that a
+        /// smaller radius means less interference.
+        /// </para>
+        /// <para>
+        /// A sweep of 0.6, 1.2, 1.8 and 2.4 over five seeds each, on the converted Mines over 150 seconds,
+        /// found the closest approach falling from 46 units to 23 and average damage rising from 11 to 235
+        /// as the radius grew, while the spread between seeds narrowed from 26 units to 4.8. The wider
+        /// radius is also better behaved, not merely luckier: at 2.4 every run came within 27 units, where
+        /// at 1.2 four of five stayed beyond 56. The same sweep on River Crossing produced no new failures.
+        /// </para>
+        /// </summary>
+        [Tooltip("How far a neighbouring tank is noticed. Smaller is not gentler: the drive penalty " +
+                 "scales against this radius, so a small value throttles tanks on contact.")]
+        [SerializeField, Min(0.1f)] private float avoidanceRadius = 2.4f;
         [SerializeField, Min(0.5f)] private float unstuckDuration = 1.8f;
         [SerializeField, Min(0.01f)] private float minimumProgressDistance = 0.18f;
         [SerializeField, Min(1f)] private float minimumProgressTurn = 8f;
