@@ -1,7 +1,6 @@
 ---
 name: add-localtanks-tank
 description: Integrate a named World of Tanks vehicle into the LocalTanks Unity game end to end — canonical WoTGenerated sprite, top-configuration gameplay parameters, local engine/gun/turret/tracks audio profile, combat JSON, playable prefab, national team registration, generated scenes, tests and documentation. Use when the user asks to add, integrate or make playable a tank by name. Do not create or repaint sprites inside this skill and do not publish local WoT assets.
-whenToUse: Use for full vehicle integration; use render-wot-tank-sprite for artwork alone and wot-tank-audio for sound alone.
 ---
 
 # Add a LocalTanks tank

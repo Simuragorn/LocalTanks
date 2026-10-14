@@ -1,7 +1,6 @@
 ---
 name: render-wot-tank-sprite
 description: Render a named World of Tanks vehicle from the locally installed 3D packages into the canonical LocalTanks top-down sprite bundle (separated hull and turret layers plus layout, measured track mask and manifest sidecars) under Assets/LocalOnly/WoTGenerated, preserving model geometry and shared scale. Use when a LocalTanks tank needs new or refreshed artwork, or when an existing render manifest still records stock or intermediate modules. Do not use for an attached raster reference, and do not use it for combat JSON, prefab or roster integration — that is add-localtanks-tank.
-whenToUse: Use when tank art must be produced or replaced from the local WoT client before gameplay integration; skip it when a canonical sprite with a top-configuration manifest already exists.
 ---
 
 # Render a WoT tank sprite

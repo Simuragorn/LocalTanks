@@ -162,8 +162,15 @@ if (Test-Path -LiteralPath $prototypeSetupPath) {
 
 if ($tank.availableInGame -and (Test-Path -LiteralPath $riverSetupPath)) {
     $riverSource = Get-Content -LiteralPath $riverSetupPath -Raw
-    if ($riverSource -notmatch [regex]::Escape($TankId)) {
-        Add-Failure "RiverCrossingSetup does not bind tank '$TankId'."
+    $derivedBindingMarkers = @(
+        'tank.availableInGame',
+        'scenario?.entries',
+        'PrototypeSetup.FindTankPrefabPath(tankId)'
+    )
+    foreach ($marker in $derivedBindingMarkers) {
+        if ($riverSource -notmatch [regex]::Escape($marker)) {
+            Add-Failure "RiverCrossingSetup no longer derives playable/scenario prefab bindings from data (missing '$marker')."
+        }
     }
 }
 

@@ -1,7 +1,6 @@
 ---
 name: wot-tank-audio
 description: Resolve, extract and wire local World of Tanks Wwise audio for LocalTanks — vehicle effects, map music and ambience, battle flow, base capture and localized quick commands — into stable grouped clip IDs under Assets/LocalOnly/Resources/WoTAudio. Use when a tank needs an audio profile, a map or universal event set is requested, a Wwise event must be re-resolved, or the local cache must be regenerated. Do not commit extracted clips, banks or manifests.
-whenToUse: Use for any WoT Wwise extraction or integration task in LocalTanks; skip it when only sprite art or combat numbers change.
 ---
 
 # WoT audio for LocalTanks
@@ -21,7 +20,6 @@ Extract only the Wwise events the project actually names, decode them to WAV in 
 - `Assets/Game/GameData/Definitions/Tanks/<tank_id>.json` — the per-vehicle `audio` object that Unity consumes.
 - `Assets/Game/Resources/BattleAudioProfiles.json` — the per-arena audio profile: music states, ambience and battle signals plus their levels.
 - `Assets/Game/Resources/CrewVoiceProfiles.json` — nation → voice language, role → clip ID pattern, and the crew voice level. This is the only place the language of a crew line is decided.
-- `Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py` — collects voice event names from the client scripts and verifies them by hash; prints per-nation voice language IDs.
 - `Assets/Game/Runtime/WotAudioClipLibrary.cs` — the runtime resolver that turns a stable clip ID into the local WAV path through the manifest.
 
 Read the scripts before changing anything; the repository wins over this summary.

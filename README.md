@@ -37,4 +37,4 @@
 
 Редактируемые источники: карта `Assets/Game/GameData/Maps/river_crossing.json` и состав боя `Assets/Game/GameData/Scenarios/river_crossing_battle.json`. Художественный набор находится в `Assets/Game/Art/Environment/RiverCrossing`; игровая проходимость от него не зависит.
 
-Главный план: `PROJECT_PLAN.md`. Текущее состояние: `Docs/STATUS.md`. Сцены разделены на играбельные карты (`Assets/Game/Scenes/Maps/`) и служебные полигоны и лаборатории (`Assets/Game/Scenes/Labs/`); имена сцен при этом неизменны, потому что Play Mode наборы грузят их по имени.
+Карта документации и конвейеров: `Docs/README.md`. Главный план: `PROJECT_PLAN.md`. Текущее состояние: `Docs/STATUS.md`. Сцены разделены на играбельные карты (`Assets/Game/Scenes/Maps/`) и служебные полигоны и лаборатории (`Assets/Game/Scenes/Labs/`); имена сцен при этом неизменны, потому что Play Mode наборы грузят их по имени.

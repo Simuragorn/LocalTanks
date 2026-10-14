@@ -92,7 +92,7 @@
 
 `vehicleClass` обязателен и принимает одно из пяти значений: `HeavyTank`, `MediumTank`, `LightTank`, `TankDestroyer` или `Artillery`. Класс определяет символ машины в мире и HUD, угол сектора обзора и — вместе с `tier` — дальность обзора; в остальном боевые характеристики он не меняет.
 
-`nation` обязателен и пока принимает `Germany` или `USSR`. `availableInGame` отделяет сохранённую в проекте технику от активного состава: недоступная машина может иметь данные, спрайт и префаб, но не попадает на полигон и запрещена в сценариях боя.
+`nation` обязателен и принимает значения живого enum `TankNation`; сейчас это `Germany`, `USSR` и `USA`. Добавление нации начинается с enum и профиля экипажа, после чего валидатор и национально однородные составы подхватывают её из данных. `availableInGame` отделяет сохранённую в проекте технику от активного состава: недоступная машина может иметь данные, спрайт и префаб, но не попадает на полигон и запрещена в сценариях боя.
 
 `tier` относится к представлению конкретной машины в World of Tanks, а не к исторической классификации. Для новой техники он берётся с официальной страницы Tankopedia или другого официального материала WoT. Значение вне диапазона 1–10 отклоняется; уровень XI нельзя молча преобразовывать в X.
 
@@ -215,8 +215,8 @@
 
 | Таблица | Ключ | Обязательные поля |
 |---|---|---|
-| `weaponProfiles` | `maxCaliberMm` по возрастанию, последняя полоса открыта | `flashScale`, `flashSeconds`, `smokeScale`, `smokeSeconds`, `smokeBurst`, `recoilDistance`, `lightIntensity`, `lightRadius`, `lightSeconds` |
-| `movementProfiles` | `maxMassTonnes` по возрастанию | `dustOpacity`, `dustSizeFraction`, `dustRate`, `dustSpeed`, `exhaustIdleRate`, `exhaustLoadedRate`, `markOpacity`, `markSpacingFraction`, `markLengthFraction`, `markWidthFraction`, `markFadeSeconds`, `markLimit`, `sprayRate` |
+| `weaponProfiles` | `maxCaliberMm` по возрастанию, последняя полоса открыта | `flashScale`, `flashSeconds`, `smokeScale`, `smokeSeconds`, `smokeBurst`, `barrelSmokeSeconds` |
+| `movementProfiles` | `maxMassTonnes` по возрастанию | `dustOpacity`, `dustSizeFraction`, `dustRate`, `dustSpeed`, `exhaustIdleRate`, `exhaustLoadedRate`, `markOpacity`, `markSpacingFraction`, `markLengthFraction`, `markWidthFraction`, `markFadeSeconds`, `markLimit`, `sprayRate`, `exhaustStartPuffSeconds`, `exhaustStartPuffMultiplier` |
 | `damageProfiles` | `minHealthFraction` по убыванию; последняя полоса обязана начинаться с нуля и нести `wreck: true` | `smokeRate`, `smokeOpacity`, `smokeSizeFraction`, `smokeRise`, `fire` |
 | `impactProfiles` | `outcome`: `penetrated`, `blocked`, `ricocheted`, `ground` | `flashScale`, `sparkCount`, `sparkSpeed`, `dustScale`, `debrisCount`, `seconds` |
 | `surfaceProfiles` | `terrain`: имя значения `TerrainKind`, каждое ровно один раз | `dustTint`, `dustRateMultiplier`, `markOpacityMultiplier`, `splash` |
