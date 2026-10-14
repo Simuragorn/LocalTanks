@@ -100,6 +100,66 @@ namespace LocalTanks.Editor
         /// </summary>
         private const string AerialSurfacePath =
             "Assets/LocalOnly/WoTEnvironmentGenerated/Ground/mines_aerial.png";
+
+        /// <summary>Where the detail materials live; one file per material id.</summary>
+        private const string GroundMaterialFolder = "Assets/LocalOnly/WoTEnvironmentGenerated/Ground";
+
+        /// <summary>
+        /// Side of one detail block, in metres. The materials are seamless tiles, so the ground is covered
+        /// by repeating them rather than by stretching a single image: repetition at this size reads as
+        /// ground, where one stretched texture reads as a photograph of ground seen from orbit.
+        /// </summary>
+        private const float DetailBlockMetres = 8f;
+
+        /// <summary>Draw order of the detail materials: above the surface image, below everything else.</summary>
+        private const float DetailSortingOrder = -18f;
+
+        /// <summary>
+        /// How strongly the detail materials show over the surface image.
+        /// <para>
+        /// They are deliberately not opaque. Drawn at full strength they replace the arena's own picture,
+        /// which carries the roads, fields, water and settlement that make the map recognisable, and leave
+        /// only a repeating tile. At part strength the tiles supply grain under a close camera while the
+        /// picture still supplies the shapes - which is the point of having both.
+        /// </para>
+        /// </summary>
+        private const float DetailStrength = 0.45f;
+
+        /// <summary>
+        /// One ground material and the range of terrain height it covers.
+        /// <para>
+        /// The ranges come from the arena's own height distribution rather than from taste. On Mines the
+        /// lowest ground sits at about sea level, the median is sixteen metres and the cliffs reach a
+        /// hundred and sixty, so sand and cracked flats belong in the bottoms, ground and rubble on the
+        /// flats, boulders on the slopes and bedrock above. The materials themselves are the ones the map
+        /// is actually paved with according to its own data, where Rock_4 is referenced 395 times,
+        /// PBS_Ground_37 238 times, and the rest fall in between.
+        /// </para>
+        /// </summary>
+        private readonly struct GroundMaterial
+        {
+            public GroundMaterial(string spriteId, float fromMetres, float toMetres)
+            {
+                SpriteId = spriteId;
+                FromMetres = fromMetres;
+                ToMetres = toMetres;
+            }
+
+            public string SpriteId { get; }
+            public float FromMetres { get; }
+            public float ToMetres { get; }
+        }
+
+        private static readonly GroundMaterial[] GroundMaterials =
+        {
+            new GroundMaterial("mines_sand", float.NegativeInfinity, 1.5f),
+            new GroundMaterial("mines_cracked_earth", 1.5f, 8f),
+            new GroundMaterial("mines_ground", 8f, 24f),
+            new GroundMaterial("mines_rubble", 24f, 50f),
+            new GroundMaterial("mines_boulders", 50f, 78f),
+            new GroundMaterial("mines_rock", 78f, float.PositiveInfinity)
+        };
+
         private const float ObstacleSortingOrder = -5f;
 
         [MenuItem("Local Tanks/Build WoT Map Scene (Mines)")]
@@ -222,7 +282,119 @@ namespace LocalTanks.Editor
                     1f);
             }
 
+            CreateDetailGround(root.transform, asset);
             CreateNavigationOverlay(root.transform, asset);
+        }
+
+        /// <summary>
+        /// Covers the arena with the map's own ground materials, chosen by terrain height.
+        /// <para>
+        /// The reason this exists is that the surface image carries about five pixels per metre. That is
+        /// plenty from above and soft under a tank, so each material is repeated as a seamless tile across
+        /// blocks of a few metres and drawn over the image. The picture supplies the large shapes - fields,
+        /// roads, water, the settlement - and the tiles supply the grain that a camera close to the ground
+        /// needs.
+        /// </para>
+        /// <para>
+        /// Each block also gets a small offset into its tile, taken from its own coordinates so the result
+        /// is identical on every rebuild. Without it the repetition lines up into a visible grid, which is
+        /// the artefact this whole exercise is meant to avoid.
+        /// </para>
+        /// </summary>
+        private static void CreateDetailGround(Transform parent, WoTMapAsset asset)
+        {
+            List<(string Id, Sprite Sprite)> materials = new List<(string, Sprite)>();
+            foreach (GroundMaterial material in GroundMaterials)
+            {
+                Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                    $"{GroundMaterialFolder}/{material.SpriteId}.png");
+                if (sprite == null)
+                {
+                    Debug.LogWarning($"Ground material '{material.SpriteId}' is missing; its band will show " +
+                                     "the surface image only. Rebuild the environment library to restore it.");
+                    continue;
+                }
+
+                materials.Add((material.SpriteId, sprite));
+            }
+
+            if (materials.Count == 0) return;
+
+            GameObject root = new GameObject("GroundDetail");
+            root.transform.SetParent(parent, false);
+
+            float cell = asset.navigationCellSize;
+            Vector2 origin = asset.worldCenter - asset.playableSize * 0.5f;
+            int side = Mathf.Max(1, Mathf.RoundToInt(DetailBlockMetres / cell));
+            int placed = 0;
+
+            for (int row = 0; row < asset.navigationRows; row += side)
+            {
+                for (int column = 0; column < asset.navigationColumns; column += side)
+                {
+                    float height = BlockHeight(asset, row, column, side);
+                    GroundMaterial band = GroundMaterials[BandFor(height)];
+                    Sprite sprite = materials.FirstOrDefault(item => item.Id == band.SpriteId).Sprite;
+                    if (sprite == null) continue;
+
+                    Vector2 centre = origin + new Vector2(
+                        (column + side * 0.5f) * cell,
+                        (row + side * 0.5f) * cell);
+
+                    GameObject block = new GameObject($"Ground_{column:00}_{row:00}");
+                    block.transform.SetParent(root.transform, false);
+                    block.transform.position = centre;
+                    SpriteRenderer renderer = block.AddComponent<SpriteRenderer>();
+                    renderer.sprite = sprite;
+                    renderer.sortingOrder = Mathf.RoundToInt(DetailSortingOrder);
+                    renderer.color = new Color(1f, 1f, 1f, DetailStrength);
+                    // Mirrored per block: the same tile repeated without variation reads as a pattern
+                    // rather than as ground.
+                    renderer.flipX = ((column / side) & 1) == 1;
+                    renderer.flipY = ((row / side) & 1) == 1;
+
+                    Vector2 drawn = sprite.bounds.size;
+                    float size = side * cell;
+                    if (drawn.x > 0.0001f && drawn.y > 0.0001f)
+                    {
+                        block.transform.localScale = new Vector3(size / drawn.x, size / drawn.y, 1f);
+                    }
+
+                    placed++;
+                }
+            }
+
+            Debug.Log($"Ground detail: {placed} blocks of {DetailBlockMetres} m from {materials.Count} materials.");
+        }
+
+        /// <summary>Average terrain height over a block, so a single cliff does not recolour its neighbours.</summary>
+        private static float BlockHeight(WoTMapAsset asset, int row, int column, int side)
+        {
+            float sum = 0f;
+            int count = 0;
+            for (int y = row; y < Mathf.Min(row + side, asset.navigationRows); y++)
+            {
+                for (int x = column; x < Mathf.Min(column + side, asset.navigationColumns); x++)
+                {
+                    int index = y * asset.navigationColumns + x;
+                    if (index < 0 || index >= asset.terrainHeightsMetres.Length) continue;
+                    sum += asset.terrainHeightsMetres[index];
+                    count++;
+                }
+            }
+
+            return count > 0 ? sum / count : 0f;
+        }
+
+        /// <summary>Which height band a terrain height falls in.</summary>
+        private static int BandFor(float height)
+        {
+            for (int index = 0; index < GroundMaterials.Length; index++)
+            {
+                if (height <= GroundMaterials[index].ToMetres) return index;
+            }
+
+            return GroundMaterials.Length - 1;
         }
 
         /// <summary>
