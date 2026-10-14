@@ -27,6 +27,29 @@ namespace LocalTanks.Tests
             Assert.That(wider, Is.GreaterThan(far));
             Assert.That(GunDispersionMath.RadiusAtDistance(10000f, 3f), Is.GreaterThan(150f),
                 "The world-space disk must remain honest even when it extends beyond the screen.");
+
+            float threeMetres = GunDispersionMath.RadiusAtDistance(GameScale.MetresToUnits(3f), 1f);
+            float oneHundredFiftyMetres = GunDispersionMath.RadiusAtDistance(GameScale.MetresToUnits(150f), 1f);
+            Assert.That(oneHundredFiftyMetres, Is.EqualTo(threeMetres * 50f).Within(0.0001f),
+                "At a fixed angular dispersion the sight radius must grow linearly from 3 to 150 metres.");
+            Assert.That(PlayerAimReticle.FormatDistance(GameScale.MetresToUnits(150f)), Is.EqualTo("150 м"));
+        }
+
+        [Test]
+        public void PlayerAimDeadZone_HoldsTheLastDirectionAcrossTheTurretPivot()
+        {
+            Vector2 origin = new Vector2(2f, -1f);
+            float deadZone = GameScale.MetresToUnits(PlayerTankInput.AimDeadZoneMetres);
+            Vector2 held = PlayerTankInput.StabilizeAimTarget(
+                origin,
+                origin + Vector2.left * deadZone * 0.1f,
+                Vector2.up,
+                deadZone);
+            Vector2 outside = origin + Vector2.right * deadZone * 1.1f;
+
+            Assert.That(held, Is.EqualTo(origin + Vector2.up * deadZone));
+            Assert.That(PlayerTankInput.StabilizeAimTarget(origin, outside, Vector2.up, deadZone),
+                Is.EqualTo(outside));
         }
 
         [Test]

@@ -5,6 +5,8 @@ namespace LocalTanks
     [RequireComponent(typeof(TankMotor))]
     public sealed class GunDispersionController : MonoBehaviour
     {
+        public const float ShotBloomHoldSeconds = 0.16f;
+
         [SerializeField] private TankDefinition config;
         [SerializeField] private TankMotor motor;
         [SerializeField] private TurretAiming turret;
@@ -14,11 +16,16 @@ namespace LocalTanks
         private float previousTurretAngle;
         private int shotSequence;
         private bool anglesInitialized;
+        private float shotBloomHoldRemaining;
 
         public float CurrentDispersionDegrees => currentDispersionDegrees;
-        public float NormalizedDispersion => config == null || config.maximumDispersionDegrees <= config.minimumDispersionDegrees
+        public float NormalizedDispersion => config == null || ShotMaximum <= config.minimumDispersionDegrees
             ? 0f
-            : Mathf.InverseLerp(config.minimumDispersionDegrees, config.maximumDispersionDegrees, currentDispersionDegrees);
+            : Mathf.InverseLerp(config.minimumDispersionDegrees, ShotMaximum, currentDispersionDegrees);
+
+        private float ShotMaximum => config != null
+            ? GunDispersionMath.MaximumAfterShot(config.maximumDispersionDegrees, config.shotDispersionDegrees)
+            : 0f;
 
         public void Configure(TankDefinition newConfig, TankMotor newMotor, TurretAiming newTurret)
         {
@@ -76,11 +83,16 @@ namespace LocalTanks
                 config.movementDispersionDegrees,
                 config.hullTraverseDispersionDegrees,
                 config.turretTraverseDispersionDegrees);
+            if (shotBloomHoldRemaining > 0f)
+            {
+                shotBloomHoldRemaining = Mathf.Max(0f, shotBloomHoldRemaining - Time.deltaTime);
+                target = Mathf.Max(target, currentDispersionDegrees);
+            }
             currentDispersionDegrees = GunDispersionMath.Step(
                 currentDispersionDegrees,
                 target,
                 config.minimumDispersionDegrees,
-                config.maximumDispersionDegrees,
+                ShotMaximum,
                 config.aimingTimeSeconds,
                 Time.deltaTime);
         }
@@ -93,7 +105,8 @@ namespace LocalTanks
                 currentDispersionDegrees,
                 config != null ? config.shotDispersionDegrees : 0f,
                 config != null ? config.minimumDispersionDegrees : 0f,
-                config != null ? config.maximumDispersionDegrees : currentDispersionDegrees);
+                config != null ? ShotMaximum : currentDispersionDegrees);
+            shotBloomHoldRemaining = ShotBloomHoldSeconds;
             return Quaternion.Euler(0f, 0f, offset) * normalized;
         }
 
@@ -104,6 +117,7 @@ namespace LocalTanks
             previousTurretAngle = turret != null ? turret.transform.localEulerAngles.z : 0f;
             anglesInitialized = true;
             shotSequence = 0;
+            shotBloomHoldRemaining = 0f;
         }
     }
 }

@@ -26,6 +26,8 @@ namespace LocalTanks.Tests
         {
             Assert.That(BattleHudController.FormatHitPoints(73, 100), Is.EqualTo("73/100"));
             Assert.That(TankHealthBar.FormatHitPoints(-5, 100), Is.EqualTo("0/100"));
+            Assert.That(TankHealthBar.DefaultWidth, Is.GreaterThanOrEqualTo(94f));
+            Assert.That(TankHealthBar.DefaultHeight, Is.GreaterThanOrEqualTo(18f));
             Assert.That(DamagePopupLayer.FormatDamage(27), Is.EqualTo("-27"));
             Assert.That(DamagePopupLayer.FormatIndicator("MS-1", 123.6f), Is.EqualTo("MS-1  124 м"));
             Assert.That(DamagePopupLayer.ArrowGlyph(0f), Is.EqualTo("▶"));
@@ -389,6 +391,17 @@ namespace LocalTanks.Tests
             float target = GunDispersionMath.CalculateTarget(0.3f, 10f, 1f, 1f, 1f, 3f, 4f, 1f);
 
             Assert.That(target, Is.EqualTo(Mathf.Sqrt(0.09f + 9f + 16f + 1f)).Within(0.0001f));
+        }
+
+        [Test]
+        public void GunDispersion_ShotBloomCanExceedTheMovementCeiling()
+        {
+            float shotMaximum = GunDispersionMath.MaximumAfterShot(5.9f, 0.8f);
+            float bloomed = GunDispersionMath.AddShotPenalty(5.9f, 0.8f, 0.25f, shotMaximum);
+
+            Assert.That(shotMaximum, Is.EqualTo(6.7f).Within(0.0001f));
+            Assert.That(bloomed, Is.EqualTo(shotMaximum).Within(0.0001f),
+                "A shot fired while moving must still expand the sight instead of clamping to the movement ceiling.");
         }
 
         [Test]

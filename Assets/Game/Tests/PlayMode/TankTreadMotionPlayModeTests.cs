@@ -85,6 +85,8 @@ namespace LocalTanks.Tests
                     "A stationary machine must not carry a moving highlight on its left track.");
                 Assert.That(motionBefore.y, Is.EqualTo(0f).Within(0.001f),
                     "A stationary machine must not carry a moving highlight on its right track.");
+                Assert.That(motionBefore.w, Is.EqualTo(TankTrackAnimator.StaticPatternStrength).Within(0.001f),
+                    "A stationary belt must retain its frozen metal relief instead of losing every bright link.");
                 Assert.That(geometry.z, Is.GreaterThan(0f), "The shader needs the measured half-width of a track band.");
                 Assert.That(hullRect.z, Is.GreaterThan(0f), "The property block must carry the hull rectangle.");
                 Assert.That(properties.GetTexture("_HullTex"), Is.Not.Null,

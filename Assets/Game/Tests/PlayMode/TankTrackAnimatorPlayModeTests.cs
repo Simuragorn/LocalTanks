@@ -129,7 +129,7 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
-        public IEnumerator ADestroyedTank_StopsMovingAndSwitchesTheOverlayOff()
+        public IEnumerator ADestroyedTank_StopsMotionAndKeepsFrozenTreadRelief()
         {
             TrackRig rig = TrackRig.Create(new Vector2(400f, 400f));
             try
@@ -147,8 +147,12 @@ namespace LocalTanks.Tests
                 MaterialPropertyBlock properties = new MaterialPropertyBlock();
                 rig.Overlay.GetPropertyBlock(properties);
                 Vector4 strength = properties.GetVector("_TrackStrength");
-                Assert.That(strength.x, Is.Zero.Within(0.0001f),
-                    "A wreck must switch the highlight off instead of leaving it glowing.");
+                Vector4 motion = properties.GetVector("_TrackMotion");
+                Assert.That(motion.x, Is.Zero.Within(0.0001f));
+                Assert.That(motion.y, Is.Zero.Within(0.0001f));
+                Assert.That(motion.w, Is.EqualTo(TankTrackAnimator.StaticPatternStrength).Within(0.0001f));
+                Assert.That(strength.x, Is.GreaterThan(0f),
+                    "A stopped or destroyed belt must keep its frozen metal relief instead of vanishing.");
             }
             finally
             {

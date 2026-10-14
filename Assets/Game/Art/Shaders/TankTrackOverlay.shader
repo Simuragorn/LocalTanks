@@ -25,9 +25,9 @@ Shader "LocalTanks/TankTrackOverlay"
         // x and y are how far the left and right track have travelled, in mask heights.
         _TrackTravel ("Left and right track travel", Vector) = (0, 0, 0, 0)
 
-        // x/y are the visible motion amount of the left and right track; z is the distant-pattern
-        // gain. A stopped machine leaves its original painted tracks untouched.
-        _TrackMotion ("Left motion, right motion, distant gain", Vector) = (0, 0, 0.95, 0)
+        // x/y are the visible motion amount of the left and right track, z is the distant-pattern
+        // gain and w is the static metal relief that remains when the belt stops.
+        _TrackMotion ("Left motion, right motion, distant gain, static relief", Vector) = (0, 0, 0.95, 0.42)
 
         // Centres of the red and green mask bands, followed by their half-width, in mask UV.
         _TrackGeometry ("Red centre, green centre, half width", Vector) = (0.85, 0.15, 0.08, 0)
@@ -168,10 +168,15 @@ Shader "LocalTanks/TankTrackOverlay"
                 float redShape = TrackLateralShape(IN.texcoord.x, _TrackGeometry.x, _TrackGeometry.z);
                 float greenShape = TrackLateralShape(IN.texcoord.x, _TrackGeometry.y, _TrackGeometry.z);
 
-                float fine = TrackLinkProfile(left * links, 0.0) * mask.r * redShape * _TrackMotion.x
-                             + TrackLinkProfile(right * links, 17.0) * mask.g * greenShape * _TrackMotion.y;
-                float coarse = TrackClusterProfile(left * sweeps, 3.0) * mask.r * redShape * _TrackMotion.x
-                               + TrackClusterProfile(right * sweeps, 29.0) * mask.g * greenShape * _TrackMotion.y;
+                // A stopped belt freezes at its last phase and retains the same steel ridges and dark
+                // joints. Motion increases their contrast; it never creates a second, temporary set of
+                // shiny links that vanishes as soon as the vehicle stops.
+                float leftVisibility = lerp(_TrackMotion.w, 1.0, saturate(_TrackMotion.x));
+                float rightVisibility = lerp(_TrackMotion.w, 1.0, saturate(_TrackMotion.y));
+                float fine = TrackLinkProfile(left * links, 0.0) * mask.r * redShape * leftVisibility
+                             + TrackLinkProfile(right * links, 17.0) * mask.g * greenShape * rightVisibility;
+                float coarse = TrackClusterProfile(left * sweeps, 3.0) * mask.r * redShape * leftVisibility
+                               + TrackClusterProfile(right * sweeps, 29.0) * mask.g * greenShape * rightVisibility;
                 float detail = fine * resolvable + coarse * coarseShare;
 
                 float profile = coverage * detail;

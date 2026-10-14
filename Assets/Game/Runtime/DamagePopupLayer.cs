@@ -99,8 +99,8 @@ namespace LocalTanks
                 }
 
                 float worldOffset = component != null ? component.WorldOffset : 1.45f;
-                float width = component != null ? component.Width : 72f;
-                float height = component != null ? component.Height : 13f;
+                float width = component != null ? component.Width : TankHealthBar.DefaultWidth;
+                float height = component != null ? component.Height : TankHealthBar.DefaultHeight;
                 if (!TryProject(camera, entry.Member.transform.position + Vector3.up * worldOffset, out Vector2 point))
                 {
                     view.Root.style.display = DisplayStyle.None;

@@ -60,6 +60,20 @@ namespace LocalTanks.Tests
             }
         }
 
+        [Test]
+        public void EveryIntegratedVehicle_UsesItsVisibleTrackMeshInsteadOfBroadHullBands()
+        {
+            foreach (string directory in VehicleDirectories())
+            {
+                string vehicleId = Path.GetFileName(directory);
+                TrackLayoutJsonProbe layout = ReadLayout(directory, vehicleId);
+                Assert.That(layout.tracks.source, Is.EqualTo("trackMeshes"),
+                    $"{vehicleId} must keep its per-pixel visible track surface; hull-side fallback bands " +
+                    "animate mudguards and fixed steel covers.");
+                Assert.That(layout.tracks.fallbackReason, Is.Null.Or.Empty);
+            }
+        }
+
         /// <summary>
         /// The mask must be cropped exactly like the hull layer, because both sprites are drawn with
         /// the same centred pivot: a mask of another size covers a different part of the machine even

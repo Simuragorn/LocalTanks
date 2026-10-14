@@ -21,6 +21,7 @@ namespace LocalTanks
 
         private Camera worldCamera;
         private bool uiInteractionActive;
+        private GUIStyle distanceStyle;
 
         public Transform ControlledTank => controlledTank;
         public bool IsLineOfFireBlocked { get; private set; }
@@ -101,7 +102,8 @@ namespace LocalTanks
             DrawCross(cursorGui);
 
             Vector2 turretPosition = turret.transform.position;
-            float aimDistance = Mathf.Max(1f, Vector2.Distance(turretPosition, cursorWorld));
+            float actualDistance = Vector2.Distance(turretPosition, cursorWorld);
+            float aimDistance = Mathf.Max(0.05f, actualDistance);
             Vector2 gunPoint = turretPosition + (Vector2)turret.transform.up * aimDistance;
             Vector3 gunScreen3 = worldCamera.WorldToScreenPoint(gunPoint);
             Vector2 gunGui = new Vector2(gunScreen3.x, Screen.height - gunScreen3.y);
@@ -122,6 +124,7 @@ namespace LocalTanks
                 : reloadColor;
             DrawDottedCircle(gunGui, radius, aimColor);
             DrawReloadSegments(gunGui, radius + 8f, weapon.ReloadProgress, reloadColor);
+            DrawDistanceLabel(gunGui, radius, actualDistance);
         }
 
         private void RefreshCursorVisibility()
@@ -143,6 +146,44 @@ namespace LocalTanks
         public static Color PenetrationChanceColor(float chance)
         {
             return Color.Lerp(BlockedLineColor, ReadyColor, Mathf.Clamp01(chance));
+        }
+
+        public static string FormatDistance(float gameUnits)
+        {
+            return $"{Mathf.RoundToInt(GameScale.UnitsToMetres(Mathf.Max(0f, gameUnits)))} м";
+        }
+
+        private void DrawDistanceLabel(Vector2 center, float circleRadius, float gameUnits)
+        {
+            const float width = 74f;
+            const float height = 20f;
+            Rect rect = new Rect(
+                center.x - width * 0.5f,
+                center.y + Mathf.Max(10f, circleRadius) + 14f,
+                width,
+                height);
+            Color previous = GUI.color;
+            GUI.color = new Color(0.035f, 0.045f, 0.035f, 0.78f);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = previous;
+            GUI.Label(rect, FormatDistance(gameUnits), DistanceStyle());
+        }
+
+        private GUIStyle DistanceStyle()
+        {
+            if (distanceStyle == null)
+            {
+                distanceStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 13,
+                    fontStyle = FontStyle.Bold,
+                    clipping = TextClipping.Clip
+                };
+                distanceStyle.normal.textColor = new Color(0.94f, 0.94f, 0.88f, 1f);
+            }
+
+            return distanceStyle;
         }
 
         private static void DrawCross(Vector2 center)

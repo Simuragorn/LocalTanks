@@ -41,6 +41,12 @@ namespace LocalTanks
         /// <summary>The distant pattern stays subordinate to individually resolved links.</summary>
         public const float DistantPatternGain = 0.95f;
 
+        /// <summary>
+        /// The metal relief that remains visible while a belt is stopped. Motion strengthens the same
+        /// frozen pattern instead of creating highlights from nothing and erasing them at rest.
+        /// </summary>
+        public const float StaticPatternStrength = 0.42f;
+
         [SerializeField] private Rigidbody2D body;
         [SerializeField] private TankHealth health;
         [SerializeField] private SpriteRenderer overlay;
@@ -241,7 +247,6 @@ namespace LocalTanks
         private void OnDestroyed(TankHealth destroyedHealth)
         {
             running = false;
-            strength = Vector2.zero;
             leftMotion = 0f;
             rightMotion = 0f;
             ApplyProperties();
@@ -274,7 +279,7 @@ namespace LocalTanks
             properties.SetVector(TrackStrengthId, new Vector4(strength.x, strength.y, 0f, 0f));
             properties.SetVector(
                 TrackMotionId,
-                new Vector4(leftMotion, rightMotion, DistantPatternGain, 0f));
+                new Vector4(leftMotion, rightMotion, DistantPatternGain, StaticPatternStrength));
             properties.SetVector(TrackGeometryId, TrackGeometry);
             properties.SetVector(HullRectId, hullTextureRect);
 

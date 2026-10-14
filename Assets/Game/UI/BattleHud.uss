@@ -121,7 +121,11 @@
     top: 0;
     bottom: 0;
     color: rgb(242, 242, 235);
-    font-size: 10px;
+    padding-top: 1px;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    font-size: 12px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     -unity-text-outline-width: 1px;
@@ -129,7 +133,7 @@
 }
 
 .health-track {
-    height: 13px;
+    height: 17px;
 }
 
 .health-fill { height: 100%; background-color: rgb(120, 169, 123); }
@@ -206,7 +210,11 @@
     top: 0;
     bottom: 0;
     color: rgb(235, 235, 228);
-    font-size: 10px;
+    padding-top: 1px;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    font-size: 13px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     -unity-text-outline-width: 1px;

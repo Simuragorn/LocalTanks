@@ -10,7 +10,7 @@ namespace LocalTanks.Editor
 {
     /// <summary>
     /// Renders the tread overlay of a generated tank into PNG files so its look can be judged without
-    /// driving a battle: the same machine with the overlay off, and with the pattern at several
+    /// driving a battle: the same machine with the overlay off, stationary, and at several moving
     /// phases, at the battle zoom and close up. The effect is a few pixels wide on screen, so a
     /// written parameter set is not evidence of how it reads; these images are.
     /// </summary>
@@ -157,24 +157,40 @@ namespace LocalTanks.Editor
             properties.SetVector(
                 "_TrackGeometry",
                 animator != null ? animator.TrackGeometry : new Vector4(0.85f, 0.15f, 0.08f, 0f));
-            properties.SetVector(
-                "_TrackMotion",
-                new Vector4(1f, 1f, TankTrackAnimator.DistantPatternGain, 0f));
-
             foreach (float pitchMetres in TreadPitches)
             {
                 float links = TankTrackAnimator.LinkRepeats(
                     maskHeightUnits, pitchMetres / GameScale.MetresPerUnit);
                 foreach (Vector4 look in Looks)
                 {
+                    properties.SetVector(
+                        "_TrackParams", new Vector4(links, TankTrackAnimator.SweepRepeats, 0f, 0f));
+                    properties.SetVector("_TrackStrength", new Vector4(look.x, look.y, 0f, 0f));
+                    properties.SetVector("_HullLighting", new Vector4(look.z, 0f, 1.5f, look.w));
+                    properties.SetVector("_TrackTravel", Vector4.zero);
+                    properties.SetVector(
+                        "_TrackMotion",
+                        new Vector4(
+                            0f,
+                            0f,
+                            TankTrackAnimator.DistantPatternGain,
+                            TankTrackAnimator.StaticPatternStrength));
+                    overlay.SetPropertyBlock(properties);
+                    Render(
+                        camera,
+                        $"{name}_zoom{zoom:0.##}_pitch{pitchMetres:0.##}_h{look.x:0.00}s{look.y:0.00}_stationary.png");
+
+                    properties.SetVector(
+                        "_TrackMotion",
+                        new Vector4(
+                            1f,
+                            1f,
+                            TankTrackAnimator.DistantPatternGain,
+                            TankTrackAnimator.StaticPatternStrength));
                     foreach (float phase in Phases)
                     {
                         // One phase is one link period, expressed as the travel the shader expects.
                         float travel = phase / links;
-                        properties.SetVector(
-                            "_TrackParams", new Vector4(links, TankTrackAnimator.SweepRepeats, 0f, 0f));
-                        properties.SetVector("_TrackStrength", new Vector4(look.x, look.y, 0f, 0f));
-                        properties.SetVector("_HullLighting", new Vector4(look.z, 0f, 1.5f, look.w));
                         properties.SetVector("_TrackTravel", new Vector4(travel, travel, 0f, 0f));
                         overlay.SetPropertyBlock(properties);
                         Render(

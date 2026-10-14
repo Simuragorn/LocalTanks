@@ -273,12 +273,12 @@ function Test-TrackMask($result, [int]$width, [int]$height) {
     $checks.widthDifferenceFraction = [Math]::Round([Math]::Abs($left.widthPixels - $right.widthPixels) / $widest, 4)
     $checks.mirrorErrorFraction = [Math]::Round([Math]::Abs(($left.centroidX + $right.centroidX) - ($width - 1)) / [double]$width, 4)
 
-    # A band that covers almost nothing is unusable even though it is geometrically correct: at the
-    # battle zoom the visible track of these machines is a couple of pixels wide, so a tread drawn
-    # only there can never show movement. Such a mask is rejected on purpose, which hands the vehicle
-    # to the safe side bands and records why.
-    if ($checks.coverage -lt 0.15 -or $checks.coverage -gt 0.7) {
-        return @{ Valid = $false; Reason = "the visible track surface covers only $($checks.coverage) of the mask, which is too little to show movement"; Checks = $checks; Left = $left; Right = $right }
+    # Sparse is valid. Mudguards and side skirts genuinely hide most of the upper run on several
+    # vehicles, and replacing a small ray-cast result with broad silhouette bands paints movement on
+    # those fixed steel covers. Empty sides were rejected above; only a physically impossible mask
+    # that covers most of the hull is rejected here.
+    if ($checks.coverage -gt 0.7) {
+        return @{ Valid = $false; Reason = "the visible track surface covers $($checks.coverage) of the mask, which is too broad to be a track"; Checks = $checks; Left = $left; Right = $right }
     }
     if ($checks.lateralSeparationFraction -lt 0.2) {
         return @{ Valid = $false; Reason = 'the two tracks are not separated across the hull'; Checks = $checks; Left = $left; Right = $right }

@@ -524,7 +524,7 @@ namespace LocalTanks.Editor
                 changed |= SetMaterialVector(
                     material,
                     "_TrackMotion",
-                    new Vector4(0f, 0f, TankTrackAnimator.DistantPatternGain, 0f));
+                    new Vector4(0f, 0f, TankTrackAnimator.DistantPatternGain, TankTrackAnimator.StaticPatternStrength));
                 changed |= SetMaterialVector(material, "_HullLighting", new Vector4(0.5f, 0f, 1.5f, 0f));
                 if (changed)
                 {

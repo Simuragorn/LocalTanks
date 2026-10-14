@@ -131,9 +131,10 @@ question exactly and costs about one second per vehicle.
 The result matters, because in a straight top-down view the mudguards of these
 machines cover most of the track belt. MS-1 keeps 6.9% of its track projection
 visible, the Leichttraktor 11.3% and the T1 Cunningham 10.7%; the Tiger II keeps
-0.02%, so its mask is rejected and the safe side bands are used and recorded as
-`hullSideBands`. Removing the Tiger II track meshes changes 19 of 118,524 sampled
-pixels of its hull layer, which is the measurement behind that verdict.
+only about 0.02%. These sparse ray-cast masks are deliberately preserved: replacing
+them with broad hull-side bands would animate fixed mudguards and side skirts. The
+fallback `hullSideBands` is now reserved for a missing/unrecognised track mesh or an
+explicit local override, not for an accurately measured but small visible area.
 
 `treadPitchMetres` is the distance between two tread links in model metres and
 defaults to `render.trackFeaturePitchMetres` (0.22 m), which is a little coarser

@@ -5,8 +5,11 @@ namespace LocalTanks
     [RequireComponent(typeof(TankHealth))]
     public sealed class TankHealthBar : MonoBehaviour
     {
-        [SerializeField, Min(1f)] private float width = 72f;
-        [SerializeField, Min(1f)] private float height = 13f;
+        public const float DefaultWidth = 94f;
+        public const float DefaultHeight = 18f;
+
+        [SerializeField, Min(1f)] private float width = DefaultWidth;
+        [SerializeField, Min(1f)] private float height = DefaultHeight;
         [SerializeField, Min(0f)] private float worldOffset = 1.45f;
         [SerializeField] private bool useTeamColor;
         [SerializeField] private bool allied = true;
@@ -36,6 +39,8 @@ namespace LocalTanks
         public void Configure(float offset)
         {
             worldOffset = Mathf.Max(0f, offset);
+            width = DefaultWidth;
+            height = DefaultHeight;
             useTeamColor = false;
             if (health == null)
             {
@@ -98,7 +103,7 @@ namespace LocalTanks
                 healthTextStyle = new GUIStyle(GUI.skin.label)
                 {
                     alignment = TextAnchor.MiddleCenter,
-                    fontSize = 10,
+                    fontSize = 13,
                     fontStyle = FontStyle.Bold,
                     clipping = TextClipping.Clip
                 };

@@ -53,6 +53,15 @@ namespace LocalTanks
             return Mathf.Clamp(current + Mathf.Max(0f, penalty), Mathf.Max(0f, minimum), Mathf.Max(minimum, maximum));
         }
 
+        /// <summary>
+        /// Firing bloom sits above the movement/traverse ceiling. Clamping a shot back to that ceiling
+        /// made a round fired while moving produce no visible reticle reaction at all.
+        /// </summary>
+        public static float MaximumAfterShot(float movementMaximum, float shotPenalty)
+        {
+            return Mathf.Max(0f, movementMaximum) + Mathf.Max(0f, shotPenalty);
+        }
+
         public static float SampleOffsetDegrees(float dispersionDegrees, int shotSequence)
         {
             if (dispersionDegrees <= 0f)
