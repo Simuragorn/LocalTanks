@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using LocalTanks.Editor;
 using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
 
 namespace LocalTanks.Tests
 {
@@ -221,6 +223,22 @@ namespace LocalTanks.Tests
             Assert.That(errors, Is.Empty,
                 "A generated effect library must be complete; half of it is worse than none:\n- " +
                 string.Join("\n- ", errors));
+        }
+
+        [Test]
+        public void GeneratedFireAndMuzzle_AreLayeredInsteadOfSingleSprites()
+        {
+            GameObject muzzle = AssetDatabase.LoadAssetAtPath<GameObject>(
+                CombatVfxAssetBuilder.PrefabPath(CombatVfxEffects.MuzzleFlash));
+            GameObject fire = AssetDatabase.LoadAssetAtPath<GameObject>(
+                CombatVfxAssetBuilder.PrefabPath(CombatVfxEffects.DamageFire));
+
+            Assert.That(muzzle, Is.Not.Null);
+            Assert.That(fire, Is.Not.Null);
+            Assert.That(muzzle.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
+                Is.EquivalentTo(new[] { "Core", "Plume", "SideFlames", "Sparks" }));
+            Assert.That(fire.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
+                Is.EquivalentTo(new[] { "Soot", "Glow", "Tongues", "TallTongues", "Core", "Ember" }));
         }
     }
 }

@@ -199,12 +199,12 @@ namespace LocalTanks.Editor
                 renderer.color = new Color(0.25f, 0.25f, 0.25f, renderer.color.a);
             }
 
-            // Emission over the engine deck, which is the rear quarter of the hull. A negative rate and a
-            // zero size mean "keep what the prefab was generated with": the fire is three layers with their
-            // own rates and sizes, and flattening them would undo the balance the builder chose.
+            // Emission over the engine deck, which is the rear quarter of the hull. A negative rate, zero
+            // size and null tint mean "keep what the prefab was generated with": the fire's soot, glow,
+            // low and tall tongues, hot core and embers retain their own rates, sizes and colours.
             Vector3 deck = geometry.Centre + geometry.Forward * (-geometry.Length * 0.3f);
             AddLoop(spawned, tank.transform, CombatVfxEffects.DamageFire, "Fire",
-                deck, -1f, 0f, Color.white);
+                deck, -1f, 0f, null);
 
             AddLoop(spawned, tank.transform, CombatVfxEffects.DamageSmoke, "WreckSmoke", deck,
                 wreck.smokeRate, wreck.smokeSizeFraction * geometry.Width, new Color(0.28f, 0.27f, 0.26f, wreck.smokeOpacity));
@@ -288,7 +288,7 @@ namespace LocalTanks.Editor
             Vector3 worldPosition,
             float rate,
             float size,
-            Color tint)
+            Color? tint)
         {
             GameObject instance = UnityEngine.Object.Instantiate(
                 LoadEffect(effectId), worldPosition, parent.rotation, parent);
@@ -306,7 +306,10 @@ namespace LocalTanks.Editor
                     main.startSize = size;
                 }
 
-                main.startColor = tint;
+                if (tint.HasValue)
+                {
+                    main.startColor = tint.Value;
+                }
             }
 
             SetEmission(instance, rate);

@@ -8,7 +8,7 @@ namespace LocalTanks.Editor
     /// <remarks>
     /// They are drawn, not extracted: no World of Tanks material, shader or particle format is involved,
     /// so nothing here has to be re-cut when the local client changes and nothing derived from WoT enters
-    /// the repository. Eleven textures cover the whole effect set because one smoke puff serves the shot,
+    /// the repository. A compact shared texture set covers the whole effect library because one smoke puff serves the shot,
     /// the damage trail and the wreck with a different colour, size and lifetime.
     /// <para>
     /// Drawing is deterministic: all variation comes from a hash of the pixel coordinate and a per-texture
@@ -80,12 +80,14 @@ namespace LocalTanks.Editor
 
         private static void DrawSmokePuff(VfxPixelCanvas canvas)
         {
-            // A puff is several overlapping billows, not one circle: a single soft disc reads as a spot.
-            canvas.SoftCircle(0.5f, 0.47f, 0.44f, new Color(0.94f, 0.93f, 0.92f, 0.55f), 1.6f, 0.5f, 11);
-            canvas.SoftCircle(0.35f, 0.58f, 0.27f, new Color(0.9f, 0.89f, 0.88f, 0.45f), 1.5f, 0.55f, 12);
-            canvas.SoftCircle(0.66f, 0.55f, 0.25f, new Color(0.9f, 0.89f, 0.88f, 0.45f), 1.5f, 0.55f, 13);
-            canvas.SoftCircle(0.5f, 0.32f, 0.26f, new Color(0.86f, 0.85f, 0.84f, 0.4f), 1.4f, 0.6f, 14);
-            canvas.SoftCircle(0.5f, 0.5f, 0.16f, new Color(1f, 1f, 1f, 0.5f), 2f, 0.35f, 15);
+            // No enclosing disc: separate billows overlap into an irregular cloud and leave translucent
+            // valleys between them. The old full-size circle made every smoke particle a blurred coin.
+            canvas.SoftCircle(0.39f, 0.43f, 0.29f, new Color(0.9f, 0.89f, 0.87f, 0.42f), 1.8f, 0.72f, 11);
+            canvas.SoftCircle(0.62f, 0.43f, 0.27f, new Color(0.86f, 0.85f, 0.83f, 0.38f), 1.9f, 0.76f, 12);
+            canvas.SoftCircle(0.47f, 0.63f, 0.28f, new Color(0.92f, 0.91f, 0.89f, 0.4f), 1.8f, 0.74f, 13);
+            canvas.SoftCircle(0.64f, 0.64f, 0.21f, new Color(0.82f, 0.81f, 0.79f, 0.3f), 2f, 0.8f, 14);
+            canvas.SoftCircle(0.34f, 0.67f, 0.18f, new Color(0.84f, 0.83f, 0.81f, 0.28f), 2.1f, 0.82f, 15);
+            canvas.SoftCircle(0.52f, 0.36f, 0.18f, new Color(1f, 0.98f, 0.94f, 0.34f), 1.7f, 0.62f, 16);
         }
 
         private static void DrawSmokeWisp(VfxPixelCanvas canvas)
@@ -151,46 +153,24 @@ namespace LocalTanks.Editor
         }
 
         /// <summary>
-        /// The petals of a muzzle flash: an irregular bloom of unequal tongues rather than a symmetric
-        /// star. The first version was a six-point star and read as a drawn symbol pasted onto the barrel;
-        /// a real flash has no symmetry, so every petal here has its own length, width, angle and colour.
+        /// Directional propellant flame leaving a muzzle. Its hot base sits at the lower edge and the
+        /// broken cone opens along +Y, the same axis as the bore in every generated effect prefab.
         /// </summary>
         private static void DrawFlashPetals(VfxPixelCanvas canvas)
         {
-            // Angle in turns, length, half width, brightness.
-            float[,] petals =
-            {
-                { 0.02f, 0.46f, 0.10f, 1.0f },
-                { 0.16f, 0.30f, 0.07f, 0.8f },
-                { 0.29f, 0.38f, 0.09f, 0.9f },
-                { 0.44f, 0.22f, 0.06f, 0.7f },
-                { 0.55f, 0.34f, 0.08f, 0.85f },
-                { 0.68f, 0.26f, 0.06f, 0.75f },
-                { 0.79f, 0.40f, 0.09f, 0.95f },
-                { 0.92f, 0.20f, 0.05f, 0.65f }
-            };
-
-            for (int index = 0; index < petals.GetLength(0); index++)
-            {
-                float angle = petals[index, 0] * Mathf.PI * 2f;
-                float length = petals[index, 1];
-                float width = petals[index, 2];
-                float brightness = petals[index, 3];
-                Color colour = new Color(1f, 0.72f + 0.22f * brightness, 0.34f + 0.3f * brightness, 0.55f * brightness);
-                canvas.SoftEllipse(
-                    0.5f + Mathf.Cos(angle) * length * 0.45f,
-                    0.5f + Mathf.Sin(angle) * length * 0.45f,
-                    width,
-                    length * 0.5f,
-                    colour,
-                    1.1f,
-                    0.35f,
-                    90 + index,
-                    angle - Mathf.PI * 0.5f);
-            }
-
-            canvas.SoftCircle(0.5f, 0.5f, 0.3f, new Color(1f, 0.86f, 0.55f, 0.5f), 1.6f, 0.35f, 110);
-            canvas.SoftCircle(0.5f, 0.5f, 0.15f, new Color(1f, 0.97f, 0.86f, 0.85f), 1.2f, 0.15f, 111);
+            canvas.SoftEllipse(0.5f, 0.27f, 0.22f, 0.19f,
+                new Color(1f, 0.66f, 0.16f, 0.52f), 1.8f, 0.48f, 90);
+            canvas.SoftEllipse(0.5f, 0.5f, 0.13f, 0.36f,
+                new Color(1f, 0.78f, 0.28f, 0.58f), 1.7f, 0.5f, 91, 0.03f);
+            canvas.SoftEllipse(0.39f, 0.43f, 0.075f, 0.25f,
+                new Color(1f, 0.39f, 0.06f, 0.42f), 1.9f, 0.58f, 92, -0.28f);
+            canvas.SoftEllipse(0.63f, 0.39f, 0.065f, 0.2f,
+                new Color(1f, 0.46f, 0.07f, 0.38f), 2f, 0.6f, 93, 0.38f);
+            canvas.SoftEllipse(0.53f, 0.72f, 0.055f, 0.23f,
+                new Color(1f, 0.87f, 0.44f, 0.5f), 1.7f, 0.55f, 94, 0.08f);
+            canvas.SoftEllipse(0.47f, 0.31f, 0.09f, 0.17f,
+                new Color(1f, 0.98f, 0.8f, 0.8f), 1.4f, 0.3f, 95);
+            canvas.SoftCircle(0.5f, 0.22f, 0.09f, new Color(1f, 1f, 0.94f, 0.95f), 1.2f, 0.16f, 96);
         }
 
         private static void DrawDirtChunk(VfxPixelCanvas canvas)
@@ -246,10 +226,11 @@ namespace LocalTanks.Editor
         /// </summary>
         private static void DrawFireGlow(VfxPixelCanvas canvas)
         {
-            canvas.SoftCircle(0.5f, 0.48f, 0.5f, new Color(1f, 0.42f, 0.07f, 0.45f), 2.6f, 0.5f, 201);
-            canvas.SoftCircle(0.5f, 0.5f, 0.34f, new Color(1f, 0.6f, 0.16f, 0.45f), 2.2f, 0.45f, 202);
-            canvas.SoftCircle(0.5f, 0.54f, 0.2f, new Color(1f, 0.82f, 0.42f, 0.5f), 1.8f, 0.35f, 203);
-            canvas.SoftCircle(0.5f, 0.56f, 0.1f, new Color(1f, 0.95f, 0.76f, 0.55f), 1.4f, 0.2f, 204);
+            // An irregular bed of heat rather than a circular lamp under the flames.
+            canvas.SoftEllipse(0.42f, 0.43f, 0.34f, 0.26f, new Color(1f, 0.28f, 0.025f, 0.3f), 2.5f, 0.78f, 201, -0.2f);
+            canvas.SoftEllipse(0.62f, 0.46f, 0.3f, 0.23f, new Color(1f, 0.39f, 0.045f, 0.3f), 2.4f, 0.76f, 202, 0.22f);
+            canvas.SoftEllipse(0.48f, 0.6f, 0.24f, 0.2f, new Color(1f, 0.58f, 0.1f, 0.34f), 2.2f, 0.7f, 203);
+            canvas.SoftEllipse(0.5f, 0.45f, 0.16f, 0.13f, new Color(1f, 0.88f, 0.48f, 0.48f), 1.8f, 0.42f, 204);
         }
 
         private static void DrawEmber(VfxPixelCanvas canvas)

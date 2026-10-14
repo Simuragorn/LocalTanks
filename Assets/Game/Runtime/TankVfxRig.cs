@@ -18,8 +18,8 @@ namespace LocalTanks
     /// instantiated once when the machine appears and the prints come from a fixed ring buffer.
     /// </para>
     /// <para>
-    /// Every generated effect is a hierarchy, not a single component: the muzzle flash is a core and a
-    /// star, and the fire is a flame and embers. The rig therefore works with the systems it finds in a
+    /// Every generated effect is a hierarchy, not a single component: the muzzle flash is a core, plume,
+    /// side flames and sparks, while wreck fire combines soot, glow, two flame heights, core and embers. The rig therefore works with the systems it finds in a
     /// prefab rather than with one component, which is the difference between an effect that appears and
     /// one that is silently never attached.
     /// </para>

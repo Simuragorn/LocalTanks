@@ -322,7 +322,9 @@ namespace LocalTanks.Editor
             materials["flash"] = CreateMaterial(shader, "vfx_flash", textures[VfxTextureLibrary.FlashStar], true);
             materials["petals"] = CreateMaterial(shader, "vfx_petals", textures[VfxTextureLibrary.FlashPetals], true);
             materials["core"] = CreateMaterial(shader, "vfx_core", textures[VfxTextureLibrary.FlashCore], true);
-            materials["flame"] = CreateMaterial(shader, "vfx_flame", textures[VfxTextureLibrary.Flame], true);
+            // The flame keeps its orange body through normal alpha blending. Only the glow, core and
+            // embers are additive; making every layer additive turned a fire into separate bright beads.
+            materials["flame"] = CreateMaterial(shader, "vfx_flame", textures[VfxTextureLibrary.Flame], false);
             materials["fire_glow"] = CreateMaterial(shader, "vfx_fire_glow", textures[VfxTextureLibrary.FireGlow], true);
             materials["ember"] = CreateMaterial(shader, "vfx_ember", textures[VfxTextureLibrary.Ember], true);
             return materials;
@@ -436,27 +438,39 @@ namespace LocalTanks.Editor
         private static void BuildMuzzleFlash(GameObject root, CombatVfxCatalog catalog, Dictionary<string, Material> materials)
         {
             float seconds = Max(catalog.weaponProfiles, profile => profile.flashSeconds);
-            // Three layers instead of one symmetric star: a small white-hot core, an irregular bloom of
-            // petals, and thin spikes thrown along the bore. The rig rotates and scales the whole thing a
-            // little on every shot, so a burst of fire never looks like one sprite repeated.
-            ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder + 1, seconds + 0.06f, 0.04f, 0.07f, 0.16f, 0.28f);
+            // A gun throws a short cone of propellant flame along the bore, not a radial star. Four layers
+            // keep the event readable in one or two frames: white core, directional plume, two short side
+            // flames and a few narrow incandescent fragments.
+            ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder + 2, seconds + 0.05f, 0.035f, 0.065f, 0.13f, 0.22f);
             SetBurst(core, 1);
-            SetPlanarVelocity(core, -0.1f, 0.1f, 0.4f, 1.0f);
-            SetSizeOverLifetime(core, 1.1f, 0.5f);
-            SetFade(core, 0.06f);
+            SetPlanarVelocity(core, -0.05f, 0.05f, 0.2f, 0.65f);
+            SetSizeOverLifetime(core, 1f, 0.45f);
+            SetFade(core, 0.035f);
+            OffsetSystem(core, 0f, 0.08f);
 
-            ParticleSystem petals = AddSystem(root, "Petals", materials["petals"], FlashSortingOrder, seconds + 0.1f, 0.06f, 0.12f, 0.55f, 0.95f);
-            SetBurst(petals, 1);
-            SetPlanarVelocity(petals, -0.2f, 0.2f, 0.7f, 1.6f);
-            SetSizeOverLifetime(petals, 1f, 0.5f);
-            SetFade(petals, 0.08f);
+            ParticleSystem plume = AddSystem(root, "Plume", materials["petals"], FlashSortingOrder + 1, seconds + 0.08f, 0.045f, 0.09f, 0.58f, 0.86f);
+            SetBurst(plume, 1);
+            SetPlanarVelocity(plume, -0.08f, 0.08f, 0.35f, 1.0f);
+            SetStartRotation(plume, -0.12f, 0.12f);
+            SetSizeOverLifetime(plume, 1f, 0.58f);
+            SetFade(plume, 0.04f);
+            OffsetSystem(plume, 0f, 0.22f);
 
-            ParticleSystem spikes = AddSystem(root, "Spikes", materials["spark"], SparkSortingOrder, seconds + 0.08f, 0.05f, 0.11f, 0.22f, 0.45f);
-            SetBurst(spikes, 5);
-            // Spikes leave the bore, so their spread along the barrel is narrow and their side spread tiny.
-            SetPlanarVelocity(spikes, -0.25f, 0.25f, 1.2f, 2.6f);
-            SetSizeOverLifetime(spikes, 1f, 0.3f);
-            SetFade(spikes, 0.06f);
+            ParticleSystem sideFlames = AddSystem(root, "SideFlames", materials["flame"], FlashSortingOrder, seconds + 0.06f, 0.04f, 0.08f, 0.22f, 0.38f);
+            SetBurst(sideFlames, 2);
+            SetPlanarVelocity(sideFlames, -0.34f, 0.34f, 0.25f, 0.75f);
+            SetStartRotation(sideFlames, -0.45f, 0.45f);
+            SetSizeOverLifetime(sideFlames, 0.9f, 0.25f);
+            SetFade(sideFlames, 0.035f);
+            OffsetSystem(sideFlames, 0f, 0.1f);
+
+            ParticleSystem sparks = AddSystem(root, "Sparks", materials["spark"], SparkSortingOrder, seconds + 0.08f, 0.055f, 0.12f, 0.05f, 0.11f);
+            SetBurst(sparks, 4);
+            SetPlanarVelocity(sparks, -0.16f, 0.16f, 1.3f, 2.9f);
+            SetStartRotation(sparks, -0.14f, 0.14f);
+            SetSizeOverLifetime(sparks, 1f, 0.15f);
+            SetFade(sparks, 0.045f);
+            OffsetSystem(sparks, 0f, 0.16f);
         }
 
         /// <summary>
@@ -564,45 +578,62 @@ namespace LocalTanks.Editor
 
         private static void BuildDamageSmoke(GameObject root, Dictionary<string, Material> materials)
         {
-            ParticleSystem smoke = AddSystem(root, "Smoke", materials["smoke"], SmokeSortingOrder, 3f, 1.4f, 2.4f, 0.5f, 0.9f);
-            SetRate(smoke, 3f);
-            SetPlanarVelocity(smoke, -0.2f, 0.2f, 0.6f, 1.1f);
-            SetSizeOverLifetime(smoke, 0.6f, 2f);
-            SetFade(smoke, 0.2f);
+            ParticleSystem smoke = AddSystem(root, "Smoke", materials["smoke"], SmokeSortingOrder, 3.5f, 1.5f, 2.8f, 0.42f, 0.78f, 0.12f, 0.16f);
+            SetRate(smoke, 3.5f);
+            SetPlanarVelocity(smoke, -0.28f, 0.28f, 0.45f, 1.05f);
+            SetSizeOverLifetime(smoke, 0.55f, 2.25f);
+            SetFade(smoke, 0.16f);
+            SetTurbulence(smoke, 0.22f, 0.48f);
         }
 
         private static void BuildDamageFire(GameObject root, Dictionary<string, Material> materials)
         {
-            // A fire is a body of light with tongues licking out of it, not a pile of flame-shaped sprites.
-            // Four layers: a warm glow that carries the brightness, soft tongues, a hot core and embers.
-            // Lifetimes are short and sizes small, so the shape shimmers instead of showing one large
-            // silhouette, and turbulence keeps every particle moving differently.
-            ParticleSystem glow = AddSystem(root, "Glow", materials["fire_glow"], FireSortingOrder, 3f, 0.35f, 0.6f, 0.3f, 0.55f, 0.18f, 0.3f);
-            SetRate(glow, 16f);
-            SetPlanarVelocity(glow, -0.15f, 0.15f, 0.2f, 0.6f);
-            SetSizeOverLifetime(glow, 0.85f, 1.2f);
-            SetFade(glow, 0.22f);
+            // Six layers form one continuous combustion column: soot behind the source, a broken bed of
+            // orange light, broad low flames, sparse tall licks, a white-hot core and rare embers. The
+            // visible flame is alpha blended; only light and incandescent particles add energy.
+            ParticleSystem soot = AddSystem(root, "Soot", materials["smoke"], SmokeSortingOrder, 3f, 1.0f, 2.0f, 0.2f, 0.34f, 0.14f, 0.12f);
+            SetRate(soot, 2.8f);
+            SetPlanarVelocity(soot, -0.24f, 0.24f, 0.5f, 1.1f);
+            SetSizeOverLifetime(soot, 0.55f, 2.1f);
+            SetFade(soot, 0.14f);
+            SetTurbulence(soot, 0.24f, 0.5f);
+            SetStartColor(soot, new Color(0.18f, 0.16f, 0.14f, 0.48f));
+
+            ParticleSystem glow = AddSystem(root, "Glow", materials["fire_glow"], FireSortingOrder, 3f, 0.2f, 0.38f, 0.4f, 0.7f, 0.2f, 0.18f);
+            SetRate(glow, 9f);
+            SetPlanarVelocity(glow, -0.16f, 0.16f, 0.12f, 0.42f);
+            SetSizeOverLifetime(glow, 0.78f, 1.05f);
+            SetFade(glow, 0.18f);
             SetTurbulence(glow, 0.12f, 0.7f);
 
-            ParticleSystem tongues = AddSystem(root, "Tongues", materials["flame"], FireSortingOrder + 1, 3f, 0.26f, 0.48f, 0.28f, 0.48f, 0.18f, 0.3f);
-            SetRate(tongues, 20f);
-            SetPlanarVelocity(tongues, -0.1f, 0.1f, 0.35f, 0.95f);
-            SetStartRotation(tongues, -0.55f, 0.55f);
-            SetSizeOverLifetime(tongues, 1f, 0.55f);
-            SetFade(tongues, 0.18f);
-            SetTurbulence(tongues, 0.2f, 0.9f);
+            ParticleSystem tongues = AddSystem(root, "Tongues", materials["flame"], FireSortingOrder + 1, 3f, 0.28f, 0.58f, 0.34f, 0.62f, 0.22f, 0.16f);
+            SetRate(tongues, 24f);
+            SetPlanarVelocity(tongues, -0.2f, 0.2f, 0.38f, 1.0f);
+            SetStartRotation(tongues, -0.38f, 0.38f);
+            SetSizeOverLifetime(tongues, 0.95f, 0.24f);
+            SetFade(tongues, 0.12f);
+            SetTurbulence(tongues, 0.24f, 0.86f);
 
-            ParticleSystem core = AddSystem(root, "Core", materials["core"], FireSortingOrder + 2, 3f, 0.18f, 0.34f, 0.16f, 0.3f, 0.1f, 0.16f);
-            SetRate(core, 10f);
-            SetPlanarVelocity(core, -0.1f, 0.1f, 0.15f, 0.5f);
-            SetSizeOverLifetime(core, 1.1f, 0.6f);
-            SetFade(core, 0.15f);
+            ParticleSystem tallTongues = AddSystem(root, "TallTongues", materials["flame"], FireSortingOrder + 1, 3f, 0.45f, 0.82f, 0.22f, 0.4f, 0.14f, 0.1f);
+            SetRate(tallTongues, 9f);
+            SetPlanarVelocity(tallTongues, -0.16f, 0.16f, 0.62f, 1.35f);
+            SetStartRotation(tallTongues, -0.26f, 0.26f);
+            SetSizeOverLifetime(tallTongues, 0.86f, 0.12f);
+            SetFade(tallTongues, 0.1f);
+            SetTurbulence(tallTongues, 0.28f, 0.72f);
 
-            ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.6f, 1.3f, 0.04f, 0.09f, 0.14f, 0.22f);
-            SetRate(ember, 9f);
-            SetPlanarVelocity(ember, -0.7f, 0.7f, 0.7f, 1.9f);
-            SetSizeOverLifetime(ember, 1f, 0.3f);
-            SetFade(ember, 0.1f);
+            ParticleSystem core = AddSystem(root, "Core", materials["core"], FireSortingOrder + 2, 3f, 0.13f, 0.27f, 0.18f, 0.34f, 0.16f, 0.12f);
+            SetRate(core, 14f);
+            SetPlanarVelocity(core, -0.12f, 0.12f, 0.12f, 0.46f);
+            SetSizeOverLifetime(core, 1f, 0.38f);
+            SetFade(core, 0.1f);
+            SetStartColor(core, new Color(1f, 0.9f, 0.62f, 0.9f));
+
+            ParticleSystem ember = AddSystem(root, "Ember", materials["ember"], EmberSortingOrder, 3f, 0.65f, 1.4f, 0.02f, 0.05f, 0.12f, 0.12f);
+            SetRate(ember, 3.5f);
+            SetPlanarVelocity(ember, -0.5f, 0.5f, 0.75f, 1.8f);
+            SetSizeOverLifetime(ember, 1f, 0.12f);
+            SetFade(ember, 0.08f);
         }
 
         /// <summary>Limits how far a particle may be rotated, so tongues point along the plume.</summary>
@@ -610,6 +641,17 @@ namespace LocalTanks.Editor
         {
             ParticleSystem.MainModule main = system.main;
             main.startRotation = new ParticleSystem.MinMaxCurve(minRadians, maxRadians);
+        }
+
+        private static void SetStartColor(ParticleSystem system, Color color)
+        {
+            ParticleSystem.MainModule main = system.main;
+            main.startColor = color;
+        }
+
+        private static void OffsetSystem(ParticleSystem system, float x, float y)
+        {
+            system.transform.localPosition = new Vector3(x, y, 0f);
         }
 
         /// <summary>
@@ -679,6 +721,8 @@ namespace LocalTanks.Editor
             child.transform.SetParent(root.transform, false);
             ParticleSystem system = child.AddComponent<ParticleSystem>();
             system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            system.useAutoRandomSeed = false;
+            system.randomSeed = StableSeed(name);
 
             ParticleSystem.MainModule main = system.main;
             main.playOnAwake = false;
@@ -713,6 +757,20 @@ namespace LocalTanks.Editor
             renderer.receiveShadows = false;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             return system;
+        }
+
+        private static uint StableSeed(string value)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                foreach (char character in value)
+                {
+                    hash = (hash ^ character) * 16777619u;
+                }
+
+                return hash == 0u ? 1u : hash;
+            }
         }
 
         private static void SetPlanarVelocity(ParticleSystem system, float minX, float maxX, float minY, float maxY)
