@@ -45,6 +45,8 @@ namespace LocalTanks
         private readonly HashSet<ContactKey> spottedThisSweep = new HashSet<ContactKey>();
         private readonly Dictionary<ContactKey, VisionContact> contacts = new Dictionary<ContactKey, VisionContact>();
         private readonly List<VisionDiagnostic> diagnostics = new List<VisionDiagnostic>();
+        private readonly List<RaycastHit2D> worldPointHits = new List<RaycastHit2D>(16);
+        private ContactFilter2D worldPointFilter = new ContactFilter2D().NoFilter();
         private float nextSweepTime;
         private bool sweepInProgress;
 
@@ -116,6 +118,75 @@ namespace LocalTanks
         public bool TryGetContact(TeamId viewingTeam, TeamMember target, out VisionContact contact)
         {
             return contacts.TryGetValue(new ContactKey(viewingTeam, target), out contact);
+        }
+
+        /// <summary>
+        /// Whether an unobscured point of terrain is inside the current view of at least one living member
+        /// of a team. Ground marks use this instead of their author's visibility: an enemy may have moved
+        /// away while the old piece of track is still under observation.
+        /// </summary>
+        public bool IsWorldPositionVisibleTo(TeamId viewingTeam, Vector2 position)
+        {
+            if (rules == null)
+            {
+                return true;
+            }
+
+            foreach (TeamMember observer in TeamMember.ActiveMembers)
+            {
+                if (observer == null || !observer.isActiveAndEnabled || !observer.IsAlive ||
+                    observer.Team != viewingTeam || observer.Definition == null)
+                {
+                    continue;
+                }
+
+                Vector2 origin = observer.transform.position;
+                Vector2 delta = position - origin;
+                float distance = delta.magnitude;
+                if (distance > observer.Definition.viewRange)
+                {
+                    continue;
+                }
+
+                if (distance > 0.001f)
+                {
+                    Vector2 direction = delta / distance;
+                    float dot = Vector2.Dot(observer.VisionForward, direction);
+                    if (!DetectionMath.IsWithinViewArc(
+                            dot,
+                            rules.GetViewAngle(observer.Definition.vehicleClass)))
+                    {
+                        continue;
+                    }
+
+                    bool blocked = false;
+                    worldPointHits.Clear();
+                    Physics2D.Raycast(origin, direction, worldPointFilter, worldPointHits, distance);
+                    foreach (RaycastHit2D hit in worldPointHits)
+                    {
+                        Collider2D collider = hit.collider;
+                        if (collider == null || BelongsTo(collider.transform, observer.transform))
+                        {
+                            continue;
+                        }
+
+                        if (collider.GetComponentInParent<VisionBlocker>() != null)
+                        {
+                            blocked = true;
+                            break;
+                        }
+                    }
+
+                    if (blocked)
+                    {
+                        continue;
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         public DetectionResult Evaluate(TeamMember observer, TeamMember target, out float bushBonus)

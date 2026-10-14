@@ -209,7 +209,15 @@ namespace LocalTanks.Tests
             emitter.Emit(Vector3.zero, Quaternion.identity, 0.1f, 0.15f, Color.white, 1f);
 
             Assert.That(emitter.LiveCount, Is.EqualTo(1));
-            emitter.Tick(1.5f);
+            SpriteRenderer print = GameObject.Find("TrackMarks_FadingMarkEmitter")
+                .GetComponentInChildren<SpriteRenderer>();
+            emitter.Tick(0.5f);
+            Assert.That(print.color.a, Is.EqualTo(1f).Within(0.01f),
+                "A long-lived print should remain readable before its final fade begins.");
+            emitter.Tick(0.3f);
+            Assert.That(print.color.a, Is.InRange(0.05f, 0.95f),
+                "A print should disappear gradually near the end of its lifetime.");
+            emitter.Tick(0.7f);
 
             Assert.That(emitter.LiveCount, Is.EqualTo(0), "A print that outlived its fade must stop drawing.");
 

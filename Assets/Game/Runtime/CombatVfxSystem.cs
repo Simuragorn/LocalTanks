@@ -42,6 +42,7 @@ namespace LocalTanks
         public CombatVfxCatalog Catalog => catalog;
         public CombatVfxPool Pool => pool;
         public ICombatVfxAssetProvider AssetProvider => assetProvider;
+        public TeamVisionSystem VisionSystem => director != null ? director.VisionSystem : null;
         public string Status => status;
         public bool HasCatalog => catalog != null;
         public int ArmorImpactEffects { get; private set; }

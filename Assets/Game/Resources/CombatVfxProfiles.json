@@ -72,8 +72,8 @@
       "markSpacingFraction": 0.125,
       "markLengthFraction": 0.26,
       "markWidthFraction": 0.42,
-      "markFadeSeconds": 9.0,
-      "markLimit": 40,
+      "markFadeSeconds": 24.0,
+      "markLimit": 160,
       "sprayRate": 8.0,
       "exhaustStartPuffSeconds": 0.9,
       "exhaustStartPuffMultiplier": 3.5
@@ -92,8 +92,8 @@
       "markSpacingFraction": 0.125,
       "markLengthFraction": 0.26,
       "markWidthFraction": 0.44,
-      "markFadeSeconds": 10.0,
-      "markLimit": 48,
+      "markFadeSeconds": 28.0,
+      "markLimit": 192,
       "sprayRate": 10.0,
       "exhaustStartPuffSeconds": 0.9,
       "exhaustStartPuffMultiplier": 3.5
@@ -112,8 +112,8 @@
       "markSpacingFraction": 0.125,
       "markLengthFraction": 0.27,
       "markWidthFraction": 0.46,
-      "markFadeSeconds": 11.0,
-      "markLimit": 56,
+      "markFadeSeconds": 32.0,
+      "markLimit": 224,
       "sprayRate": 12.0,
       "exhaustStartPuffSeconds": 0.9,
       "exhaustStartPuffMultiplier": 3.5

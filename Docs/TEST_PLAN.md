@@ -178,6 +178,8 @@
 - `ValidateCombatVfxAssets` проверяет полноту сгенерированной библиотеки, а Edit Mode `CombatVfxProfileTests` дополнительно требует четыре слоя вспышки (`Core`, `Plume`, `SideFlames`, `Sparks`) и шесть слоёв пожара (`Soot`, `Glow`, `Tongues`, `TallTongues`, `Core`, `Ember`). Play Mode тесты с фильтром `CombatVfx` подтверждают загрузку, повторное использование и очистку эффектов в пуле.
 - `RenderCombatVfxProof` пишет крупный каталог эффектов в `Docs/Media/CombatVfx.png`; направленный факел должен быть вытянут от дульного среза, дым — состоять из неровных клубов, а пожар — образовывать связное основание с языками, ядром, угольками и копотью, а не круглыми аддитивными точками.
 - `RenderCombatVfxBattleProof` пишет `Docs/Media/CombatVfxBattle.png` с эффектами в масштабе машин. На кадре проверяются читаемость короткой вспышки у ствола и заметный, но не закрывающий корпус пожар на моторной части уничтоженной машины.
+- Edit Mode `CombatVfxProfileTests.TrackMarks_KeepAUsefulTrailBeforeTheyFade` удерживает минимальные срок жизни и ёмкость кольцевого буфера. Play Mode `TrackMarkEmitter_FadesAndReleasesItsPrints` требует полную плотность в начале, плавное затухание в конце и освобождение просроченного отпечатка.
+- `VisionPlayModeTests.EnemyTrackMarks_RenderOnlyOnObservedGround` оставляет два вражеских отпечатка, перемещает наблюдателя и проверяет, что видимость следует текущему обзору каждой точки земли, а оба отпечатка продолжают стареть независимо от отображения.
 
 ## Фоновый запуск Unity: Headless, Graphical Background и очередь
 

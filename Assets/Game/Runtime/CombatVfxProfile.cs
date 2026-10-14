@@ -113,7 +113,8 @@ namespace LocalTanks
         /// </summary>
         public float markWidthFraction = 0.35f;
 
-        public float markFadeSeconds = 6f;
+        /// <summary>Total lifetime of a print. It stays solid for most of this time and fades at the end.</summary>
+        public float markFadeSeconds = 24f;
 
         /// <summary>Prints one machine may keep on the ground at once; the oldest is reused first.</summary>
         public int markLimit = 48;

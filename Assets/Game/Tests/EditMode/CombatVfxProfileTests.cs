@@ -99,6 +99,17 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void TrackMarks_KeepAUsefulTrailBeforeTheyFade()
+        {
+            CombatVfxCatalog catalog = CombatVfxProfileValidator.LoadSource();
+
+            Assert.That(catalog.movementProfiles.All(profile => profile.markFadeSeconds >= 24f), Is.True,
+                "A track print must remain long enough to form a trail behind the machine.");
+            Assert.That(catalog.movementProfiles.All(profile => profile.markLimit >= 160), Is.True,
+                "The ring buffer must not recycle the beginning of a trail almost immediately.");
+        }
+
+        [Test]
         public void DamageBands_FollowTheRemainingHealth()
         {
             CombatVfxCatalog catalog = CombatVfxProfileValidator.LoadSource();

@@ -273,6 +273,43 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator EnemyTrackMarks_RenderOnlyOnObservedGround()
+        {
+            VisionRules rules = CreateRules();
+            GameObject systems = new GameObject("Systems");
+            TeamVisionSystem vision = systems.AddComponent<TeamVisionSystem>();
+            vision.Configure(rules, TeamId.TeamA);
+            TeamMember observer = CreateTank("Observer", TeamId.TeamA, Vector2.zero, 10f, 0f);
+            GameObject owner = new GameObject("EnemyTrackOwner");
+            Sprite sprite = CreateMarkSprite();
+            TankTrackMarkEmitter emitter = owner.AddComponent<TankTrackMarkEmitter>();
+            emitter.Configure(sprite, 4);
+            emitter.ConfigureVisibility(TeamId.TeamB, vision);
+            yield return null;
+
+            emitter.Emit(new Vector3(0f, 5f, 0f), Quaternion.identity, 0.1f, 0.2f, Color.white, 10f);
+            emitter.Emit(new Vector3(0f, 15f, 0f), Quaternion.identity, 0.1f, 0.2f, Color.white, 10f);
+            Assert.That(emitter.LiveCount, Is.EqualTo(2),
+                "Both enemy prints must keep aging even when one is outside vision.");
+            Assert.That(emitter.VisibleCount, Is.EqualTo(1));
+
+            observer.transform.position = new Vector3(0f, 10f, 0f);
+            Physics2D.SyncTransforms();
+            emitter.Tick(0.21f);
+
+            Assert.That(emitter.LiveCount, Is.EqualTo(2));
+            Assert.That(emitter.VisibleCount, Is.EqualTo(1),
+                "Visibility must follow the observed ground, not the enemy that authored the print.");
+            SpriteRenderer[] prints = GameObject.Find("TrackMarks_EnemyTrackOwner")
+                .GetComponentsInChildren<SpriteRenderer>(true);
+            Assert.That(System.Array.Find(prints, item => item.transform.position.y > 10f).enabled, Is.True);
+            Assert.That(System.Array.Find(prints, item => item.transform.position.y < 10f).enabled, Is.False);
+
+            Cleanup(systems, observer.gameObject, owner, sprite, sprite.texture, rules);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator NearbyPlayer_MakesConcealmentVegetationTransparent()
         {
             TeamMember player = CreateTank("Player", TeamId.TeamA, Vector2.zero, 10f, 0f);
@@ -415,6 +452,20 @@ namespace LocalTanks.Tests
             rules.tankDestroyerViewAngle = 100f;
             rules.artilleryViewAngle = 80f;
             return rules;
+        }
+
+        private static Sprite CreateMarkSprite()
+        {
+            Texture2D texture = new Texture2D(4, 4, TextureFormat.RGBA32, false);
+            Color[] pixels = new Color[16];
+            for (int index = 0; index < pixels.Length; index++)
+            {
+                pixels[index] = Color.white;
+            }
+
+            texture.SetPixels(pixels);
+            texture.Apply(false, false);
+            return Sprite.Create(texture, new Rect(0f, 0f, 4f, 4f), new Vector2(0.5f, 0.5f), 4f);
         }
 
         private static CaptureRules CreateCaptureRules(float seconds, int maximumTanks, float recoverySeconds)

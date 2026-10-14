@@ -167,9 +167,17 @@ namespace LocalTanks
             }
 
             float deltaTime = Time.deltaTime;
-            if (destroyed || !IsVisibleToPlayer())
+            if (destroyed)
             {
                 SuppressMovement();
+            }
+            else if (!IsVisibleToPlayer())
+            {
+                // Dust, spray and exhaust would reveal a hidden vehicle. Its ground prints are still
+                // recorded, but the emitter independently exposes only the pieces of terrain currently
+                // observed by the player's team.
+                SuppressMovement();
+                UpdateTrackMarks(deltaTime);
             }
             else
             {
@@ -210,6 +218,10 @@ namespace LocalTanks
                 markSprite = provider.LoadMarkSprite(CombatVfxEffects.MarkVariantFor(movement.id));
                 marks = gameObject.AddComponent<TankTrackMarkEmitter>();
                 marks.Configure(markSprite, movement.markLimit);
+                TeamMember owner = GetComponent<TeamMember>();
+                marks.ConfigureVisibility(
+                    owner != null ? owner.Team : TeamId.Neutral,
+                    system.VisionSystem);
             }
 
             leftDust = AttachLoop(provider, CombatVfxEffects.TrackDust, "VfxDustLeft", -halfTrackOffset, RearOffset());
@@ -399,6 +411,25 @@ namespace LocalTanks
                 SetEmission(exhaust, exhaustRate);
             }
 
+            EmitPrints(profile, surfaceProfile, markMultiplier, deltaTime);
+        }
+
+        private void UpdateTrackMarks(float deltaTime)
+        {
+            CombatVfxSystem system = CombatVfxSystem.Current;
+            CombatVfxCatalog catalog = system != null ? system.Catalog : null;
+            MovementVfxProfile profile = catalog != null ? catalog.ResolveMovement(config.massTonnes) : null;
+            if (profile == null)
+            {
+                return;
+            }
+
+            TerrainKind surface = terrain != null ? terrain.CurrentTerrain : TerrainKind.Grass;
+            CurrentSurface = surface;
+            SurfaceVfxProfile surfaceProfile = catalog.ResolveSurface(surface);
+            float markMultiplier = surfaceProfile != null
+                ? Mathf.Max(0f, surfaceProfile.markOpacityMultiplier)
+                : 1f;
             EmitPrints(profile, surfaceProfile, markMultiplier, deltaTime);
         }
 

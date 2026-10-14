@@ -22,16 +22,44 @@ namespace LocalTanks
         private float[] ages;
         private float[] lifetimes;
         private Color[] colors;
+        private bool[] active;
         private int cursor;
         private int liveCount;
         private Transform container;
         private Sprite sprite;
+        private TeamId ownerTeam = TeamId.Neutral;
+        private TeamVisionSystem visionSystem;
+        private float visibilityRefreshSecondsLeft;
+
+        private const float VisibilityRefreshSeconds = 0.2f;
+        private const float FadeTailFraction = 0.35f;
 
         /// <summary>Draw order below the hull (5) and below every other effect of the machine.</summary>
         public const int SortingOrder = 4;
 
         public int Capacity { get; private set; }
         public int LiveCount => liveCount;
+        public int VisibleCount
+        {
+            get
+            {
+                if (marks == null || active == null)
+                {
+                    return 0;
+                }
+
+                int count = 0;
+                for (int slot = 0; slot < marks.Length; slot++)
+                {
+                    if (active[slot] && marks[slot] != null && marks[slot].enabled)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
 
         /// <summary>Renderers this emitter has ever created. It can never exceed <see cref="Capacity"/>.</summary>
         public int RendererCount
@@ -69,8 +97,20 @@ namespace LocalTanks
             ages = new float[Capacity];
             lifetimes = new float[Capacity];
             colors = new Color[Capacity];
+            active = new bool[Capacity];
             cursor = 0;
             liveCount = 0;
+        }
+
+        /// <summary>
+        /// Enemy prints are world evidence, not children of the enemy's silhouette. They remain active in
+        /// the ring buffer but render only where the local team currently observes the ground.
+        /// </summary>
+        public void ConfigureVisibility(TeamId team, TeamVisionSystem vision)
+        {
+            ownerTeam = team;
+            visionSystem = vision;
+            visibilityRefreshSecondsLeft = 0f;
         }
 
         /// <summary>Places one print. Silently does nothing when the mark sprite was never generated.</summary>
@@ -84,6 +124,7 @@ namespace LocalTanks
 
             int slot = cursor;
             cursor = (cursor + 1) % Capacity;
+            bool replacesLivePrint = active[slot];
             SpriteRenderer renderer = marks[slot];
             if (renderer == null)
             {
@@ -104,12 +145,16 @@ namespace LocalTanks
             // are the width and the length of this particular machine's track.
             renderer.transform.localScale = new Vector3(width, length, 1f);
             renderer.color = color;
-            renderer.enabled = true;
+            renderer.enabled = ShouldRender(position);
 
             ages[slot] = 0f;
             lifetimes[slot] = Mathf.Max(0.05f, fadeSeconds);
             colors[slot] = color;
-            liveCount = Mathf.Min(Capacity, liveCount + 1);
+            active[slot] = true;
+            if (!replacesLivePrint)
+            {
+                liveCount = Mathf.Min(Capacity, liveCount + 1);
+            }
             EmittedCount++;
         }
 
@@ -122,11 +167,18 @@ namespace LocalTanks
             }
 
             float step = Mathf.Max(0f, deltaTime);
+            visibilityRefreshSecondsLeft -= step;
+            bool refreshVisibility = visibilityRefreshSecondsLeft <= 0f;
+            if (refreshVisibility)
+            {
+                visibilityRefreshSecondsLeft = VisibilityRefreshSeconds;
+            }
+
             int remaining = 0;
             for (int slot = 0; slot < Capacity; slot++)
             {
                 SpriteRenderer renderer = marks[slot];
-                if (renderer == null || !renderer.enabled)
+                if (renderer == null || !active[slot])
                 {
                     continue;
                 }
@@ -135,13 +187,21 @@ namespace LocalTanks
                 float life = lifetimes[slot];
                 if (ages[slot] >= life)
                 {
+                    active[slot] = false;
                     renderer.enabled = false;
                     continue;
                 }
 
                 Color color = colors[slot];
-                color.a = colors[slot].a * (1f - ages[slot] / life);
+                float fadeStart = life * (1f - FadeTailFraction);
+                float fadeProgress = Mathf.InverseLerp(fadeStart, life, ages[slot]);
+                color.a = colors[slot].a * (1f - fadeProgress);
                 renderer.color = color;
+                if (refreshVisibility)
+                {
+                    renderer.enabled = ShouldRender(renderer.transform.position);
+                }
+
                 remaining++;
             }
 
@@ -156,12 +216,15 @@ namespace LocalTanks
                 return;
             }
 
-            foreach (SpriteRenderer renderer in marks)
+            for (int slot = 0; slot < marks.Length; slot++)
             {
+                SpriteRenderer renderer = marks[slot];
                 if (renderer != null)
                 {
                     renderer.enabled = false;
                 }
+
+                active[slot] = false;
             }
 
             liveCount = 0;
@@ -181,7 +244,21 @@ namespace LocalTanks
 
             container = null;
             marks = null;
+            active = null;
             liveCount = 0;
+        }
+
+        private bool ShouldRender(Vector3 position)
+        {
+            if (visionSystem == null || ownerTeam == TeamId.Neutral ||
+                ownerTeam == visionSystem.LocalPlayerTeam)
+            {
+                return true;
+            }
+
+            return visionSystem.IsWorldPositionVisibleTo(
+                visionSystem.LocalPlayerTeam,
+                position);
         }
 
         private Transform EnsureContainer()
