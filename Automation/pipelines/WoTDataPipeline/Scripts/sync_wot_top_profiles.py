@@ -246,10 +246,18 @@ def extract_profile(archive: zipfile.ZipFile, entry: dict, conversion: dict) -> 
     hull_factor = number(chassis, "shotDispersionFactors/vehicleRotation")
     turret_factor = overlay_number(gun_override, gun_base, "shotDispersionFactors/turretRotation")
     after_shot_factor = overlay_number(gun_override, gun_base, "shotDispersionFactors/afterShot")
-    movement_penalty = base_dispersion_degrees * movement_factor * forward_kmh / 10.0
-    hull_penalty = base_dispersion_degrees * hull_factor * traverse / 10.0
-    turret_penalty = base_dispersion_degrees * turret_factor * turret_traverse / 10.0
+    # WoT's movement coefficients multiply the actual vehicle/turret rate. They are not percentages
+    # and must not be divided by ten: doing that made movement and traverse almost invisible in play.
+    movement_penalty = base_dispersion_degrees * movement_factor * forward_kmh
+    hull_penalty = base_dispersion_degrees * hull_factor * traverse
+    turret_penalty = base_dispersion_degrees * turret_factor * turret_traverse
     shot_penalty = base_dispersion_degrees * after_shot_factor
+    maximum_dispersion = math.sqrt(
+        base_dispersion_degrees ** 2
+        + movement_penalty ** 2
+        + hull_penalty ** 2
+        + turret_penalty ** 2
+    )
 
     still_camo = number(vehicle, "invisibility/still")
     moving_camo = number(vehicle, "invisibility/moving")
@@ -298,6 +306,10 @@ def extract_profile(archive: zipfile.ZipFile, entry: dict, conversion: dict) -> 
             "gunReloadSeconds": overlay_number(gun_override, gun_base, "reloadTime"),
             "gunAimingSeconds": overlay_number(gun_override, gun_base, "aimingTime"),
             "dispersionMetresAt100m": dispersion_metres,
+            "movementDispersionFactor": movement_factor,
+            "hullTraverseDispersionFactor": hull_factor,
+            "turretTraverseDispersionFactor": turret_factor,
+            "afterShotDispersionFactor": after_shot_factor,
             "magazineSize": magazine_size,
             "burstSize": max(1, int(number(gun_base, "burst/count", 1))),
             "roundsPerMinuteInsideMagazine": clip_rate,
@@ -336,7 +348,7 @@ def extract_profile(archive: zipfile.ZipFile, entry: dict, conversion: dict) -> 
             },
             "gunHandling": {
                 "minimumDispersionDegrees": round_value(base_dispersion_degrees),
-                "maximumDispersionDegrees": round_value(base_dispersion_degrees + movement_penalty + hull_penalty + turret_penalty),
+                "maximumDispersionDegrees": round_value(maximum_dispersion),
                 "aimingTimeSeconds": round_value(overlay_number(gun_override, gun_base, "aimingTime")),
                 "movementDispersionDegrees": round_value(movement_penalty),
                 "hullTraverseDispersionDegrees": round_value(hull_penalty),
@@ -403,6 +415,15 @@ def apply_profile(project_root: Path, profile: dict) -> None:
     write_json(definitions / "Shells" / f"{shell['id']}.json", shell)
 
 
+def apply_gun_handling(project_root: Path, profile: dict) -> None:
+    """Apply only the aiming model without crossing the pending P6 ballistics boundary."""
+    validate_rendered_top_configuration(project_root, profile)
+    tank_path = project_root / "Assets/Game/GameData/Definitions/Tanks" / f"{profile['tankId']}.json"
+    tank = load_json(tank_path)
+    tank["gunHandling"] = profile["final"]["gunHandling"]
+    write_json(tank_path, tank)
+
+
 def markdown(version: str, profiles: list[dict], conversion: dict) -> str:
     lines = [
         "# Снимок топовых конфигураций World of Tanks",
@@ -459,6 +480,7 @@ def main() -> None:
     parser.add_argument("--project-root", required=True)
     parser.add_argument("--config", required=True)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--apply-gun-handling", action="store_true")
     args = parser.parse_args()
 
     project_root = Path(args.project_root).resolve()
@@ -478,6 +500,11 @@ def main() -> None:
     if args.apply:
         for profile in profiles:
             apply_profile(project_root, profile)
+    elif args.apply_gun_handling:
+        for profile in profiles:
+            apply_gun_handling(project_root, profile)
+
+    if args.apply or args.apply_gun_handling:
         snapshot = project_root / "Docs/WOT_TOP_CONFIG_SNAPSHOT.md"
         snapshot.write_text(markdown(version, profiles, config["conversion"]), encoding="utf-8")
 

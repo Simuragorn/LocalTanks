@@ -14,10 +14,18 @@ namespace LocalTanks
             float hullTraversePenalty,
             float turretTraversePenalty)
         {
-            float target = Mathf.Max(0f, minimum) +
-                           Mathf.Clamp01(movement01) * Mathf.Max(0f, movementPenalty) +
-                           Mathf.Clamp01(hullTraverse01) * Mathf.Max(0f, hullTraversePenalty) +
-                           Mathf.Clamp01(turretTraverse01) * Mathf.Max(0f, turretTraversePenalty);
+            float baseDispersion = Mathf.Max(0f, minimum);
+            float movement = Mathf.Clamp01(movement01) * Mathf.Max(0f, movementPenalty);
+            float hull = Mathf.Clamp01(hullTraverse01) * Mathf.Max(0f, hullTraversePenalty);
+            float turret = Mathf.Clamp01(turretTraverse01) * Mathf.Max(0f, turretTraversePenalty);
+            // WoT coefficients are independent sources of gun movement. Combining them as vector
+            // magnitudes keeps simultaneous motion from becoming an arbitrary linear sum while still
+            // preserving the full penalty of each authored factor.
+            float target = Mathf.Sqrt(
+                baseDispersion * baseDispersion +
+                movement * movement +
+                hull * hull +
+                turret * turret);
             return Mathf.Clamp(target, Mathf.Max(0f, minimum), Mathf.Max(minimum, maximum));
         }
 

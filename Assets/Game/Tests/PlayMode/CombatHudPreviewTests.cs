@@ -127,7 +127,7 @@ namespace LocalTanks.Tests
 
             yield return null;
             yield return null;
-            Assert.That(document.rootVisualElement.Query<Label>(className: "world-health-number").ToList(),
+            Assert.That(document.rootVisualElement.Query<VisualElement>(className: "world-health-bar").ToList(),
                 Is.Not.Empty);
             Assert.That(document.rootVisualElement.Query<Label>(className: "damage-popup").ToList(),
                 Has.Count.EqualTo(2));

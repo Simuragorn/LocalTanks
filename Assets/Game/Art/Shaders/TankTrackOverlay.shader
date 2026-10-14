@@ -17,17 +17,17 @@ Shader "LocalTanks/TankTrackOverlay"
 
         // x lightens a tread plate, y darkens the gap between two links. Both are multipliers around
         // one, so 0.2 means twenty percent brighter and 0.3 thirty percent darker.
-        _TrackStrength ("Lighten and darken strength", Vector) = (0.32, 0.5, 0, 0)
+        _TrackStrength ("Lighten and darken strength", Vector) = (0.38, 0.58, 0, 0)
 
         // x is how many links span the mask and y how many coarse sweeps span it.
-        _TrackParams ("Link repeats, sweep repeats", Vector) = (8, 5.5, 0, 0)
+        _TrackParams ("Link repeats, sweep repeats", Vector) = (8, 6.5, 0, 0)
 
         // x and y are how far the left and right track have travelled, in mask heights.
         _TrackTravel ("Left and right track travel", Vector) = (0, 0, 0, 0)
 
         // x/y are the visible motion amount of the left and right track; z is the distant-pattern
         // gain. A stopped machine leaves its original painted tracks untouched.
-        _TrackMotion ("Left motion, right motion, distant gain", Vector) = (0, 0, 0.62, 0)
+        _TrackMotion ("Left motion, right motion, distant gain", Vector) = (0, 0, 0.95, 0)
 
         // Centres of the red and green mask bands, followed by their half-width, in mask UV.
         _TrackGeometry ("Red centre, green centre, half width", Vector) = (0.85, 0.15, 0.08, 0)
@@ -121,7 +121,7 @@ Shader "LocalTanks/TankTrackOverlay"
                 float f = frac(phase - (noise - 0.5) * 0.09);
                 float ridge = smoothstep(0.08, 0.18, f) * (1.0 - smoothstep(0.3, 0.4, f));
                 float joint = smoothstep(0.55, 0.64, f) * (1.0 - smoothstep(0.78, 0.88, f));
-                return ridge * 0.3 - joint * (0.34 + 0.08 * noise);
+                return ridge * 0.42 - joint * (0.5 + 0.08 * noise);
             }
 
             // A real link is not a uniformly lit bar across the whole belt. Its central plate and both
@@ -144,8 +144,9 @@ Shader "LocalTanks/TankTrackOverlay"
                 // weight, so a band fades out towards its own silhouette instead of ending in a
                 // straight edge.
                 float tint = IN.color.a * max(IN.color.r, max(IN.color.g, IN.color.b));
-                float sideMotion = saturate(mask.r * _TrackMotion.x + mask.g * _TrackMotion.y);
-                float coverage = mask.a * mask.b * tint * sideMotion;
+                // Motion is applied in the pattern below, once. The previous shader multiplied it into
+                // coverage as well, squaring low belt speeds and making normal acceleration invisible.
+                float coverage = mask.a * mask.b * tint;
 
                 // Travel is measured in mask heights, so the same value drives both scales and the
                 // machine's own speed decides the rate of each.
@@ -173,24 +174,18 @@ Shader "LocalTanks/TankTrackOverlay"
                                + TrackClusterProfile(right * sweeps, 29.0) * mask.g * greenShape * _TrackMotion.y;
                 float detail = fine * resolvable + coarse * coarseShare;
 
-                // The mask sprite lines up with the hull rectangle of the source texture, so the
-                // hull's own pixels are one fetch away. Art that is already dark cannot be darkened
-                // much further, so the gaps lose depth there and keep it on bright plates.
-                float3 hullRgb = tex2D(_HullTex, _HullRect.xy + IN.texcoord * _HullRect.zw).rgb;
-                float hullLuma = saturate(dot(hullRgb, float3(0.299, 0.587, 0.114)) * _HullLighting.z);
-                float darkening = lerp(_HullLighting.x, 1.0, hullLuma);
-
                 float profile = coverage * detail;
                 float modulation = profile >= 0.0
                     ? profile * _TrackStrength.x
-                    : profile * _TrackStrength.y * darkening;
+                    : profile * _TrackStrength.y;
 
-                // Only the light carries the highlight tint: a gap between links is a shadow and
-                // must not tint the surface. The sprite tint of this renderer is applied as well,
-                // so a wreck, a faded invisible machine and a team colour all survive.
-                float3 tinted = modulation >= 0.0 ? modulation * _TrackHighlight.rgb : modulation;
-                float3 shaded = hullRgb * (1.0 + tinted) * IN.color.rgb;
-                return fixed4(shaded, coverage * IN.color.a);
+                // Blend only the ridge or joint itself. Sampling the hull through a per-renderer
+                // texture could fall back to white on some GPU paths, turning both tracks into solid
+                // white strips. A pale source lightens ridges and a black source darkens joints while
+                // leaving the painted hull fully in charge everywhere else.
+                float3 shade = modulation >= 0.0 ? _TrackHighlight.rgb * IN.color.rgb : float3(0.0, 0.0, 0.0);
+                float alpha = saturate(abs(modulation) * 1.4) * IN.color.a;
+                return fixed4(shade, alpha);
             }
             ENDCG
         }

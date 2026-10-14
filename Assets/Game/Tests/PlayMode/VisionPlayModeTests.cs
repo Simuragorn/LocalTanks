@@ -193,7 +193,7 @@ namespace LocalTanks.Tests
             Assert.That(entry.IsCurrentlyVisible, Is.True);
             Assert.That(roster.EnemiesCurrentHitPoints, Is.EqualTo(100));
             Assert.That(roster.EnemiesMaximumHitPoints, Is.EqualTo(100));
-            Assert.That(BattleHudController.VisibleHitPoints(entry), Is.EqualTo("100 / 100"));
+            Assert.That(BattleHudController.VisibleHitPoints(entry), Is.EqualTo("100/100"));
 
             enemy.transform.position = new Vector2(0f, 15f);
             Physics2D.SyncTransforms();

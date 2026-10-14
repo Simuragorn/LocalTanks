@@ -33,13 +33,13 @@ namespace LocalTanks
         /// distant camera, so it is counted in mask heights rather than metres: every machine then
         /// shows the same number of sweeps no matter how long its hull is.
         /// </summary>
-        public const float SweepRepeats = 5.5f;
+        public const float SweepRepeats = 6.5f;
 
         /// <summary>Rendered motion reaches full strength at this achieved belt speed.</summary>
         public const float FullMotionSpeedUnitsPerSecond = 0.55f;
 
         /// <summary>The distant pattern stays subordinate to individually resolved links.</summary>
-        public const float DistantPatternGain = 0.62f;
+        public const float DistantPatternGain = 0.95f;
 
         [SerializeField] private Rigidbody2D body;
         [SerializeField] private TankHealth health;
@@ -99,7 +99,7 @@ namespace LocalTanks
         /// multipliers around one. Deliberately low: the tread is a movement cue, not a conveyor
         /// belt, and the pattern is fine enough that a strong contrast would look painted on.
         /// </summary>
-        public static Vector2 DefaultStrength => new Vector2(0.32f, 0.5f);
+        public static Vector2 DefaultStrength => new Vector2(0.38f, 0.58f);
 
         /// <summary>
         /// Splits the hull's real motion into the distance each track travelled over the ground.

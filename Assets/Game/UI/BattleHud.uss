@@ -115,17 +115,21 @@
 }
 
 .health-number {
-    min-width: 62px;
-    margin-left: 4px;
-    margin-right: 4px;
-    color: rgb(228, 228, 218);
-    font-size: 11px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    color: rgb(242, 242, 235);
+    font-size: 10px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.88);
 }
 
 .health-track {
-    height: 8px;
+    height: 13px;
 }
 
 .health-fill { height: 100%; background-color: rgb(120, 169, 123); }
@@ -197,14 +201,33 @@
 
 .world-health-number {
     position: absolute;
-    width: 100px;
-    height: 18px;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
     color: rgb(235, 235, 228);
-    font-size: 11px;
+    font-size: 10px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     -unity-text-outline-width: 1px;
     -unity-text-outline-color: rgba(0, 0, 0, 0.92);
+}
+
+.world-health-bar {
+    position: absolute;
+    background-color: rgba(18, 20, 18, 0.94);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: rgba(218, 218, 205, 0.42);
+    border-right-color: rgba(218, 218, 205, 0.42);
+    border-top-color: rgba(218, 218, 205, 0.42);
+    border-bottom-color: rgba(218, 218, 205, 0.42);
+}
+
+.world-health-fill {
+    height: 100%;
 }
 
 .damage-popup {

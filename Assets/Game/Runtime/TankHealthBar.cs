@@ -6,12 +6,14 @@ namespace LocalTanks
     public sealed class TankHealthBar : MonoBehaviour
     {
         [SerializeField, Min(1f)] private float width = 72f;
-        [SerializeField, Min(1f)] private float height = 8f;
+        [SerializeField, Min(1f)] private float height = 13f;
         [SerializeField, Min(0f)] private float worldOffset = 1.45f;
         [SerializeField] private bool useTeamColor;
         [SerializeField] private bool allied = true;
 
         private TankHealth health;
+        private GUIStyle healthTextStyle;
+        private bool externalPresentation;
 
         public float HealthRatio => health != null && health.MaximumHitPoints > 0
             ? Mathf.Clamp01((float)health.CurrentHitPoints / health.MaximumHitPoints)
@@ -22,6 +24,9 @@ namespace LocalTanks
         public string HealthText => health != null
             ? FormatHitPoints(health.CurrentHitPoints, health.MaximumHitPoints)
             : string.Empty;
+        public float WorldOffset => worldOffset;
+        public float Width => width;
+        public float Height => height;
 
         private void Awake()
         {
@@ -45,10 +50,15 @@ namespace LocalTanks
             useTeamColor = true;
         }
 
+        public void SetExternalPresentation(bool enabled)
+        {
+            externalPresentation = enabled;
+        }
+
         private void OnGUI()
         {
             Camera camera = Camera.main;
-            if (camera == null || health == null || health.IsDestroyed)
+            if (externalPresentation || camera == null || health == null || health.IsDestroyed)
             {
                 return;
             }
@@ -73,11 +83,34 @@ namespace LocalTanks
             GUI.DrawTexture(fill, Texture2D.whiteTexture);
             GUI.color = previousColor;
 
+            GUIStyle style = HealthTextStyle();
+            Color textColor = style.normal.textColor;
+            style.normal.textColor = new Color(0f, 0f, 0f, 0.82f);
+            GUI.Label(new Rect(background.x + 1f, background.y + 1f, background.width, background.height), HealthText, style);
+            style.normal.textColor = textColor;
+            GUI.Label(background, HealthText, style);
+        }
+
+        private GUIStyle HealthTextStyle()
+        {
+            if (healthTextStyle == null)
+            {
+                healthTextStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 10,
+                    fontStyle = FontStyle.Bold,
+                    clipping = TextClipping.Clip
+                };
+                healthTextStyle.normal.textColor = new Color(0.96f, 0.96f, 0.91f, 1f);
+            }
+
+            return healthTextStyle;
         }
 
         public static string FormatHitPoints(int current, int maximum)
         {
-            return $"{Mathf.Max(0, current)} / {Mathf.Max(0, maximum)}";
+            return $"{Mathf.Max(0, current)}/{Mathf.Max(0, maximum)}";
         }
 
         private static Color GetHealthColor(float ratio)

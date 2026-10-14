@@ -260,11 +260,9 @@ namespace LocalTanks
                 {
                     title.Add(classIcon);
                     title.Add(name);
-                    title.Add(hitPoints);
                 }
                 else
                 {
-                    title.Add(hitPoints);
                     title.Add(name);
                     title.Add(classIcon);
                 }
@@ -279,6 +277,7 @@ namespace LocalTanks
                 fill.style.backgroundColor = entry.TeamColor;
                 fill.style.width = Length.Percent(entry.IsAlive ? entry.HealthRatio * 100f : 0f);
                 bar.Add(fill);
+                bar.Add(hitPoints);
                 data.Add(title);
                 data.Add(bar);
 

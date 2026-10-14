@@ -42,7 +42,7 @@ namespace LocalTanks.Editor
         private static readonly Vector4[] Looks =
         {
             new Vector4(0.22f, 0.34f, 0.5f, 1f),
-            new Vector4(0.32f, 0.5f, 0.45f, 1f),
+            new Vector4(TankTrackAnimator.DefaultStrength.x, TankTrackAnimator.DefaultStrength.y, 0.45f, 1f),
             new Vector4(0.42f, 0.62f, 0.45f, 1f),
             // Gaps only, exaggerated: this must visibly darken the band, because additive blending
             // silently clamped exactly this half of the pattern away.

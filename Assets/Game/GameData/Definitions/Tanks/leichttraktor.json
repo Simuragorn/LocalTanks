@@ -25,11 +25,11 @@
   },
   "gunHandling": {
     "minimumDispersionDegrees": 0.3037,
-    "maximumDispersionDegrees": 1.5372,
+    "maximumDispersionDegrees": 8.309,
     "aimingTimeSeconds": 1.8,
-    "movementDispersionDegrees": 0.3935,
-    "hullTraverseDispersionDegrees": 0.7215,
-    "turretTraverseDispersionDegrees": 0.1184,
+    "movementDispersionDegrees": 3.9355,
+    "hullTraverseDispersionDegrees": 7.2151,
+    "turretTraverseDispersionDegrees": 1.1843,
     "shotDispersionDegrees": 0.4251
   },
   "vision": {

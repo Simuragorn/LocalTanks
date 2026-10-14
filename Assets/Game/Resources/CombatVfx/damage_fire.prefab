@@ -80,8 +80,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.38
-      minScalar: 0.2
+      scalar: 0.46
+      minScalar: 0.24
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -179,8 +179,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.7
-      minScalar: 0.4
+      scalar: 0.86
+      minScalar: 0.52
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -312,7 +312,7 @@ ParticleSystem:
     donutRadius: 0.2
     m_Position: {x: 0, y: 0, z: 0}
     m_Rotation: {x: 0, y: 0, z: 0}
-    m_Scale: {x: 0.4, y: 0.36, z: 0.001}
+    m_Scale: {x: 0.52, y: 0.4, z: 0.001}
     placementMode: 0
     m_MeshMaterialIndex: 0
     m_MeshNormalOffset: 0
@@ -402,7 +402,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 3
       minMaxState: 0
-      scalar: 9
+      scalar: 7
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -7011,8 +7011,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.82
-      minScalar: 0.45
+      scalar: 0.7
+      minScalar: 0.38
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -7110,8 +7110,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.4
-      minScalar: 0.22
+      scalar: 0.52
+      minScalar: 0.32
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -7243,7 +7243,7 @@ ParticleSystem:
     donutRadius: 0.2
     m_Position: {x: 0, y: 0, z: 0}
     m_Rotation: {x: 0, y: 0, z: 0}
-    m_Scale: {x: 0.28, y: 0.2, z: 0.001}
+    m_Scale: {x: 0.36, y: 0.24, z: 0.001}
     placementMode: 0
     m_MeshMaterialIndex: 0
     m_MeshNormalOffset: 0
@@ -7333,7 +7333,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 3
       minMaxState: 0
-      scalar: 9
+      scalar: 8
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -7670,8 +7670,8 @@ ParticleSystem:
     x:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.16
-      minScalar: -0.16
+      scalar: 0.13
+      minScalar: -0.13
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -7687,8 +7687,8 @@ ParticleSystem:
     y:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 1.35
-      minScalar: 0.62
+      scalar: 0.55
+      minScalar: 0.15
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -9309,8 +9309,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.58
-      minScalar: 0.28
+      scalar: 0.55
+      minScalar: 0.3
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -9408,8 +9408,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.62
-      minScalar: 0.34
+      scalar: 0.7
+      minScalar: 0.4
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -9541,7 +9541,7 @@ ParticleSystem:
     donutRadius: 0.2
     m_Position: {x: 0, y: 0, z: 0}
     m_Rotation: {x: 0, y: 0, z: 0}
-    m_Scale: {x: 0.44, y: 0.32, z: 0.001}
+    m_Scale: {x: 0.56, y: 0.36, z: 0.001}
     placementMode: 0
     m_MeshMaterialIndex: 0
     m_MeshNormalOffset: 0
@@ -9631,7 +9631,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 3
       minMaxState: 0
-      scalar: 24
+      scalar: 16
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -9968,8 +9968,8 @@ ParticleSystem:
     x:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.2
-      minScalar: -0.2
+      scalar: 0.16
+      minScalar: -0.16
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -9985,8 +9985,8 @@ ParticleSystem:
     y:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 1
-      minScalar: 0.38
+      scalar: 0.36
+      minScalar: 0.08
       maxCurve:
         serializedVersion: 2
         m_Curve: []

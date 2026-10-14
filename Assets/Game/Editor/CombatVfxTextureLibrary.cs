@@ -215,25 +215,59 @@ namespace LocalTanks.Editor
         /// </remarks>
         private static void DrawFlame(VfxPixelCanvas canvas)
         {
-            const int steps = 64;
+            // A connected base and three differently curved licks read as one turbulent flame. The old
+            // texture was one thin vertical filament, so a particle system looked like a row of candles.
+            DrawFlameTongue(canvas, 0.50f, 0.96f, 0.24f, 0.16f, 301);
+            DrawFlameTongue(canvas, 0.35f, 0.72f, 0.19f, -0.22f, 401);
+            DrawFlameTongue(canvas, 0.66f, 0.79f, 0.18f, 0.2f, 501);
+
+            // The opaque hot path joins the lobes. Without it their curved silhouettes enclosed a dark
+            // eye that looked like a ring or a stamped icon instead of a volume of burning gas.
+            for (int step = 0; step < 28; step++)
+            {
+                float t = step / 27f;
+                float x = 0.5f + Mathf.Sin(t * 4.6f) * 0.045f * t;
+                float y = Mathf.Lerp(0.12f, 0.68f, t);
+                float width = Mathf.Lerp(0.13f, 0.025f, t);
+                canvas.SoftEllipse(x, y, width, 0.045f,
+                    new Color(1f, Mathf.Lerp(0.94f, 0.54f, t), Mathf.Lerp(0.7f, 0.08f, t), Mathf.Lerp(0.5f, 0.12f, t)),
+                    2f, 0.3f, 700 + step);
+            }
+
+            canvas.SoftEllipse(0.5f, 0.18f, 0.34f, 0.16f,
+                new Color(1f, 0.36f, 0.035f, 0.52f), 2.3f, 0.42f, 610);
+            canvas.SoftEllipse(0.5f, 0.16f, 0.22f, 0.12f,
+                new Color(1f, 0.78f, 0.26f, 0.66f), 2f, 0.32f, 611);
+            canvas.SoftEllipse(0.5f, 0.12f, 0.11f, 0.07f,
+                new Color(1f, 0.98f, 0.82f, 0.82f), 1.7f, 0.2f, 612);
+        }
+
+        private static void DrawFlameTongue(
+            VfxPixelCanvas canvas,
+            float baseX,
+            float topY,
+            float baseWidth,
+            float bend,
+            int seed)
+        {
+            const int steps = 52;
             for (int step = 0; step < steps; step++)
             {
                 float t = step / (steps - 1f);
-                float y = Mathf.Lerp(0.08f, 0.94f, t);
-                float profile = Mathf.Sin(Mathf.Pow(t, 0.55f) * Mathf.PI);
-                float lick = VfxNoise.Fbm(t * 5f, 1.7f, 301, 3) - 0.5f;
-                float x = 0.5f + lick * 0.18f * t;
-                float width = Mathf.Max(0.012f, 0.15f * profile * (0.7f + 0.6f * VfxNoise.Fbm(t * 7f, 3.1f, 302, 2)));
-                float alpha = (1f - t) * 0.42f + 0.06f;
+                float y = Mathf.Lerp(0.12f, topY, t);
+                float taper = Mathf.Pow(1f - t, 0.72f);
+                float curl = Mathf.Sin(t * Mathf.PI * 1.3f) * bend * t;
+                float jitter = (VfxNoise.Fbm(t * 6.2f, seed * 0.01f, seed, 3) - 0.5f) * 0.075f * t;
+                float x = baseX + curl + jitter;
+                float width = Mathf.Max(0.009f, baseWidth * taper * (0.82f + 0.3f * Mathf.Sin(t * 13f + seed)));
                 Color colour = Color.Lerp(
-                    new Color(1f, 0.86f, 0.48f),
-                    new Color(1f, 0.3f, 0.04f),
-                    Mathf.Clamp01(t * 1.4f));
-                canvas.SoftEllipse(x, y, width, 0.035f, new Color(colour.r, colour.g, colour.b, alpha), 2.4f, 0.4f, 300 + step);
+                    new Color(1f, 0.82f, 0.3f),
+                    new Color(0.94f, 0.18f, 0.015f),
+                    Mathf.SmoothStep(0.1f, 1f, t));
+                float alpha = Mathf.Lerp(0.38f, 0.055f, t);
+                canvas.SoftEllipse(x, y, width, 0.052f,
+                    new Color(colour.r, colour.g, colour.b, alpha), 2.2f, 0.36f, seed + step);
             }
-
-            canvas.SoftEllipse(0.5f, 0.15f, 0.115f, 0.085f, new Color(1f, 0.93f, 0.66f, 0.55f), 2.2f, 0.3f, 370);
-            canvas.SoftEllipse(0.5f, 0.1f, 0.07f, 0.05f, new Color(1f, 0.98f, 0.86f, 0.6f), 1.8f, 0.2f, 371);
         }
 
         /// <summary>

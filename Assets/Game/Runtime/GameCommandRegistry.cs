@@ -36,6 +36,7 @@ namespace LocalTanks
             new GameCommandInfo("fire", "ЛКМ", "Огонь; удерживание ведёт непрерывную стрельбу", GameCommandGroup.Battle),
             new GameCommandInfo("reload", "R", "Принудительная перезарядка магазина", GameCommandGroup.Battle),
             new GameCommandInfo("zoom", "Колесо мыши", "Изменение масштаба камеры", GameCommandGroup.Battle),
+            new GameCommandInfo("aim_mode", "Shift", "Включить или выключить прицельный режим", GameCommandGroup.Battle),
             new GameCommandInfo("help", "F1", "Открыть или закрыть эту справку", GameCommandGroup.Interface),
             new GameCommandInfo("bot_selection", "Tab / Shift+Tab", "Следующий или предыдущий живой бот при открытом F4", GameCommandGroup.Interface),
             new GameCommandInfo("close_window", "Esc", "Закрыть верхнее диагностическое окно", GameCommandGroup.Interface),

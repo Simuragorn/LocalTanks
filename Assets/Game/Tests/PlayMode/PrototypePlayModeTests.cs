@@ -281,6 +281,28 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator CameraAimMode_ShiftsForwardAndReturnsWithoutChangingZoom()
+        {
+            SceneManager.LoadScene("Battle_TestRange");
+            yield return null;
+
+            CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
+            follow.SetZoom(5f, true);
+            float zoom = follow.CurrentZoom;
+            follow.SetAimMode(true);
+            yield return new WaitForSeconds(0.5f);
+
+            Assert.That(follow.IsAimMode, Is.True);
+            Assert.That(Vector2.Distance(follow.transform.position, follow.Target.position), Is.GreaterThan(1.5f));
+            Assert.That(follow.CurrentZoom, Is.EqualTo(zoom).Within(0.001f));
+
+            follow.SetAimMode(false);
+            yield return new WaitForSeconds(0.65f);
+            Assert.That(Vector2.Distance(follow.transform.position, follow.Target.position), Is.LessThan(0.25f));
+            Assert.That(follow.CurrentZoom, Is.EqualTo(zoom).Within(0.001f));
+        }
+
+        [UnityTest]
         public IEnumerator Selector_ReplacesPlayerAndRetargetsCamera()
         {
             SceneManager.LoadScene("Battle_TestRange");
@@ -699,7 +721,9 @@ namespace LocalTanks.Tests
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
             Assert.That(follow.Target, Is.EqualTo(playerMember.transform));
             Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CloseInspectionZoom));
-            Assert.That(follow.MaximumZoom, Is.EqualTo(22f));
+            TankDefinition playerDefinition = playerMember.GetComponent<TankHealth>().Definition;
+            Assert.That(follow.MaximumZoom,
+                Is.EqualTo(VisionRangeTable.UnitsFor(playerDefinition.vehicleClass, playerDefinition.tier)));
         }
 
         [UnityTest]

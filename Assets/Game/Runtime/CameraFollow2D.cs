@@ -7,6 +7,7 @@ namespace LocalTanks
     public sealed class CameraFollow2D : MonoBehaviour
     {
         public const float CloseInspectionZoom = 0.75f;
+        public const float AimOffsetZoomShare = 0.62f;
 
         [SerializeField] private Transform target;
         [SerializeField, Min(0f)] private float smoothTime = 0.15f;
@@ -16,8 +17,10 @@ namespace LocalTanks
         [SerializeField, Min(0.1f)] private float zoomSpeed = 10f;
 
         private Camera cameraComponent;
+        private TurretAiming targetTurret;
         private Vector3 velocity;
         private float targetZoom;
+        private bool aimMode;
 
         public Transform Target => target;
         public float CurrentZoom => cameraComponent != null ? cameraComponent.orthographicSize : 0f;
@@ -26,9 +29,15 @@ namespace LocalTanks
         // close view available immediately on every map and also survives future scene regeneration.
         public float MinimumZoom => Mathf.Min(minimumZoom, CloseInspectionZoom);
         public float MaximumZoom => maximumZoom;
+        public bool IsAimMode => aimMode;
 
         private void Awake()
         {
+            targetTurret = target != null ? target.GetComponentInChildren<TurretAiming>() : null;
+            if (target != null)
+            {
+                maximumZoom = MaximumZoomFor(target);
+            }
             InitializeCamera();
             EnsureAimReticle().Configure(target);
         }
@@ -36,7 +45,10 @@ namespace LocalTanks
         public void Configure(Transform newTarget)
         {
             target = newTarget;
+            targetTurret = target != null ? target.GetComponentInChildren<TurretAiming>() : null;
+            maximumZoom = MaximumZoomFor(target);
             InitializeCamera();
+            SetZoom(targetZoom > 0f ? targetZoom : MinimumZoom);
             EnsureAimReticle().Configure(newTarget);
         }
 
@@ -61,6 +73,15 @@ namespace LocalTanks
 
         private void Update()
         {
+            Keyboard keyboard = Keyboard.current;
+            bool shiftPressed = keyboard != null &&
+                                (keyboard.leftShiftKey.wasPressedThisFrame || keyboard.rightShiftKey.wasPressedThisFrame);
+            bool diagnosticTab = keyboard != null && keyboard.tabKey.wasPressedThisFrame;
+            if (!ModalUiState.AnyOpen && shiftPressed && !diagnosticTab)
+            {
+                SetAimMode(!aimMode);
+            }
+
             Mouse mouse = Mouse.current;
             if (mouse == null)
             {
@@ -95,12 +116,47 @@ namespace LocalTanks
                 return;
             }
 
-            Vector3 desired = new Vector3(target.position.x, target.position.y, transform.position.z);
+            Vector2 gunDirection = targetTurret != null ? targetTurret.transform.up : target.up;
+            Vector2 centre = CalculateViewCenter(target.position, gunDirection, CurrentZoom, aimMode);
+            Vector3 desired = new Vector3(centre.x, centre.y, transform.position.z);
             transform.position = Vector3.SmoothDamp(
                 transform.position,
                 desired,
                 ref velocity,
                 smoothTime);
+        }
+
+        public void SetAimMode(bool enabled)
+        {
+            aimMode = enabled;
+        }
+
+        public static Vector2 CalculateViewCenter(
+            Vector2 tankPosition,
+            Vector2 gunDirection,
+            float orthographicSize,
+            bool aiming)
+        {
+            if (!aiming || gunDirection.sqrMagnitude <= 0.0001f)
+            {
+                return tankPosition;
+            }
+
+            return tankPosition + gunDirection.normalized * Mathf.Max(0f, orthographicSize) * AimOffsetZoomShare;
+        }
+
+        public static float MaximumZoomFor(Transform tank)
+        {
+            TankHealth health = tank != null ? tank.GetComponent<TankHealth>() : null;
+            TankDefinition definition = health != null ? health.Definition : null;
+            return definition != null
+                ? MaximumZoomFor(definition.vehicleClass, definition.tier)
+                : 12f;
+        }
+
+        public static float MaximumZoomFor(VehicleClass vehicleClass, int tier)
+        {
+            return VisionRangeTable.UnitsFor(vehicleClass, tier);
         }
 
         private void InitializeCamera()

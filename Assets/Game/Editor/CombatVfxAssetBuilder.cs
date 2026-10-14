@@ -442,14 +442,14 @@ namespace LocalTanks.Editor
             // A gun throws a short cone of propellant flame along the bore, not a radial star. Four layers
             // keep the event readable in one or two frames: white core, directional plume, two short side
             // flames and a few narrow incandescent fragments.
-            ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder + 2, seconds + 0.05f, 0.035f, 0.065f, 0.13f, 0.22f);
+            ParticleSystem core = AddSystem(root, "Core", materials["core"], FlashSortingOrder + 2, seconds + 0.05f, 0.04f, 0.075f, 0.18f, 0.29f);
             SetBurst(core, 1);
             SetPlanarVelocity(core, -0.05f, 0.05f, 0.2f, 0.65f);
             SetSizeOverLifetime(core, 1f, 0.45f);
             SetFade(core, 0.035f);
             OffsetSystem(core, 0f, 0.08f);
 
-            ParticleSystem plume = AddSystem(root, "Plume", materials["petals"], FlashSortingOrder + 1, seconds + 0.08f, 0.045f, 0.09f, 0.58f, 0.86f);
+            ParticleSystem plume = AddSystem(root, "Plume", materials["petals"], FlashSortingOrder + 1, seconds + 0.09f, 0.055f, 0.11f, 0.82f, 1.18f);
             SetBurst(plume, 1);
             SetPlanarVelocity(plume, -0.08f, 0.08f, 0.35f, 1.0f);
             SetStartRotation(plume, -0.12f, 0.12f);
@@ -457,9 +457,9 @@ namespace LocalTanks.Editor
             SetFade(plume, 0.04f);
             OffsetSystem(plume, 0f, 0.22f);
 
-            ParticleSystem sideFlames = AddSystem(root, "SideFlames", materials["flame"], FlashSortingOrder, seconds + 0.06f, 0.04f, 0.08f, 0.22f, 0.38f);
-            SetBurst(sideFlames, 2);
-            SetPlanarVelocity(sideFlames, -0.34f, 0.34f, 0.25f, 0.75f);
+            ParticleSystem sideFlames = AddSystem(root, "SideFlames", materials["flame"], FlashSortingOrder, seconds + 0.08f, 0.05f, 0.11f, 0.32f, 0.52f);
+            SetBurst(sideFlames, 3);
+            SetPlanarVelocity(sideFlames, -0.42f, 0.42f, 0.32f, 0.92f);
             SetStartRotation(sideFlames, -0.45f, 0.45f);
             SetSizeOverLifetime(sideFlames, 0.9f, 0.25f);
             SetFade(sideFlames, 0.035f);
@@ -618,24 +618,24 @@ namespace LocalTanks.Editor
             SetTurbulence(soot, 0.24f, 0.5f);
             SetStartColor(soot, new Color(0.18f, 0.16f, 0.14f, 0.48f));
 
-            ParticleSystem glow = AddSystem(root, "Glow", materials["fire_glow"], FireSortingOrder, 3f, 0.2f, 0.38f, 0.4f, 0.7f, 0.2f, 0.18f);
-            SetRate(glow, 9f);
+            ParticleSystem glow = AddSystem(root, "Glow", materials["fire_glow"], FireSortingOrder, 3f, 0.24f, 0.46f, 0.52f, 0.86f, 0.26f, 0.2f);
+            SetRate(glow, 7f);
             SetPlanarVelocity(glow, -0.16f, 0.16f, 0.12f, 0.42f);
             SetSizeOverLifetime(glow, 0.78f, 1.05f);
             SetFade(glow, 0.18f);
             SetTurbulence(glow, 0.12f, 0.7f);
 
-            ParticleSystem tongues = AddSystem(root, "Tongues", materials["flame"], FireSortingOrder + 1, 3f, 0.28f, 0.58f, 0.34f, 0.62f, 0.22f, 0.16f);
-            SetRate(tongues, 24f);
-            SetPlanarVelocity(tongues, -0.2f, 0.2f, 0.38f, 1.0f);
+            ParticleSystem tongues = AddSystem(root, "Tongues", materials["flame"], FireSortingOrder + 1, 3f, 0.3f, 0.55f, 0.4f, 0.7f, 0.28f, 0.18f);
+            SetRate(tongues, 16f);
+            SetPlanarVelocity(tongues, -0.16f, 0.16f, 0.08f, 0.36f);
             SetStartRotation(tongues, -0.38f, 0.38f);
             SetSizeOverLifetime(tongues, 0.95f, 0.24f);
             SetFade(tongues, 0.12f);
             SetTurbulence(tongues, 0.24f, 0.86f);
 
-            ParticleSystem tallTongues = AddSystem(root, "TallTongues", materials["flame"], FireSortingOrder + 1, 3f, 0.45f, 0.82f, 0.22f, 0.4f, 0.14f, 0.1f);
-            SetRate(tallTongues, 9f);
-            SetPlanarVelocity(tallTongues, -0.16f, 0.16f, 0.62f, 1.35f);
+            ParticleSystem tallTongues = AddSystem(root, "TallTongues", materials["flame"], FireSortingOrder + 1, 3f, 0.38f, 0.7f, 0.32f, 0.52f, 0.18f, 0.12f);
+            SetRate(tallTongues, 8f);
+            SetPlanarVelocity(tallTongues, -0.13f, 0.13f, 0.15f, 0.55f);
             SetStartRotation(tallTongues, -0.26f, 0.26f);
             SetSizeOverLifetime(tallTongues, 0.86f, 0.12f);
             SetFade(tallTongues, 0.1f);

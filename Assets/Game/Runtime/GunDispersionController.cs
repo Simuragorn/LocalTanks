@@ -56,7 +56,9 @@ namespace LocalTanks
                 anglesInitialized = true;
             }
 
-            float hullDegreesPerSecond = Mathf.Abs(Mathf.DeltaAngle(previousHullAngle, hullAngle)) / Time.deltaTime;
+            float hullDegreesPerSecond = Mathf.Max(
+                Mathf.Abs(motor.CurrentTurnRate),
+                Mathf.Abs(Mathf.DeltaAngle(previousHullAngle, hullAngle)) / Time.deltaTime);
             float turretRelativeDegreesPerSecond = Mathf.Abs(Mathf.DeltaAngle(previousTurretAngle, turretAngle)) / Time.deltaTime;
             previousHullAngle = hullAngle;
             previousTurretAngle = turretAngle;

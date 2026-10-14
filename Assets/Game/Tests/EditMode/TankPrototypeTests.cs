@@ -24,8 +24,8 @@ namespace LocalTanks.Tests
         [Test]
         public void BattleHud_FormatsHitPointsAndDamageWithoutRecalculatingThem()
         {
-            Assert.That(BattleHudController.FormatHitPoints(73, 100), Is.EqualTo("73 / 100"));
-            Assert.That(TankHealthBar.FormatHitPoints(-5, 100), Is.EqualTo("0 / 100"));
+            Assert.That(BattleHudController.FormatHitPoints(73, 100), Is.EqualTo("73/100"));
+            Assert.That(TankHealthBar.FormatHitPoints(-5, 100), Is.EqualTo("0/100"));
             Assert.That(DamagePopupLayer.FormatDamage(27), Is.EqualTo("-27"));
             Assert.That(DamagePopupLayer.FormatIndicator("MS-1", 123.6f), Is.EqualTo("MS-1  124 м"));
             Assert.That(DamagePopupLayer.ArrowGlyph(0f), Is.EqualTo("▶"));
@@ -381,6 +381,28 @@ namespace LocalTanks.Tests
             float turret = GunDispersionMath.CalculateTarget(0f, 3f, 0f, 0f, 1f, 1.5f, 1.2f, 0.4f);
 
             Assert.That(turret, Is.LessThan(hull));
+        }
+
+        [Test]
+        public void GunDispersion_CombinesIndependentWoTFactorsByMagnitude()
+        {
+            float target = GunDispersionMath.CalculateTarget(0.3f, 10f, 1f, 1f, 1f, 3f, 4f, 1f);
+
+            Assert.That(target, Is.EqualTo(Mathf.Sqrt(0.09f + 9f + 16f + 1f)).Within(0.0001f));
+        }
+
+        [Test]
+        public void AimMode_ShiftsViewAlongGunWithoutChangingZoomContract()
+        {
+            Vector2 tank = new Vector2(4f, -2f);
+            Vector2 normal = CameraFollow2D.CalculateViewCenter(tank, Vector2.up, 8f, false);
+            Vector2 aimed = CameraFollow2D.CalculateViewCenter(tank, Vector2.up, 8f, true);
+
+            Assert.That(normal, Is.EqualTo(tank));
+            Assert.That(aimed.x, Is.EqualTo(tank.x).Within(0.0001f));
+            Assert.That(aimed.y, Is.EqualTo(tank.y + 8f * CameraFollow2D.AimOffsetZoomShare).Within(0.0001f));
+            Assert.That(CameraFollow2D.MaximumZoomFor(VehicleClass.HeavyTank, 8),
+                Is.GreaterThan(CameraFollow2D.MaximumZoomFor(VehicleClass.LightTank, 1)));
         }
 
         [Test]

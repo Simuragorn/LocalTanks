@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 namespace LocalTanks
 {
     /// <summary>
-    /// One screen-space owner for tank HP, transient damage numbers and spotted enemies outside the camera.
+    /// One screen-space owner for transient damage numbers and spotted enemies outside the camera.
     /// It writes into the battle UIDocument, so fourteen machines do not create fourteen screen-space layers
     /// and graphical proofs can render the exact same elements without an interactive game window.
     /// </summary>
@@ -19,7 +19,7 @@ namespace LocalTanks
 
         private readonly List<DamagePopup> popups = new List<DamagePopup>();
         private readonly HashSet<TankArmor> subscribedArmor = new HashSet<TankArmor>();
-        private readonly Dictionary<TeamMember, Label> healthLabels = new Dictionary<TeamMember, Label>();
+        private readonly Dictionary<TeamMember, HealthBarView> healthBars = new Dictionary<TeamMember, HealthBarView>();
         private readonly Dictionary<TeamMember, IndicatorView> indicators = new Dictionary<TeamMember, IndicatorView>();
         private BattleRoster roster;
         private Camera worldCamera;
@@ -78,6 +78,66 @@ namespace LocalTanks
             RefreshIndicators(camera);
         }
 
+        private void RefreshTankHealth(Camera camera)
+        {
+            HashSet<TeamMember> active = new HashSet<TeamMember>();
+            foreach (BattleRosterEntry entry in roster.Allies.Concat(roster.Enemies))
+            {
+                if (entry.Member == null || !entry.IsAlive || !entry.IsAlly && !entry.IsCurrentlyVisible)
+                {
+                    continue;
+                }
+
+                active.Add(entry.Member);
+                TankHealthBar component = entry.Member.GetComponent<TankHealthBar>();
+                component?.SetExternalPresentation(true);
+                if (!healthBars.TryGetValue(entry.Member, out HealthBarView view))
+                {
+                    view = CreateHealthBar();
+                    healthBars.Add(entry.Member, view);
+                    overlay.Add(view.Root);
+                }
+
+                float worldOffset = component != null ? component.WorldOffset : 1.45f;
+                float width = component != null ? component.Width : 72f;
+                float height = component != null ? component.Height : 13f;
+                if (!TryProject(camera, entry.Member.transform.position + Vector3.up * worldOffset, out Vector2 point))
+                {
+                    view.Root.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                view.Root.style.display = DisplayStyle.Flex;
+                view.Root.style.left = point.x - width * 0.5f;
+                view.Root.style.top = point.y - height * 0.5f;
+                view.Root.style.width = width;
+                view.Root.style.height = height;
+                view.Fill.style.width = Length.Percent(entry.HealthRatio * 100f);
+                view.Fill.style.backgroundColor = entry.TeamColor;
+                view.Label.text = BattleHudController.FormatHitPoints(entry.LastKnownHitPoints, entry.MaximumHitPoints);
+            }
+
+            foreach (TeamMember member in healthBars.Keys.Where(member => !active.Contains(member)).ToArray())
+            {
+                member?.GetComponent<TankHealthBar>()?.SetExternalPresentation(false);
+                healthBars[member].Root.RemoveFromHierarchy();
+                healthBars.Remove(member);
+            }
+        }
+
+        private static HealthBarView CreateHealthBar()
+        {
+            VisualElement root = new VisualElement { name = "world-health-bar", pickingMode = PickingMode.Ignore };
+            root.AddToClassList("world-health-bar");
+            VisualElement fill = new VisualElement { pickingMode = PickingMode.Ignore };
+            fill.AddToClassList("world-health-fill");
+            Label label = new Label { name = "world-health-number", pickingMode = PickingMode.Ignore };
+            label.AddToClassList("world-health-number");
+            root.Add(fill);
+            root.Add(label);
+            return new HealthBarView(root, fill, label);
+        }
+
         private void RefreshPopups(Camera camera)
         {
             float now = Time.unscaledTime;
@@ -104,45 +164,6 @@ namespace LocalTanks
                 float scale = PopupScale(progress);
                 popup.Label.style.scale = new Scale(new Vector3(scale, scale, 1f));
                 popup.Label.style.opacity = PopupOpacity(progress);
-            }
-        }
-
-        private void RefreshTankHealth(Camera camera)
-        {
-            HashSet<TeamMember> active = new HashSet<TeamMember>();
-            foreach (BattleRosterEntry entry in roster.Allies.Concat(roster.Enemies))
-            {
-                if (entry.Member == null || !entry.IsAlive || !entry.IsAlly && !entry.IsCurrentlyVisible)
-                {
-                    continue;
-                }
-
-                active.Add(entry.Member);
-                if (!healthLabels.TryGetValue(entry.Member, out Label label))
-                {
-                    label = new Label { name = "world-health-number", pickingMode = PickingMode.Ignore };
-                    label.AddToClassList("world-health-number");
-                    healthLabels.Add(entry.Member, label);
-                    overlay.Add(label);
-                }
-
-                if (!TryProject(camera, entry.Member.transform.position + Vector3.up * 1.18f, out Vector2 point))
-                {
-                    label.style.display = DisplayStyle.None;
-                    continue;
-                }
-
-                label.text = BattleHudController.FormatHitPoints(entry.LastKnownHitPoints, entry.MaximumHitPoints);
-                label.style.color = entry.TeamColor;
-                label.style.display = DisplayStyle.Flex;
-                label.style.left = point.x - 50f;
-                label.style.top = point.y;
-            }
-
-            foreach (TeamMember member in healthLabels.Keys.Where(member => !active.Contains(member)).ToArray())
-            {
-                healthLabels[member].RemoveFromHierarchy();
-                healthLabels.Remove(member);
             }
         }
 
@@ -328,8 +349,9 @@ namespace LocalTanks
 
             if (!added && member != null)
             {
-                if (healthLabels.TryGetValue(member, out Label health)) health.RemoveFromHierarchy();
-                healthLabels.Remove(member);
+                member.GetComponent<TankHealthBar>()?.SetExternalPresentation(false);
+                if (healthBars.TryGetValue(member, out HealthBarView health)) health.Root.RemoveFromHierarchy();
+                healthBars.Remove(member);
                 if (indicators.TryGetValue(member, out IndicatorView indicator)) indicator.Root.RemoveFromHierarchy();
                 indicators.Remove(member);
             }
@@ -364,8 +386,12 @@ namespace LocalTanks
 
         private void ClearViews()
         {
+            foreach (TeamMember member in healthBars.Keys)
+            {
+                member?.GetComponent<TankHealthBar>()?.SetExternalPresentation(false);
+            }
             popups.Clear();
-            healthLabels.Clear();
+            healthBars.Clear();
             indicators.Clear();
             overlay?.RemoveFromHierarchy();
             overlay = null;
@@ -410,6 +436,20 @@ namespace LocalTanks
             public VisualElement Root { get; }
             public Label Arrow { get; }
             public Label Text { get; }
+        }
+
+        private sealed class HealthBarView
+        {
+            public HealthBarView(VisualElement root, VisualElement fill, Label label)
+            {
+                Root = root;
+                Fill = fill;
+                Label = label;
+            }
+
+            public VisualElement Root { get; }
+            public VisualElement Fill { get; }
+            public Label Label { get; }
         }
 
         private readonly struct DamagePopup

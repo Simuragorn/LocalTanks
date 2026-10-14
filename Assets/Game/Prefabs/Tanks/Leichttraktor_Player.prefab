@@ -1186,7 +1186,7 @@ MonoBehaviour:
   maskHeightUnits: 1.1345365
   forwardSign: -1
   trackGeometry: {x: 0.9040786, y: 0.09118341, z: 0.08562446}
-  strength: {x: 0.32, y: 0.5}
+  strength: {x: 0.38, y: 0.58}
 --- !u!114 &3739543856252439229
 MonoBehaviour:
   m_ObjectHideFlags: 0

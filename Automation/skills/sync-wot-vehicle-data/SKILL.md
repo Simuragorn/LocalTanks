@@ -45,6 +45,9 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
 
    `-Apply` updates the matching combat JSON, refreshes engine, gun and turret clip IDs from the audio mapping, writes magazine data when the top weapon has one, and regenerates `Docs/WOT_TOP_CONFIG_SNAPSHOT.md`. Do not apply while the ballistic preview differs from the tracked shell unless the task explicitly owns the common P6 migration or has documented the intended overwrite; never migrate one vehicle alone.
 
+   If the task owns only WoT gun handling while P6 is pending, use `-ApplyGunHandling` instead. It updates
+   only the tank `gunHandling` block and the generated snapshot, so the longer tracked shell range survives.
+
 3. **Protect the audio block.** After applying, diff the tank JSON and verify the `audio` object still contains every field the importer requires — `engineClipId`, `tracksClipId`, `shotClipId`, `reloadClipId`, `turretClipId`, `destructionClipId` and their volume/pitch values. Re-add anything the sync dropped, or re-run `wot-tank-audio`.
 
 4. **Rebuild Unity content.** Run `Local Tanks > Data > Reimport Combat Definitions` (or `Local Tanks > Build Combat Assets`) so ScriptableObjects, prefabs and `Docs/TANK_BALANCE.md` follow the JSON.
