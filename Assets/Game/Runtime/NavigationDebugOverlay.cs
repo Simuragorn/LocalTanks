@@ -77,11 +77,19 @@ namespace LocalTanks
 
         private void OnGUI()
         {
-            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
+            if (BattleDiagnosticsOverlay.AnyModalVisible)
+            {
+                ModalUiState.ClearPointerRegion(this);
+                return;
+            }
 
             const float width = 250f;
-            Rect button = new Rect(Screen.width - width - 12f, 12f, width, 28f);
-            if (GUI.Button(button, visible ? "Скрыть навигацию (F2)" : "Показать навигацию (F2)"))
+            // The battle HUD owns both top corners. Developer controls form a separate bottom-right rail
+            // so they never cover the enemy roster, score or timer.
+            Rect button = new Rect(Screen.width - width - 12f, Screen.height - 40f, width, 28f);
+            ModalUiState.SetPointerRegion(this, button);
+            if (LocalTanksGuiTheme.Button(button,
+                    visible ? "Скрыть навигацию (F2)" : "Показать навигацию (F2)"))
             {
                 Toggle();
             }
@@ -92,6 +100,11 @@ namespace LocalTanks
             }
 
             DrawGameViewGrid();
+        }
+
+        private void OnDisable()
+        {
+            ModalUiState.ClearPointerRegion(this);
         }
 
         /// <summary>

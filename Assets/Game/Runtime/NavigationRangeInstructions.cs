@@ -25,9 +25,19 @@ namespace LocalTanks
                 : wall.IsDestroyed
                     ? "проход открыт"
                     : $"HP стены: {wall.CurrentHitPoints}";
-            GUI.Box(
-                new Rect(12f, 12f, 330f, 82f),
-                "Навигационный полигон\nW/S/A/D — игрок, ЛКМ — огонь по стене\nКолесо — зум, F2 — сетка\n" + wallState);
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(new Rect(12f, 12f, 360f, 108f));
+            ModalUiState.SetPointerRegion(this, panel);
+            LocalTanksGuiTheme.DrawPanel(panel, false);
+            GUI.Label(new Rect(panel.x + 14f, panel.y + 10f, panel.width - 28f, 22f),
+                "Навигационный полигон", LocalTanksGuiTheme.SectionTitle);
+            GUI.Label(new Rect(panel.x + 14f, panel.y + 38f, panel.width - 28f, 60f),
+                "W/S/A/D — движение   ·   ЛКМ — огонь по стене\n" +
+                $"Колесо — зум   ·   F2 — сетка   ·   {wallState}", LocalTanksGuiTheme.Caption);
+        }
+
+        private void OnDisable()
+        {
+            ModalUiState.ClearPointerRegion(this);
         }
     }
 }

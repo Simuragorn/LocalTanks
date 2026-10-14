@@ -63,9 +63,11 @@ namespace LocalTanks
 
         private void OnGUI()
         {
-            if (uiInteractionActive) return;
-
             Mouse mouse = Mouse.current;
+            bool pointerBlocked = mouse != null && ModalUiState.BlocksPointer(mouse.position.ReadValue());
+            Cursor.visible = uiInteractionActive || pointerBlocked || controlledTank == null;
+            if (uiInteractionActive || pointerBlocked) return;
+
             if (mouse == null || controlledTank == null || turret == null || weapon == null || dispersion == null)
             {
                 return;

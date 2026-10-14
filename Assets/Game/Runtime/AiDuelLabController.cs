@@ -113,6 +113,7 @@ namespace LocalTanks
 
         private void OnDestroy()
         {
+            ModalUiState.ClearPointerRegion(this);
             auditSession?.Dispose();
             auditSession = null;
             if (hasPreviousRandomState) UnityEngine.Random.state = previousRandomState;
@@ -205,8 +206,17 @@ namespace LocalTanks
         {
             EnsureStyles();
             float width = Mathf.Min(510f, Screen.width - 24f);
-            Rect panel = new Rect(12f, 12f, width, 238f);
-            GUI.Box(panel, GUIContent.none);
+            string description = activeCase != null
+                ? activeCase.description
+                : string.Empty;
+            float descriptionHeight = ready && activeCase != null
+                ? Mathf.Max(46f, bodyStyle.CalcHeight(new GUIContent(
+                    description + $"\nSeed: {activeCase.seed}   Время: {activeCase.durationSeconds:0} с"), width - 28f))
+                : 30f;
+            float panelHeight = ready && activeCase != null ? 190f + descriptionHeight : 64f;
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(new Rect(12f, 12f, width, panelHeight));
+            ModalUiState.SetPointerRegion(this, panel);
+            LocalTanksGuiTheme.DrawPanel(panel, false);
             if (!ready || activeCase == null)
             {
                 GUI.Label(new Rect(panel.x + 14f, panel.y + 12f, panel.width - 28f, 28f),
@@ -218,24 +228,33 @@ namespace LocalTanks
             int issueCount = auditSession?.Auditor?.Issues.Count ?? 0;
             GUI.Label(new Rect(panel.x + 14f, panel.y + 10f, panel.width - 28f, 28f),
                 $"AI Duel Lab · {ActiveCaseIndex + 1}/{catalog.cases.Length} · {activeCase.displayName}", titleStyle);
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 40f, panel.width - 28f, 58f),
+            GUI.Label(new Rect(panel.x + 14f, panel.y + 40f, panel.width - 28f, descriptionHeight),
                 activeCase.description + $"\nSeed: {activeCase.seed}   Время: {elapsed:0.0}/{activeCase.durationSeconds:0} с   Нарушения: {issueCount}", bodyStyle);
 
-            if (GUI.Button(new Rect(panel.x + 14f, panel.y + 104f, 116f, 28f), paused ? "Продолжить" : "Пауза"))
+            float buttonY = panel.y + 48f + descriptionHeight;
+            float buttonGap = 6f;
+            float buttonWidth = (panel.width - 28f - buttonGap * 3f) / 4f;
+            if (LocalTanksGuiTheme.Button(new Rect(panel.x + 14f, buttonY, buttonWidth, 30f),
+                    paused ? "Продолжить" : "Пауза"))
                 SetPaused(!paused);
-            if (GUI.Button(new Rect(panel.x + 136f, panel.y + 104f, 116f, 28f), "Заново"))
+            if (LocalTanksGuiTheme.Button(new Rect(panel.x + 14f + (buttonWidth + buttonGap), buttonY,
+                    buttonWidth, 30f), "Заново"))
                 ReloadCase(ActiveCaseIndex);
-            if (GUI.Button(new Rect(panel.x + 258f, panel.y + 104f, 116f, 28f), "Предыдущий"))
+            if (LocalTanksGuiTheme.Button(new Rect(panel.x + 14f + (buttonWidth + buttonGap) * 2f, buttonY,
+                    buttonWidth, 30f), "Предыдущий"))
                 ReloadCase(ActiveCaseIndex - 1);
-            if (GUI.Button(new Rect(panel.x + 380f, panel.y + 104f, 116f, 28f), "Следующий"))
+            if (LocalTanksGuiTheme.Button(new Rect(panel.x + 14f + (buttonWidth + buttonGap) * 3f, buttonY,
+                    buttonWidth, 30f), "Следующий"))
                 ReloadCase(ActiveCaseIndex + 1);
 
             string status = complete ? "Сценарий завершён и поставлен на паузу." :
                 paused ? "Пауза." : "Идёт автоматическое наблюдение.";
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 140f, panel.width - 28f, 22f),
+            float statusY = buttonY + 38f;
+            GUI.Label(new Rect(panel.x + 14f, statusY, panel.width - 28f, 38f),
                 status + "   Space — пауза, R — заново, B/N — сценарии.", bodyStyle);
             string issues = BuildRecentIssues();
-            GUI.Label(new Rect(panel.x + 14f, panel.y + 166f, panel.width - 28f, 62f), issues, issueStyle);
+            GUI.Label(new Rect(panel.x + 14f, statusY + 42f, panel.width - 28f,
+                panel.yMax - statusY - 54f), issues, issueStyle);
         }
 
         private string BuildRecentIssues()
@@ -266,22 +285,15 @@ namespace LocalTanks
         private void EnsureStyles()
         {
             if (titleStyle != null) return;
-            titleStyle = new GUIStyle(GUI.skin.label)
+            titleStyle = new GUIStyle(LocalTanksGuiTheme.SectionTitle)
             {
-                fontSize = 17,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.72f, 0.88f, 0.67f) }
+                fontSize = 17
             };
-            bodyStyle = new GUIStyle(GUI.skin.label)
+            bodyStyle = new GUIStyle(LocalTanksGuiTheme.Body)
             {
-                fontSize = 13,
-                wordWrap = true,
-                normal = { textColor = new Color(0.84f, 0.86f, 0.8f) }
+                fontSize = 13
             };
-            issueStyle = new GUIStyle(bodyStyle)
-            {
-                normal = { textColor = new Color(0.9f, 0.67f, 0.58f) }
-            };
+            issueStyle = new GUIStyle(LocalTanksGuiTheme.Warning) { wordWrap = true };
         }
     }
 }

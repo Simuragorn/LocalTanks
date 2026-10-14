@@ -14,7 +14,6 @@ namespace LocalTanks
 
         private Vector2 helpScroll;
         private Vector2 mapScroll;
-        private GUIStyle panelStyle;
         private GUIStyle titleStyle;
         private GUIStyle sectionStyle;
         private GUIStyle bodyStyle;
@@ -62,6 +61,7 @@ namespace LocalTanks
             helpVisible = false;
             mapAnalysisVisible = false;
             ModalUiState.Set(this, false);
+            ModalUiState.ClearPointerRegion(this);
         }
 
         private void Update()
@@ -100,7 +100,7 @@ namespace LocalTanks
         private void DrawHelp()
         {
             Rect panel = CenteredPanel(760f, 650f);
-            GUI.Box(panel, GUIContent.none, panelStyle);
+            LocalTanksGuiTheme.DrawPanel(panel);
             GUI.Label(new Rect(panel.x + 24f, panel.y + 18f, panel.width - 48f, 34f), "Справка по управлению", titleStyle);
 
             Rect viewport = new Rect(panel.x + 18f, panel.y + 60f, panel.width - 36f, panel.height - 104f);
@@ -146,7 +146,7 @@ namespace LocalTanks
         private void DrawMapAnalysis()
         {
             Rect panel = CenteredPanel(980f, 760f);
-            GUI.Box(panel, GUIContent.none, panelStyle);
+            LocalTanksGuiTheme.DrawPanel(panel);
             BattleStrategicPlanner planner = director != null ? director.StrategicPlanner : null;
             GUI.Label(new Rect(panel.x + 24f, panel.y + 18f, panel.width - 48f, 34f),
                 "Стратегическая оценка карты", titleStyle);
@@ -331,38 +331,28 @@ namespace LocalTanks
         private void EnsureStyles()
         {
             if (titleStyle != null) return;
-            panelStyle = new GUIStyle(GUI.skin.window)
+            titleStyle = new GUIStyle(LocalTanksGuiTheme.Title)
             {
-                padding = new RectOffset(18, 18, 18, 18)
+                wordWrap = true
             };
-            titleStyle = new GUIStyle(GUI.skin.label)
+            sectionStyle = new GUIStyle(LocalTanksGuiTheme.SectionTitle)
             {
-                fontSize = 20,
-                fontStyle = FontStyle.Bold,
-                wordWrap = true,
-                normal = { textColor = new Color(0.88f, 0.9f, 0.84f) }
+                fontSize = 16
             };
-            sectionStyle = new GUIStyle(titleStyle)
-            {
-                fontSize = 16,
-                normal = { textColor = new Color(0.58f, 0.76f, 0.54f) }
-            };
-            bodyStyle = new GUIStyle(GUI.skin.label)
+            bodyStyle = new GUIStyle(LocalTanksGuiTheme.Body)
             {
                 fontSize = 14,
                 wordWrap = true,
-                richText = false,
-                normal = { textColor = new Color(0.82f, 0.84f, 0.78f) }
+                richText = false
             };
             keyStyle = new GUIStyle(bodyStyle)
             {
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.66f, 0.83f, 0.61f) }
+                normal = { textColor = new Color(0.68f, 0.79f, 0.65f) }
             };
-            footerStyle = new GUIStyle(bodyStyle)
+            footerStyle = new GUIStyle(LocalTanksGuiTheme.Caption)
             {
-                alignment = TextAnchor.MiddleRight,
-                normal = { textColor = new Color(0.62f, 0.66f, 0.6f) }
+                alignment = TextAnchor.MiddleRight
             };
         }
     }

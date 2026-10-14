@@ -67,6 +67,11 @@ namespace LocalTanks
                 return;
             }
 
+            if (ModalUiState.BlocksPointer(mouse.position.ReadValue()))
+            {
+                return;
+            }
+
             float scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) > Mathf.Epsilon)
             {

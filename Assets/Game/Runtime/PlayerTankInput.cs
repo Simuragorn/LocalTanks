@@ -48,6 +48,14 @@ namespace LocalTanks
                 return;
             }
 
+            // Non-modal laboratory and diagnostic tools should not stop WASD, but the mouse belongs to
+            // the control under it. Without this gate a click on an IMGUI button also fires and dragging a
+            // slider turns the turret across the battlefield behind the window.
+            if (ModalUiState.BlocksPointer(mouse.position.ReadValue()))
+            {
+                return;
+            }
+
             Camera cameraToUse = worldCamera != null ? worldCamera : Camera.main;
             if (cameraToUse != null && turret != null)
             {

@@ -77,26 +77,37 @@ namespace LocalTanks
 
         private void OnGUI()
         {
-            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
+            if (BattleDiagnosticsOverlay.AnyModalVisible)
+            {
+                ModalUiState.ClearPointerRegion(this);
+                return;
+            }
 
-            Rect button = new Rect(Screen.width - 262f, 84f, 250f, 28f);
+            Rect button = new Rect(Screen.width - 262f, Screen.height - 112f, 250f, 28f);
+            Rect sliderRow = new Rect(Screen.width - 262f, Screen.height - 140f, 250f, 24f);
+            ModalUiState.SetPointerRegion(this, LocalTanksGuiTheme.Union(button, sliderRow));
             string label = IsAccelerated
                 ? $"Скорость ×{CurrentScale:0.#} — вернуть ×1 (F5)"
                 : "Ускорить время (F5)";
-            if (GUI.Button(button, label))
+            if (LocalTanksGuiTheme.Button(button, label))
             {
                 Toggle();
             }
 
-            Rect sliderRow = new Rect(Screen.width - 262f, 116f, 250f, 24f);
-            GUI.Label(new Rect(sliderRow.x, sliderRow.y, 58f, 20f), $"×{sliderScale:0.#}");
-            float wanted = GUI.HorizontalSlider(
+            GUI.Label(new Rect(sliderRow.x, sliderRow.y, 58f, 20f), $"×{sliderScale:0.#}",
+                LocalTanksGuiTheme.Caption);
+            float wanted = LocalTanksGuiTheme.HorizontalSlider(
                 new Rect(sliderRow.x + 60f, sliderRow.y + 4f, sliderRow.width - 60f, 20f),
                 sliderScale, NormalScale, Steps[Steps.Length - 1]);
             if (!Mathf.Approximately(wanted, sliderScale))
             {
                 SetScale(wanted);
             }
+        }
+
+        private void OnDestroy()
+        {
+            ModalUiState.ClearPointerRegion(this);
         }
 
         /// <summary>

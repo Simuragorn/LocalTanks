@@ -341,6 +341,7 @@ namespace LocalTanks
 
         private void OnDestroy()
         {
+            ModalUiState.ClearPointerRegion(this);
             UnsubscribeWeapons();
             auditSession?.Dispose();
             auditSession = null;
@@ -577,8 +578,14 @@ namespace LocalTanks
         private void DrawSetupPanel()
         {
             float width = Mathf.Min(650f, Screen.width - 24f);
-            Rect panel = new Rect((Screen.width - width) * 0.5f, 24f, width, 430f);
-            GUI.Box(panel, GUIContent.none);
+            float messageHeight = Mathf.Max(55f, (string.IsNullOrEmpty(validationMessage) ? bodyStyle : warningStyle)
+                .CalcHeight(new GUIContent(string.IsNullOrEmpty(validationMessage)
+                    ? "Состав корректен. Команды сохраняют единый состав по нации; техника ботов выбирается случайно внутри выбранного уровня."
+                    : validationMessage), width - 44f));
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(
+                new Rect((Screen.width - width) * 0.5f, 24f, width, 390f + messageHeight));
+            ModalUiState.SetPointerRegion(this, panel);
+            LocalTanksGuiTheme.DrawPanel(panel);
             float x = panel.x + 22f;
             float y = panel.y + 16f;
             float contentWidth = panel.width - 44f;
@@ -601,11 +608,12 @@ namespace LocalTanks
                 () => SavedSettings.seed = Math.Max(1, SavedSettings.seed - 1),
                 () => SavedSettings.seed++);
 
-            if (GUI.Button(new Rect(x, y, 170f, 30f), "Случайный seed"))
+            if (LocalTanksGuiTheme.Button(new Rect(x, y, 170f, 30f), "Случайный seed"))
                 SavedSettings.seed = Math.Abs(Environment.TickCount == int.MinValue ? 1701 : Environment.TickCount);
-            if (GUI.Button(new Rect(panel.xMax - 192f, y, 170f, 30f), "Начать бой")) StartBattle();
+            if (LocalTanksGuiTheme.Button(new Rect(panel.xMax - 192f, y, 170f, 30f),
+                    "Начать бой", true)) StartBattle();
             y += 40f;
-            GUI.Label(new Rect(x, y, contentWidth, 55f),
+            GUI.Label(new Rect(x, y, contentWidth, messageHeight),
                 string.IsNullOrEmpty(validationMessage)
                     ? "Состав корректен. Команды сохраняют единый состав по нации; техника ботов выбирается случайно внутри выбранного уровня."
                     : validationMessage,
@@ -614,15 +622,18 @@ namespace LocalTanks
 
         private void DrawBattlePanel()
         {
-            Rect panel = new Rect(12f, Screen.height - 116f, 520f, 104f);
-            GUI.Box(panel, GUIContent.none);
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(new Rect(12f, Screen.height - 126f, 520f, 114f));
+            ModalUiState.SetPointerRegion(this, panel);
+            LocalTanksGuiTheme.DrawPanel(panel, false);
             GUI.Label(new Rect(panel.x + 14f, panel.y + 10f, panel.width - 28f, 24f),
                 $"AI Test · {elapsed:0.0} с · Союзники {director.TeamAAlive} : {director.TeamBAlive} Враги", titleStyle);
             GUI.Label(new Rect(panel.x + 14f, panel.y + 38f, panel.width - 28f, 22f),
                 $"Seed {SavedSettings.seed} · боты уровня {SavedSettings.botTier} · P — пауза", bodyStyle);
-            if (GUI.Button(new Rect(panel.x + 14f, panel.y + 68f, 150f, 26f), paused ? "Продолжить" : "Пауза"))
+            if (LocalTanksGuiTheme.Button(new Rect(panel.x + 14f, panel.y + 70f, 150f, 30f),
+                    paused ? "Продолжить" : "Пауза"))
                 SetPaused(!paused);
-            if (GUI.Button(new Rect(panel.x + 174f, panel.y + 68f, 190f, 26f), "Завершить и оценить"))
+            if (LocalTanksGuiTheme.Button(new Rect(panel.x + 174f, panel.y + 70f, 190f, 30f),
+                    "Завершить и оценить", true))
                 FinishBattle("StoppedByPlayer");
         }
 
@@ -630,8 +641,10 @@ namespace LocalTanks
         {
             float width = Mathf.Min(720f, Screen.width - 24f);
             float height = Mathf.Min(520f, Screen.height - 48f);
-            Rect panel = new Rect((Screen.width - width) * 0.5f, 24f, width, height);
-            GUI.Box(panel, GUIContent.none);
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(
+                new Rect((Screen.width - width) * 0.5f, 24f, width, height));
+            ModalUiState.SetPointerRegion(this, panel);
+            LocalTanksGuiTheme.DrawPanel(panel);
             float x = panel.x + 22f;
             float y = panel.y + 16f;
             float contentWidth = panel.width - 44f;
@@ -644,10 +657,12 @@ namespace LocalTanks
             GUI.Label(new Rect(x, y, contentWidth, 22f),
                 "Ваш комментарий: что показалось неправильным, в какой момент и у какого бота?", bodyStyle);
             y += 26f;
-            comment = GUI.TextArea(new Rect(x, y, contentWidth, 190f), comment, 4000);
+            comment = GUI.TextArea(new Rect(x, y, contentWidth, 190f), comment, 4000,
+                LocalTanksGuiTheme.TextArea);
             y += 202f;
-            if (GUI.Button(new Rect(x, y, 190f, 32f), "Сохранить комментарий")) SaveReport();
-            if (GUI.Button(new Rect(x + 202f, y, 170f, 32f), "Новый бой"))
+            if (LocalTanksGuiTheme.Button(new Rect(x, y, 190f, 32f),
+                    "Сохранить комментарий", true)) SaveReport();
+            if (LocalTanksGuiTheme.Button(new Rect(x + 202f, y, 170f, 32f), "Новый бой"))
             {
                 Time.timeScale = 1f;
                 SceneManager.LoadScene(gameObject.scene.name);
@@ -670,9 +685,9 @@ namespace LocalTanks
             Action next)
         {
             GUI.Label(new Rect(x, y + 4f, 220f, 24f), label, bodyStyle);
-            if (GUI.Button(new Rect(x + width - 280f, y, 34f, 28f), "‹")) previous();
+            if (LocalTanksGuiTheme.Button(new Rect(x + width - 280f, y, 34f, 28f), "‹")) previous();
             GUI.Label(new Rect(x + width - 240f, y + 4f, 194f, 24f), value, bodyStyle);
-            if (GUI.Button(new Rect(x + width - 38f, y, 34f, 28f), "›")) next();
+            if (LocalTanksGuiTheme.Button(new Rect(x + width - 38f, y, 34f, 28f), "›")) next();
             y += 38f;
             ValidateSelection();
         }
@@ -695,22 +710,15 @@ namespace LocalTanks
         private void EnsureStyles()
         {
             if (titleStyle != null) return;
-            titleStyle = new GUIStyle(GUI.skin.label)
+            titleStyle = new GUIStyle(LocalTanksGuiTheme.Title)
             {
-                fontSize = 18,
-                fontStyle = FontStyle.Bold,
-                normal = { textColor = new Color(0.72f, 0.88f, 0.67f) }
+                fontSize = 18
             };
-            bodyStyle = new GUIStyle(GUI.skin.label)
+            bodyStyle = new GUIStyle(LocalTanksGuiTheme.Body)
             {
-                fontSize = 13,
-                wordWrap = true,
-                normal = { textColor = new Color(0.84f, 0.86f, 0.8f) }
+                fontSize = 13
             };
-            warningStyle = new GUIStyle(bodyStyle)
-            {
-                normal = { textColor = new Color(0.92f, 0.66f, 0.54f) }
-            };
+            warningStyle = new GUIStyle(LocalTanksGuiTheme.Warning) { wordWrap = true };
         }
     }
 

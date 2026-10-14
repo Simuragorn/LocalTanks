@@ -46,19 +46,27 @@ namespace LocalTanks
 
         private void OnGUI()
         {
-            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
-
-            if (!visible || visionSystem == null)
+            if (BattleDiagnosticsOverlay.AnyModalVisible)
             {
+                ModalUiState.ClearPointerRegion(this);
                 return;
             }
 
-            Rect panel = new Rect(12f, Screen.height - 230f, 440f, 218f);
-            GUI.Box(panel, "F3 — диагностика обзора");
+            if (!visible || visionSystem == null)
+            {
+                ModalUiState.ClearPointerRegion(this);
+                return;
+            }
+
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(new Rect(12f, Screen.height - 374f, 470f, 270f));
+            ModalUiState.SetPointerRegion(this, panel);
+            LocalTanksGuiTheme.DrawPanel(panel, false);
+            GUI.Label(new Rect(panel.x + 14f, panel.y + 12f, panel.width - 28f, 24f),
+                "Диагностика обзора · F3", LocalTanksGuiTheme.SectionTitle);
             int line = 0;
             foreach (VisionDiagnostic diagnostic in visionSystem.Diagnostics)
             {
-                if (line >= 8 || diagnostic.Observer == null || diagnostic.Target == null)
+                if (line >= 6 || diagnostic.Observer == null || diagnostic.Target == null)
                 {
                     break;
                 }
@@ -66,9 +74,15 @@ namespace LocalTanks
                 string text = $"{diagnostic.Observer.name} → {diagnostic.Target.name}: " +
                               $"{diagnostic.Result.Reason}, {diagnostic.Distance:0.0}/" +
                               $"{diagnostic.Result.DetectionDistance:0.0}, кусты {diagnostic.BushBonus:0.00}";
-                GUI.Label(new Rect(22f, Screen.height - 202f + line * 22f, 420f, 22f), text);
+                GUI.Label(new Rect(panel.x + 14f, panel.y + 44f + line * 35f, panel.width - 28f, 33f),
+                    text, LocalTanksGuiTheme.Caption);
                 line++;
             }
+        }
+
+        private void OnDisable()
+        {
+            ModalUiState.ClearPointerRegion(this);
         }
 
         private void OnDrawGizmos()

@@ -172,6 +172,7 @@ namespace LocalTanks
         private void OnDisable()
         {
             ApplySelectionOutline(null);
+            ModalUiState.ClearPointerRegion(this);
         }
 
         private static List<CombatTankAI> GetLivingBots()
@@ -192,10 +193,16 @@ namespace LocalTanks
 
         private void OnGUI()
         {
-            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
+            if (BattleDiagnosticsOverlay.AnyModalVisible)
+            {
+                ModalUiState.ClearPointerRegion(this);
+                return;
+            }
 
-            Rect button = new Rect(Screen.width - 262f, 48f, 250f, 28f);
-            if (GUI.Button(button, visible ? "Скрыть боевой ИИ (F4)" : "Показать боевой ИИ (F4)"))
+            Rect button = new Rect(Screen.width - 262f, Screen.height - 76f, 250f, 28f);
+            ModalUiState.SetPointerRegion(this, button);
+            if (LocalTanksGuiTheme.Button(button,
+                    visible ? "Скрыть боевой ИИ (F4)" : "Показать боевой ИИ (F4)"))
             {
                 SetVisible(!visible);
             }
@@ -214,10 +221,12 @@ namespace LocalTanks
             BotStrategicDecision decision = brain?.CurrentDecision;
             EnsureStyles();
             float width = Mathf.Min(390f, Screen.width - 24f);
-            float top = 118f;
+            float top = 150f;
             float height = Mathf.Clamp(Screen.height - top - 12f, 240f, 450f);
-            Rect panel = new Rect(Screen.width - width - 12f, top, width, height);
-            GUI.Box(panel, GUIContent.none);
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(
+                new Rect(Screen.width - width - 276f, top, width, height));
+            ModalUiState.SetPointerRegion(this, LocalTanksGuiTheme.Union(button, panel));
+            LocalTanksGuiTheme.DrawPanel(panel, false);
 
             List<CombatTankAI> livingBots = GetLivingBots();
             int number = Mathf.Max(0, livingBots.IndexOf(selected)) + 1;
@@ -367,19 +376,16 @@ namespace LocalTanks
         private void EnsureStyles()
         {
             if (headerStyle != null) return;
-            headerStyle = new GUIStyle(GUI.skin.label)
+            headerStyle = new GUIStyle(LocalTanksGuiTheme.SectionTitle)
             {
                 fontSize = 18,
-                fontStyle = FontStyle.Bold,
-                clipping = TextClipping.Clip,
-                normal = { textColor = new Color(0.7f, 0.86f, 0.66f) }
+                clipping = TextClipping.Clip
             };
-            detailsStyle = new GUIStyle(GUI.skin.label)
+            detailsStyle = new GUIStyle(LocalTanksGuiTheme.Body)
             {
                 fontSize = 14,
                 wordWrap = true,
-                richText = true,
-                normal = { textColor = new Color(0.84f, 0.86f, 0.8f) }
+                richText = true
             };
         }
     }

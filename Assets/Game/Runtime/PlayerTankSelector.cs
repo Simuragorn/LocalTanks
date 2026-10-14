@@ -121,23 +121,27 @@ namespace LocalTanks
             }
 
             const float width = 310f;
-            float controlsTop = 41f + tankPrefabs.Length * 29f;
-            float height = controlsTop + 94f;
-            GUI.Box(new Rect(12f, 12f, width, height), $"Выбор танка (1–{tankPrefabs.Length})");
+            float controlsTop = 58f + tankPrefabs.Length * 34f;
+            float height = controlsTop + 116f;
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(new Rect(12f, 12f, width, height));
+            ModalUiState.SetPointerRegion(this, panel);
+            LocalTanksGuiTheme.DrawPanel(panel);
+            GUI.Label(new Rect(panel.x + 14f, panel.y + 12f, panel.width - 28f, 28f),
+                $"Выбор танка · 1–{tankPrefabs.Length}", LocalTanksGuiTheme.SectionTitle);
 
             for (int index = 0; index < tankPrefabs.Length; index++)
             {
                 string marker = index == currentTankIndex ? "▶ " : string.Empty;
-                if (GUI.Button(
-                    new Rect(22f, 41f + index * 29f, width - 20f, 24f),
+                if (LocalTanksGuiTheme.Button(
+                    new Rect(panel.x + 12f, panel.y + 46f + index * 34f, panel.width - 24f, 30f),
                     $"{marker}{index + 1}. {GetTankName(index)}"))
                 {
                     SelectTank(index);
                 }
             }
 
-            bool fastReload = GUI.Toggle(
-                new Rect(22f, controlsTop, width - 20f, 24f),
+            bool fastReload = LocalTanksGuiTheme.Toggle(
+                new Rect(panel.x + 12f, panel.y + controlsTop, panel.width - 24f, 30f),
                 developerFastReload,
                 "Режим разработчика: перезарядка 1 с");
             if (fastReload != developerFastReload)
@@ -145,7 +149,9 @@ namespace LocalTanks
                 SetDeveloperFastReload(fastReload);
             }
 
-            if (GUI.Button(new Rect(22f, controlsTop + 29f, width - 20f, 26f), "Респавн ИИ-танков"))
+            if (LocalTanksGuiTheme.Button(
+                    new Rect(panel.x + 12f, panel.y + controlsTop + 36f, panel.width - 24f, 30f),
+                    "Респавн ИИ-танков"))
             {
                 targetRespawner?.RespawnAllTargets();
             }
@@ -153,10 +159,16 @@ namespace LocalTanks
             string rotationLabel = targetRespawner != null && targetRespawner.RotationPaused
                 ? "Возобновить вращение (P)"
                 : "Остановить вращение (P)";
-            if (GUI.Button(new Rect(22f, controlsTop + 58f, width - 20f, 26f), rotationLabel))
+            if (LocalTanksGuiTheme.Button(
+                    new Rect(panel.x + 12f, panel.y + controlsTop + 72f, panel.width - 24f, 30f), rotationLabel))
             {
                 targetRespawner?.ToggleTargetRotation();
             }
+        }
+
+        private void OnDisable()
+        {
+            ModalUiState.ClearPointerRegion(this);
         }
 
         private void ApplyDeveloperReload()

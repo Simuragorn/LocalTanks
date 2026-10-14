@@ -73,24 +73,36 @@ namespace LocalTanks
 
         private void OnGUI()
         {
-            if (BattleDiagnosticsOverlay.AnyModalVisible) return;
+            if (BattleDiagnosticsOverlay.AnyModalVisible)
+            {
+                ModalUiState.ClearPointerRegion(this);
+                return;
+            }
 
-            // Bottom left, away from the speed control on the right and the help list on the left top.
-            Rect row = new Rect(12f, Screen.height - 64f, 300f, 22f);
-            GUI.Label(new Rect(row.x, row.y, 150f, 20f), $"Детали земли {detailStrength:0.00}");
-            float wanted = GUI.HorizontalSlider(
-                new Rect(row.x + 152f, row.y + 4f, row.width - 152f, 20f), detailStrength, 0f, 1f);
+            Rect panel = LocalTanksGuiTheme.ClampToScreen(new Rect(12f, Screen.height - 92f, 320f, 80f));
+            ModalUiState.SetPointerRegion(this, panel);
+            LocalTanksGuiTheme.DrawPanel(panel, false);
+            Rect row = new Rect(panel.x + 12f, panel.y + 10f, panel.width - 24f, 24f);
+            GUI.Label(new Rect(row.x, row.y, 152f, 22f), $"Детали земли  {detailStrength:0.00}",
+                LocalTanksGuiTheme.Caption);
+            float wanted = LocalTanksGuiTheme.HorizontalSlider(
+                new Rect(row.x + 156f, row.y + 7f, row.width - 156f, 20f), detailStrength, 0f, 1f);
             if (!Mathf.Approximately(wanted, detailStrength))
             {
                 SetDetailStrength(wanted);
             }
 
-            Rect tintRow = new Rect(12f, Screen.height - 40f, 300f, 22f);
-            if (GUI.Button(tintRow, "Цвет земли: сброс"))
+            Rect tintRow = new Rect(panel.x + 12f, panel.y + 40f, panel.width - 24f, 28f);
+            if (LocalTanksGuiTheme.Button(tintRow, "Сбросить цвет земли"))
             {
                 tint = Color.white;
                 Apply();
             }
+        }
+
+        private void OnDisable()
+        {
+            ModalUiState.ClearPointerRegion(this);
         }
     }
 }
