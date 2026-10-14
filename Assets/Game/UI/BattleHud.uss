@@ -128,7 +128,7 @@
     font-size: 12px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    -unity-text-outline-width: 1px;
+    -unity-text-outline-width: 1.25px;
     -unity-text-outline-color: rgba(0, 0, 0, 0.88);
 }
 
@@ -217,7 +217,7 @@
     font-size: 13px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-    -unity-text-outline-width: 1px;
+    -unity-text-outline-width: 1.4px;
     -unity-text-outline-color: rgba(0, 0, 0, 0.92);
 }
 

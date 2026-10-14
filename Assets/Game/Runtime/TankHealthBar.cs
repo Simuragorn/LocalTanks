@@ -91,7 +91,10 @@ namespace LocalTanks
             GUIStyle style = HealthTextStyle();
             Color textColor = style.normal.textColor;
             style.normal.textColor = new Color(0f, 0f, 0f, 0.82f);
-            GUI.Label(new Rect(background.x + 1f, background.y + 1f, background.width, background.height), HealthText, style);
+            GUI.Label(new Rect(background.x - 1f, background.y, background.width, background.height), HealthText, style);
+            GUI.Label(new Rect(background.x + 1f, background.y, background.width, background.height), HealthText, style);
+            GUI.Label(new Rect(background.x, background.y - 1f, background.width, background.height), HealthText, style);
+            GUI.Label(new Rect(background.x, background.y + 1f, background.width, background.height), HealthText, style);
             style.normal.textColor = textColor;
             GUI.Label(background, HealthText, style);
         }
