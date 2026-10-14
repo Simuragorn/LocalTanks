@@ -109,7 +109,7 @@ namespace LocalTanks.Editor
         /// by repeating them rather than by stretching a single image: repetition at this size reads as
         /// ground, where one stretched texture reads as a photograph of ground seen from orbit.
         /// </summary>
-        private const float DetailBlockMetres = 8f;
+        private const float DetailBlockMetres = 4f;
 
         /// <summary>Draw order of the detail materials: above the surface image, below everything else.</summary>
         private const float DetailSortingOrder = -18f;
@@ -124,6 +124,12 @@ namespace LocalTanks.Editor
         /// </para>
         /// </summary>
         private const float DetailStrength = 0.45f;
+
+        /// <summary>
+        /// How much larger than its cell a ground block is drawn. The overlap hides the slivers that the
+        /// per-block nudge would otherwise open, and a sliver shows the brighter layer beneath as a line.
+        /// </summary>
+        private const float BlockOverlap = 1.08f;
 
         /// <summary>
         /// One ground material and the range of terrain height it covers.
@@ -330,9 +336,14 @@ namespace LocalTanks.Editor
 
             for (int row = 0; row < asset.navigationRows; row += side)
             {
-                for (int column = 0; column < asset.navigationColumns; column += side)
+                // Every other row of blocks is shifted half a block sideways and a little along, so block
+                // edges do not stack into continuous lines. Aligned edges are what makes a tiled ground
+                // read as a grid of squares rather than as ground.
+                int stagger = ((row / side) & 1) == 1 ? side / 2 : 0;
+                for (int column = -stagger; column < asset.navigationColumns; column += side)
                 {
-                    float height = BlockHeight(asset, row, column, side);
+                    int sampleColumn = Mathf.Clamp(column, 0, asset.navigationColumns - side);
+                    float height = BlockHeight(asset, row, sampleColumn, side);
                     GroundMaterial band = GroundMaterials[BandFor(height)];
                     Sprite sprite = materials.FirstOrDefault(item => item.Id == band.SpriteId).Sprite;
                     if (sprite == null) continue;
@@ -340,6 +351,11 @@ namespace LocalTanks.Editor
                     Vector2 centre = origin + new Vector2(
                         (column + side * 0.5f) * cell,
                         (row + side * 0.5f) * cell);
+                    // A small deterministic nudge so neighbouring blocks of the same material do not line up
+                    // into a lattice. Seeded from the coordinates, so a rebuild reproduces the arena exactly.
+                    centre += new Vector2(
+                        (Hash01(column, row, 1) - 0.5f) * cell * 0.5f,
+                        (Hash01(column, row, 2) - 0.5f) * cell * 0.5f);
 
                     GameObject block = new GameObject($"Ground_{column:00}_{row:00}");
                     block.transform.SetParent(root.transform, false);
@@ -347,14 +363,22 @@ namespace LocalTanks.Editor
                     SpriteRenderer renderer = block.AddComponent<SpriteRenderer>();
                     renderer.sprite = sprite;
                     renderer.sortingOrder = Mathf.RoundToInt(DetailSortingOrder);
-                    renderer.color = new Color(1f, 1f, 1f, DetailStrength);
-                    // Mirrored per block: the same tile repeated without variation reads as a pattern
-                    // rather than as ground.
+                    // Opacity varies only slightly. A wide range was tried and made the grid worse rather
+                    // than better: neighbouring blocks of one material became visible as patches, and the
+                    // eye finds regular brightness steps far more readily than it finds seams.
+                    float strength = DetailStrength * (0.94f + Hash01(column, row, 4) * 0.12f);
+                    renderer.color = new Color(1f, 1f, 1f, Mathf.Clamp01(strength));
+                    // Mirrored per block, and the tile's own UV origin is not moved: the materials are
+                    // seamless, so their edges already agree and shifting them would create the very seam
+                    // this is trying to avoid.
                     renderer.flipX = ((column / side) & 1) == 1;
                     renderer.flipY = ((row / side) & 1) == 1;
 
                     Vector2 drawn = sprite.bounds.size;
-                    float size = side * cell;
+                    // Every block is drawn slightly larger than its cell so neighbours overlap. Without the
+                    // overlap the nudge above opens slivers between blocks, and through a sliver the brighter
+                    // layer underneath shows as a bright line - which is exactly the grid this fixes.
+                    float size = side * cell * BlockOverlap;
                     if (drawn.x > 0.0001f && drawn.y > 0.0001f)
                     {
                         block.transform.localScale = new Vector3(size / drawn.x, size / drawn.y, 1f);
@@ -365,6 +389,23 @@ namespace LocalTanks.Editor
             }
 
             Debug.Log($"Ground detail: {placed} blocks of {DetailBlockMetres} m from {materials.Count} materials.");
+        }
+
+        /// <summary>
+        /// A stable value in [0,1) from a block's coordinates. Used for the small position, size and opacity
+        /// variations that break up repetition. Deliberately not <c>Random</c>: the same arena must look the
+        /// same after every rebuild, and a random source would also make a scene diff unreadable.
+        /// </summary>
+        private static float Hash01(int column, int row, int salt)
+        {
+            unchecked
+            {
+                uint hash = (uint)(column * 73856093) ^ (uint)(row * 19349663) ^ (uint)(salt * 83492791);
+                hash ^= hash >> 13;
+                hash *= 0x5bd1e995;
+                hash ^= hash >> 15;
+                return (hash & 0xffffff) / (float)0x1000000;
+            }
         }
 
         /// <summary>Average terrain height over a block, so a single cliff does not recolour its neighbours.</summary>
