@@ -63,12 +63,19 @@ def arguments() -> argparse.Namespace:
 def material_bands() -> list[tuple[str, float, float]]:
     """Material id and the height range it covers, in metres.
 
-    These are the bands the scene builder used, kept identical so the baked ground and any
-    future runtime preview agree about which material belongs where. The ranges come from
-    the arena's own height distribution: on Mines the lowest ground is about sea level, the
-    median is sixteen metres and the cliffs reach a hundred and sixty, so sand and cracked
-    flats lie in the bottoms, ground and rubble on the flats, boulders on the slopes and
-    bedrock above.
+    The set is not a guess. The map's own data lists the materials it is paved with, inside
+    each spaces/<map>/*.cdata_processed archive under terrain2/blend_textures; on Mines the
+    leaders are Rock_4_AM at 395 references, Grass_Tussock_09_AM at 328, PBS_Stones_Big_AM at
+    275 and PBS_Ground_37_AM at 238. Those became mines_rock, mines_boulders and mines_ground
+    in the environment catalog, and the bands follow the arena's own height distribution -
+    lowest ground near sea level, median 16.1 metres, ninetieth percentile 53.6, cliffs at
+    159.4 - so the bottoms take sand and cracked flats, the flats take ground and rubble, the
+    slopes take boulders and the tops take bedrock.
+
+    The per-vertex assignment the game itself uses was not decoded: the material identifier
+    is packed byte-wise into the geometry behind a nested bwb and bwt header rather than
+    sitting in a flat table, and reading it cost more than it returned. Bands are the
+    substitute. If exact placement is ever wanted, terrain2/blend_textures is where to start.
     """
     return [
         ("mines_sand", float("-inf"), 1.5),
