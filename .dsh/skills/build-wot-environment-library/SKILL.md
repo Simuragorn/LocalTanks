@@ -15,6 +15,11 @@ instead of copying a generated PNG by hand. Build with
 original resolution and the refreshed `library_preview.png`, then run
 `-Mode Validate`.
 
+For a playable arena floor, add or update its `groundRecipes` entry and use `-Mode BuildGround -MapIds <id>`,
+then `-Mode ValidateGround`. Do not copy a baked floor into Unity. The generated macro/atlas/selector manifest
+is the hand-off to `WoTGroundMaterialBuilder`; rebuild the arena scene and inspect all three
+`CaptureWotGroundDetailPreview` images at zoom 4, 8 and 12. A whole-map preview is not evidence of close detail.
+
 Preserve these invariants:
 
 - strict orthographic top-down camera with no perspective;
@@ -23,6 +28,9 @@ Preserve these invariants:
 - ordinary objects are assigned semantic Unity map layers and explicit gameplay
   flags in the catalog;
 - seamless terrain albedo stays at source resolution and is marked tileable;
+- an arena ground recipe contains every map-specific material band and scale; the Python code contains none;
+- runtime ground uses one renderer with a semantic macro image, high-pass material atlas and two-material blend
+  selector; atlas data imports as linear, not sRGB;
 - generated PNGs, DDS files, package contents and Blender intermediates remain
   below ignored local-only paths and never enter Git;
 - unsupported WoT shaders or formats fail visibly instead of producing grey,

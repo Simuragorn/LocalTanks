@@ -201,7 +201,7 @@ def build_surface(entry: dict, package_root: Path, work_root: Path, output_root:
 
 
 def validate_catalog(catalog: dict) -> None:
-    if catalog.get("schemaVersion") != 1:
+    if catalog.get("schemaVersion") != 2:
         raise RuntimeError("Unsupported environment catalog schema")
     entries = catalog.get("objects", []) + catalog.get("surfaces", [])
     ids = [entry.get("id", "") for entry in entries]
@@ -215,6 +215,22 @@ def validate_catalog(catalog: dict) -> None:
         variant = entry.get("gameplay", {}).get("fallenVariantId")
         if variant and variant not in object_ids:
             raise RuntimeError(f"Unknown fallenVariantId for {entry['id']}: {variant}")
+    surface_ids = {entry["id"] for entry in catalog.get("surfaces", [])}
+    map_ids = [entry.get("mapId", "") for entry in catalog.get("groundRecipes", [])]
+    if any(not value for value in map_ids):
+        raise RuntimeError("Every ground recipe needs a non-empty mapId")
+    duplicate_maps = sorted({value for value in map_ids if map_ids.count(value) > 1})
+    if duplicate_maps:
+        raise RuntimeError(f"Duplicate ground recipe map ids: {', '.join(duplicate_maps)}")
+    for recipe in catalog.get("groundRecipes", []):
+        references = [recipe.get("macroSurfaceId", "")] + [
+            material.get("surfaceId", "") for material in recipe.get("materials", [])
+        ]
+        missing = sorted({value for value in references if value not in surface_ids})
+        if missing:
+            raise RuntimeError(
+                f"Ground recipe {recipe['mapId']} references unknown surfaces: {', '.join(missing)}"
+            )
 
 
 def validate_outputs(catalog: dict, output_root: Path, ids: set[str]) -> dict:
@@ -328,11 +344,12 @@ def main() -> None:
     merged_objects.sort(key=lambda entry: order.get(entry["id"], 999999))
     merged_surfaces.sort(key=lambda entry: order.get(entry["id"], 999999))
     manifest = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "sourceCatalog": str(catalog_path.relative_to(project_root)).replace("\\", "/"),
         "pixelsPerMeter": catalog["pixelsPerMeter"],
         "objects": merged_objects,
         "surfaces": merged_surfaces,
+        "groundRecipes": catalog.get("groundRecipes", []),
         "knownLimitations": [
             "World of Tanks living vegetation is primarily SpeedTree SRT 06.0.0 and is not yet supported by the maintained Blender importer.",
             "Terrain objects using PBS_tiled_atlas_global are rejected until their atlas material is reconstructed.",

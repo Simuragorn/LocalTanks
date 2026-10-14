@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "pixelsPerMeter": 108,
   "maximumSpriteDimension": 4096,
   "objects": [
@@ -134,5 +134,29 @@
     {"id": "mines_sand", "displayName": "Mines sand", "terrainId": "sand", "tileable": true, "sourcePackage": "shared_content_sandbox-part2.pkg", "sourcePath": "maps/landscape/00_AllTerrain3_tiles/PBS_sand_river_water_AM.dds"},
 
     {"id": "mines_aerial", "displayName": "Mines surface, whole arena", "terrainId": "aerial", "tileable": false, "sourcePackage": "10_hills.pkg", "sourcePath": "spaces/10_hills/global_AM.dds", "treatAsWholeMap": true}
+  ],
+  "groundRecipes": [
+    {
+      "mapId": "10_hills",
+      "displayName": "Mines runtime ground",
+      "macroSurfaceId": "mines_aerial",
+      "selectorResolution": 1024,
+      "atlasTileResolution": 1024,
+      "atlasPaddingPixels": 8,
+      "atlasColumns": 3,
+      "atlasHighPassRadiusPixels": 32,
+      "transitionMeters": 6.0,
+      "detailTileMeters": 32.0,
+      "detailStrength": 0.7,
+      "macroMaxTextureSize": 4096,
+      "materials": [
+        {"surfaceId": "mines_sand", "maximumHeightMeters": 1.5},
+        {"surfaceId": "mines_cracked_earth", "minimumHeightMeters": 1.5, "maximumHeightMeters": 8.0},
+        {"surfaceId": "mines_ground", "minimumHeightMeters": 8.0, "maximumHeightMeters": 24.0},
+        {"surfaceId": "mines_rubble", "minimumHeightMeters": 24.0, "maximumHeightMeters": 50.0},
+        {"surfaceId": "mines_boulders", "minimumHeightMeters": 50.0, "maximumHeightMeters": 78.0},
+        {"surfaceId": "mines_rock", "minimumHeightMeters": 78.0}
+      ]
+    }
   ]
 }

@@ -74,6 +74,76 @@ namespace LocalTanks.Editor
             EditorSceneManager.CloseScene(scene, true);
         }
 
+        /// <summary>
+        /// Captures the ground alone at all three meaningful gameplay zooms. The whole-arena preview can
+        /// prove alignment and colour, but it downsamples the map so heavily that a texture imported at half
+        /// resolution still looks acceptable there. These close views are the regression proof for detail.
+        /// </summary>
+        [MenuItem("Local Tanks/Diagnostics/Capture WoT Ground Detail Preview")]
+        public static void CaptureGroundDetailPreview()
+        {
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            Camera camera = UnityEngine.Object.FindAnyObjectByType<Camera>();
+            WoTMapAsset asset = AssetDatabase.LoadAssetAtPath<WoTMapAsset>(AssetPath);
+            GameObject surfaceObject = GameObject.Find("Ground/Surface");
+            SpriteRenderer surface = surfaceObject != null ? surfaceObject.GetComponent<SpriteRenderer>() : null;
+            if (camera == null || asset == null || surface == null)
+            {
+                throw new InvalidOperationException("The arena needs a camera, map asset and Ground/Surface to capture detail.");
+            }
+
+            Renderer[] renderers = UnityEngine.Object.FindObjectsByType<Renderer>(
+                FindObjectsInactive.Include,
+                FindObjectsSortMode.None);
+            bool[] states = renderers.Select(item => item.enabled).ToArray();
+            for (int index = 0; index < renderers.Length; index++)
+            {
+                renderers[index].enabled = renderers[index] == surface;
+            }
+
+            const int side = 768;
+            float[] zooms = { 4f, 8f, 12f };
+            string folder = Path.GetFullPath("TestResults/WoTGroundDetail");
+            Directory.CreateDirectory(folder);
+            try
+            {
+                camera.transform.position = new Vector3(asset.worldCenter.x, asset.worldCenter.y, -10f);
+                camera.transform.rotation = Quaternion.identity;
+                camera.orthographic = true;
+                foreach (float zoom in zooms)
+                {
+                    camera.orthographicSize = zoom;
+                    RenderTexture target = new RenderTexture(side, side, 24, RenderTextureFormat.ARGB32);
+                    Texture2D image = new Texture2D(side, side, TextureFormat.RGB24, false);
+                    RenderTexture previous = RenderTexture.active;
+                    try
+                    {
+                        camera.targetTexture = target;
+                        RenderTexture.active = target;
+                        camera.Render();
+                        image.ReadPixels(new Rect(0f, 0f, side, side), 0, 0);
+                        image.Apply();
+                        string path = Path.Combine(folder, $"Zoom_{zoom:0}.png");
+                        File.WriteAllBytes(path, image.EncodeToPNG());
+                    }
+                    finally
+                    {
+                        camera.targetTexture = null;
+                        RenderTexture.active = previous;
+                        UnityEngine.Object.DestroyImmediate(target);
+                        UnityEngine.Object.DestroyImmediate(image);
+                    }
+                }
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                Debug.Log($"WoT ground detail previews saved: {folder}");
+            }
+            finally
+            {
+                for (int index = 0; index < renderers.Length; index++) renderers[index].enabled = states[index];
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
         private static string ScenePath => BattleSceneLayout.EnsurePlaced(BattleSceneLayout.MapSceneName(DefaultMapId));
 
         private static string AssetPath => WoTMapImporter.AssetPath(DefaultMapId);
@@ -93,27 +163,6 @@ namespace LocalTanks.Editor
         /// without hiding the ground it describes.
         /// </summary>
         private const float NavigationOverlaySortingOrder = -19f;
-
-        /// <summary>
-        /// The arena's own surface image, produced by the environment library from the game client. It
-        /// covers the whole map in one sprite, so it is not a tile: see <see cref="CreateGround"/>.
-        /// </summary>
-        private const string AerialSurfacePath =
-            "Assets/LocalOnly/WoTEnvironmentGenerated/Ground/mines_aerial.png";
-
-        /// <summary>
-        /// The arena's ground as one baked texture: the surface image combined per pixel with the map's own
-        /// ground materials, chosen by terrain height. Produced by
-        /// <c>Tools/WoTEnvironmentPipeline/Scripts/bake_ground_texture.py</c>.
-        /// <para>
-        /// This replaced a few thousand translucent sprite stamps. A stamp is a flat quad with edges, and
-        /// with hundreds of equal quads those edges line up into a visible grid; widening the variation made
-        /// it worse rather than better. Baked, there are no object boundaries at all, so there are no seams
-        /// to see, and the ground costs one draw instead of thousands.
-        /// </para>
-        /// </summary>
-        private const string BakedGroundPath =
-            "Assets/LocalOnly/WoTEnvironmentGenerated/Ground/mines_ground_baked.png";
 
         /// <summary>
         /// The sprite-block ground that the baked texture replaced. Left switched off rather than deleted:
@@ -205,6 +254,9 @@ namespace LocalTanks.Editor
 
         public static void Build(string mapId)
         {
+            // Texture import can refresh the asset database, so it must finish before the map ScriptableObject
+            // is loaded and passed through the rest of the scene build.
+            WoTGroundMaterialBuilder.Prepare(mapId);
             WoTMapAsset asset = WoTMapImporter.ImportAsset(mapId);
             // The arena is a playable map, so the scene belongs under Maps; placing it first means a scene
             // that has not been moved yet is never rebuilt as a second copy next to the old one.
@@ -274,7 +326,7 @@ namespace LocalTanks.Editor
         /// </summary>
         /// <summary>
         /// The arena floor. It is the map's own surface image, taken from the game client, drawn as one
-        /// sprite across the whole playable area.
+        /// sprite across the whole playable area, with its own material grain sampled by a shared shader.
         /// <para>
         /// The alternative was a tilemap of flat colours keyed to the navigation grid, which is a
         /// debugging view rather than a place to fight: it showed the routing cells and told a player
@@ -283,9 +335,10 @@ namespace LocalTanks.Editor
         /// are no tile seams at all.
         /// </para>
         /// <para>
-        /// Its limit is resolution. The source is 4096 square over an 800-metre arena, about five pixels
-        /// per metre, which is generous from a distance and soft close up. That is what the material
-        /// surfaces are for: they sit on top and give the close view detail the aerial image lacks.
+        /// The source is 4096 square over an 800-metre arena, about five pixels per metre: enough for the
+        /// large shapes but not for the closest camera. The generated selector and material atlas remain
+        /// separate, so the shader can repeat their grain at a physical scale instead of stretching it with
+        /// the macro image. It is still one renderer and has no tile boundaries.
         /// </para>
         /// </summary>
         private static void CreateGround(WoTMapAsset asset)
@@ -293,34 +346,21 @@ namespace LocalTanks.Editor
             GameObject root = new GameObject("Ground");
             SceneManager.MoveGameObjectToScene(root, SceneManager.GetActiveScene());
 
-            // The baked ground if it exists, otherwise the plain surface image: the arena must still build
-            // where the bake step has not been run, just with a softer floor.
-            Sprite surface = AssetDatabase.LoadAssetAtPath<Sprite>(BakedGroundPath);
-            if (surface == null)
-            {
-                Debug.LogWarning($"The baked ground was not found at {BakedGroundPath}; falling back to the " +
-                                 "surface image, which is softer up close. Run " +
-                                 "Tools/WoTEnvironmentPipeline/Scripts/bake_ground_texture.py to produce it.");
-                surface = AssetDatabase.LoadAssetAtPath<Sprite>(AerialSurfacePath);
-            }
-
-            if (surface == null)
-            {
-                Debug.LogWarning($"The arena surface was not found at {AerialSurfacePath}. The ground will " +
-                                 "have no image; rebuild the environment library to restore it.");
-                return;
-            }
+            WoTGroundMaterialBuilder.Result ground = WoTGroundMaterialBuilder.Build(
+                asset.mapId,
+                asset.playableSize,
+                asset.metresPerUnit);
+            Sprite surface = ground.Surface;
 
             GameObject floor = new GameObject("Surface");
             floor.transform.SetParent(root.transform, false);
             floor.transform.position = asset.worldCenter;
             SpriteRenderer renderer = floor.AddComponent<SpriteRenderer>();
             renderer.sprite = surface;
+            renderer.sharedMaterial = ground.Material;
             renderer.sortingOrder = Mathf.RoundToInt(GroundSortingOrder);
-            // A tunable tint over the baked ground. The bake cannot be adjusted from a scene, and the balance
-            // between the map's shapes and the ground's grain is a judgement about how the arena should look,
-            // so it is left where whoever is looking at it can move it.
-            floor.AddComponent<GroundAppearanceTuner>();
+            GroundAppearanceTuner tuner = floor.AddComponent<GroundAppearanceTuner>();
+            tuner.Configure(ground.DetailStrength);
 
             // Scaled to the playable area rather than left at its pixel size, so the picture and the
             // collision world describe the same ground. Uniform, because the source is square and the

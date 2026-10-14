@@ -1,156 +1,120 @@
-"""Bakes one ground texture for an imported arena from its surface image and material tiles.
+"""Builds runtime ground inputs for every catalogued World of Tanks arena.
 
-Why this exists
----------------
-Drawing the ground as a few thousand translucent sprite stamps leaves a visible grid: a
-stamp is a flat quad with edges, and with hundreds of equal quads those edges line up
-into lines. Varying size and opacity made it worse, not better, so the fix is to stop
-compositing at runtime and produce the ground once, here.
+The arena's global_AM image is the macro layer: roads, fields, water and the settlement.
+It is intentionally not enlarged and baked together with detail, because a 4096 image over
+an 800 metre arena can never stay sharp at the player's closest zoom. Instead this tool
+produces two compact derived textures:
 
-What it does
-------------
-The surface image carries the arena's large shapes - roads, fields, water, the
-settlement - at about five pixels per metre, which is soft under a camera close to the
-ground. The material tiles carry the grain. Both are combined per pixel, choosing
-material by terrain height, so the result has no object boundaries to show.
+* a padded atlas of the arena's own terrain materials, normalised around neutral grey so a
+  shader can multiply their grain over the macro layer without washing its colours away;
+* a point-sampled material selector containing two material indices and their blend weight,
+  chosen from the semantic height field without blocky random transitions.
 
-The material is decided from the height field rather than from a texture coordinate, so
-the field's own grid is never visible: heights are sampled as a continuous surface, and
-the choice between two materials is dithered over a band instead of cut at a line. The
-dither uses a hash of the pixel position, so every rebuild produces the same ground.
+Unity combines all three textures on one quad. Detail therefore remains at a physical world
+scale, while there are no sprite blocks, tilemap seams or giant 8K/16K colour textures.
+Every map-specific choice lives in environment_catalog.json; this script contains no Mines
+material names or height thresholds.
 """
 
 from __future__ import annotations
 
 import argparse
-import io
+import hashlib
 import json
 import math
-import zipfile
 from pathlib import Path
 
-from PIL import Image
-
-# Side of the baked texture in pixels. The arena is about 209 by 176 world units, so this
-# is roughly twenty pixels per unit: finer than the surface image it replaces by a factor
-# of four, and small enough that the atlas lookups stay inexpensive.
-IMAGE_SIDE = 4096
-
-# Material atlas: six tiles of this side in a three by two grid.
-TILE_SIDE = 1024
-
-# Side of the coarse material field. Each cell is about two world units, small enough that
-# the dither band below hides the steps.
-FIELD_SIDE = 128
-
-# How far a material reaches across the height range beyond its own band, in metres. Small
-# values give crisp bands, large ones blend everything into mud.
-TRANSITION_METRES = 6.0
-
-# Share of the baked pixel taken from the material tile, the rest coming from the surface image.
-# Above half, because the image is the soft source and the tiles are the sharp one.
-MATERIAL_STRENGTH = 0.55
+from PIL import Image, ImageChops, ImageFilter, ImageStat
 
 
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", required=True)
-    parser.add_argument("--map-id", default="10_hills")
-    parser.add_argument("--output", default=None)
+    parser.add_argument("--mode", choices=("list", "build", "validate"), default="build")
+    parser.add_argument(
+        "--map-id",
+        action="append",
+        default=[],
+        help="Map recipe to process. Repeat for several maps; omission processes every recipe.",
+    )
     return parser.parse_args()
 
 
-def material_bands() -> list[tuple[str, float, float]]:
-    """Material id and the height range it covers, in metres.
-
-    The set is not a guess. The map's own data lists the materials it is paved with, inside
-    each spaces/<map>/*.cdata_processed archive under terrain2/blend_textures; on Mines the
-    leaders are Rock_4_AM at 395 references, Grass_Tussock_09_AM at 328, PBS_Stones_Big_AM at
-    275 and PBS_Ground_37_AM at 238. Those became mines_rock, mines_boulders and mines_ground
-    in the environment catalog, and the bands follow the arena's own height distribution -
-    lowest ground near sea level, median 16.1 metres, ninetieth percentile 53.6, cliffs at
-    159.4 - so the bottoms take sand and cracked flats, the flats take ground and rubble, the
-    slopes take boulders and the tops take bedrock.
-
-    The per-vertex assignment the game itself uses was not decoded: the material identifier
-    is packed byte-wise into the geometry behind a nested bwb and bwt header rather than
-    sitting in a flat table, and reading it cost more than it returned. Bands are the
-    substitute. If exact placement is ever wanted, terrain2/blend_textures is where to start.
-    """
-    return [
-        ("mines_sand", float("-inf"), 1.5),
-        ("mines_cracked_earth", 1.5, 8.0),
-        ("mines_ground", 8.0, 24.0),
-        ("mines_rubble", 24.0, 50.0),
-        ("mines_boulders", 50.0, 78.0),
-        ("mines_rock", 78.0, float("inf")),
-    ]
+def read_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
-def hash_unit(x: int, y: int, salt: int) -> float:
-    """Stable value in [0,1) from integer coordinates.
-
-    Deliberately not a random source: the arena must look the same after every rebuild, or
-    the scene diff becomes noise and a defect cannot be reproduced.
-    """
-    value = (x * 73856093) ^ (y * 19349663) ^ (salt * 83492791)
-    value &= 0xFFFFFFFF
-    value ^= value >> 13
-    value = (value * 0x5BD1E995) & 0xFFFFFFFF
-    value ^= value >> 15
-    return (value & 0xFFFFFF) / float(0x1000000)
+def write_json(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def load_surface(path: Path, side: int) -> Image.Image:
-    with Image.open(path) as image:
-        return image.convert("RGB").resize((side, side), Image.LANCZOS)
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
-def build_material_atlas(folder: Path, ids: list[str]) -> Image.Image:
-    atlas = Image.new("RGB", (TILE_SIDE * 3, TILE_SIDE * 2))
-    for index, material_id in enumerate(ids):
-        path = folder / f"{material_id}.png"
-        if not path.is_file():
-            raise RuntimeError(f"Material tile is missing: {path}")
-        with Image.open(path) as tile:
-            atlas.paste(tile.convert("RGB").resize((TILE_SIDE, TILE_SIDE), Image.LANCZOS),
-                        ((index % 3) * TILE_SIDE, (index // 3) * TILE_SIDE))
-    return atlas
+def recipe_hash(recipe: dict) -> str:
+    canonical = json.dumps(recipe, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def read_height_field(primitives_path: Path, side: int) -> list[list[float]]:
-    """Terrain height per cell of a coarse grid, over the same area the surface image covers.
+def selected_recipes(catalog: dict, requested: set[str]) -> list[dict]:
+    recipes = catalog.get("groundRecipes", [])
+    known = {recipe["mapId"] for recipe in recipes}
+    unknown = sorted(requested - known)
+    if unknown:
+        raise RuntimeError(f"Unknown ground map ids: {', '.join(unknown)}")
+    return [recipe for recipe in recipes if not requested or recipe["mapId"] in requested]
 
-    Heights arrive on a regular grid with a known step, so the field is sampled bilinearly
-    rather than nearest: a stepped field would put the material boundaries on its own grid
-    and reintroduce exactly the artefact this script exists to remove.
-    """
-    document = json.loads(primitives_path.read_text(encoding="utf-8-sig"))
-    terrain = document["terrain"]
-    origin = terrain["originMeters"]
-    step = terrain["stepMeters"]
-    columns = terrain["columns"]
-    rows = terrain["rows"]
-    heights = terrain["heightsMeters"]
-    bounds = document["playableBoundsMeters"]
-    minimum = bounds["min"]
-    maximum = bounds["max"]
-    span_x = maximum[0] - minimum[0]
-    span_z = maximum[1] - minimum[1]
 
-    field: list[list[float]] = []
-    for y in range(side):
-        # The surface image is drawn with its own orientation: row zero of the image is the
-        # far side of the map. Heights are stored south first, so the row is mirrored here.
-        world_z = minimum[1] + (1.0 - (y + 0.5) / side) * span_z
-        row: list[float] = []
-        for x in range(side):
-            world_x = minimum[0] + (x + 0.5) / side * span_x
-            column = (world_x - origin[0]) / step - 0.5
-            line = (world_z - origin[1]) / step - 0.5
-            row.append(sample_bilinear(heights, columns, rows, column, line))
-        field.append(row)
-    return field
+def validate_recipe(recipe: dict, surfaces: dict[str, dict]) -> None:
+    map_id = recipe.get("mapId", "")
+    if not map_id:
+        raise RuntimeError("Every ground recipe needs a non-empty mapId")
+    macro_id = recipe.get("macroSurfaceId", "")
+    if macro_id not in surfaces:
+        raise RuntimeError(f"Ground recipe {map_id} references unknown macro surface {macro_id}")
+    if surfaces[macro_id].get("tileable", True):
+        raise RuntimeError(f"Ground recipe {map_id} macro surface must cover the whole map")
+
+    materials = recipe.get("materials", [])
+    if not 1 <= len(materials) <= 255:
+        raise RuntimeError(f"Ground recipe {map_id} needs between 1 and 255 materials")
+    previous_high: float | None = None
+    for index, material in enumerate(materials):
+        surface_id = material.get("surfaceId", "")
+        if surface_id not in surfaces:
+            raise RuntimeError(f"Ground recipe {map_id} references unknown material {surface_id}")
+        if not surfaces[surface_id].get("tileable", False):
+            raise RuntimeError(f"Ground recipe {map_id} material {surface_id} is not tileable")
+        low = material.get("minimumHeightMeters")
+        high = material.get("maximumHeightMeters")
+        if low is None and index != 0:
+            raise RuntimeError(f"Only the first band of {map_id} may omit minimumHeightMeters")
+        if high is None and index != len(materials) - 1:
+            raise RuntimeError(f"Only the last band of {map_id} may omit maximumHeightMeters")
+        if low is not None and high is not None and float(low) >= float(high):
+            raise RuntimeError(f"Ground recipe {map_id} has an empty height band for {surface_id}")
+        if previous_high is not None and low is not None and not math.isclose(float(low), previous_high):
+            raise RuntimeError(f"Ground recipe {map_id} has a gap or overlap before {surface_id}")
+        previous_high = None if high is None else float(high)
+
+    for field in ("selectorResolution", "atlasTileResolution", "atlasPaddingPixels", "atlasColumns"):
+        if int(recipe.get(field, 0)) <= 0:
+            raise RuntimeError(f"Ground recipe {map_id} needs positive {field}")
+    if int(recipe["atlasColumns"]) > len(materials):
+        raise RuntimeError(f"Ground recipe {map_id} has more atlas columns than materials")
+    if float(recipe.get("detailTileMeters", 0)) <= 0:
+        raise RuntimeError(f"Ground recipe {map_id} needs positive detailTileMeters")
+    strength = float(recipe.get("detailStrength", -1))
+    if not 0 <= strength <= 1:
+        raise RuntimeError(f"Ground recipe {map_id} detailStrength must be in [0, 1]")
+    if float(recipe.get("atlasHighPassRadiusPixels", 0)) < 0:
+        raise RuntimeError(f"Ground recipe {map_id} atlasHighPassRadiusPixels cannot be negative")
 
 
 def sample_bilinear(heights: list, columns: int, rows: int, column: float, line: float) -> float:
@@ -164,14 +128,7 @@ def sample_bilinear(heights: list, columns: int, rows: int, column: float, line:
     return top * (1 - fy) + bottom * fy
 
 
-def weight_for(height: float, low: float, high: float) -> float:
-    """How strongly a material claims a height.
-
-    Full inside its band and fading over TRANSITION_METRES outside it, so a boundary between
-    two materials is a region where both are present rather than a line where one stops.
-    """
-    if math.isinf(low) and math.isinf(high):
-        return 1.0
+def weight_for(height: float, low: float, high: float, transition: float) -> float:
     if low == float("-inf"):
         distance = height - high
     elif high == float("inf"):
@@ -180,96 +137,228 @@ def weight_for(height: float, low: float, high: float) -> float:
         distance = max(low - height, height - high)
     if distance <= 0:
         return 1.0
-    return max(0.0, 1.0 - distance / TRANSITION_METRES)
+    return max(0.0, 1.0 - distance / max(transition, 0.001))
 
 
-def bake(project_root: Path, map_id: str, output: Path) -> dict:
-    generated = project_root / "Assets" / "LocalOnly" / "WoTEnvironmentGenerated"
-    surface_path = generated / "Ground" / "mines_aerial.png"
-    materials_root = generated / "Ground"
-    primitives = project_root / "Assets" / "LocalOnly" / "WoTMapPrimitives" / map_id / f"{map_id}_primitives.json"
-    for required in (surface_path, primitives):
-        if not required.is_file():
-            raise RuntimeError(f"Required input is missing: {required}")
+def normalise_tile(path: Path, side: int, high_pass_radius: float) -> tuple[Image.Image, list[float]]:
+    with Image.open(path) as source:
+        tile = source.convert("RGB").resize((side, side), Image.Resampling.LANCZOS)
 
-    bands = material_bands()
-    ids = [band[0] for band in bands]
-    surface = load_surface(surface_path, IMAGE_SIDE)
-    atlas = build_material_atlas(materials_root, ids)
-    field = read_height_field(primitives, FIELD_SIDE)
+    source_means = ImageStat.Stat(tile).mean[:3]
+    # These textures become a multiplicative detail layer. Removing broad colour/value changes prevents
+    # each repeat from reading as a large square while preserving stones, cracks, soil and grass fibres.
+    if high_pass_radius > 0:
+        low_frequency = tile.filter(ImageFilter.GaussianBlur(radius=high_pass_radius))
+        tile = ImageChops.subtract(tile, low_frequency, scale=0.75, offset=128)
 
-    surface_pixels = surface.load()
-    atlas_pixels = atlas.load()
-    scale = FIELD_SIDE / IMAGE_SIDE
-    atlas_width = TILE_SIDE * 3
+    means = ImageStat.Stat(tile).mean[:3]
+    channels = []
+    for channel, mean in zip(tile.split(), means):
+        offset = 127.5 - float(mean)
+        channels.append(channel.point(lambda value, add=offset: max(0, min(255, round(value + add)))))
+    return Image.merge("RGB", channels), [round(float(value), 3) for value in source_means]
 
-    result = Image.new("RGB", (IMAGE_SIDE, IMAGE_SIDE))
-    result_pixels = result.load()
 
-    for y in range(IMAGE_SIDE):
-        field_y = min(int(y * scale), FIELD_SIDE - 1)
-        height_row = field[field_y]
-        for x in range(IMAGE_SIDE):
-            height = height_row[min(int(x * scale), FIELD_SIDE - 1)]
-            weights = [weight_for(height, low, high) for _, low, high in bands]
-            total = sum(weights)
-            if total <= 0.0001:
-                result_pixels[x, y] = surface_pixels[x, y]
-                continue
+def wrap_padding(tile: Image.Image, padding: int) -> Image.Image:
+    side = tile.width
+    tiled = Image.new("RGB", (side * 3, side * 3))
+    for row in range(3):
+        for column in range(3):
+            tiled.paste(tile, (column * side, row * side))
+    return tiled.crop((side - padding, side - padding, side * 2 + padding, side * 2 + padding))
 
-            # One material per pixel, chosen in proportion to the weights. Blending several tiles
-            # together would average their grain into flat mud, where picking keeps every pixel a
-            # real texture sample and turns the boundary into dither - the way terrain has always
-            # been blended without a per-pixel shader.
-            pick = hash_unit(x, y, 7) * total
-            chosen = len(weights) - 1
-            running = 0.0
-            for index, weight in enumerate(weights):
-                running += weight
-                if pick <= running:
-                    chosen = index
-                    break
 
-            # Two repetitions of the tile per texture edge, so one tile spans about twenty-five world units.
-            # The surface image carries only about five pixels per metre, which is what makes the ground look
-            # soft, and the materials are 1024 square, so at this rate they supply about forty pixels per
-            # metre - the grain. Four repetitions were tried and measured slightly sharper, but the pattern
-            # of the tile started to be recognisable, which costs more than the extra sharpness buys.
-            tile_x = (x * 2) % TILE_SIDE
-            tile_y = (y * 2) % TILE_SIDE
-            tile = atlas_pixels[tile_x + (chosen % 3) * TILE_SIDE,
-                                tile_y + (chosen // 3) * TILE_SIDE]
-            base = surface_pixels[x, y]
-            # Material over the surface image. The share matters: the image carries the roads, fields and
-            # water at about five pixels per metre, which is what reads as soft, and the materials carry the
-            # grain at about eighty. Giving the materials the larger share therefore sharpens the ground
-            # while the image still supplies its shapes. EXPOSURE in the scene builder tunes the balance
-            # afterwards without another bake.
-            strength = MATERIAL_STRENGTH
-            result_pixels[x, y] = (
-                int(base[0] * (1 - strength) + tile[0] * strength),
-                int(base[1] * (1 - strength) + tile[1] * strength),
-                int(base[2] * (1 - strength) + tile[2] * strength),
-            )
-
+def build_atlas(recipe: dict, ground_root: Path, output: Path) -> tuple[dict, list[dict]]:
+    tile_side = int(recipe["atlasTileResolution"])
+    high_pass_radius = float(recipe.get("atlasHighPassRadiusPixels", 0))
+    padding = int(recipe["atlasPaddingPixels"])
+    columns = int(recipe["atlasColumns"])
+    materials = recipe["materials"]
+    rows = math.ceil(len(materials) / columns)
+    cell_side = tile_side + padding * 2
+    atlas = Image.new("RGB", (cell_side * columns, cell_side * rows), (128, 128, 128))
+    metadata = []
+    for index, material in enumerate(materials):
+        source = ground_root / f"{material['surfaceId']}.png"
+        if not source.is_file():
+            raise RuntimeError(f"Ground material is missing: {source}")
+        tile, average = normalise_tile(source, tile_side, high_pass_radius)
+        atlas.paste(wrap_padding(tile, padding), ((index % columns) * cell_side, (index // columns) * cell_side))
+        metadata.append({"index": index, "surfaceId": material["surfaceId"], "sourceAverageRgb": average})
     output.parent.mkdir(parents=True, exist_ok=True)
-    result.save(output)
+    atlas.save(output)
     return {
-        "output": str(output),
-        "size": [IMAGE_SIDE, IMAGE_SIDE],
-        "materials": ids,
-        "atlasWidth": atlas_width,
+        "columns": columns,
+        "rows": rows,
+        "tilePixels": tile_side,
+        "paddingPixels": padding,
+        "cellPixels": cell_side,
+        "highPassRadiusPixels": high_pass_radius,
+        "pixelSize": [atlas.width, atlas.height],
+    }, metadata
+
+
+def build_selector(recipe: dict, primitives: dict, output: Path) -> dict:
+    side = int(recipe["selectorResolution"])
+    transition = float(recipe["transitionMeters"])
+    terrain = primitives["terrain"]
+    origin = terrain["originMeters"]
+    step = float(terrain["stepMeters"])
+    columns = int(terrain["columns"])
+    rows = int(terrain["rows"])
+    heights = terrain["heightsMeters"]
+    bounds = primitives["playableBoundsMeters"]
+    minimum = bounds["min"]
+    maximum = bounds["max"]
+    span_x = maximum[0] - minimum[0]
+    span_z = maximum[1] - minimum[1]
+    bands = []
+    for material in recipe["materials"]:
+        low = float(material["minimumHeightMeters"]) if "minimumHeightMeters" in material else float("-inf")
+        high = float(material["maximumHeightMeters"]) if "maximumHeightMeters" in material else float("inf")
+        bands.append((low, high))
+
+    # R and G are exact byte material indices; B is the contribution of G. Keeping indices
+    # point-sampled avoids invalid in-between ids, while the explicit weight gives smooth transitions
+    # without the visible checkerboard created by stochastic material selection.
+    values = bytearray(side * side * 3)
+    counts = [0] * len(bands)
+    for y in range(side):
+        world_z = minimum[1] + (1.0 - (y + 0.5) / side) * span_z
+        line = (world_z - origin[1]) / step - 0.5
+        for x in range(side):
+            world_x = minimum[0] + (x + 0.5) / side * span_x
+            column = (world_x - origin[0]) / step - 0.5
+            height = sample_bilinear(heights, columns, rows, column, line)
+            weights = [weight_for(height, low, high, transition) for low, high in bands]
+            ranked = sorted(range(len(weights)), key=lambda item: weights[item], reverse=True)
+            primary = ranked[0]
+            secondary = ranked[1] if len(ranked) > 1 and weights[ranked[1]] > 0 else primary
+            pair_total = weights[primary] + weights[secondary]
+            secondary_share = weights[secondary] / pair_total if secondary != primary and pair_total > 0 else 0.0
+            offset = (y * side + x) * 3
+            values[offset] = primary
+            values[offset + 1] = secondary
+            values[offset + 2] = max(0, min(255, round(secondary_share * 255)))
+            counts[primary] += 1
+
+    selector = Image.frombytes("RGB", (side, side), bytes(values))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    selector.save(output)
+    return {
+        "pixelSize": [side, side],
+        "format": "primaryIndex-secondaryIndex-secondaryWeight",
+        "dominantMaterialPixelCounts": counts,
     }
+
+
+def generated_paths(project_root: Path, map_id: str) -> dict[str, Path]:
+    root = project_root / "Assets" / "LocalOnly" / "WoTEnvironmentGenerated" / "Ground"
+    return {
+        "manifest": root / f"{map_id}_ground.json",
+        "atlas": root / f"{map_id}_ground_atlas.png",
+        "selector": root / f"{map_id}_ground_selector.png",
+    }
+
+
+def asset_path(project_root: Path, path: Path) -> str:
+    return str(path.relative_to(project_root)).replace("\\", "/")
+
+
+def build_recipe(project_root: Path, catalog: dict, recipe: dict) -> dict:
+    map_id = recipe["mapId"]
+    generated_root = project_root / "Assets" / "LocalOnly" / "WoTEnvironmentGenerated"
+    ground_root = generated_root / "Ground"
+    macro = ground_root / f"{recipe['macroSurfaceId']}.png"
+    primitives_path = (
+        project_root / "Assets" / "LocalOnly" / "WoTMapPrimitives" / map_id / f"{map_id}_primitives.json"
+    )
+    for required in (macro, primitives_path):
+        if not required.is_file():
+            raise RuntimeError(f"Required ground input is missing: {required}")
+    primitives = read_json(primitives_path)
+    if primitives.get("mapId") != map_id:
+        raise RuntimeError(f"Ground recipe {map_id} received primitives for {primitives.get('mapId')}")
+
+    paths = generated_paths(project_root, map_id)
+    atlas_info, materials = build_atlas(recipe, ground_root, paths["atlas"])
+    selector_info = build_selector(recipe, primitives, paths["selector"])
+    document = {
+        "schemaVersion": 1,
+        "mapId": map_id,
+        "displayName": recipe.get("displayName", map_id),
+        "sourceRecipeSha256": recipe_hash(recipe),
+        "macroTexture": asset_path(project_root, macro),
+        "materialAtlas": asset_path(project_root, paths["atlas"]),
+        "materialSelector": asset_path(project_root, paths["selector"]),
+        "macroMaxTextureSize": int(recipe["macroMaxTextureSize"]),
+        "detailTileMeters": float(recipe["detailTileMeters"]),
+        "detailStrength": float(recipe["detailStrength"]),
+        "atlas": atlas_info,
+        "selector": selector_info,
+        "materials": materials,
+        "hashes": {
+            "macro": sha256(macro),
+            "atlas": sha256(paths["atlas"]),
+            "selector": sha256(paths["selector"]),
+            "primitives": sha256(primitives_path),
+        },
+        "rights": "Local prototype reference only. Do not publish WoT-derived output without permission.",
+    }
+    write_json(paths["manifest"], document)
+    return document
+
+
+def validate_generated(project_root: Path, recipe: dict) -> dict:
+    paths = generated_paths(project_root, recipe["mapId"])
+    if not paths["manifest"].is_file():
+        raise RuntimeError(f"Generated ground manifest is missing: {paths['manifest']}")
+    document = read_json(paths["manifest"])
+    if document.get("schemaVersion") != 1 or document.get("mapId") != recipe["mapId"]:
+        raise RuntimeError(f"Generated ground manifest has the wrong identity: {paths['manifest']}")
+    if document.get("sourceRecipeSha256") != recipe_hash(recipe):
+        raise RuntimeError(f"Generated ground for {recipe['mapId']} is stale; rebuild it")
+    for key, hash_key in (("atlas", "atlas"), ("selector", "selector")):
+        path = paths[key]
+        if not path.is_file():
+            raise RuntimeError(f"Generated ground texture is missing: {path}")
+        if sha256(path) != document["hashes"][hash_key]:
+            raise RuntimeError(f"Generated ground texture hash drifted: {path}")
+    macro = project_root / document["macroTexture"]
+    if not macro.is_file() or sha256(macro) != document["hashes"]["macro"]:
+        raise RuntimeError(f"Ground macro texture is missing or changed: {macro}")
+    return document
 
 
 def main() -> None:
     args = arguments()
     project_root = Path(args.project_root).resolve()
-    output = Path(args.output) if args.output else (
-        project_root / "Assets" / "LocalOnly" / "WoTEnvironmentGenerated" / "Ground" / "mines_ground_baked.png")
-    report = bake(project_root, args.map_id, output)
-    print(f"Baked ground written to {report['output']} at {report['size'][0]}x{report['size'][1]} "
-          f"from {len(report['materials'])} materials")
+    catalog_path = project_root / "Tools" / "WoTEnvironmentPipeline" / "environment_catalog.json"
+    catalog = read_json(catalog_path)
+    if catalog.get("schemaVersion") != 2:
+        raise RuntimeError("Ground material builder requires environment catalog schema 2")
+    surfaces = {entry["id"]: entry for entry in catalog.get("surfaces", [])}
+    recipes = selected_recipes(catalog, set(args.map_id))
+    if not recipes:
+        raise RuntimeError("Environment catalog contains no ground recipes")
+    for recipe in recipes:
+        validate_recipe(recipe, surfaces)
+
+    if args.mode == "list":
+        for recipe in recipes:
+            print(f"ground  {recipe['mapId']:<24} {recipe.get('displayName', recipe['mapId'])}")
+        return
+
+    for recipe in recipes:
+        if args.mode == "build":
+            document = build_recipe(project_root, catalog, recipe)
+            print(
+                f"Built runtime ground for {recipe['mapId']}: "
+                f"{len(document['materials'])} materials, selector "
+                f"{document['selector']['pixelSize'][0]}x{document['selector']['pixelSize'][1]}"
+            )
+        validated = validate_generated(project_root, recipe)
+        print(f"Validated runtime ground for {validated['mapId']}")
 
 
 if __name__ == "__main__":

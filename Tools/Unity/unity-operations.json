@@ -308,6 +308,19 @@
       "outputs": [
         "Docs/Media/WoTMapArena.png"
       ]
+    },
+    {
+      "name": "CaptureWotGroundDetailPreview",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.WoTMapSceneBuilder.CaptureGroundDetailPreview",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the Mines ground alone at camera zooms 4, 8 and 12. The whole-map preview cannot reveal an undersized imported texture, so these close views are the sharpness proof.",
+      "outputs": [
+        "TestResults/WoTGroundDetail/Zoom_4.png",
+        "TestResults/WoTGroundDetail/Zoom_8.png",
+        "TestResults/WoTGroundDetail/Zoom_12.png"
+      ]
     }
   ]
 }

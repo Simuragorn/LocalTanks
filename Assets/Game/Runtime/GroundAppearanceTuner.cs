@@ -3,33 +3,39 @@ using UnityEngine;
 namespace LocalTanks
 {
     /// <summary>
-    /// Lets the balance between the ground's shape and its grain be dialled in from the scene, while the
-    /// battle plays.
+    /// Lets the balance between the ground's macro surface and its world-scaled material grain be dialled
+    /// in while the battle plays.
     /// <para>
-    /// The ground is one baked texture, so its content cannot be changed without running the bake again. What
-    /// can be changed cheaply is how strongly that texture is tinted, and that turns out to be the control
-    /// worth having: the arena's surface image carries roads, fields and water at about five pixels per metre
-    /// and the material tiles carry grain at about eighty, so raising the tint makes the ground read as
-    /// detailed and lowering it makes the map's own shapes clearer. Which of those is right is a judgement
-    /// about how the arena should look, so it belongs to whoever is looking at it rather than to a constant
-    /// in a script.
+    /// The arena surface carries roads, fields and water; its atlas carries only neutralised grain. The
+    /// slider changes the shader blend rather than brightening the whole sprite, so it can reveal detail
+    /// without washing the map pale. MaterialPropertyBlock keeps the generated material shared.
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GroundAppearanceTuner : MonoBehaviour
     {
-        [Tooltip("Multiplier on the ground texture's colour. Above one strengthens the grain, below one lets " +
-                 "the surface image's shapes through. It cannot add detail that is not baked in.")]
-        [SerializeField, Range(0.5f, 1.6f)] private float detailStrength = 1f;
+        private static readonly int DetailStrengthId = Shader.PropertyToID("_DetailStrength");
+        private static readonly int GroundTintId = Shader.PropertyToID("_GroundTint");
+
+        [Tooltip("Share of the world-scaled material grain. Zero is the macro surface alone; one is the " +
+                 "strongest detail while roads and fields still come from the macro surface.")]
+        [SerializeField, Range(0f, 1f)] private float detailStrength = 0.55f;
 
         [Tooltip("Ground tint, for correcting a colour cast without touching the bake.")]
         [SerializeField] private Color tint = Color.white;
 
         private SpriteRenderer target;
+        private MaterialPropertyBlock properties;
         private float appliedStrength = -1f;
         private Color appliedTint;
 
         public float DetailStrength => detailStrength;
+
+        public void Configure(float strength)
+        {
+            detailStrength = Mathf.Clamp01(strength);
+            Apply();
+        }
 
         private void Awake()
         {
@@ -48,20 +54,21 @@ namespace LocalTanks
         /// <summary>Sets the multiplier, as the scene's own inspector or a test would.</summary>
         public void SetDetailStrength(float strength)
         {
-            detailStrength = Mathf.Clamp(strength, 0.5f, 1.6f);
+            detailStrength = Mathf.Clamp01(strength);
             Apply();
         }
 
         private void Apply()
         {
+            if (target == null) target = GetComponent<SpriteRenderer>();
             if (target == null) return;
+            properties ??= new MaterialPropertyBlock();
             appliedStrength = detailStrength;
             appliedTint = tint;
-            target.color = new Color(
-                Mathf.Clamp01(tint.r * detailStrength),
-                Mathf.Clamp01(tint.g * detailStrength),
-                Mathf.Clamp01(tint.b * detailStrength),
-                1f);
+            target.GetPropertyBlock(properties);
+            properties.SetFloat(DetailStrengthId, detailStrength);
+            properties.SetColor(GroundTintId, tint);
+            target.SetPropertyBlock(properties);
         }
 
         private void OnGUI()
@@ -69,16 +76,16 @@ namespace LocalTanks
             if (BattleDiagnosticsOverlay.AnyModalVisible) return;
 
             // Bottom left, away from the speed control on the right and the help list on the left top.
-            Rect row = new Rect(12f, Screen.height - 64f, 260f, 22f);
-            GUI.Label(new Rect(row.x, row.y, 116f, 20f), $"Земля ×{detailStrength:0.00}");
+            Rect row = new Rect(12f, Screen.height - 64f, 300f, 22f);
+            GUI.Label(new Rect(row.x, row.y, 150f, 20f), $"Детали земли {detailStrength:0.00}");
             float wanted = GUI.HorizontalSlider(
-                new Rect(row.x + 118f, row.y + 4f, row.width - 118f, 20f), detailStrength, 0.5f, 1.6f);
+                new Rect(row.x + 152f, row.y + 4f, row.width - 152f, 20f), detailStrength, 0f, 1f);
             if (!Mathf.Approximately(wanted, detailStrength))
             {
                 SetDetailStrength(wanted);
             }
 
-            Rect tintRow = new Rect(12f, Screen.height - 40f, 260f, 22f);
+            Rect tintRow = new Rect(12f, Screen.height - 40f, 300f, 22f);
             if (GUI.Button(tintRow, "Цвет земли: сброс"))
             {
                 tint = Color.white;

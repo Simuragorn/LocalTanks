@@ -52,61 +52,27 @@ to each other.
 
 ## The arena floor
 
-The ground is **one baked texture**, not a tile set and not a tilemap. It is produced by
-`Tools/WoTEnvironmentPipeline/Scripts/bake_ground_texture.py`, which combines the arena's
-own surface image with its own ground materials, choosing material per pixel by terrain
-height. Read that script before changing ground art; it carries the reasoning inline.
+The ground is **one renderer with a layered material**, not a tilemap, sprite stamps or one
+giant baked image. `global_AM.dds` remains the macro layer because it owns roads, fields,
+water and settlements. Close sharpness comes from a separate high-pass atlas of the map's
+own terrain materials, repeated at a physical metre scale by `LocalTanks/WoTGroundDetail`.
 
-Run it after the environment library exists:
+Every map-specific choice lives in `Tools/WoTEnvironmentPipeline/environment_catalog.json`
+under `groundRecipes`: macro surface, ordered height/material bands, transition width,
+resolutions, repeat metres, high-pass radius and strength. The script must contain no Mines
+names or thresholds. Run `BuildGround` and `ValidateGround` after the environment library,
+then rebuild the scene. The generated RGB selector stores two material indices and their
+blend weight; random per-pixel selection is forbidden because its cells become a visible
+checkerboard at close zoom. Bilinear sampling is used while deriving the selector, while
+the selector itself remains point-sampled so material indices cannot interpolate into
+unrelated IDs.
 
-```
-python Tools/WoTEnvironmentPipeline/Scripts/bake_ground_texture.py --project-root .
-```
-
-Two facts about the data are worth keeping, because both were established by measuring
-rather than by looking:
-
-- the surface image is `spaces/<map>/global_AM.dds` inside the arena package, about
-  4096 square over an eight-hundred-metre field. It is **albedo, not a material mask**:
-  8409 unique colours on Mines and not one white pixel. It carries roads, fields, water
-  and the settlement, and it is the soft source at roughly five pixels per metre;
-- the materials the map is actually paved with are listed in the map's own
-  `spaces/<map>/*.cdata_processed`, inside a nested archive under
-  `terrain2/blend_textures`. On Mines the leaders are `Rock_4_AM` at 395 references,
-  `Grass_Tussock_09_AM` at 328 and `PBS_Stones_Big_AM` at 275. Use those names as the
-  candidate set instead of guessing from a catalogue.
-
-**Do not draw the ground as sprite stamps.** A stamp is a flat quad with edges, and
-hundreds of equal quads in rows line their edges up into a visible grid. Staggering the
-rows, overlapping the blocks and shrinking them only reduce it, and widening the
-per-block size and opacity variation makes it **worse**, because the eye finds a regular
-brightness step far more readily than a seam. Baking has no object boundaries, so it has
-no seams, and it costs one draw instead of thousands.
-
-**Decide material by height with a dithered boundary, not a threshold.** Full weight
-inside a band, fading over a few metres outside it, and pick between the two neighbours
-by a hash of the pixel position. A line becomes a region. Sample heights bilinearly: a
-stepped field puts the boundaries back on the field's own grid and returns the artefact.
-Never blend several tiles per pixel either - averaging textures produces flat mud, where
-picking keeps every pixel a real sample.
-
-The bands on Mines, taken from its own height distribution (minimum -0.1 m, median
-16.1, ninetieth percentile 53.6, maximum 159.4):
-
-| Height | Material |
-|---|---|
-| below 1.5 m | `mines_sand` |
-| 1.5 to 8 m | `mines_cracked_earth` |
-| 8 to 24 m | `mines_ground` |
-| 24 to 50 m | `mines_rubble` |
-| 50 to 78 m | `mines_boulders` |
-| above 78 m | `mines_rock` |
-
-Balance the two sources deliberately. Material share and tile repetition were measured
-against high-frequency energy: the surface image alone is 3.68, and the chosen bake is
-9.78, about twice as sharp. A stronger material share reaches 12.12 but makes the tile's
-pattern recognisable and washes the map pale. What the bake cannot do is invent detail:
-about five pixels per metre is the limit of the available data.
+Do not return to sprite stamps: repeated quads reveal their edges and cost thousands of
+objects. Do not import the detail atlas as sRGB: its neutral byte value 128 is multiplicative
+data, and gamma decoding would darken the whole arena. High-pass filtering removes broad
+stains before repetition, padded atlas cells prevent mip bleeding, and mirror sampling makes
+imperfect source tiles meet without seams. The result remains one draw and needs no 8K/16K
+colour texture.
 
 Two artefacts are already fixed and must not come back:
 
@@ -118,10 +84,8 @@ Two artefacts are already fixed and must not come back:
   renders dark. `flatten_alpha` in the environment pipeline does this for every surface;
   compositing over an opaque colour is not a substitute, it darkens or tints the result.
 
-`GroundAppearanceTuner` on the ground object exposes a live 0.50 to 1.60 strength slider
-and a colour reset. A baked texture cannot be adjusted from a scene, and the balance
-between sharp and readable is a judgement about how the arena should look, so it belongs
-to whoever is looking at it.
+`GroundAppearanceTuner` changes `_DetailStrength` through a property block, so one generated
+material stays shared and a scene does not create an accidental copy.
 
 ## Seeing the arena
 
@@ -136,6 +100,10 @@ discards every draw call:
 It writes `Docs/Media/WoTMapArena.png`. Read that file and judge the result from it. The
 same applies to any change to materials, shaders, transparency or the ground: a headless
 run can prove data and cannot prove appearance.
+
+For ground sharpness also run `CaptureWotGroundDetailPreview`. It writes zoom 4, 8 and 12
+frames under `TestResults/WoTGroundDetail`; inspect all three. The whole-map preview
+downsamples enough to hide an undersized or blurred texture.
 
 ## One predicate decides what counts as a barrier
 
@@ -220,10 +188,11 @@ The whole arena is reproducible from the client, and the steps depend on each ot
 1. `Tools/WoTMapPrimitivePipeline` builds the semantic map JSON, terrain and AI grid;
 2. `Tools/WoTEnvironmentPipeline` extracts the art: objects, plus the materials and the
    surface image the ground needs;
-3. `bake_ground_texture.py` combines surface and materials into the arena floor;
+3. `BuildGround` creates the macro/atlas/selector manifest for the arena floor;
 4. `ImportWotMap`, then `BuildWotMapTacticalAnalysis`, then `BuildWotMapScene` through
    the launcher, which is the only entry point for Unity;
-5. `CaptureWotMapPreview` to see the result, and the PlayMode arena checks to prove it.
+5. `CaptureWotMapPreview` plus `CaptureWotGroundDetailPreview` to see the result, and the
+   PlayMode arena checks to prove it.
 
 Step 4 rebuilds the scene from the map asset, so any hand edit to the scene is lost. Put
 changes in the builder, never in the scene file.
