@@ -314,6 +314,7 @@ namespace LocalTanks.Editor
 
             Dictionary<string, Material> materials = new Dictionary<string, Material>(StringComparer.Ordinal);
             materials["smoke"] = CreateMaterial(shader, "vfx_smoke", textures[VfxTextureLibrary.SmokePuff], false);
+            materials["smoke_wisp"] = CreateMaterial(shader, "vfx_smoke_wisp", textures[VfxTextureLibrary.SmokeWisp], false);
             materials["dust"] = CreateMaterial(shader, "vfx_dust", textures[VfxTextureLibrary.DustPuff], false);
             materials["exhaust"] = CreateMaterial(shader, "vfx_exhaust", textures[VfxTextureLibrary.ExhaustSmoke], false);
             materials["spray"] = CreateMaterial(shader, "vfx_spray", textures[VfxTextureLibrary.WaterDrop], false);
@@ -480,23 +481,41 @@ namespace LocalTanks.Editor
         /// </summary>
         private static void BuildBarrelSmoke(GameObject root, Dictionary<string, Material> materials)
         {
-            ParticleSystem plume = AddSystem(root, "Plume", materials["exhaust"], MuzzleSmokeSortingOrder, 2f, 0.6f, 1.2f, 0.12f, 0.22f);
-            SetRate(plume, 7f);
-            // Local +Y is out of the bore, because the prefab is parented to the muzzle.
-            SetPlanarVelocity(plume, -0.18f, 0.18f, 0.3f, 0.9f);
-            SetSizeOverLifetime(plume, 0.7f, 2.1f);
-            SetFade(plume, 0.1f);
+            // A narrow jet leaves the bore first; a slower translucent cloud hangs at the muzzle after it.
+            // Both are opened by the rig for the weapon profile's barrelSmokeSeconds.
+            ParticleSystem jet = AddSystem(root, "Jet", materials["smoke_wisp"], MuzzleSmokeSortingOrder, 2f, 0.42f, 0.78f, 0.07f, 0.14f);
+            SetRate(jet, 7f);
+            SetPlanarVelocity(jet, -0.08f, 0.08f, 0.42f, 1.1f);
+            SetStartRotation(jet, -0.24f, 0.24f);
+            SetSizeOverLifetime(jet, 0.65f, 1.85f);
+            SetFade(jet, 0.08f);
+            SetTurbulence(jet, 0.12f, 0.9f);
+            SetStartColor(jet, new Color(0.7f, 0.69f, 0.67f, 0.52f));
+            OffsetSystem(jet, 0f, 0.07f);
+
+            ParticleSystem residual = AddSystem(root, "Residual", materials["smoke"], MuzzleSmokeSortingOrder - 1, 2f, 0.72f, 1.35f, 0.12f, 0.23f);
+            SetRate(residual, 7f);
+            SetPlanarVelocity(residual, -0.2f, 0.2f, 0.12f, 0.52f);
+            SetStartRotation(residual, -1.2f, 1.2f);
+            SetSizeOverLifetime(residual, 0.55f, 2.2f);
+            SetFade(residual, 0.12f);
+            SetTurbulence(residual, 0.2f, 0.62f);
+            SetStartColor(residual, new Color(0.78f, 0.77f, 0.75f, 0.36f));
         }
 
         private static void BuildMuzzleSmoke(GameObject root, CombatVfxCatalog catalog, Dictionary<string, Material> materials)
         {
             float seconds = Max(catalog.weaponProfiles, profile => profile.smokeSeconds);
             int burst = Mathf.Max(1, Max(catalog.weaponProfiles, profile => profile.smokeBurst));
-            ParticleSystem smoke = AddSystem(root, "Smoke", materials["smoke"], MuzzleSmokeSortingOrder, seconds, 0.5f, 1.0f, 0.24f, 0.42f);
+            ParticleSystem smoke = AddSystem(root, "PropellantCloud", materials["smoke"], MuzzleSmokeSortingOrder, seconds, 0.42f, 1.05f, 0.2f, 0.38f);
             SetBurst(smoke, burst);
-            SetPlanarVelocity(smoke, -0.4f, 0.4f, 0.6f, 1.7f);
-            SetSizeOverLifetime(smoke, 0.7f, 1.7f);
-            SetFade(smoke, 0.12f);
+            SetPlanarVelocity(smoke, -0.26f, 0.26f, 0.7f, 1.85f);
+            SetStartRotation(smoke, -1.1f, 1.1f);
+            SetSizeOverLifetime(smoke, 0.55f, 2f);
+            SetFade(smoke, 0.09f);
+            SetTurbulence(smoke, 0.18f, 0.72f);
+            SetStartColor(smoke, new Color(0.76f, 0.75f, 0.73f, 0.62f));
+            OffsetSystem(smoke, 0f, 0.12f);
         }
 
         private static void BuildImpactSpark(GameObject root, CombatVfxCatalog catalog, Dictionary<string, Material> materials)
@@ -671,14 +690,25 @@ namespace LocalTanks.Editor
 
         private static void BuildExhaustSmoke(GameObject root, Dictionary<string, Material> materials)
         {
-            // The exhaust is the effect a player watches to read what a machine is doing, so it is dense
-            // and long lived: the rig raises the rate while the engine is loaded and multiplies it while a
-            // machine pulls away from a standstill.
-            ParticleSystem exhaust = AddSystem(root, "Exhaust", materials["exhaust"], DustSortingOrder, 2f, 1.0f, 1.9f, 0.26f, 0.46f);
-            SetRate(exhaust, 6f);
-            SetPlanarVelocity(exhaust, -0.22f, 0.22f, 0.2f, 0.65f);
-            SetSizeOverLifetime(exhaust, 0.8f, 2.1f);
-            SetFade(exhaust, 0.2f);
+            // A short dark pulse reads as combustion at the pipe; the larger pale layer carries it away
+            // and dissolves it. The rig still controls both rates from engine load and the start-up puff.
+            ParticleSystem dense = AddSystem(root, "DensePuffs", materials["exhaust"], DustSortingOrder, 2f, 0.55f, 1.05f, 0.16f, 0.3f);
+            SetRate(dense, 6f);
+            SetPlanarVelocity(dense, -0.1f, 0.1f, 0.18f, 0.48f);
+            SetStartRotation(dense, -0.42f, 0.42f);
+            SetSizeOverLifetime(dense, 0.72f, 1.75f);
+            SetFade(dense, 0.09f);
+            SetTurbulence(dense, 0.13f, 0.92f);
+            SetStartColor(dense, new Color(0.72f, 0.69f, 0.65f, 0.74f));
+
+            ParticleSystem drift = AddSystem(root, "Drift", materials["smoke_wisp"], DustSortingOrder - 1, 2f, 0.95f, 1.85f, 0.21f, 0.42f);
+            SetRate(drift, 6f);
+            SetPlanarVelocity(drift, -0.24f, 0.24f, 0.16f, 0.62f);
+            SetStartRotation(drift, -0.75f, 0.75f);
+            SetSizeOverLifetime(drift, 0.62f, 2.35f);
+            SetFade(drift, 0.14f);
+            SetTurbulence(drift, 0.2f, 0.58f);
+            SetStartColor(drift, new Color(0.52f, 0.5f, 0.47f, 0.3f));
         }
 
         private static ParticleSystem AddSystem(

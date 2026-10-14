@@ -163,11 +163,11 @@ namespace LocalTanks.Editor
             AddOneShot(spawned, tank.transform, CombatVfxEffects.MuzzleFlash, "Flash",
                 muzzle.position, aim, weapon.flashScale, 0.045f);
             AddOneShot(spawned, tank.transform, CombatVfxEffects.MuzzleSmoke, "MuzzleSmoke",
-                muzzle.position, aim, weapon.smokeScale, 0.3f, weapon.smokeBurst, new Color(0.72f, 0.71f, 0.7f, 1f));
+                muzzle.position, aim, weapon.smokeScale, 0.3f, weapon.smokeBurst);
             AddLoop(spawned, tank.transform, CombatVfxEffects.BarrelSmoke, "BarrelSmoke",
-                muzzle.position, 7f, 0.22f, Color.white);
+                muzzle.position, 7f, 0f, null);
             AddLoop(spawned, tank.transform, CombatVfxEffects.ExhaustSmoke, "Exhaust",
-                geometry.ExhaustPosition, movement.exhaustIdleRate, 0.3f, new Color(0.42f, 0.41f, 0.4f, 1f));
+                geometry.ExhaustPosition, movement.exhaustIdleRate, 0f, null);
 
             // The hit sits on the light machine's hull, where a blocked round would land.
             TankGeometry targetGeometry = Measure(target);

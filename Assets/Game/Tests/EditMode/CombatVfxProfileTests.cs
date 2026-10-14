@@ -237,17 +237,32 @@ namespace LocalTanks.Tests
         }
 
         [Test]
-        public void GeneratedFireAndMuzzle_AreLayeredInsteadOfSingleSprites()
+        public void GeneratedFireMuzzleAndExhaust_AreLayeredInsteadOfSingleSprites()
         {
             GameObject muzzle = AssetDatabase.LoadAssetAtPath<GameObject>(
                 CombatVfxAssetBuilder.PrefabPath(CombatVfxEffects.MuzzleFlash));
+            GameObject muzzleSmoke = AssetDatabase.LoadAssetAtPath<GameObject>(
+                CombatVfxAssetBuilder.PrefabPath(CombatVfxEffects.MuzzleSmoke));
+            GameObject barrelSmoke = AssetDatabase.LoadAssetAtPath<GameObject>(
+                CombatVfxAssetBuilder.PrefabPath(CombatVfxEffects.BarrelSmoke));
+            GameObject exhaust = AssetDatabase.LoadAssetAtPath<GameObject>(
+                CombatVfxAssetBuilder.PrefabPath(CombatVfxEffects.ExhaustSmoke));
             GameObject fire = AssetDatabase.LoadAssetAtPath<GameObject>(
                 CombatVfxAssetBuilder.PrefabPath(CombatVfxEffects.DamageFire));
 
             Assert.That(muzzle, Is.Not.Null);
+            Assert.That(muzzleSmoke, Is.Not.Null);
+            Assert.That(barrelSmoke, Is.Not.Null);
+            Assert.That(exhaust, Is.Not.Null);
             Assert.That(fire, Is.Not.Null);
             Assert.That(muzzle.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
                 Is.EquivalentTo(new[] { "Core", "Plume", "SideFlames", "Sparks" }));
+            Assert.That(muzzleSmoke.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
+                Is.EquivalentTo(new[] { "PropellantCloud" }));
+            Assert.That(barrelSmoke.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
+                Is.EquivalentTo(new[] { "Jet", "Residual" }));
+            Assert.That(exhaust.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
+                Is.EquivalentTo(new[] { "DensePuffs", "Drift" }));
             Assert.That(fire.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
                 Is.EquivalentTo(new[] { "Soot", "Glow", "Tongues", "TallTongues", "Core", "Ember" }));
         }
