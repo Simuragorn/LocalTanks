@@ -377,6 +377,17 @@ namespace LocalTanks.Editor
                     "Re-run Tools\\WoTSpritePipeline for this vehicle.");
             }
 
+            if (!string.Equals(tracks.source, "trackMeshes", System.StringComparison.Ordinal) ||
+                !string.Equals(tracks.visibilityMethod, "firstSurfaceRaycast", System.StringComparison.Ordinal) ||
+                !tracks.occlusionAware || !tracks.geometryVerified ||
+                !string.IsNullOrWhiteSpace(tracks.fallbackReason))
+            {
+                throw new System.InvalidOperationException(
+                    $"Track block of '{spec.DisplayName}' is not an exact visible-surface mask. New tanks must " +
+                    "use recognised track meshes, first-surface camera rays, verified left/right geometry and no " +
+                    "silhouette fallback; otherwise fixed mudguards or armor skirts would appear to move.");
+            }
+
             if (!Mathf.Approximately(tracks.mask.width, spec.HullRect.width) ||
                 !Mathf.Approximately(tracks.mask.height, spec.HullRect.height))
             {
@@ -438,7 +449,8 @@ namespace LocalTanks.Editor
             foreach (TankBuildSpec spec in TankSpecs)
             {
                 TrackLayoutJson tracks = spec.Tracks;
-                Debug.Log($"Track mask '{spec.DisplayName}': source {tracks.source}, sides {tracks.sideSource}" +
+                Debug.Log($"Track mask '{spec.DisplayName}': source {tracks.source}, visibility {tracks.visibilityMethod}, " +
+                          $"occlusion-aware {tracks.occlusionAware}, sides {tracks.sideSource}" +
                           (tracks.channelsSwapped ? " (channels swapped)" : string.Empty) +
                           $", mask {tracks.mask.width:0}x{tracks.mask.height:0}, " +
                           $"bands {tracks.bandSeparationMetres:0.###} m apart and {tracks.bandWidthMetres:0.###} m " +
@@ -1264,6 +1276,8 @@ namespace LocalTanks.Editor
         {
             public int schemaVersion;
             public string source;
+            public string visibilityMethod;
+            public bool occlusionAware;
             public string maskFile;
             public SpriteLayoutSizeJson mask;
             public float outputPixelsPerMeter;

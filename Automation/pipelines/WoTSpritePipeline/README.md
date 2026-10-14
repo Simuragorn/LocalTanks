@@ -100,7 +100,8 @@ pixels that were actually written:
 
 | Field | Meaning |
 |---|---|
-| `source` | `trackMeshes` when the model's own track meshes were found, `hullSideBands` when the safe fallback was used |
+| `source` | Always `trackMeshes`; the compose step fails instead of inventing a region when the model's own track meshes are unavailable |
+| `visibilityMethod`, `occlusionAware` | `firstSurfaceRaycast` and `true`: every included pixel hit a track before any covering hull, mudguard or armor skirt |
 | `maskFile`, `mask` | Mask file name and its size, which must equal the hull rectangle |
 | `sideSource` | `gunDirection` when the projected gun direction proved the sides, `cameraConvention` when only the camera convention was available, `meshNames` when nothing could be proved |
 | `geometryVerified`, `channelsSwapped` | Whether the sides were proved, and whether the two channels had to be exchanged to match the model |
@@ -111,7 +112,6 @@ pixels that were actually written:
 | `treadPitchMetres` | Distance between two tread features; see below |
 | `left`, `right`, `checks` | Per-side pixel statistics and the symmetry checks that were applied |
 | `diagnostic` | Repository-relative path of the diagnostic image |
-| `fallbackReason` | Present only when the mesh mask was rejected; states why |
 
 The mask itself is drawn with a lateral weight in the blue channel, so the
 overlay can fade a band out towards its own edge. The diagnostic image shows the
@@ -132,9 +132,10 @@ The result matters, because in a straight top-down view the mudguards of these
 machines cover most of the track belt. MS-1 keeps 6.9% of its track projection
 visible, the Leichttraktor 11.3% and the T1 Cunningham 10.7%; the Tiger II keeps
 only about 0.02%. These sparse ray-cast masks are deliberately preserved: replacing
-them with broad hull-side bands would animate fixed mudguards and side skirts. The
-fallback `hullSideBands` is now reserved for a missing/unrecognised track mesh or an
-explicit local override, not for an accurately measured but small visible area.
+them with broad hull-side bands would animate fixed mudguards and side skirts. There
+is no silhouette fallback. Missing or unrecognised left/right track geometry,
+unverified vehicle axes, a missing ray-cast image or invalid pixels stop composition
+and must be fixed in the classifier or source package before the vehicle is integrated.
 
 `treadPitchMetres` is the distance between two tread links in model metres and
 defaults to `render.trackFeaturePitchMetres` (0.22 m), which is a little coarser
@@ -143,19 +144,19 @@ can be resolved, and at 108 pixels per metre a literal link pitch would strobe
 long before that. A per-vehicle override lives in `Local/Tracks/<vehicle id>.json`:
 
 ```json
-{ "swapSides": false, "forceFallback": false, "bandFraction": 0.18, "treadPitchMetres": 0.22 }
+{ "swapSides": false, "treadPitchMetres": 0.22 }
 ```
 
-Every field is optional. `forceFallback` switches a machine whose track meshes are
-hidden under mudguards to the outer hull bands on purpose, and `swapSides` flips
-the two channels for a model whose own naming is mirrored. The pipeline records
-whatever it used, so the effect is never silently different from the diagnostic
-image.
+Every field is optional. `swapSides` flips the two channels for a model whose own
+naming is mirrored. The obsolete `forceFallback` setting is rejected deliberately:
+hidden tracks should produce a sparse or empty visible region, never moving hull
+armor. The pipeline records the method and occlusion contract so Unity can reject
+an old or approximate layout before it creates a prefab.
 
-The blue channel is what keeps a wide fallback band from ending in a straight
-edge: the pipeline measures, per row and per side, where that band starts and
-ends, and ramps the weight from 1 in its middle to 0 on the silhouette. A narrow
-band keeps a solid core, because fading it across its whole width would erase it.
+The blue channel measures lateral weight inside each actually visible region. Per
+row and per side it ramps from 1 in the middle to 0 at the measured track edge. A
+narrow region keeps a solid core, because fading it across its whole width would
+erase it.
 
 The Blender view layer is updated explicitly after the orthographic camera is
 configured and before the joint is projected. `world_to_camera_view` may

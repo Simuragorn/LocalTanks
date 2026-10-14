@@ -68,7 +68,7 @@ Run every command from the project root `C:\UnityProjects\LocalTanks`.
    - for Unity integration, a turret rotation of at least 90° leaves the turret body centred on the ring instead of orbiting the hull centre or the mantlet — a transform-only check is not enough;
    - no missing-texture white planes, magenta materials, black blocks, detached geometry, unexpected decals, excessive glare or opaque background patches;
    - the track diagnostic image `Local\Renders\<vehicle-id>\tracks_mask_diagnostic.png` shows both bands on the tracks of the hull layer, green on the side the model's own starboard direction projects to, red on the other, the front arrow at the machine's front and no band on the hull centre;
-   - `tracks.source` is `trackMeshes` whenever both track meshes were recognised, even when mudguards leave only a sparse visible area; `hullSideBands` is accepted only for unrecognised/missing meshes or an explicit local override and must be explained;
+   - `tracks.source` is `trackMeshes`, `tracks.visibilityMethod` is `firstSurfaceRaycast`, and both `tracks.occlusionAware` and `tracks.geometryVerified` are true, even when mudguards leave only a sparse visible area; broad hull-side fallback is forbidden;
    - `tracks.mask.width/height` equal the hull rectangle of the same layout, `tracks.forwardSignV` is exactly ±1, and `tracks.starboardImageXPixels` is non-zero;
    - `git status --short --ignored` shows every source and derived output still ignored.
 
@@ -120,7 +120,7 @@ The layout uses Unity bottom-left rectangle coordinates and records both anchors
 - The turret slides or orbits: do not hand-tune the anchors. Confirm the Blender view layer was updated after camera setup, that one projected 3D ring point produced both anchors, and that Unity applied the hull-mount offset together with the source-art rotation.
 - Materials are wrong: use the saved `.blend` and the manifest material list to identify the offending material, then implement a reproducible fix in the tracked Blender pipeline. Never patch only the ignored third-party clone, paint over the final PNG or hide the failure with image generation.
 - The track mask is empty or nearly empty: check `render_metadata.json` → `trackMask.rayHits`. A low non-zero count is kept because it is the measured visible surface left by mudguards. Zero hits together with `ambiguousObjects` means the meshes were never recognised, so extend the name pattern instead of accepting a broad fallback.
-- The tread highlight appears on the mudguards instead of the tracks: `tracks.source` must not be `hullSideBands` merely because the measured mask is sparse. Remove an obsolete `forceFallback` override and re-run the compose step; accept the fallback only when the model has no identifiable left/right track meshes.
+- The tread highlight appears on the mudguards instead of the tracks: `tracks.source` must never be `hullSideBands`. Remove an obsolete `forceFallback` override and re-run the compose step. If the model has no identifiable left/right track meshes, the render must fail until the classifier recognises its geometry; do not integrate an approximate band.
 - After any tracked pipeline change, rerun PowerShell parsing, Python compilation, a catalog probe, one full render, a project-scoped `git diff --check` and visual inspection of both the sprite and the track diagnostic.
 
 ## Local-art boundary

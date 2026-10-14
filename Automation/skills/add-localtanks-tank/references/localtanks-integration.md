@@ -100,6 +100,8 @@ Use the dedicated `wot-tank-audio` skill; this is only the integration summary.
 
 Do not alter the selected sprite. Use the layout sidecar's Unity bottom-left rectangles and turret pivot when present. Without a sidecar, determine non-transparent component bounds rather than guessing slice rectangles and set pivots from visible mechanical centers, not canvas centers. Preserve existing sprite IDs when configuring an already imported tracked texture. Scale the finished hull from a documented real dimension against the established game scale.
 
+The layout must also carry an exact visible-track mask: `tracks.source` is `trackMeshes`, `tracks.visibilityMethod` is `firstSurfaceRaycast`, and both `tracks.occlusionAware` and `tracks.geometryVerified` are true, with no `fallbackReason`. Never integrate synthesized hull-side bands. If the renderer cannot recognise both track sides or prove the model axes, repair the classifier and render again before building the prefab.
+
 ### Hull contour contract
 
 The hull geometry is the one part of a build spec that a compiler cannot check, so it has explicit rules and the build enforces all of them by failing with the tank name:

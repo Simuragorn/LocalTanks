@@ -462,6 +462,8 @@ def render_track_mask(
     left, right, ambiguous = classify_track_meshes(root, part_for_object)
     info = {
         "detected": bool(left) and bool(right),
+        "visibilityMethod": "firstSurfaceRaycast",
+        "occlusionAware": True,
         "leftObjects": [obj.name for obj in left],
         "rightObjects": [obj.name for obj in right],
         "ambiguousObjects": ambiguous,
@@ -470,7 +472,7 @@ def render_track_mask(
     if not info["detected"]:
         info["reason"] = (
             "no left and right track meshes were identified by object or material name; "
-            "the sprite pipeline falls back to the outer bands of the hull silhouette"
+            "the exact-visible-track contract rejects this render until recognition is extended"
         )
         return info
 

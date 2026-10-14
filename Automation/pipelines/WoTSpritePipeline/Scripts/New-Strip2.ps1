@@ -201,57 +201,6 @@ function New-TrackMask([Drawing.Bitmap]$raw, [bool]$swapSides) {
     return @{ Bitmap = $mask; Left = $left; Right = $right }
 }
 
-# Fallback for a model whose track parts cannot be identified: the outer bands of the
-# hull silhouette. Coarse on purpose, and recorded as such in the layout.
-function New-SideBandMask([Drawing.Bitmap]$hull, [double]$bandFraction, [bool]$redOnImageLeft) {
-    $mask = New-Object Drawing.Bitmap $hull.Width, $hull.Height, ([Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $left = New-EmptyStats
-    $right = New-EmptyStats
-    $rows = @{ left = @{}; right = @{} }
-    for ($y = 0; $y -lt $hull.Height; $y++) {
-        $minX = $hull.Width
-        $maxX = -1
-        for ($x = 0; $x -lt $hull.Width; $x++) {
-            if ($hull.GetPixel($x, $y).A -gt 32) {
-                if ($x -lt $minX) { $minX = $x }
-                if ($x -gt $maxX) { $maxX = $x }
-            }
-        }
-        if ($maxX -lt 0) { continue }
-        $band = [Math]::Max(2, [int][Math]::Round(($maxX - $minX + 1) * $bandFraction))
-        $bandLeftEnd = [Math]::Min($minX + $band - 1, $maxX)
-        $bandRightStart = [Math]::Max($minX, $maxX - $band + 1)
-        for ($x = $minX; $x -le $maxX; $x++) {
-            $alpha = $hull.GetPixel($x, $y).A
-            if ($alpha -lt 32) { continue }
-            $onLeftBand = $x -le $bandLeftEnd
-            $onRightBand = $x -ge $bandRightStart
-            if (-not ($onLeftBand -or $onRightBand)) { continue }
-            $sideIsImageLeft = $x -le [int](($minX + $maxX) / 2)
-            if ($redOnImageLeft) { $isLeft = $sideIsImageLeft } else { $isLeft = -not $sideIsImageLeft }
-            if ($isLeft) {
-                $mask.SetPixel($x, $y, [Drawing.Color]::FromArgb($alpha, 255, 0, 0))
-                Add-StatsPixel $left $x $y
-                $side = 'left'
-            } else {
-                $mask.SetPixel($x, $y, [Drawing.Color]::FromArgb($alpha, 0, 255, 0))
-                Add-StatsPixel $right $x $y
-                $side = 'right'
-            }
-
-            if ($rows[$side].ContainsKey($y)) {
-                $range = $rows[$side][$y]
-                if ($x -lt $range[0]) { $range[0] = $x }
-                if ($x -gt $range[1]) { $range[1] = $x }
-            } else {
-                $rows[$side][$y] = @($x, $x)
-            }
-        }
-    }
-    Add-LateralWeights $mask $rows
-    return @{ Bitmap = $mask; Left = $left; Right = $right }
-}
-
 function Test-TrackMask($result, [int]$width, [int]$height) {
     $left = Get-TrackStats $result.Left
     $right = Get-TrackStats $result.Right
@@ -380,7 +329,8 @@ function Write-TrackDiagnostic(
             ("coverage         {0:0.###}" -f $trackLayout.checks.coverage)
             ("mirror error     {0:0.###}" -f $trackLayout.checks.mirrorErrorFraction)
             ("forward sign V   {0}" -f $trackLayout.forwardSignV)
-            ("fallback reason  {0}" -f $(if ($trackLayout.Contains('fallbackReason')) { $trackLayout.fallbackReason } else { '-' }))
+            ("visibility       {0}" -f $trackLayout.visibilityMethod)
+            ("occlusion aware  {0}" -f $trackLayout.occlusionAware)
         ) -join "`n"
         $captionSize = $graphics.MeasureString($caption, $smallFont)
         $background = [Drawing.SolidBrush]::new([Drawing.Color]::FromArgb(210, 0, 0, 0))
@@ -488,9 +438,13 @@ try {
         $sideSource = 'cameraConvention'
         $starboardImageX = 0.0
         $forwardImageY = 1.0
+        $visibilityMethod = ''
+        $occlusionAware = $false
         $detected = $false
         if ($null -ne $metadata -and $null -ne $metadata.trackMask) {
             $detected = [bool]$metadata.trackMask.detected
+            $visibilityMethod = [string]$metadata.trackMask.visibilityMethod
+            $occlusionAware = [bool]$metadata.trackMask.occlusionAware
             if ($null -ne $metadata.trackMask.starboardImage) {
                 $starboardImageX = [double]$metadata.trackMask.starboardImage.xPixels
                 $sideSource = [string]$metadata.trackMask.sideSource
@@ -499,17 +453,12 @@ try {
                 $forwardImageY = [double]$metadata.trackMask.forwardImage.yPixels
             }
         }
-        $forceFallback = $false
-        if ($null -ne $override -and $null -ne $override.forceFallback) {
-            $forceFallback = [bool]$override.forceFallback
+        if ($null -ne $override -and $null -ne $override.forceFallback -and [bool]$override.forceFallback) {
+            throw "Track override for $VehicleId requests forceFallback, but broad hull-side masks are no longer allowed. Extend track mesh recognition so the effect stays on first-surface visible links."
         }
         $swapSides = $false
         if ($null -ne $override -and $null -ne $override.swapSides) {
             $swapSides = [bool]$override.swapSides
-        }
-        $bandFraction = 0.18
-        if ($null -ne $override -and $null -ne $override.bandFraction) {
-            $bandFraction = [double]$override.bandFraction
         }
         $treadPitchMetres = [double](Get-ScalarOr $config.render.trackFeaturePitchMetres 0.22)
         if ($null -ne $override -and $null -ne $override.treadPitchMetres) {
@@ -524,80 +473,66 @@ try {
         # the left track, which is therefore on the opposite half of the image.
         $starboardIsImageRight = $starboardImageX -ge 0.0
         $geometryKnown = $sideSource -eq 'gunDirection'
-        $redOnImageLeft = $starboardIsImageRight
         $forwardSignV = -1
         if ($forwardImageY -lt 0.0) { $forwardSignV = 1 }
 
         $hullMask = Get-ScaledCrop $hull $hullBounds $hullWidth $hullHeight
         try {
             $maskSource = 'trackMeshes'
-            $fallbackReason = ''
             $channelsSwapped = $swapSides
             $result = $null
             $verdict = $null
-            if ($detected -and -not $forceFallback -and (Test-Path -LiteralPath $tracksPath -PathType Leaf)) {
-                $tracksBitmap = [Drawing.Bitmap]::FromFile($tracksPath)
-                try {
-                    $rawMask = Get-ScaledCrop $tracksBitmap $hullBounds $hullWidth $hullHeight
-                } finally {
-                    $tracksBitmap.Dispose()
+            if (-not $detected) {
+                $reason = 'left/right track meshes were not identified'
+                if ($null -ne $metadata -and $null -ne $metadata.trackMask -and $null -ne $metadata.trackMask.reason) {
+                    $reason = [string]$metadata.trackMask.reason
                 }
-                try {
-                    if ($geometryKnown -and -not $swapSides) {
-                        # The name-based sides are verified against the model's own starboard
-                        # direction; a mirrored result means the two channels are exchanged.
-                        $probe = New-TrackMask $rawMask $false
-                        try {
-                            $probeStats = Test-TrackMask $probe $hullWidth $hullHeight
-                            if ($probeStats.Valid) {
-                                $rightIsImageRight = $probeStats.Right.centroidX -gt $probeStats.Left.centroidX
-                                if ($rightIsImageRight -ne $starboardIsImageRight) {
-                                    $channelsSwapped = $true
-                                }
+                throw "Exact visible track mask for $VehicleId is required, but $reason. Extend the Blender name/material classifier and re-render; the importer will not animate hull edges or mudguards as a fallback."
+            }
+            if (-not $geometryKnown) {
+                throw "Exact visible track mask for $VehicleId has no verified vehicle axes. A gun-derived starboard direction is required so left and right tracks cannot be silently mirrored."
+            }
+            if ($visibilityMethod -ne 'firstSurfaceRaycast' -or -not $occlusionAware) {
+                throw "Exact visible track mask for $VehicleId lacks first-surface occlusion metadata. Re-run the current Blender renderer; an old or screen-space mask cannot prove that mudguards and armor skirts stay still."
+            }
+            if (-not (Test-Path -LiteralPath $tracksPath -PathType Leaf)) {
+                throw "Exact visible track mask render is missing for ${VehicleId}: $tracksPath. Re-run the Blender render; the importer will not synthesize broad hull-side bands."
+            }
+
+            $tracksBitmap = [Drawing.Bitmap]::FromFile($tracksPath)
+            try {
+                $rawMask = Get-ScaledCrop $tracksBitmap $hullBounds $hullWidth $hullHeight
+            } finally {
+                $tracksBitmap.Dispose()
+            }
+            try {
+                if (-not $swapSides) {
+                    # The name-based sides are verified against the model's own starboard
+                    # direction; a mirrored result means the two channels are exchanged.
+                    $probe = New-TrackMask $rawMask $false
+                    try {
+                        $probeStats = Test-TrackMask $probe $hullWidth $hullHeight
+                        if ($probeStats.Valid) {
+                            $rightIsImageRight = $probeStats.Right.centroidX -gt $probeStats.Left.centroidX
+                            if ($rightIsImageRight -ne $starboardIsImageRight) {
+                                $channelsSwapped = $true
                             }
-                        } finally {
-                            ($probe.Bitmap).Dispose()
                         }
+                    } finally {
+                        ($probe.Bitmap).Dispose()
                     }
-                    $result = New-TrackMask $rawMask $channelsSwapped
-                } finally {
-                    $rawMask.Dispose()
                 }
-                $verdict = Test-TrackMask $result $hullWidth $hullHeight
-            } else {
-                $maskSource = 'hullSideBands'
-                if ($forceFallback) {
-                    $fallbackReason = 'the local track override forces the side-band mask'
-                } elseif (-not $detected) {
-                    $fallbackReason = 'no track meshes were identified in the 3D model'
-                } else {
-                    $fallbackReason = 'the track mask render is missing'
-                }
+                $result = New-TrackMask $rawMask $channelsSwapped
+            } finally {
+                $rawMask.Dispose()
             }
-
-            if ($null -eq $result) {
-                $result = New-SideBandMask $hullMask $bandFraction $redOnImageLeft
-                $verdict = Test-TrackMask $result $hullWidth $hullHeight
-            } elseif (-not $verdict.Valid) {
-                # An unusable mesh mask is replaced by the safe silhouette bands rather
-                # than failing the whole render, and the reason is recorded.
-                ($result.Bitmap).Dispose()
-                $fallbackReason = "the track mesh mask was rejected: $($verdict.Reason)"
-                $maskSource = 'hullSideBands'
-                $result = New-SideBandMask $hullMask $bandFraction $redOnImageLeft
-                $verdict = Test-TrackMask $result $hullWidth $hullHeight
-            }
+            $verdict = Test-TrackMask $result $hullWidth $hullHeight
             if (-not $verdict.Valid) {
-                throw "Track mask for $VehicleId could not be built: $($verdict.Reason)"
+                ($result.Bitmap).Dispose()
+                throw "Exact visible track mask for $VehicleId was rejected: $($verdict.Reason). Fix recognition or ray-cast geometry; the importer will not replace it with broad hull-side bands."
             }
 
-            if ($maskSource -eq 'trackMeshes') {
-                if (-not $geometryKnown) {
-                    $sideSource = 'meshNames'
-                }
-            } else {
-                if ($geometryKnown) { $sideSource = 'gunDirection' } else { $sideSource = 'cameraConvention' }
-            }
+            $sideSource = 'gunDirection'
 
             $maskFile = "{0}_tracks_mask.png" -f $VehicleId
             $maskPath = Join-Path $vehicleOutput $maskFile
@@ -610,6 +545,8 @@ try {
             $trackLayout = [ordered]@{
                 schemaVersion = 1
                 source = $maskSource
+                visibilityMethod = $visibilityMethod
+                occlusionAware = $occlusionAware
                 maskFile = $maskFile
                 mask = [ordered]@{ width = $hullWidth; height = $hullHeight }
                 outputPixelsPerMeter = $outputPixelsPerMeter
@@ -628,7 +565,6 @@ try {
                 checks = $verdict.Checks
                 diagnostic = ("Automation/pipelines/WoTSpritePipeline/Local/Renders/{0}/tracks_mask_diagnostic.png" -f $VehicleId)
             }
-            if ($fallbackReason) { $trackLayout.fallbackReason = $fallbackReason }
             $layout.tracks = $trackLayout
 
             $diagnosticPath = Join-Path $renderRoot 'tracks_mask_diagnostic.png'

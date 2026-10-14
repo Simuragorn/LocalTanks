@@ -70,6 +70,12 @@ namespace LocalTanks.Tests
                 Assert.That(layout.tracks.source, Is.EqualTo("trackMeshes"),
                     $"{vehicleId} must keep its per-pixel visible track surface; hull-side fallback bands " +
                     "animate mudguards and fixed steel covers.");
+                Assert.That(layout.tracks.visibilityMethod, Is.EqualTo("firstSurfaceRaycast"),
+                    $"{vehicleId} must measure only the first surface visible from the battle camera");
+                Assert.That(layout.tracks.occlusionAware, Is.True,
+                    $"{vehicleId} must not animate track links hidden below mudguards or armor skirts");
+                Assert.That(layout.tracks.geometryVerified, Is.True,
+                    $"{vehicleId} must prove left/right sides from the model instead of guessing from the image");
                 Assert.That(layout.tracks.fallbackReason, Is.Null.Or.Empty);
             }
         }
@@ -253,9 +259,12 @@ namespace LocalTanks.Tests
         {
             public int schemaVersion;
             public string source;
+            public string visibilityMethod;
+            public bool occlusionAware;
             public string maskFile;
             public float outputPixelsPerMeter;
             public string sideSource;
+            public bool geometryVerified;
             public float forwardSignV;
             public float bandSeparationPixels;
             public float bandSeparationMetres;
