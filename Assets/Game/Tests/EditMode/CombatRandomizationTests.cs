@@ -157,6 +157,20 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void PenetrationIndicator_IsNeutralWithoutTargetAndColouredWithSolution()
+        {
+            Color neutral = PlayerAimReticle.PenetrationIndicatorColor(false, 1f);
+            Color blocked = PlayerAimReticle.PenetrationIndicatorColor(true, 0f);
+            Color penetrable = PlayerAimReticle.PenetrationIndicatorColor(true, 1f);
+
+            Assert.That(neutral.r, Is.EqualTo(neutral.g).Within(0.05f));
+            Assert.That(blocked.r, Is.GreaterThan(blocked.g));
+            Assert.That(penetrable.g, Is.GreaterThan(penetrable.r));
+            Assert.That(neutral, Is.Not.EqualTo(penetrable),
+                "A loaded weapon without a target must not look like a confirmed high penetration chance.");
+        }
+
+        [Test]
         public void HoverOutlineColor_FollowsTeamRelation()
         {
             Assert.That(PlayerAimReticle.RelationOutlineColor(TeamId.TeamA, TeamId.TeamA),

@@ -8,8 +8,9 @@ namespace LocalTanks
     {
         private const int AimSegmentCount = 40;
         private const int ReloadSegmentCount = 24;
-        private static readonly Color ReadyColor = new Color(0.28f, 0.72f, 0.39f, 0.92f);
+        private static readonly Color PenetrableColor = new Color(0.28f, 0.72f, 0.39f, 0.92f);
         private static readonly Color ReloadingColor = new Color(0.78f, 0.28f, 0.25f, 0.92f);
+        private static readonly Color ReloadReadyColor = new Color(0.78f, 0.82f, 0.74f, 0.78f);
         private static readonly Color CursorColor = new Color(0.86f, 0.89f, 0.82f, 0.9f);
         private static readonly Color ClearLineColor = new Color(0.28f, 0.72f, 0.39f, 0.72f);
         private static readonly Color BlockedLineColor = new Color(0.78f, 0.28f, 0.25f, 0.82f);
@@ -110,8 +111,6 @@ namespace LocalTanks
             {
                 DrawLine(muzzleGui, cursorGui, 1.5f, ClearLineColor);
             }
-            DrawCross(cursorGui);
-
             Vector2 turretPosition = turret.transform.position;
             float actualDistance = Vector2.Distance(turretPosition, cursorWorld);
             float aimDistance = Mathf.Max(0.05f, actualDistance);
@@ -119,7 +118,7 @@ namespace LocalTanks
             Vector3 gunScreen3 = worldCamera.WorldToScreenPoint(gunPoint);
             Vector2 gunGui = new Vector2(gunScreen3.x, Screen.height - gunScreen3.y);
             float radius = CalculateRadiusPixels(turretPosition, gunPoint, aimDistance, dispersion.CurrentDispersionDegrees);
-            Color reloadColor = Color.Lerp(ReloadingColor, ReadyColor, weapon.ReloadProgress);
+            Color reloadColor = Color.Lerp(ReloadingColor, ReloadReadyColor, weapon.ReloadProgress);
             ShellDefinition shell = weapon.CurrentShell;
             ArmorAimSolution aimSolution = default;
             float probeDistance = shell != null && shell.maximumRange > 0f
@@ -135,12 +134,13 @@ namespace LocalTanks
                 weapon.CombatRules,
                 out aimSolution);
             CurrentPenetrationChance = HasPenetrationSolution ? aimSolution.PenetrationChance : 0f;
-            Color aimColor = HasPenetrationSolution
-                ? PenetrationChanceColor(CurrentPenetrationChance)
-                : reloadColor;
+            Color aimColor = PenetrationIndicatorColor(
+                HasPenetrationSolution,
+                CurrentPenetrationChance);
             DrawDottedCircle(gunGui, radius, aimColor);
             DrawReloadSegments(gunGui, radius + 8f, weapon.ReloadProgress, reloadColor);
             DrawDistanceLabel(gunGui, radius, actualDistance);
+            DrawCross(cursorGui, aimColor);
         }
 
         /// <summary>
@@ -222,7 +222,12 @@ namespace LocalTanks
 
         public static Color PenetrationChanceColor(float chance)
         {
-            return Color.Lerp(BlockedLineColor, ReadyColor, Mathf.Clamp01(chance));
+            return Color.Lerp(BlockedLineColor, PenetrableColor, Mathf.Clamp01(chance));
+        }
+
+        public static Color PenetrationIndicatorColor(bool hasSolution, float chance)
+        {
+            return hasSolution ? PenetrationChanceColor(chance) : CursorColor;
         }
 
         public static string FormatDistance(float gameUnits)
@@ -263,12 +268,12 @@ namespace LocalTanks
             return distanceStyle;
         }
 
-        private static void DrawCross(Vector2 center)
+        private static void DrawCross(Vector2 center, Color color)
         {
-            DrawLine(center + Vector2.left * 11f, center + Vector2.left * 3f, 1.5f, CursorColor);
-            DrawLine(center + Vector2.right * 3f, center + Vector2.right * 11f, 1.5f, CursorColor);
-            DrawLine(center + Vector2.up * 11f, center + Vector2.up * 3f, 1.5f, CursorColor);
-            DrawLine(center + Vector2.down * 3f, center + Vector2.down * 11f, 1.5f, CursorColor);
+            DrawLine(center + Vector2.left * 12f, center + Vector2.left * 3f, 2f, color);
+            DrawLine(center + Vector2.right * 3f, center + Vector2.right * 12f, 2f, color);
+            DrawLine(center + Vector2.up * 12f, center + Vector2.up * 3f, 2f, color);
+            DrawLine(center + Vector2.down * 3f, center + Vector2.down * 12f, 2f, color);
         }
 
         private static void DrawDottedCircle(Vector2 center, float radius, Color color)

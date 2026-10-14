@@ -122,7 +122,24 @@ namespace LocalTanks.Editor
                 renderer.color = color;
                 renderer.sortingOrder = 220;
             }
-        }
 
+            for (int index = 0; index < 4; index++)
+            {
+                float angle = index * 90f;
+                float radians = angle * Mathf.Deg2Rad;
+                GameObject marker = new GameObject($"PenetrationCross{index}");
+                marker.transform.SetParent(tank.transform, false);
+                marker.transform.localPosition = new Vector3(
+                    Mathf.Cos(radians) * 0.18f,
+                    Mathf.Sin(radians) * 0.18f,
+                    -0.12f);
+                marker.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
+                marker.transform.localScale = new Vector3(0.22f, 0.045f, 1f);
+                SpriteRenderer renderer = marker.AddComponent<SpriteRenderer>();
+                renderer.sprite = dash;
+                renderer.color = color;
+                renderer.sortingOrder = 225;
+            }
+        }
     }
 }
