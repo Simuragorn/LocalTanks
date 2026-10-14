@@ -3,6 +3,11 @@
   "id": "ai_duel_lab_battle",
   "sceneId": "Battle_RiverCrossing",
   "kind": "AiDuelLab",
+  "rules": {
+    "timeLimitSeconds": 900,
+    "timeLimitIsDraw": true,
+    "friendlyFire": true
+  },
   "routes": [
     { "team": "TeamA", "lane": "Center", "points": [{"x":17,"y":22},{"x":25,"y":22},{"x":31,"y":22}] },
     { "team": "TeamB", "lane": "Center", "points": [{"x":54,"y":22},{"x":46,"y":22},{"x":40,"y":22}] }

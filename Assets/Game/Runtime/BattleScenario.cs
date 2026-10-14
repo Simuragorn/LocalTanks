@@ -48,6 +48,13 @@ namespace LocalTanks
         public string id;
         public string sceneId;
         public BattleScenarioKind kind;
+
+        /// <summary>
+        /// Match rules: the battle length, what the time limit means and whether friendly fire is allowed.
+        /// They travel with the scenario so a battle cannot end because of a value hidden in a component.
+        /// </summary>
+        public MatchRules rules = new MatchRules();
+
         public BattleScenarioEntry[] entries;
 
         public int ExpectedTeamSize => kind == BattleScenarioKind.AiDuelLab ? 1 : TeamSize;
@@ -60,6 +67,14 @@ namespace LocalTanks
             BattleScenarioEntry[] roster = entries ?? Array.Empty<BattleScenarioEntry>();
             if (string.IsNullOrWhiteSpace(id)) errors.Add("Scenario id is empty.");
             if (string.IsNullOrWhiteSpace(sceneId)) errors.Add("Scenario sceneId is empty.");
+            if (rules == null)
+            {
+                errors.Add("Scenario has no match rules.");
+            }
+            else
+            {
+                errors.AddRange(rules.Validate($"Scenario '{id}' match rules:"));
+            }
             int teamACount = roster.Count(item => item != null && item.team == TeamId.TeamA);
             int teamBCount = roster.Count(item => item != null && item.team == TeamId.TeamB);
             if (kind == BattleScenarioKind.PlayerAiTestLab)

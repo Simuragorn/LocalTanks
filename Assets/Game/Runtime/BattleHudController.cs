@@ -21,7 +21,11 @@ namespace LocalTanks
         private Label allyScore;
         private Label enemyScore;
         private VisualElement baseStatusList;
+        private Label battleTimer;
+        private Label battleResult;
+        private BattleDirector director;
         private float nextCaptureRefreshTime;
+        private float nextClockRefreshTime;
 
         public VisualElement AllyList => allyList;
         public VisualElement EnemyList => enemyList;
@@ -90,12 +94,24 @@ namespace LocalTanks
             allyScore = root.Q<Label>("ally-score");
             enemyScore = root.Q<Label>("enemy-score");
             baseStatusList = root.Q<VisualElement>("base-status-list");
+            battleTimer = root.Q<Label>("battle-timer");
+            battleResult = root.Q<Label>("battle-result");
+            director = FindAnyObjectByType<BattleDirector>();
             Rebuild();
             RefreshCaptureStatus();
+            RefreshClock();
         }
 
         private void Update()
         {
+            // The battle clock reads the director, so it updates on its own cadence and never on the capture
+            // cadence: a timer that ticks ten times a second is noise, and a result must appear at once.
+            if (Time.unscaledTime >= nextClockRefreshTime)
+            {
+                nextClockRefreshTime = Time.unscaledTime + 0.25f;
+                RefreshClock();
+            }
+
             if (Time.unscaledTime < nextCaptureRefreshTime)
             {
                 return;
@@ -103,6 +119,48 @@ namespace LocalTanks
 
             nextCaptureRefreshTime = Time.unscaledTime + 0.1f;
             RefreshCaptureStatus();
+        }
+
+        /// <summary>
+        /// The battle clock and the result come from <see cref="BattleDirector"/>, the single thing that decides
+        /// the battle is over. A scene without a director hides the clock rather than showing a frozen zero.
+        /// </summary>
+        private void RefreshClock()
+        {
+            if (battleTimer == null || battleResult == null)
+            {
+                return;
+            }
+
+            if (director == null)
+            {
+                director = FindAnyObjectByType<BattleDirector>();
+            }
+
+            VisualElement clock = battleTimer.parent;
+            if (director == null)
+            {
+                if (clock != null)
+                {
+                    clock.style.display = DisplayStyle.None;
+                }
+
+                return;
+            }
+
+            if (clock != null)
+            {
+                clock.style.display = DisplayStyle.Flex;
+            }
+
+            battleTimer.text = FormatTime(director.RemainingSeconds);
+            bool ended = director.HasEnded;
+            battleResult.EnableInClassList("has-result", ended);
+            if (ended)
+            {
+                TeamId playerTeam = roster != null ? roster.LocalPlayerTeam : TeamId.TeamA;
+                battleResult.text = director.Result.Describe(playerTeam);
+            }
         }
 
         private void Rebuild()

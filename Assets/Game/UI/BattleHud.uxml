@@ -10,6 +10,14 @@
         <ui:VisualElement name="base-status-list" class="base-status-list" />
         <ui:VisualElement name="enemy-list" class="roster-panel enemy-panel" />
 
+        <!-- The clock is always visible and the result replaces nothing: the timer keeps the value the battle
+             ended with, so the player can see how long it lasted. Both are filled by BattleHudController from
+             BattleDirector, which is the only thing that decides that the battle is over. -->
+        <ui:VisualElement name="battle-clock" class="battle-clock">
+            <ui:Label name="battle-timer" text="--:--" class="battle-timer" />
+            <ui:Label name="battle-result" text="" class="battle-result" />
+        </ui:VisualElement>
+
         <!-- The settings overlay is a template so its markup has one definition shared with the test
              range. It belongs to this document so it draws above the roster panels; a second
              UIDocument would get its own panel and the order between panels would decide layering.

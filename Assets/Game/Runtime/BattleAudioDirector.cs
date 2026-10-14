@@ -149,9 +149,9 @@ namespace LocalTanks
             }
 
             director.TankSpawned += OnTankSpawned;
-            System.Action<TeamId, int, int> livingCounts = OnLivingCountsChanged;
-            director.LivingCountsChanged += livingCounts;
-            unsubscribers.Add(() => director.LivingCountsChanged -= livingCounts);
+            System.Action<MatchResult> matchEnded = OnMatchEnded;
+            director.MatchEnded += matchEnded;
+            unsubscribers.Add(() => director.MatchEnded -= matchEnded);
 
             foreach (TeamMember member in director.SpawnedMembers)
             {
@@ -290,9 +290,13 @@ namespace LocalTanks
             RegisterEvent(BattleAudioEventKind.Captured);
         }
 
-        private void OnLivingCountsChanged(TeamId team, int teamAAlive, int teamBAlive)
+        /// <summary>
+        /// Plays the ending the director decided, with the signal that matches its reason: a captured base has
+        /// its own line, and everything else uses the last-kill one.
+        /// </summary>
+        private void OnMatchEnded(MatchResult result)
         {
-            if (battleEnded || (teamAAlive > 0 && teamBAlive > 0))
+            if (battleEnded || !result.HasEnded)
             {
                 return;
             }
@@ -303,12 +307,9 @@ namespace LocalTanks
             TeamId playerTeam = director != null && director.PlayerMember != null
                 ? director.PlayerMember.Team
                 : TeamId.TeamA;
-            TeamId surviving = teamAAlive > 0 ? TeamId.TeamA : teamBAlive > 0 ? TeamId.TeamB : TeamId.Neutral;
-            Flow?.PlayBattleEnd(false);
-            Music?.EnterResult(playerTeam, surviving);
-            status = surviving == TeamId.Neutral
-                ? "бой окончен: ничья"
-                : $"бой окончен: победила команда {surviving}";
+            Flow?.PlayBattleEnd(result.Outcome == MatchOutcome.BaseCaptured);
+            Music?.EnterResult(playerTeam, result.Winner);
+            status = $"бой окончен: {result.Describe(playerTeam)}";
         }
     }
 }

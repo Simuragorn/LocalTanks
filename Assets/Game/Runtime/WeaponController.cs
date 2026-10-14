@@ -16,6 +16,14 @@ namespace LocalTanks
         private Transform projectileOwnerRoot;
         private int roundsRemaining;
 
+        /// <summary>
+        /// Match rules that decide whether a shell may damage a machine of its own team. Set by
+        /// <see cref="BattleDirector"/> when the machine is spawned, so the rule travels from the scenario
+        /// through the weapon into the shell instead of being looked up from a global inside the projectile.
+        /// A weapon outside a battle keeps the default, which allows friendly fire.
+        /// </summary>
+        public MatchRules MatchRules { get; set; } = new MatchRules();
+
         public event Action<WeaponController> Fired;
         public event Action<WeaponController> ReloadStarted;
 
@@ -103,7 +111,8 @@ namespace LocalTanks
             projectile.Initialize(
                 shotDirection,
                 shell,
-                projectileOwnerRoot != null ? projectileOwnerRoot : transform);
+                projectileOwnerRoot != null ? projectileOwnerRoot : transform,
+                MatchRules);
             roundsRemaining--;
             if (roundsRemaining <= 0)
             {

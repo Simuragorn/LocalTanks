@@ -37,12 +37,21 @@ namespace LocalTanks.Editor
     }
 
     [Serializable]
+    public sealed class ScenarioRulesJson
+    {
+        public float timeLimitSeconds;
+        public bool timeLimitIsDraw;
+        public bool friendlyFire;
+    }
+
+    [Serializable]
     public sealed class BattleScenarioJson
     {
         public int schemaVersion;
         public string id;
         public string sceneId;
         public string kind;
+        public ScenarioRulesJson rules;
         public ScenarioRouteJson[] routes;
         public ScenarioEntryJson[] entries;
     }
@@ -88,6 +97,7 @@ namespace LocalTanks.Editor
             asset.id = source.id;
             asset.sceneId = source.sceneId;
             asset.kind = ParseKind(source.kind, source.id);
+            asset.rules = ConvertRules(source.rules);
             asset.entries = (source.entries ?? Array.Empty<ScenarioEntryJson>())
                 .Select(item => ConvertEntry(item, routes))
                 .ToArray();
@@ -131,6 +141,26 @@ namespace LocalTanks.Editor
             if (string.IsNullOrWhiteSpace(value)) return BattleScenarioKind.StandardBattle;
             if (Enum.TryParse(value, false, out BattleScenarioKind kind)) return kind;
             throw new InvalidDataException($"Scenario '{scenarioId}' has unknown kind '{value}'.");
+        }
+
+        /// <summary>
+        /// Match rules from the scenario file. A file without the block keeps the authored defaults rather
+        /// than a set of zeroes: an omitted <c>friendlyFire</c> would otherwise read as "disabled", and the
+        /// rule would change because a key was forgotten instead of because someone decided it.
+        /// </summary>
+        private static MatchRules ConvertRules(ScenarioRulesJson source)
+        {
+            if (source == null)
+            {
+                return new MatchRules();
+            }
+
+            return new MatchRules
+            {
+                timeLimitSeconds = source.timeLimitSeconds,
+                timeLimitIsDraw = source.timeLimitIsDraw,
+                friendlyFire = source.friendlyFire
+            };
         }
 
         private static BattleScenarioEntry ConvertEntry(

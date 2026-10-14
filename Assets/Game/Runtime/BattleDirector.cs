@@ -40,9 +40,19 @@ namespace LocalTanks
         private readonly Dictionary<string, TeamMember> membersByEntityId = new Dictionary<string, TeamMember>(StringComparer.Ordinal);
         private readonly Dictionary<TeamMember, string> entityIdsByMember = new Dictionary<TeamMember, string>();
         private bool spawned;
+        private float matchStartedAt;
+        private float matchElapsed;
+        private bool matchEnded;
+        private TeamId capturedBy = TeamId.Neutral;
+
+        /// <summary>A scenario without rules — a laboratory that builds one in code — reads this one instead.</summary>
+        private MatchRules fallbackRules;
 
         public event Action<TeamMember> TankSpawned;
         public event Action<TeamId, int, int> LivingCountsChanged;
+
+        /// <summary>Raised once, when the match has a result. Nothing else decides that the battle is over.</summary>
+        public event Action<MatchResult> MatchEnded;
 
         public IReadOnlyList<TeamMember> SpawnedMembers => spawnedMembers;
         public TeamMember PlayerMember { get; private set; }
@@ -59,6 +69,21 @@ namespace LocalTanks
         public IReadOnlyList<CaptureBase> Bases => bases ?? Array.Empty<CaptureBase>();
         public int TeamAAlive { get; private set; }
         public int TeamBAlive { get; private set; }
+
+        /// <summary>Match rules of the current scenario: battle length and friendly fire come from data.</summary>
+        public MatchRules Rules => scenario != null && scenario.rules != null
+            ? scenario.rules
+            : fallbackRules ??= new MatchRules();
+
+        /// <summary>The result of the match, or <see cref="MatchResult.None"/> while it is still running.</summary>
+        public MatchResult Result { get; private set; }
+
+        public bool HasEnded => matchEnded;
+
+        /// <summary>Battle time in seconds. It stops when the match ends, so the result keeps its own moment.</summary>
+        public float ElapsedSeconds => matchEnded ? matchElapsed : spawned ? Time.time - matchStartedAt : 0f;
+
+        public float RemainingSeconds => Mathf.Max(0f, Rules.timeLimitSeconds - ElapsedSeconds);
         public IReadOnlyDictionary<string, BotIdentity> BotIdentities => botIdentities;
         public IReadOnlyList<TankDefinition> SpawnableTankDefinitions => (combatDatabase?.tanks ?? Array.Empty<TankDefinition>())
             .Where(item => item != null && item.availableInGame && CanSpawnTank(item.id))
@@ -106,6 +131,99 @@ namespace LocalTanks
                     health.Destroyed -= OnTankDestroyed;
                 }
             }
+
+            foreach (CaptureBase captureBase in Bases)
+            {
+                if (captureBase != null)
+                {
+                    captureBase.Captured -= NotifyBaseCaptured;
+                }
+            }
+        }
+
+        private void Update()
+        {
+            if (!spawned || matchEnded)
+            {
+                return;
+            }
+
+            matchElapsed = Time.time - matchStartedAt;
+            MatchResult result = MatchOutcomeRules.Resolve(TeamAAlive, TeamBAlive, capturedBy, matchElapsed, Rules);
+            if (result.HasEnded)
+            {
+                EndMatch(result);
+            }
+        }
+
+        /// <summary>
+        /// Ends the battle once. The result is stored, every machine is switched off and the layers that
+        /// follow the outcome — audio, interface — are told through one event instead of each deciding for
+        /// itself when the battle is over.
+        /// </summary>
+        private void EndMatch(MatchResult result)
+        {
+            matchEnded = true;
+            matchElapsed = result.ElapsedSeconds;
+            Result = result;
+            StopEveryMachine();
+            MatchEnded?.Invoke(result);
+            Debug.Log(
+                $"Local Tanks match ended: {result.Outcome}, winner {result.Winner}, after {result.ElapsedSeconds:0.0} s");
+        }
+
+        /// <summary>
+        /// Freezes the battle by switching off the components that drive a machine. The same rule stops a bot
+        /// and the player, so nothing has to ask who is who, and the physics keeps the wrecks where they are.
+        /// </summary>
+        private void StopEveryMachine()
+        {
+            foreach (TeamMember member in spawnedMembers)
+            {
+                if (member == null)
+                {
+                    continue;
+                }
+
+                foreach (MonoBehaviour behaviour in member.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (behaviour is CombatTankAI || behaviour is NavigationAgent || behaviour is TankMotor ||
+                        behaviour is TurretAiming || behaviour is WeaponController || behaviour is PlayerTankInput)
+                    {
+                        behaviour.enabled = false;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Captures are followed from here rather than in each base: the director owns the outcome, and a base
+        /// that changed hands must not be able to end the battle on its own.
+        /// </summary>
+        private void TrackBases()
+        {
+            foreach (CaptureBase captureBase in Bases)
+            {
+                if (captureBase == null)
+                {
+                    continue;
+                }
+
+                captureBase.Captured -= NotifyBaseCaptured;
+                captureBase.Captured += NotifyBaseCaptured;
+            }
+        }
+
+        /// <summary>
+        /// Records that a base changed hands. The director owns the outcome, so a base cannot end the battle by
+        /// itself; the method is public so a test can drive the outcome without waiting for a real capture.
+        /// </summary>
+        public void NotifyBaseCaptured(CaptureBase captureBase, TeamId previousOwner, TeamId newOwner)
+        {
+            if (newOwner == TeamId.TeamA || newOwner == TeamId.TeamB)
+            {
+                capturedBy = newOwner;
+            }
         }
 
         public void Configure(
@@ -139,6 +257,12 @@ namespace LocalTanks
 
             ValidateConfiguration();
             spawned = true;
+            matchStartedAt = Time.time;
+            matchElapsed = 0f;
+            matchEnded = false;
+            capturedBy = TeamId.Neutral;
+            Result = MatchResult.None;
+            TrackBases();
             BattleScenarioEntry[] entries = scenario.entries
                 .OrderBy(item => item.team)
                 .ThenBy(item => item.spawnSlot)
@@ -218,6 +342,14 @@ namespace LocalTanks
             TeamMember member = tank.GetComponent<TeamMember>();
             if (member == null) member = tank.AddComponent<TeamMember>();
             member.Configure(entry.team, entry.playerControlled);
+            WeaponController weapon = tank.GetComponent<WeaponController>();
+            if (weapon != null)
+            {
+                // Friendly fire is a match rule, so it reaches the shell through the weapon that fires it
+                // rather than through a global lookup inside the projectile.
+                weapon.MatchRules = Rules;
+            }
+
             membersByEntityId.Add(entry.id, member);
             entityIdsByMember.Add(member, entry.id);
 

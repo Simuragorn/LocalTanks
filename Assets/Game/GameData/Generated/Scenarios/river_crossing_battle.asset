@@ -15,6 +15,10 @@ MonoBehaviour:
   id: river_crossing_battle
   sceneId: Battle_RiverCrossing
   kind: 0
+  rules:
+    timeLimitSeconds: 900
+    timeLimitIsDraw: 1
+    friendlyFire: 1
   entries:
   - id: a_south_ms1_1
     tankId: ms_1

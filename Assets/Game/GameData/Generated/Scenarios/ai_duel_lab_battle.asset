@@ -15,6 +15,10 @@ MonoBehaviour:
   id: ai_duel_lab_battle
   sceneId: Battle_RiverCrossing
   kind: 1
+  rules:
+    timeLimitSeconds: 900
+    timeLimitIsDraw: 1
+    friendlyFire: 1
   entries:
   - id: duel_a_ms1
     tankId: ms_1

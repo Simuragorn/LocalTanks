@@ -42,8 +42,7 @@
 .base-status-list {
     position: absolute;
     top: 68px;
-    left: 50%;
-    translate: -50% 0;
+    left: 50%;    translate: -50% 0;
     width: 360px;
 }
 
@@ -113,3 +112,35 @@
 .enemy-row .health-fill { background-color: rgb(185, 104, 104); }
 .destroyed-row { opacity: 0.32; }
 .unspotted-row { opacity: 0.58; }
+
+.battle-clock {
+    position: absolute;
+    top: 18px;
+    right: 286px;
+    align-items: flex-end;
+    padding: 6px 12px;
+    background-color: rgba(15, 18, 16, 0.78);
+    border-radius: 5px;
+}
+
+/* Read from across the screen, and never wider than the time itself: the battle clock is the one number the
+   player looks at without aiming at it first. */
+.battle-timer {
+    color: rgb(235, 235, 228);
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-right;
+}
+
+/* The line under the clock appears only when the battle has a result, so a running battle stays quiet. */
+.battle-result {
+    display: none;
+    color: rgb(226, 214, 176);
+    font-size: 13px;
+    -unity-text-align: middle-right;
+    max-width: 260px;
+    white-space: normal;
+}
+
+.battle-result.has-result { display: flex; }
+

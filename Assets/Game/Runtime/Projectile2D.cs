@@ -19,6 +19,8 @@ namespace LocalTanks
         private ShellAudioProfile audioProfile;
         private CrewVoiceController crewVoice;
         private Collider2D temporarilyIgnoredCollider;
+        private MatchRules matchRules;
+        private TeamId shooterTeam = TeamId.Neutral;
         private bool initialized;
         private readonly ProjectileTravelBudget travelBudget = new ProjectileTravelBudget();
 
@@ -44,6 +46,15 @@ namespace LocalTanks
         }
 
         public void Initialize(Vector2 travelDirection, ShellDefinition shell, Transform newOwnerRoot)
+        {
+            Initialize(travelDirection, shell, newOwnerRoot, null);
+        }
+
+        public void Initialize(
+            Vector2 travelDirection,
+            ShellDefinition shell,
+            Transform newOwnerRoot,
+            MatchRules rules)
         {            if (shell == null)
             {
                 throw new System.ArgumentNullException(nameof(shell));
@@ -64,6 +75,31 @@ namespace LocalTanks
             remainingRicochets = Mathf.Max(0, shell.maximumRicochets);
             audioProfile = shell.audio;
             crewVoice = FindCrewVoice(newOwnerRoot);
+            matchRules = rules;
+            TeamMember shooter = newOwnerRoot != null ? newOwnerRoot.GetComponentInChildren<TeamMember>() : null;
+            shooterTeam = shooter != null ? shooter.Team : TeamId.Neutral;
+        }
+
+        /// <summary>
+        /// True when this shell may damage the machine it hit. A wreck is always a physical obstacle — it is
+        /// cover — so only a living machine of the shooter's own team is passed through when the match rules
+        /// forbid friendly fire. Public because the decision, not the collision, is what the rule is about.
+        /// </summary>
+        public bool CanDamageMachine(TankArmor armor)
+        {
+            if (armor == null || matchRules == null || matchRules.friendlyFire)
+            {
+                return true;
+            }
+
+            TankHealth health = armor.GetComponent<TankHealth>();
+            if (health != null && health.IsDestroyed)
+            {
+                return true;
+            }
+
+            TeamMember victim = armor.GetComponentInParent<TeamMember>();
+            return victim == null || matchRules.AllowsDamageTo(shooterTeam, victim.Team);
         }
 
         /// <summary>
@@ -105,6 +141,13 @@ namespace LocalTanks
 
                 transform.position = hit.centroid;
                 TankArmor armor = hit.collider.GetComponentInParent<TankArmor>();
+                if (armor != null && !CanDamageMachine(armor))
+                {
+                    // Friendly fire is switched off, so the shell passes through a living ally and the next hit
+                    // along the same cast is considered instead of this one.
+                    continue;
+                }
+
                 if (armor == null)
                 {
                     DestructibleObstacle obstacle = hit.collider.GetComponentInParent<DestructibleObstacle>();
