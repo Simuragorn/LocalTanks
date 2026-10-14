@@ -122,6 +122,17 @@ namespace LocalTanks.Editor
         /// </summary>
         private const bool UseSpriteBlockGround = false;
 
+        /// <summary>
+        /// Whether the navigation grid is drawn as a colour wash over the ground.
+        /// <para>
+        /// Off, because it is a diagnostic and not scenery. The cells are four metres across, which is about
+        /// fifteen pixels of the baked ground, and drawn over it they read as a field of small dark squares -
+        /// which is exactly how they were reported. Switch this on when the routing grid is what needs
+        /// looking at.
+        /// </para>
+        /// </summary>
+        private const bool ShowNavigationOverlay = false;
+
         /// <summary>Where the detail materials live; one file per material id.</summary>
         private const string GroundMaterialFolder = "Assets/LocalOnly/WoTEnvironmentGenerated/Ground";
 
@@ -306,6 +317,10 @@ namespace LocalTanks.Editor
             SpriteRenderer renderer = floor.AddComponent<SpriteRenderer>();
             renderer.sprite = surface;
             renderer.sortingOrder = Mathf.RoundToInt(GroundSortingOrder);
+            // A tunable tint over the baked ground. The bake cannot be adjusted from a scene, and the balance
+            // between the map's shapes and the ground's grain is a judgement about how the arena should look,
+            // so it is left where whoever is looking at it can move it.
+            floor.AddComponent<GroundAppearanceTuner>();
 
             // Scaled to the playable area rather than left at its pixel size, so the picture and the
             // collision world describe the same ground. Uniform, because the source is square and the
@@ -320,7 +335,7 @@ namespace LocalTanks.Editor
             }
 
             if (UseSpriteBlockGround) CreateDetailGround(root.transform, asset);
-            CreateNavigationOverlay(root.transform, asset);
+            if (ShowNavigationOverlay) CreateNavigationOverlay(root.transform, asset);
         }
 
         /// <summary>

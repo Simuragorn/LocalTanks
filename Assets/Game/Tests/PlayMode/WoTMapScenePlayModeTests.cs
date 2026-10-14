@@ -143,9 +143,16 @@ namespace LocalTanks.Tests
             yield return null;
             yield return null;
 
-            // The ground sheet must exist, otherwise the arena renders as an empty void.
-            Assert.That(Object.FindObjectsByType<UnityEngine.Tilemaps.Tilemap>(FindObjectsSortMode.None).Length,
-                Is.GreaterThan(0), "The arena needs a ground sheet.");
+            // The ground must be drawn, otherwise the arena renders as an empty void. It is one sprite
+            // carrying the baked ground rather than a tilemap: a tilemap of navigation cells was a debugging
+            // view, and drawn over the map it showed a field of dark squares.
+            GameObject ground = GameObject.Find("Ground");
+            Assert.That(ground, Is.Not.Null, "The arena needs a ground object.");
+            SpriteRenderer[] groundSprites = ground.GetComponentsInChildren<SpriteRenderer>(true);
+            Assert.That(groundSprites.Length, Is.GreaterThan(0),
+                "The ground must carry its surface sprite, or the arena renders as an empty void.");
+            Assert.That(groundSprites.Any(item => item.sprite != null), Is.True,
+                "The ground sprite must actually have a texture assigned.");
 
             Collider2D[] colliders = Object.FindObjectsByType<Collider2D>(FindObjectsSortMode.None);
             Assert.That(colliders.Length, Is.GreaterThan(3000),

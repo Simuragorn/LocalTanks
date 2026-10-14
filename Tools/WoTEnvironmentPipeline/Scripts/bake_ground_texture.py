@@ -47,6 +47,10 @@ FIELD_SIDE = 128
 # values give crisp bands, large ones blend everything into mud.
 TRANSITION_METRES = 6.0
 
+# Share of the baked pixel taken from the material tile, the rest coming from the surface image.
+# Above half, because the image is the soft source and the tiles are the sharp one.
+MATERIAL_STRENGTH = 0.55
+
 
 def arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -219,14 +223,22 @@ def bake(project_root: Path, map_id: str, output: Path) -> dict:
                     chosen = index
                     break
 
+            # Two repetitions of the tile per texture edge, so one tile spans about twenty-five world units.
+            # The surface image carries only about five pixels per metre, which is what makes the ground look
+            # soft, and the materials are 1024 square, so at this rate they supply about forty pixels per
+            # metre - the grain. Four repetitions were tried and measured slightly sharper, but the pattern
+            # of the tile started to be recognisable, which costs more than the extra sharpness buys.
             tile_x = (x * 2) % TILE_SIDE
             tile_y = (y * 2) % TILE_SIDE
             tile = atlas_pixels[tile_x + (chosen % 3) * TILE_SIDE,
                                 tile_y + (chosen // 3) * TILE_SIDE]
             base = surface_pixels[x, y]
-            # Material on top of the surface image, at the same part strength the scene used, so
-            # the picture keeps supplying roads and fields while the tile supplies grain.
-            strength = 0.45
+            # Material over the surface image. The share matters: the image carries the roads, fields and
+            # water at about five pixels per metre, which is what reads as soft, and the materials carry the
+            # grain at about eighty. Giving the materials the larger share therefore sharpens the ground
+            # while the image still supplies its shapes. EXPOSURE in the scene builder tunes the balance
+            # afterwards without another bake.
+            strength = MATERIAL_STRENGTH
             result_pixels[x, y] = (
                 int(base[0] * (1 - strength) + tile[0] * strength),
                 int(base[1] * (1 - strength) + tile[1] * strength),
