@@ -101,6 +101,27 @@ namespace LocalTanks.Editor
         private const string AerialSurfacePath =
             "Assets/LocalOnly/WoTEnvironmentGenerated/Ground/mines_aerial.png";
 
+        /// <summary>
+        /// The arena's ground as one baked texture: the surface image combined per pixel with the map's own
+        /// ground materials, chosen by terrain height. Produced by
+        /// <c>Tools/WoTEnvironmentPipeline/Scripts/bake_ground_texture.py</c>.
+        /// <para>
+        /// This replaced a few thousand translucent sprite stamps. A stamp is a flat quad with edges, and
+        /// with hundreds of equal quads those edges line up into a visible grid; widening the variation made
+        /// it worse rather than better. Baked, there are no object boundaries at all, so there are no seams
+        /// to see, and the ground costs one draw instead of thousands.
+        /// </para>
+        /// </summary>
+        private const string BakedGroundPath =
+            "Assets/LocalOnly/WoTEnvironmentGenerated/Ground/mines_ground_baked.png";
+
+        /// <summary>
+        /// The sprite-block ground that the baked texture replaced. Left switched off rather than deleted:
+        /// it is the working comparison if the bake ever needs revisiting, and a reference to dead code is
+        /// cheaper than losing the experiment.
+        /// </summary>
+        private const bool UseSpriteBlockGround = false;
+
         /// <summary>Where the detail materials live; one file per material id.</summary>
         private const string GroundMaterialFolder = "Assets/LocalOnly/WoTEnvironmentGenerated/Ground";
 
@@ -261,7 +282,17 @@ namespace LocalTanks.Editor
             GameObject root = new GameObject("Ground");
             SceneManager.MoveGameObjectToScene(root, SceneManager.GetActiveScene());
 
-            Sprite surface = AssetDatabase.LoadAssetAtPath<Sprite>(AerialSurfacePath);
+            // The baked ground if it exists, otherwise the plain surface image: the arena must still build
+            // where the bake step has not been run, just with a softer floor.
+            Sprite surface = AssetDatabase.LoadAssetAtPath<Sprite>(BakedGroundPath);
+            if (surface == null)
+            {
+                Debug.LogWarning($"The baked ground was not found at {BakedGroundPath}; falling back to the " +
+                                 "surface image, which is softer up close. Run " +
+                                 "Tools/WoTEnvironmentPipeline/Scripts/bake_ground_texture.py to produce it.");
+                surface = AssetDatabase.LoadAssetAtPath<Sprite>(AerialSurfacePath);
+            }
+
             if (surface == null)
             {
                 Debug.LogWarning($"The arena surface was not found at {AerialSurfacePath}. The ground will " +
@@ -288,7 +319,7 @@ namespace LocalTanks.Editor
                     1f);
             }
 
-            CreateDetailGround(root.transform, asset);
+            if (UseSpriteBlockGround) CreateDetailGround(root.transform, asset);
             CreateNavigationOverlay(root.transform, asset);
         }
 
