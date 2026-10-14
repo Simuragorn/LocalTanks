@@ -28,7 +28,7 @@ namespace LocalTanks.Editor
 
             JObject root = JObject.Parse(File.ReadAllText(jsonPath));
             WoTMapAsset asset = ScriptableObject.CreateInstance<WoTMapAsset>();
-            asset.navigationCellSize = navigationCellMetres;
+            asset.navigationCellSize = Mathf.Max(0.25f, navigationCellMetres) / asset.metresPerUnit;
             asset.mapId = Text(root, "mapId");
             asset.displayName = Text(root, "displayName");
             asset.englishName = Text(root, "englishName");
@@ -216,9 +216,8 @@ namespace LocalTanks.Editor
         /// </summary>
         private static void BuildNavigation(WoTMapAsset asset)
         {
-            float cellMetres = asset.navigationCellSize * asset.metresPerUnit;
-            asset.navigationColumns = Mathf.Max(1, Mathf.RoundToInt(asset.playableSize.x * asset.metresPerUnit / cellMetres));
-            asset.navigationRows = Mathf.Max(1, Mathf.RoundToInt(asset.playableSize.y * asset.metresPerUnit / cellMetres));
+            asset.navigationColumns = Mathf.Max(1, Mathf.RoundToInt(asset.playableSize.x / asset.navigationCellSize));
+            asset.navigationRows = Mathf.Max(1, Mathf.RoundToInt(asset.playableSize.y / asset.navigationCellSize));
             int cells = asset.navigationColumns * asset.navigationRows;
             asset.navigationTerrain = new int[cells];
             asset.navigationBlocked = new bool[cells];
@@ -302,7 +301,8 @@ namespace LocalTanks.Editor
                 if (!OverlapsCell(obstacle, center, half)) continue;
 
                 if (!obstacle.blocksNavigation) rough = true;
-                else if (Coverage(obstacle, center, half) >= BlockingCoverage) return new ObstacleOverlap(true, true);
+                else if (ContainsPoint(obstacle, center) || Coverage(obstacle, center, half) >= BlockingCoverage)
+                    return new ObstacleOverlap(true, true);
                 else rough = true;
             }
 
@@ -335,6 +335,26 @@ namespace LocalTanks.Editor
             return Mathf.Min(shareX, shareY);
         }
 
+        private static bool ContainsPoint(WoTMapObstacle obstacle, Vector2 point)
+        {
+            Vector2 halfSize = obstacle.size * 0.5f;
+            float radians = -obstacle.rotationDegrees * Mathf.Deg2Rad;
+            float cos = Mathf.Cos(radians);
+            float sin = Mathf.Sin(radians);
+            Vector2 delta = point - obstacle.center;
+            Vector2 local = new Vector2(
+                delta.x * cos - delta.y * sin,
+                delta.x * sin + delta.y * cos);
+
+            if (obstacle.shape == MapObstacleShape.Circle || obstacle.shape == MapObstacleShape.Ellipse)
+            {
+                float radius = Mathf.Min(halfSize.x, halfSize.y);
+                return local.sqrMagnitude <= radius * radius;
+            }
+
+            return Mathf.Abs(local.x) <= halfSize.x && Mathf.Abs(local.y) <= halfSize.y;
+        }
+
         /// <summary>
         /// Decides which obstacles close ground. Routing a tank through a dense arena cannot treat every
         /// fence and boulder as a wall: on the converted Mines that blocked about 68% of the grid and
@@ -343,21 +363,9 @@ namespace LocalTanks.Editor
         private static void ApplyNavigationPolicy(WoTMapAsset asset)
         {
             int blockers = 0;
-            float threshold = WoTMapAsset.NavigationBlockerMetres / asset.metresPerUnit;
             foreach (WoTMapObstacle obstacle in asset.obstacles)
             {
-                obstacle.blocksNavigation = asset.navigationPolicy switch
-                {
-                    MapNavigationPolicy.Never => false,
-                    MapNavigationPolicy.AllMovementBlockers => obstacle.blocksMovement,
-                    MapNavigationPolicy.DestructiblePassable => obstacle.blocksMovement &&
-                                                                !obstacle.destructible &&
-                                                                Mathf.Max(obstacle.size.x, obstacle.size.y) >= threshold,
-                    MapNavigationPolicy.ObstacleCost => obstacle.blocksMovement && !obstacle.destructible,
-                    _ => obstacle.blocksMovement &&
-                         !obstacle.destructible &&
-                         Mathf.Max(obstacle.size.x, obstacle.size.y) >= threshold
-                };
+                obstacle.blocksNavigation = asset.BlocksNavigation(obstacle);
 
                 if (obstacle.blocksNavigation) blockers++;
             }

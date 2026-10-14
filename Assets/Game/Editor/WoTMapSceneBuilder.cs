@@ -287,35 +287,10 @@ namespace LocalTanks.Editor
         /// </summary>
         private static NavigationMap CreateNavigationMap(WoTMapAsset asset)
         {
-            int count = asset.navigationColumns * asset.navigationRows;
-            TerrainKind[] terrain = asset.navigationTerrain.Select(kind => (TerrainKind)kind).ToArray();
-            float[] costs = asset.navigationCosts ?? Enumerable.Repeat(1f, count).ToArray();
-            float[] speeds = asset.navigationSpeedMultipliers ?? Enumerable.Repeat(1f, count).ToArray();
-            // Cover steers a route through its movement cost, which is the part that matters. Its speed
-            // penalty is dropped here because a navigation cell is four units across while a hull is about
-            // one, so a per-cell penalty slows a tank almost everywhere on a dense arena: measured speeds
-            // fell to 0.05 against a limit of 2.59 and the battle never started.
-            for (int index = 0; index < count; index++)
-            {
-                if (terrain[index] == TerrainKind.Obstacle) speeds[index] = 1f;
-            }
-
-            float[] accelerations = speeds;
-            bool[] blocked = asset.navigationBlocked;
-
             GameObject mapObject = new GameObject("NavigationMap");
             SceneManager.MoveGameObjectToScene(mapObject, SceneManager.GetActiveScene());
             NavigationMap map = mapObject.AddComponent<NavigationMap>();
-            map.Configure(
-                asset.navigationColumns,
-                asset.navigationRows,
-                asset.navigationCellSize,
-                asset.worldCenter - asset.playableSize * 0.5f,
-                terrain,
-                costs,
-                speeds,
-                accelerations,
-                blocked);
+            mapObject.AddComponent<WoTNavigationMapSource>().Configure(asset);
             return map;
         }
 
@@ -828,7 +803,9 @@ namespace LocalTanks.Editor
                 if (!IsBlocked(asset, world)) walkable.Add(cell);
             }
 
-            return walkable.Count >= 2 ? walkable.ToArray() : oriented;
+            return walkable.Count >= 2
+                ? WeightedAStar.SimplifyCollinear(walkable).ToArray()
+                : oriented;
         }
 
         /// <summary>

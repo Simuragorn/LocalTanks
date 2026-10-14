@@ -186,6 +186,36 @@ namespace LocalTanks
             return new List<Vector2Int>();
         }
 
+        /// <summary>
+        /// Removes intermediate cells that continue in the same eight-way direction. The exact route
+        /// remains unchanged, but a fine grid no longer makes a driver satisfy hundreds of metre-scale
+        /// waypoints along one straight segment.
+        /// </summary>
+        public static List<Vector2Int> SimplifyCollinear(IReadOnlyList<Vector2Int> path)
+        {
+            List<Vector2Int> result = new List<Vector2Int>();
+            if (path == null || path.Count == 0) return result;
+            result.Add(path[0]);
+            if (path.Count == 1) return result;
+
+            Vector2Int previousDirection = Direction(path[1] - path[0]);
+            for (int index = 2; index < path.Count; index++)
+            {
+                Vector2Int direction = Direction(path[index] - path[index - 1]);
+                if (direction == previousDirection) continue;
+                result.Add(path[index - 1]);
+                previousDirection = direction;
+            }
+
+            result.Add(path[path.Count - 1]);
+            return result;
+        }
+
+        private static Vector2Int Direction(Vector2Int delta)
+        {
+            return new Vector2Int(Math.Sign(delta.x), Math.Sign(delta.y));
+        }
+
         private static bool IsDiagonalBlocked(
             NavigationGridModel grid,
             Vector2Int current,

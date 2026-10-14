@@ -33,6 +33,11 @@ namespace LocalTanks.Tests
                     Is.EqualTo(asset.terrainColumns * asset.terrainRows));
                 Assert.That(asset.navigationBlocked.Length,
                     Is.EqualTo(asset.navigationColumns * asset.navigationRows));
+                Assert.That(asset.navigationCellSize * asset.metresPerUnit,
+                    Is.EqualTo(WoTMapImporter.NavigationCellMetres).Within(0.001f),
+                    "The importer accepts source metres; storing them as Unity units made each cell 15.3 m wide.");
+                Assert.That(asset.navigationColumns, Is.EqualTo(200));
+                Assert.That(asset.navigationRows, Is.EqualTo(200));
             }
             finally
             {

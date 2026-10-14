@@ -703,6 +703,30 @@ namespace LocalTanks.Tests
             Assert.That(widePath, Is.Empty);
         }
 
+        [Test]
+        public void NavigationPath_SimplifiesStraightRunsWithoutRemovingCorners()
+        {
+            var path = new[]
+            {
+                new Vector2Int(0, 0),
+                new Vector2Int(1, 0),
+                new Vector2Int(2, 0),
+                new Vector2Int(3, 1),
+                new Vector2Int(4, 2),
+                new Vector2Int(4, 3)
+            };
+
+            var simplified = WeightedAStar.SimplifyCollinear(path);
+
+            Assert.That(simplified, Is.EqualTo(new[]
+            {
+                new Vector2Int(0, 0),
+                new Vector2Int(2, 0),
+                new Vector2Int(4, 2),
+                new Vector2Int(4, 3)
+            }));
+        }
+
         private static ImpactResult ResolveImpact(
             UnityEngine.Vector2 direction,
             UnityEngine.Vector2 surfaceNormal,

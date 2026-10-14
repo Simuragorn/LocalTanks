@@ -27,33 +27,24 @@ namespace LocalTanks
     /// <summary>
     /// Whether a static obstacle also closes the ground it stands on for routing.
     /// <para>
-    /// Most obstacles are collision objects only. Making every fence, vine row, log pile and boulder
-    /// close a navigation cell turns a dense arena into an unusable labyrinth: on the converted Mines
-    /// the unmodified rule blocked about 68% of the routing grid. Only substantial structures should
-    /// steer a route; everything else is something a driver expects to squeeze past or break.
+    /// Only obstacles that are real solid colliders may close navigation. Small clutter is omitted
+    /// from collision and remains passable-but-costly, so routing and physics cannot disagree.
     /// </para>
     /// </summary>
     public enum MapNavigationPolicy
     {
-        /// <summary>Only footprints at least as long as <see cref="WoTMapAsset.NavigationBlockerMetres"/> close ground.</summary>
+        /// <summary>Only footprints at least as long as <see cref="WoTMapAsset.BlockerMetres"/> close ground.</summary>
         SubstantialOnly,
 
         /// <summary>
-        /// A destructible obstacle never closes ground, and the rest must also be at least as long as
-        /// <see cref="WoTMapAsset.NavigationBlockerMetres"/>. This is the default because a tank crew
-        /// drives through a fence, a vine row, a log pile or a cart and breaks it, so routing should not
-        /// treat those as walls. On the converted Mines this is the difference between a field split
-        /// into dozens of pockets and one connected battlefield.
+        /// Legacy policy name retained for serialized maps. Current collision rules deliberately do not
+        /// use destructibility: a large shed remains a wall until gameplay actually destroys it.
         /// </summary>
         DestructiblePassable,
 
         /// <summary>
-        /// Only a non-destructible obstacle closes ground; every destructible one, and every object too
-        /// small to matter, makes the ground passable-but-slow instead. This is the working rule for a
-        /// dense arena: on the converted Mines any rule that also blocked small non-destructible scatter
-        /// left the field split into dozens of pockets, because a cell-centre test against thousands of
-        /// rotated footprints over-blocks by construction while the objects cover more ground than the
-        /// arena itself.
+        /// Solid colliders close ground; small omitted clutter remains passable-but-costly. This is the
+        /// working rule for a dense arena and keeps the visible wall, physics and route map identical.
         /// </summary>
         ObstacleCost,
 
@@ -117,14 +108,6 @@ namespace LocalTanks
         public const int MaximumNavigationCells = 250_000;
 
         /// <summary>
-        /// Longest side, in source metres, at which an obstacle starts closing ground for routing under
-        /// <see cref="MapNavigationPolicy.SubstantialOnly"/>. Ten metres keeps houses, bridges and the
-        /// larger rocks — the things that genuinely divide a battlefield — and drops fences, vine rows,
-        /// logs and scattered boulders, which a tank crew expects to cross or break.
-        /// </summary>
-        public const float NavigationBlockerMetres = 10f;
-
-        /// <summary>
         /// Longest side, in source metres, at which an obstacle stands as a wall a tank cannot drive
         /// through. Ten metres is about two and a half hull lengths of the smallest machine in the game
         /// (the T1 Cunningham is 3.87 m), so anything reaching it reads as a barrier on sight, which is
@@ -168,17 +151,7 @@ namespace LocalTanks
         /// </summary>
         public bool BlocksNavigation(WoTMapObstacle obstacle)
         {
-            if (obstacle == null || !obstacle.blocksMovement) return false;
-            switch (navigationPolicy)
-            {
-                case MapNavigationPolicy.Never:
-                case MapNavigationPolicy.ObstacleCost:
-                    return false;
-                case MapNavigationPolicy.AllMovementBlockers:
-                    return true;
-                default:
-                    return IsSubstantial(obstacle);
-            }
+            return IsSolid(obstacle);
         }
 
         [Header("Identity")]

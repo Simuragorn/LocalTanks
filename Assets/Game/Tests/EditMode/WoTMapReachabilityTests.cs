@@ -39,6 +39,13 @@ namespace LocalTanks.Tests
                 Vector2 local = new Vector2(
                     delta.x * cos - delta.y * sin,
                     delta.x * sin + delta.y * cos);
+                if (obstacle.shape == MapObstacleShape.Circle || obstacle.shape == MapObstacleShape.Ellipse)
+                {
+                    float radius = Mathf.Min(half.x, half.y);
+                    if (local.sqrMagnitude <= radius * radius) return true;
+                    continue;
+                }
+
                 if (Mathf.Abs(local.x) <= half.x && Mathf.Abs(local.y) <= half.y) return true;
             }
 
@@ -139,6 +146,53 @@ namespace LocalTanks.Tests
                 Assert.That(map.navigationBlocked[index], Is.False,
                     $"Base at {position} stands on a navigation cell routing cannot cross.");
             }
+        }
+
+        [Test]
+        public void SolidColliderPolicy_ExactlyMatchesNavigationBlockers()
+        {
+            WoTMapAsset map = Load();
+            if (map == null) Assert.Ignore("The converted map asset has not been imported.");
+
+            List<WoTMapObstacle> missing = map.obstacles
+                .Where(obstacle => map.IsSolid(obstacle) && !obstacle.blocksNavigation)
+                .ToList();
+            List<WoTMapObstacle> phantom = map.obstacles
+                .Where(obstacle => !map.IsSolid(obstacle) && obstacle.blocksNavigation)
+                .ToList();
+
+            Assert.That(missing, Is.Empty,
+                $"{missing.Count} solid colliders are still passable to routing. First: " +
+                string.Join(", ", missing.Take(8).Select(item => item.id)));
+            Assert.That(phantom, Is.Empty,
+                $"{phantom.Count} navigation blockers have no solid collider. First: " +
+                string.Join(", ", phantom.Take(8).Select(item => item.id)));
+        }
+
+        [Test]
+        public void WalkableCellCentres_AreOutsideSolidColliders()
+        {
+            WoTMapAsset map = Load();
+            if (map == null) Assert.Ignore("The converted map asset has not been imported.");
+
+            Vector2 origin = map.worldCenter - map.playableSize * 0.5f;
+            List<Vector2Int> conflicts = new List<Vector2Int>();
+            for (int row = 0; row < map.navigationRows; row++)
+            {
+                for (int column = 0; column < map.navigationColumns; column++)
+                {
+                    int index = row * map.navigationColumns + column;
+                    if (map.navigationBlocked[index]) continue;
+                    Vector2 centre = origin + new Vector2(
+                        (column + 0.5f) * map.navigationCellSize,
+                        (row + 0.5f) * map.navigationCellSize);
+                    if (InsideSolid(map, centre)) conflicts.Add(new Vector2Int(column, row));
+                }
+            }
+
+            Assert.That(conflicts, Is.Empty,
+                $"{conflicts.Count} walkable navigation nodes sit inside real solid colliders. First: " +
+                string.Join(", ", conflicts.Take(12)));
         }
     }
 }

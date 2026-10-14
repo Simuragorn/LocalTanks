@@ -40,6 +40,10 @@ namespace LocalTanks.Tests
 
             NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
             Assert.That(map, Is.Not.Null, "The scene must carry a navigation map.");
+            WoTNavigationMapSource source = map.GetComponent<WoTNavigationMapSource>();
+            Assert.That(source, Is.Not.Null, "The scene must load navigation from the generated map asset.");
+            Assert.That(source.Source, Is.SameAs(builder.Map),
+                "Collider content and navigation must read the same map asset.");
             Assert.That(map.Width, Is.EqualTo(builder.Map.navigationColumns));
             Assert.That(map.Height, Is.EqualTo(builder.Map.navigationRows));
             Assert.That(Object.FindObjectsByType<CaptureBase>(FindObjectsSortMode.None).Length,

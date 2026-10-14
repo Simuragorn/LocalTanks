@@ -171,7 +171,8 @@ namespace LocalTanks
             float heuristicWeight = 1.1f)
         {
             EnsureModel();
-            return WeightedAStar.FindPath(model, start, destination, clearance, heuristicWeight);
+            return WeightedAStar.SimplifyCollinear(
+                WeightedAStar.FindPath(model, start, destination, clearance, heuristicWeight));
         }
 
         public List<Vector2> FindWorldPath(
