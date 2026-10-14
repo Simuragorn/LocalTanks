@@ -358,6 +358,17 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void NavigationWaypointTolerance_NeverFallsBelowLargeMapSafetyFloor()
+        {
+            Assert.That(NavigationAvoidanceMath.EffectiveWaypointTolerance(0.3f, 1.2f, 4f),
+                Is.EqualTo(1.2f).Within(0.001f));
+            Assert.That(NavigationAvoidanceMath.EffectiveWaypointTolerance(0.3f, 1.2f, 0.75f),
+                Is.EqualTo(0.3f).Within(0.001f));
+            Assert.That(NavigationAvoidanceMath.EffectiveWaypointTolerance(1.8f, 1.2f, 4f),
+                Is.EqualTo(1.8f).Within(0.001f));
+        }
+
+        [Test]
         public void ReloadTimer_BecomesReadyAfterDuration()
         {
             ReloadTimer timer = new ReloadTimer();

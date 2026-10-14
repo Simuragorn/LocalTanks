@@ -46,6 +46,8 @@ namespace LocalTanks
     [DisallowMultipleComponent]
     public sealed class BattleTelemetry : MonoBehaviour
     {
+        public const int SchemaVersion = 2;
+
         /// <summary>Command line switch that starts recording. Consumed by the batch runners.</summary>
         public const string SwitchName = "-localtanksTelemetry";
 
@@ -64,6 +66,7 @@ namespace LocalTanks
         private readonly List<TankSample> samples = new List<TankSample>();
         private readonly List<BattleEvent> events = new List<BattleEvent>();
         private readonly Dictionary<UnityEngine.EntityId, TankTelemetryTrack> tracks = new Dictionary<UnityEngine.EntityId, TankTelemetryTrack>();
+        private readonly AiDecisionFingerprint decisionFingerprint = new AiDecisionFingerprint();
         private ConcealmentZone[] concealmentZones;
         private BattleDirector director;
         private float startedAt;
@@ -168,6 +171,8 @@ namespace LocalTanks
 
         public int SampleCount => samples.Count;
         public int EventCount => events.Count;
+        public string DecisionFingerprint => decisionFingerprint.Value;
+        public int FingerprintedDecisionCount => decisionFingerprint.Count;
 
         /// <summary>
         /// Attaches a recorder to a director when the command line asked for one. Returns null otherwise,
@@ -204,6 +209,7 @@ namespace LocalTanks
             samples.Clear();
             events.Clear();
             tracks.Clear();
+            decisionFingerprint.Reset();
             startedAt = Time.time;
             nextSampleAt = 0f;
             recording = true;
@@ -429,6 +435,16 @@ namespace LocalTanks
                 name = name ?? string.Empty,
                 detail = detail ?? string.Empty
             });
+            if (ContributesToDecisionFingerprint(kind))
+            {
+                decisionFingerprint.Append(kind, name, detail);
+            }
+        }
+
+        private static bool ContributesToDecisionFingerprint(string kind)
+        {
+            return kind == "state" || kind == "decision" || kind == "target_acquired" ||
+                   kind == "target_lost" || kind == "fire" || kind == "shot";
         }
 
         /// <summary>
@@ -461,7 +477,8 @@ namespace LocalTanks
         public string ToJson()
         {
             StringBuilder builder = new StringBuilder();
-            builder.Append("{\"summary\":").Append(SummaryJson()).Append(',');
+            builder.Append("{\"schemaVersion\":").Append(SchemaVersion).Append(',');
+            builder.Append("\"summary\":").Append(SummaryJson()).Append(',');
             builder.Append("\"tanks\":").Append(TracksJson()).Append(',');
             builder.Append("\"samples\":").Append(SamplesJson()).Append(',');
             builder.Append("\"events\":").Append(EventsJson()).Append('}');
@@ -498,6 +515,8 @@ namespace LocalTanks
                 .Append($"\"seconds\":{Round(elapsed).ToString(CultureInfo.InvariantCulture)},")
                 .Append($"\"samples\":{samples.Count},")
                 .Append($"\"events\":{events.Count},")
+                .Append($"\"decisionFingerprint\":\"{decisionFingerprint.Value}\",")
+                .Append($"\"fingerprintedDecisions\":{decisionFingerprint.Count},")
                 .Append($"\"teamAAlive\":{aliveA},\"teamBAlive\":{aliveB},")
                 .Append($"\"teamAHealth\":{healthA},\"teamBHealth\":{healthB},")
                 .Append($"\"closestApproach\":{(closest == float.MaxValue ? 0f : Round(closest)).ToString(CultureInfo.InvariantCulture)}")

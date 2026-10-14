@@ -5,6 +5,17 @@ namespace LocalTanks
 {
     public static class NavigationAvoidanceMath
     {
+        public static float EffectiveWaypointTolerance(
+            float authoredTolerance,
+            float largeCellSafetyTolerance,
+            float navigationCellSize)
+        {
+            float scaleAwareFloor = navigationCellSize > 0f
+                ? Mathf.Min(largeCellSafetyTolerance, navigationCellSize * 0.3f)
+                : largeCellSafetyTolerance;
+            return Mathf.Max(0.05f, authoredTolerance, scaleAwareFloor);
+        }
+
         public static float DriveFactor(float clearance, float avoidanceRadius)
         {
             float radius = Mathf.Max(0.1f, avoidanceRadius);
@@ -30,7 +41,7 @@ namespace LocalTanks
         [SerializeField, Min(0.05f)] private float waypointTolerance = 0.3f;
 
         /// <summary>
-        /// Smallest waypoint tolerance the agent will work with, in world units.
+        /// Largest scale-derived waypoint safety tolerance the agent may use, in world units.
         /// <para>
         /// Three tenths of a unit is smaller than a hull and far smaller than a navigation cell, which is
         /// four units across on the converted arena. A tank travelling at 2.59 units per second covers
@@ -40,9 +51,9 @@ namespace LocalTanks
         /// exactly this reason.
         /// </para>
         /// </summary>
-        [Tooltip("Smallest waypoint tolerance, in world units. A tolerance below a hull's turning " +
-                 "circle makes a tank circle waypoints it has already passed.")]
-        [SerializeField, Min(0.05f)] private float minimumWaypointTolerance = 1.2f;
+        [Tooltip("Upper limit for the scale-derived waypoint tolerance. The actual floor is 30% of the " +
+                 "navigation cell, so compact maps keep their authored precision.")]
+        [SerializeField, Min(0.05f)] private float largeCellSafetyTolerance = 1.2f;
         /// <summary>
         /// How far a neighbouring tank is noticed, in world units.
         /// <para>
@@ -130,7 +141,11 @@ namespace LocalTanks
         /// this to decide the same thing the agent does; a tighter demand than the agent's own leaves a
         /// tank circling a point it can never satisfy.
         /// </summary>
-        public float WaypointTolerance => waypointTolerance;
+        public float WaypointTolerance =>
+            NavigationAvoidanceMath.EffectiveWaypointTolerance(
+                waypointTolerance,
+                largeCellSafetyTolerance,
+                map != null ? map.CellSize : 0f);
         public bool HasFacingDirection => hasFacingDirection;
         public Vector2 FacingDirection => facingDirection;
         public bool MovingInReverse => movingInReverse;

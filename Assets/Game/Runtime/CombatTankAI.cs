@@ -56,10 +56,11 @@ namespace LocalTanks
         public int RouteIndex => routeIndex;
 
         /// <summary>
-        /// How many times the bot has entered continuation of its route, and how many times the strategic
+        /// How many route destinations the bot has actually assigned, and how many times the strategic
         /// layer took the decision away from it. Two counters, because a route that is never continued and
         /// a route that is continually overridden produce the same symptom - a bot that does not move along
-        /// its route - and telling them apart by reading code has already cost several attempts.
+        /// its route - and telling them apart by reading code has already cost several attempts. Merely
+        /// re-evaluating an unfinished destination does not increment this counter.
         /// </summary>
         public int RouteContinuationCount { get; private set; }
 
@@ -494,8 +495,7 @@ namespace LocalTanks
                         Vector2.Distance(transform.position, selected.transform.position),
                         CombatAiPolicy.CloseThreatDistance(member != null ? member.Definition : null)))
                 {
-                    ClearTacticalTask("Развёртывание продолжается: контакт дальше дистанции ближней угрозы");
-                    ContinueRoute();
+                    ResumeDeploymentRoute("Развёртывание продолжается: контакт дальше дистанции ближней угрозы");
                     return;
                 }
 
@@ -1913,7 +1913,6 @@ namespace LocalTanks
 
         private void ContinueRoute()
         {
-            RouteContinuationCount++;
             navigation?.SetPaused(false);
             if (routePoints.Length == 0)
             {
@@ -1941,12 +1940,29 @@ namespace LocalTanks
                 return;
             }
 
+            // A path finder can finish at the closest walkable point when the authored route cell itself
+            // overlaps dense imported geometry. That is a valid completion of this route leg, not a reason
+            // to submit the same unreachable cell every decision tick. Only accept the completion when the
+            // destination still belongs to the current route point; a completed cover or firing-line task
+            // must not silently advance the strategic route.
+            bool completedAssignedRoutePoint = navigation.DestinationReached &&
+                                               routeIndex < routePoints.Length &&
+                                               Vector2.Distance(navigation.Destination, routePoints[routeIndex]) <=
+                                               DestinationRefreshDistance;
+            bool completedFinalRoutePoint = completedAssignedRoutePoint &&
+                                            routeIndex >= routePoints.Length - 1;
+            if (completedAssignedRoutePoint && routeIndex < routePoints.Length - 1)
+            {
+                routeIndex++;
+            }
+
             // Skip any route points the tank already stands on, so a spawn point at the head of the
             // route does not stall the march.
             SkipReachedRoutePoints();
 
             if (routeIndex >= routePoints.Length - 1 &&
-                Vector2.Distance(transform.position, routePoints[routeIndex]) < RoutePointTolerance)
+                (completedFinalRoutePoint ||
+                 Vector2.Distance(transform.position, routePoints[routeIndex]) < RoutePointTolerance))
             {
                 routeComplete = true;
                 State = CombatAiState.Advance;
@@ -1955,7 +1971,30 @@ namespace LocalTanks
             }
 
             State = routeIndex > 0 ? CombatAiState.Advance : CombatAiState.Deploy;
+            RouteContinuationCount++;
             navigation.SetDestination(routePoints[routeIndex]);
+        }
+
+        private void ResumeDeploymentRoute(string reason)
+        {
+            bool hasCurrentRouteDestination = navigation != null && navigation.HasDestination &&
+                                              routeIndex < routePoints.Length &&
+                                              Vector2.Distance(navigation.Destination, routePoints[routeIndex]) <=
+                                              DestinationRefreshDistance;
+            if (tacticalMovementPurpose != TacticalMovementPurpose.None)
+            {
+                ClearTacticalTask(reason);
+            }
+            else
+            {
+                tacticalDecisionReason = reason;
+                if (navigation != null && navigation.HasDestination && !hasCurrentRouteDestination)
+                {
+                    navigation.ClearDestination();
+                }
+            }
+
+            ContinueRoute();
         }
 
         /// <summary>

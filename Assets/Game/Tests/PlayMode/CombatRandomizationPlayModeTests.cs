@@ -223,6 +223,9 @@ namespace LocalTanks.Tests
             string json = telemetry.Stop();
 
             Assert.That(json, Does.Contain("sequence=12"));
+            Assert.That(json, Does.Contain("\"schemaVersion\":2"));
+            Assert.That(json, Does.Match("\\\"decisionFingerprint\\\":\\\"[0-9a-f]{16}\\\""));
+            Assert.That(telemetry.FingerprintedDecisionCount, Is.EqualTo(2));
             Assert.That(json, Does.Contain("\"randomSeed\":1701"));
             Assert.That(json, Does.Contain("penetrationMultiplier=1.24"));
             Assert.That(json, Does.Contain("damageMultiplier=0.76"));

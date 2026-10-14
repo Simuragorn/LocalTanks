@@ -51,25 +51,26 @@ namespace LocalTanks.Tests
             Assert.That(director.TeamAAlive, Is.EqualTo(BattleScenario.TeamSize));
             Assert.That(director.TeamBAlive, Is.EqualTo(BattleScenario.TeamSize));
 
-            Dictionary<string, Vector2> start = director.SpawnedMembers
+            TeamMember[] bots = director.SpawnedMembers
+                .Where(member => member != null && !member.IsPlayerControlled)
+                .ToArray();
+            Dictionary<string, Vector2> start = bots
                 .ToDictionary(member => member.name, member => (Vector2)member.transform.position);
             int startHealth = director.SpawnedMembers
                 .Where(member => member != null && member.Health != null)
                 .Sum(member => member.Health.CurrentHitPoints);
             float startSeparation = Vector2.Distance(
-                Centre(director, TeamId.TeamA),
-                Centre(director, TeamId.TeamB));
+                Centre(bots, TeamId.TeamA),
+                Centre(bots, TeamId.TeamB));
 
             float previousScale = Time.timeScale;
             float closestEver = float.MaxValue;
             // Path length actually walked, accumulated per frame. Net displacement cannot separate a tank
             // that crawls from one that drives out and returns, and that ambiguity has already cost two
             // wrong diagnoses.
-            Dictionary<string, float> walked = director.SpawnedMembers
-                .Where(member => member != null)
+            Dictionary<string, float> walked = bots
                 .ToDictionary(member => member.name, _ => 0f);
-            Dictionary<string, Vector2> lastSeen = director.SpawnedMembers
-                .Where(member => member != null)
+            Dictionary<string, Vector2> lastSeen = bots
                 .ToDictionary(member => member.name, member => (Vector2)member.transform.position);
             try
             {
@@ -78,7 +79,7 @@ namespace LocalTanks.Tests
                 float nextProbe = startedAt + 50f;
                 while (Time.time - startedAt < BattleSeconds)
                 {
-                    foreach (TeamMember member in director.SpawnedMembers)
+                    foreach (TeamMember member in bots)
                     {
                         if (member == null || !lastSeen.ContainsKey(member.name)) continue;
                         Vector2 now = member.transform.position;
@@ -88,9 +89,9 @@ namespace LocalTanks.Tests
                     // Track the closest the two sides ever come. A battle that never starts and a battle
                     // that starts and then stalls look identical in an end-of-run snapshot, and this is
                     // what separates them.
-                    foreach (TeamMember ally in director.SpawnedMembers.Where(item => item != null && item.Team == TeamId.TeamA))
+                    foreach (TeamMember ally in bots.Where(item => item.Team == TeamId.TeamA))
                     {
-                        foreach (TeamMember enemy in director.SpawnedMembers.Where(item => item != null && item.Team == TeamId.TeamB))
+                        foreach (TeamMember enemy in bots.Where(item => item.Team == TeamId.TeamB))
                         {
                             closestEver = Mathf.Min(closestEver,
                                 Vector2.Distance(ally.transform.position, enemy.transform.position));
@@ -100,8 +101,8 @@ namespace LocalTanks.Tests
                     if (Time.time >= nextProbe)
                     {
                         nextProbe += 50f;
-                        Vector2 a = Centre(director, TeamId.TeamA);
-                        Vector2 b = Centre(director, TeamId.TeamB);
+                        Vector2 a = Centre(bots, TeamId.TeamA);
+                        Vector2 b = Centre(bots, TeamId.TeamB);
                         int health = director.SpawnedMembers
                             .Where(member => member != null && member.Health != null)
                             .Sum(member => member.Health.CurrentHitPoints);
@@ -123,12 +124,12 @@ namespace LocalTanks.Tests
             // likely to produce: thousands of obstacles and a coarse grid.
             List<string> stuck = new List<string>();
             List<string> movements = new List<string>();
-            foreach (TeamMember member in director.SpawnedMembers)
+            foreach (TeamMember member in bots)
             {
                 if (member == null || !start.TryGetValue(member.name, out Vector2 origin)) continue;
                 float travelled = Vector2.Distance(origin, member.transform.position);
                 movements.Add($"{member.name}={travelled:0.#}");
-                if (travelled < 1f) stuck.Add($"{member.name} moved {travelled:0.##} m");
+                if (travelled < 1f) stuck.Add($"{member.name} moved {travelled:0.##} world units");
             }
 
             Debug.Log("  displacement per tank: " + string.Join(", ", movements.OrderBy(item => item)));
@@ -164,6 +165,15 @@ namespace LocalTanks.Tests
             }
 
             Debug.Log("  route progress: " + string.Join(" | ", routeProgress));
+
+            List<string> repeatedRouteAssignments = bots
+                .Select(member => member.GetComponent<CombatTankAI>())
+                .Where(ai => ai != null && ai.RouteContinuationCount > ai.RoutePoints.Length + 4)
+                .Select(ai => $"{ai.name}: {ai.RouteContinuationCount} assignments for {ai.RoutePoints.Length} points")
+                .ToList();
+            Assert.That(repeatedRouteAssignments, Is.Empty,
+                "Re-evaluating an unfinished route must not recreate the same destination:\n- " +
+                string.Join("\n- ", repeatedRouteAssignments));
 
             // Whether the first route point is even reachable. A destination inside a solid obstacle can
             // never be satisfied, and a tank sent to one circles it for the whole battle while reporting a
@@ -263,16 +273,16 @@ namespace LocalTanks.Tests
             // How close the two sides ever came. A battle with no damage either means nobody met, or
             // means they met and could not shoot, and those need different fixes.
             float closest = float.MaxValue;
-            foreach (TeamMember ally in director.SpawnedMembers.Where(item => item != null && item.Team == TeamId.TeamA))
+            foreach (TeamMember ally in bots.Where(item => item.Team == TeamId.TeamA))
             {
-                foreach (TeamMember enemy in director.SpawnedMembers.Where(item => item != null && item.Team == TeamId.TeamB))
+                foreach (TeamMember enemy in bots.Where(item => item.Team == TeamId.TeamB))
                 {
                     closest = Mathf.Min(closest, Vector2.Distance(ally.transform.position, enemy.transform.position));
                 }
             }
 
-            Vector2 allyCentre = Centre(director, TeamId.TeamA);
-            Vector2 enemyCentre = Centre(director, TeamId.TeamB);
+            Vector2 allyCentre = Centre(bots, TeamId.TeamA);
+            Vector2 enemyCentre = Centre(bots, TeamId.TeamB);
             float separation = Vector2.Distance(allyCentre, enemyCentre);
             Debug.Log($"Arena playability after {BattleSeconds:0} s: {director.TeamAAlive} vs {director.TeamBAlive} alive, " +
                       $"total health {totalHealth}, closest approach {closest:0.#} units, " +
@@ -286,6 +296,9 @@ namespace LocalTanks.Tests
                 $"The teams barely closed: {startSeparation:0.#} units apart at the start, {separation:0.#} " +
                 $"after {BattleSeconds:0} s. On this field a view range of {director.SpawnedMembers[0].Definition.viewRange:0.#} " +
                 "units covers a few percent of the width, so the sides never reach each other.");
+            Assert.That(totalHealth, Is.LessThan(startHealth),
+                $"The bots traversed the arena but never started a fight in {BattleSeconds:0} s; " +
+                $"closest approach was {closest:0.#} units and total health stayed at {totalHealth}.");
 
             UnityEngine.Random.state = previousRandomState;
             Time.captureDeltaTime = previousCaptureDeltaTime;
@@ -304,8 +317,9 @@ namespace LocalTanks.Tests
                 .Count(agent => agent != null && agent.IsRecoveringFromStall);
         }
 
-        private static Vector2 Centre(BattleDirector director, TeamId team)        {
-            TeamMember[] members = director.SpawnedMembers
+        private static Vector2 Centre(IEnumerable<TeamMember> roster, TeamId team)
+        {
+            TeamMember[] members = roster
                 .Where(member => member != null && member.Team == team)
                 .ToArray();
             if (members.Length == 0) return Vector2.zero;

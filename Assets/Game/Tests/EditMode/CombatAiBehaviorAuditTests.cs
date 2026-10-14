@@ -7,6 +7,26 @@ namespace LocalTanks.Tests
     public sealed class CombatAiBehaviorAuditTests
     {
         [Test]
+        public void DecisionFingerprint_IsStableForTheSameOrderedTrace()
+        {
+            AiDecisionFingerprint first = new AiDecisionFingerprint();
+            AiDecisionFingerprint second = new AiDecisionFingerprint();
+            foreach (AiDecisionFingerprint fingerprint in new[] { first, second })
+            {
+                fingerprint.Append("state", "bot-a", "Advance");
+                fingerprint.Append("target_acquired", "bot-a", "enemy-b");
+                fingerprint.Append("decision", "bot-a", "Hold firing line");
+                fingerprint.Append("fire", "bot-a", "shell=ap sequence=3");
+            }
+
+            Assert.That(first.Value, Is.EqualTo(second.Value));
+            Assert.That(first.Count, Is.EqualTo(4));
+
+            second.Append("state", "bot-a", "Reposition");
+            Assert.That(second.Value, Is.Not.EqualTo(first.Value));
+        }
+
+        [Test]
         public void Auditor_DetectsRapidStateThrashing()
         {
             CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules
