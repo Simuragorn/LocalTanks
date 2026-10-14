@@ -965,7 +965,7 @@ Docs/
 - `KNOWN_ISSUES.md` — подтверждённые неисправности и обходные решения.
 - `BACKLOG.md` — задачи по приоритетам без объявления их выполненными.
 
-Дополнительно в `Docs/` ведутся рабочие документы этапов и подсистем, которые не заменяют перечисленные выше, а раскрывают их: `SPRINT_00N.md` (план и критерии приёмки конкретного этапа), `AI_TESTING.md`, `AI_DUEL_LAB.md`, `AI_PLAYER_TEST_LAB.md`, `AI_TACTICAL_COMBAT_PLAN.md`, `AI_BEHAVIOR_DIAGNOSTIC_*.md`, `MAP_TACTICS.md`, `TANK_REFERENCE.md`, `TANK_BALANCE.md`, `TANK_SPRITE_PROMPTS.md`, `LOCAL_LLM.md`, `WOT_MEDIA_AUDIT.md`, `WOT_TOP_CONFIG_SNAPSHOT.md`. Производные документы (`MAP_TACTICS.md`, `TANK_BALANCE.md`, `WOT_TOP_CONFIG_SNAPSHOT.md`) создаются инструментами и не редактируются вручную.
+Дополнительно в `Docs/` ведутся рабочие документы этапов и подсистем, которые не заменяют перечисленные выше, а раскрывают их: `SPRINT_00N.md` (план и критерии приёмки конкретного этапа), `AI_ROADMAP.md`, `AI_TESTING.md`, `AI_DUEL_LAB.md`, `AI_PLAYER_TEST_LAB.md`, `AI_TACTICAL_COMBAT_PLAN.md`, `AI_BEHAVIOR_DIAGNOSTIC_*.md`, `MAP_TACTICS.md`, `TANK_REFERENCE.md`, `TANK_BALANCE.md`, `TANK_SPRITE_PROMPTS.md`, `LOCAL_LLM.md`, `WOT_MEDIA_AUDIT.md`, `WOT_TOP_CONFIG_SNAPSHOT.md`. Производные документы (`MAP_TACTICS.md`, `TANK_BALANCE.md`, `WOT_TOP_CONFIG_SNAPSHOT.md`) создаются инструментами и не редактируются вручную.
 
 ### Навыки агента
 
