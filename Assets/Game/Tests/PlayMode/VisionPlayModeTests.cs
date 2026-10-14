@@ -223,7 +223,11 @@ namespace LocalTanks.Tests
             roster.Configure(TeamId.TeamA, vision);
             TeamMember ally = CreateTank("Ally", TeamId.TeamA, Vector2.zero, 10f, 0f);
             TeamMember enemy = CreateTank("Enemy", TeamId.TeamB, new Vector2(0f, 5f), 10f, 0f);
+            enemy.VisibilityPresenter.ConfigureHiddenPresentation(true, 0.28f);
             yield return null;
+
+            vision.ForceEvaluateAll();
+            Assert.That(vision.IsVisibleTo(TeamId.TeamA, enemy), Is.True);
 
             Assert.That(roster.EnemiesAlive, Is.EqualTo(1));
             enemy.Health.ApplyDamage(1000);
@@ -232,7 +236,37 @@ namespace LocalTanks.Tests
 
             Assert.That(roster.EnemiesAlive, Is.EqualTo(0));
             Assert.That(roster.Find(enemy).LastKnownHitPoints, Is.EqualTo(0));
+            Assert.That(vision.IsVisibleTo(TeamId.TeamA, enemy), Is.True,
+                "A vehicle destroyed in sight must remain a visible wreck.");
+            Assert.That(enemy.VisibilityPresenter.IsVisible, Is.True);
+            Assert.That(enemy.GetComponent<SpriteRenderer>().color.a, Is.EqualTo(1f).Within(0.01f),
+                "A visible wreck must not use the translucent hidden-tank presentation.");
+
+            Cleanup(systems, ally.gameObject, enemy.gameObject, rules);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator DestroyedUnspottedTank_DoesNotRevealItsWreck()
+        {
+            VisionRules rules = CreateRules();
+            GameObject systems = new GameObject("Systems");
+            TeamVisionSystem vision = systems.AddComponent<TeamVisionSystem>();
+            vision.Configure(rules, TeamId.TeamA);
+            TeamMember ally = CreateTank("Ally", TeamId.TeamA, Vector2.zero, 10f, 0f);
+            TeamMember enemy = CreateTank("HiddenEnemy", TeamId.TeamB, new Vector2(0f, 20f), 10f, 0f);
+            enemy.VisibilityPresenter.ConfigureHiddenPresentation(true, 0.28f);
+            yield return null;
+
+            vision.ForceEvaluateAll();
             Assert.That(vision.IsVisibleTo(TeamId.TeamA, enemy), Is.False);
+            enemy.Health.ApplyDamage(1000);
+            vision.ForceEvaluateAll();
+
+            Assert.That(vision.IsVisibleTo(TeamId.TeamA, enemy), Is.False,
+                "Destroying an unspotted enemy must not disclose its position.");
+            Assert.That(enemy.VisibilityPresenter.IsVisible, Is.False);
+            Assert.That(enemy.GetComponent<SpriteRenderer>().color.a, Is.EqualTo(0.28f).Within(0.01f));
 
             Cleanup(systems, ally.gameObject, enemy.gameObject, rules);
             yield return null;

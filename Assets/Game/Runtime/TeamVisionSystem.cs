@@ -275,12 +275,18 @@ namespace LocalTanks
 
                 TeamId viewingTeam = target.Team == TeamId.TeamA ? TeamId.TeamB : TeamId.TeamA;
                 ContactKey key = new ContactKey(viewingTeam, target);
-                bool visible = target.IsAlive && spottedThisSweep.Contains(key);
                 if (!contacts.TryGetValue(key, out VisionContact contact))
                 {
                     contact = new VisionContact();
                     contacts.Add(key, contact);
                 }
+
+                // A wreck is no longer a scout or a detection target, but it does not vanish when the
+                // vehicle dies in sight. Preserve only an existing visible contact: this keeps the wreck
+                // opaque without revealing an enemy that was destroyed outside the team's vision.
+                bool visible = target.IsAlive
+                    ? spottedThisSweep.Contains(key)
+                    : contact.IsVisible;
 
                 bool changed = contact.IsVisible != visible;
                 contact.IsVisible = visible;
