@@ -58,8 +58,11 @@ namespace LocalTanks.Tests
             // falling back to whatever language happens to be default.
             foreach (string nation in System.Enum.GetNames(typeof(TankNation)))
             {
-                Assert.That(crew.LanguageFor((TankNation)System.Enum.Parse(typeof(TankNation), nation)),
-                    Is.Not.Empty, $"Nation '{nation}' must map to a voice language.");
+                TankNation parsed = (TankNation)System.Enum.Parse(typeof(TankNation), nation);
+                Assert.That(crew.LanguageFor(parsed), Is.Not.Empty,
+                    $"Nation '{nation}' must map to a voice language.");
+                Assert.That(crew.VoiceFor(parsed), Is.Not.Empty,
+                    $"Nation '{nation}' must map to a voice.");
             }
 
             // Pacing is data too: an automatic gun fires several shells a second, and a crew that repeats
@@ -71,47 +74,58 @@ namespace LocalTanks.Tests
         }
 
         [Test]
-        public void CrewVoice_CurrentlySpeaksRussianForEveryNation()
+        public void CrewVoice_SpeaksTheLanguageOfEveryExtractedNation()
         {
             CrewVoiceProfileCatalog crew = BattleAudioProfileValidator.LoadCrewVoiceSource();
 
-            foreach (TankNation nation in System.Enum.GetValues(typeof(TankNation)))
+            // Five national sets are extracted, and each tank nation asks for its own; the British and
+            // French sets are declared and extracted ahead of the nations that will need them.
+            Assert.That(crew.LanguageFor(TankNation.USSR), Is.EqualTo("ru"));
+            Assert.That(crew.LanguageFor(TankNation.Germany), Is.EqualTo("de"));
+            Assert.That(crew.LanguageFor(TankNation.USA), Is.EqualTo("en_us"));
+            foreach (string language in new[] { "ru", "de", "en_gb", "fr", "en_us" })
             {
-                Assert.That(crew.LanguageFor(nation), Is.EqualTo("ru"),
-                    "Only the Russian set is extracted, so every nation must point at it for now.");
+                Assert.That(crew.TryGetLanguage(language, out CrewVoiceLanguage entry), Is.True,
+                    $"Language '{language}' must be declared in the catalog.");
+                Assert.That(entry.bankEntry, Is.Not.Empty);
             }
 
-            Assert.That(crew.ReferencedClipIds(), Does.Contain("crew_not_penetrated_ru"));
-            Assert.That(crew.ReferencedClipIds(), Does.Contain("crew_vehicle_destroyed_ru"));
-            Assert.That(crew.ReferencedClipIds(), Does.Contain("battle_start_ru"),
+            Assert.That(crew.ReferencedClipIds(), Does.Contain("crew_not_penetrated_de_male"));
+            Assert.That(crew.ReferencedClipIds(), Does.Contain("crew_vehicle_destroyed_en_us_male"));
+            Assert.That(crew.ReferencedClipIds(), Does.Contain("battle_start_ru_male"),
                 "Battle start and base capture are crew lines, so they resolve through the same nation map.");
-            Assert.That(crew.ReferencedClipIds(), Does.Contain("base_captured_ru"));
+            Assert.That(crew.ReferencedClipIds(), Does.Contain("base_captured_ru_male"));
         }
 
         [Test]
-        public void CrewVoice_ResolvesTheLanguageSuffixFromTheNation()
+        public void CrewVoice_ResolvesTheLanguageAndVoiceSuffixFromTheNation()
         {
             CrewVoiceProfileCatalog crew = BattleAudioProfileValidator.LoadCrewVoiceSource();
 
-            Assert.That(crew.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.Germany), Is.EqualTo("crew_ricochet_ru"));
+            Assert.That(crew.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.Germany),
+                Is.EqualTo("crew_ricochet_de_male"));
 
-            // Point Germany at German and the very same role asks for a different recording; nothing else
-            // in the game changes, which is the whole point of the scaffolding.
-            CrewVoiceProfileCatalog german = new CrewVoiceProfileCatalog
+            // Point a nation at another language and voice and the very same role asks for a different
+            // recording; nothing else in the game changes, which is the whole point of the scaffolding.
+            CrewVoiceProfileCatalog french = new CrewVoiceProfileCatalog
             {
                 defaultLanguage = "ru",
+                defaultVoice = "male",
                 languages = crew.languages,
                 roles = crew.roles,
                 nations = new[]
                 {
-                    new CrewVoiceNationLanguage { nation = "Germany", language = "de" },
-                    new CrewVoiceNationLanguage { nation = "USSR", language = "ru" },
-                    new CrewVoiceNationLanguage { nation = "USA", language = "ru" }
+                    new CrewVoiceNationBinding { nation = "Germany", language = "fr", voice = "female" },
+                    new CrewVoiceNationBinding { nation = "USSR", language = "ru", voice = "male" },
+                    new CrewVoiceNationBinding { nation = "USA", language = "en_us", voice = "male" }
                 }
             };
 
-            Assert.That(german.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.Germany), Is.EqualTo("crew_ricochet_de"));
-            Assert.That(german.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.USSR), Is.EqualTo("crew_ricochet_ru"));
+            Assert.That(french.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.Germany),
+                Is.EqualTo("crew_ricochet_fr_female"));
+            Assert.That(french.ClipIdFor(CrewVoiceRole.Ricochet, TankNation.USSR),
+                Is.EqualTo("crew_ricochet_ru_male"));
+            Assert.That(french.ReferencedClipIds(), Does.Contain("crew_ricochet_fr_female"));
         }
 
         [Test]
@@ -120,13 +134,14 @@ namespace LocalTanks.Tests
             CrewVoiceProfileCatalog crew = new CrewVoiceProfileCatalog
             {
                 defaultLanguage = "ru",
+                defaultVoice = "male",
                 languages = new[] { new CrewVoiceLanguage { id = "ru", wwiseLanguageId = "1", bankEntry = "ussr/voiceover.bnk" } },
-                roles = new[] { new CrewVoiceRoleBinding { role = "Ricochet", clipIdPattern = "crew_ricochet_{lang}" } },
+                roles = new[] { new CrewVoiceRoleBinding { role = "Ricochet", clipIdPattern = "crew_ricochet_{lang}_{voice}" } },
                 nations = new[]
                 {
-                    new CrewVoiceNationLanguage { nation = "Germany", language = "ru" },
-                    new CrewVoiceNationLanguage { nation = "USSR", language = "ru" },
-                    new CrewVoiceNationLanguage { nation = "USA", language = "fr" }
+                    new CrewVoiceNationBinding { nation = "Germany", language = "ru", voice = "male" },
+                    new CrewVoiceNationBinding { nation = "USSR", language = "ru", voice = "male" },
+                    new CrewVoiceNationBinding { nation = "USA", language = "fr", voice = "male" }
                 }
             };
 
@@ -138,23 +153,41 @@ namespace LocalTanks.Tests
         }
 
         [Test]
-        public void CrewVoice_RejectsAPatternWithoutTheLanguagePlaceholder()
+        public void CrewVoice_RejectsAPatternWithoutTheLanguageOrVoicePlaceholder()
         {
-            CrewVoiceProfileCatalog crew = new CrewVoiceProfileCatalog
+            CrewVoiceProfileCatalog noLanguage = new CrewVoiceProfileCatalog
             {
                 defaultLanguage = "ru",
+                defaultVoice = "male",
                 languages = new[] { new CrewVoiceLanguage { id = "ru", wwiseLanguageId = "1", bankEntry = "ussr/voiceover.bnk" } },
-                roles = new[] { new CrewVoiceRoleBinding { role = "Ricochet", clipIdPattern = "crew_ricochet_ru" } },
+                roles = new[] { new CrewVoiceRoleBinding { role = "Ricochet", clipIdPattern = "crew_ricochet_ru_{voice}" } },
                 nations = new[]
                 {
-                    new CrewVoiceNationLanguage { nation = "Germany", language = "ru" },
-                    new CrewVoiceNationLanguage { nation = "USSR", language = "ru" },
-                    new CrewVoiceNationLanguage { nation = "USA", language = "ru" }
+                    new CrewVoiceNationBinding { nation = "Germany", language = "ru", voice = "male" },
+                    new CrewVoiceNationBinding { nation = "USSR", language = "ru", voice = "male" },
+                    new CrewVoiceNationBinding { nation = "USA", language = "ru", voice = "male" }
                 }
             };
 
-            Assert.That(crew.Validate().Any(error => error.Contains("{lang}")), Is.True,
+            Assert.That(noLanguage.Validate().Any(error => error.Contains("{lang}")), Is.True,
                 "A hardcoded language in the pattern would defeat the whole scaffold.");
+
+            CrewVoiceProfileCatalog noVoice = new CrewVoiceProfileCatalog
+            {
+                defaultLanguage = "ru",
+                defaultVoice = "male",
+                languages = new[] { new CrewVoiceLanguage { id = "ru", wwiseLanguageId = "1", bankEntry = "ussr/voiceover.bnk" } },
+                roles = new[] { new CrewVoiceRoleBinding { role = "Ricochet", clipIdPattern = "crew_ricochet_{lang}_male" } },
+                nations = new[]
+                {
+                    new CrewVoiceNationBinding { nation = "Germany", language = "ru", voice = "male" },
+                    new CrewVoiceNationBinding { nation = "USSR", language = "ru", voice = "male" },
+                    new CrewVoiceNationBinding { nation = "USA", language = "ru", voice = "male" }
+                }
+            };
+
+            Assert.That(noVoice.Validate().Any(error => error.Contains("{voice}")), Is.True,
+                "A hardcoded voice would make the extracted female set unreachable.");
         }
 
         [Test]

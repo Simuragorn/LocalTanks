@@ -1,6 +1,7 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "defaultLanguage": "ru",
+  "defaultVoice": "male",
   "volume": 0.9,
   "repeatCooldownSeconds": 3.0,
   "speechCooldownSeconds": 1.2,
@@ -18,8 +19,20 @@
       "bankEntry": "germany/voiceover.bnk"
     },
     {
-      "id": "en",
-      "displayName": "Английский",
+      "id": "en_gb",
+      "displayName": "Британский",
+      "wwiseLanguageId": "2733768290",
+      "bankEntry": "uk/voiceover.bnk"
+    },
+    {
+      "id": "fr",
+      "displayName": "Французский",
+      "wwiseLanguageId": "2225046800",
+      "bankEntry": "france/voiceover.bnk"
+    },
+    {
+      "id": "en_us",
+      "displayName": "Американский",
       "wwiseLanguageId": "3035750793",
       "bankEntry": "usa/voiceover.bnk"
     }
@@ -27,66 +40,69 @@
   "nations": [
     {
       "nation": "USSR",
-      "language": "ru"
+      "language": "ru",
+      "voice": "male"
     },
     {
       "nation": "Germany",
-      "language": "ru"
+      "language": "de",
+      "voice": "male"
     },
     {
       "nation": "USA",
-      "language": "ru"
+      "language": "en_us",
+      "voice": "male"
     }
   ],
   "roles": [
     {
       "role": "BattleStart",
-      "clipIdPattern": "battle_start_{lang}",
+      "clipIdPattern": "battle_start_{lang}_{voice}",
       "description": "начало боя"
     },
     {
       "role": "BaseCaptured",
-      "clipIdPattern": "base_captured_{lang}",
+      "clipIdPattern": "base_captured_{lang}_{voice}",
       "description": "база захвачена"
     },
     {
       "role": "BaseLost",
-      "clipIdPattern": "crew_base_lost_{lang}",
+      "clipIdPattern": "crew_base_lost_{lang}_{voice}",
       "description": "база потеряна"
     },
     {
       "role": "Penetrated",
-      "clipIdPattern": "crew_penetrated_{lang}",
+      "clipIdPattern": "crew_penetrated_{lang}_{voice}",
       "description": "пробил"
     },
     {
       "role": "NotPenetrated",
-      "clipIdPattern": "crew_not_penetrated_{lang}",
+      "clipIdPattern": "crew_not_penetrated_{lang}_{voice}",
       "description": "не пробил"
     },
     {
       "role": "Ricochet",
-      "clipIdPattern": "crew_ricochet_{lang}",
+      "clipIdPattern": "crew_ricochet_{lang}_{voice}",
       "description": "рикошет"
     },
     {
       "role": "EnemyDestroyedByPlayer",
-      "clipIdPattern": "crew_enemy_destroyed_{lang}",
+      "clipIdPattern": "crew_enemy_destroyed_{lang}_{voice}",
       "description": "противник уничтожен нами"
     },
     {
       "role": "EnemyDestroyed",
-      "clipIdPattern": "crew_enemy_destroyed_by_ally_{lang}",
+      "clipIdPattern": "crew_enemy_destroyed_by_ally_{lang}_{voice}",
       "description": "противник уничтожен союзником"
     },
     {
       "role": "AllyDestroyed",
-      "clipIdPattern": "crew_ally_destroyed_{lang}",
+      "clipIdPattern": "crew_ally_destroyed_{lang}_{voice}",
       "description": "союзник уничтожен нами"
     },
     {
       "role": "VehicleDestroyed",
-      "clipIdPattern": "crew_vehicle_destroyed_{lang}",
+      "clipIdPattern": "crew_vehicle_destroyed_{lang}_{voice}",
       "description": "наша машина уничтожена"
     }
   ]

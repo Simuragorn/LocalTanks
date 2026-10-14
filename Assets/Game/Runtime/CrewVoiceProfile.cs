@@ -34,15 +34,24 @@ namespace LocalTanks
         public string bankEntry;
     }
 
-    /// <summary>Which language a nation's crew speaks. Changing an entry is all a new language needs.</summary>
+    /// <summary>
+    /// Which language a nation's crew speaks and which voice it uses. Both are one data edit: the same
+    /// role is a separate recording per language and per voice, and nothing else in the game changes.
+    /// </summary>
     [Serializable]
-    public sealed class CrewVoiceNationLanguage
+    public sealed class CrewVoiceNationBinding
     {
         public string nation;
         public string language;
+
+        /// <summary>`male` or `female`; empty means the catalog's default voice.</summary>
+        public string voice;
     }
 
-    /// <summary>Maps a role to the clip ID that carries it; `{lang}` becomes the language suffix.</summary>
+    /// <summary>
+    /// Maps a role to the clip ID that carries it; `{lang}` becomes the language suffix and `{voice}`
+    /// the voice suffix, so one pattern covers every extracted set.
+    /// </summary>
     [Serializable]
     public sealed class CrewVoiceRoleBinding
     {
@@ -52,21 +61,30 @@ namespace LocalTanks
     }
 
     /// <summary>
-    /// Crew voice is nation-dependent by design: the same role is a different recording per language, so
-    /// the clip ID carries the language suffix and only the data decides which suffix a vehicle asks for.
-    /// Every nation currently points at the Russian set, because that is the only one extracted — turning
-    /// on German or English is a one-line data change once those clips exist, and the validator refuses to
-    /// let a nation point at a language whose clips were never declared.
+    /// Crew voice is nation-dependent by design: the same role is a different recording per language
+    /// and per voice, so the clip ID carries both suffixes and only the data decides which ones a
+    /// vehicle asks for.
     /// </summary>
+    /// <remarks>
+    /// Each national bank of the installed client branches every battle line on one Wwise switch with
+    /// two values — the speaking crew's sex — so the male and the female take of a line are two
+    /// declarations of the same event, told apart by `variantMatch` in the clip catalog. The runtime
+    /// never sees a switch: it only names a clip ID, which keeps the extracted library independent of
+    /// how the client happens to store its branches.
+    /// </remarks>
     [Serializable]
     public sealed class CrewVoiceProfileCatalog
     {
         public const string ResourceName = "CrewVoiceProfiles";
         public const string SourcePath = "Assets/Game/Resources/CrewVoiceProfiles.json";
         public const string LanguagePlaceholder = "{lang}";
+        public const string VoicePlaceholder = "{voice}";
 
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
         public string defaultLanguage = "ru";
+
+        /// <summary>The voice a nation speaks with when its entry names none.</summary>
+        public string defaultVoice = "male";
 
         /// <summary>Level of every crew line; the player's `Voice` channel scales it further.</summary>
         [Range(0f, 1f)] public float volume = 0.9f;
@@ -86,7 +104,7 @@ namespace LocalTanks
         [Min(0f)] public float speechCooldownSeconds = 1.2f;
 
         public CrewVoiceLanguage[] languages = Array.Empty<CrewVoiceLanguage>();
-        public CrewVoiceNationLanguage[] nations = Array.Empty<CrewVoiceNationLanguage>();
+        public CrewVoiceNationBinding[] nations = Array.Empty<CrewVoiceNationBinding>();
         public CrewVoiceRoleBinding[] roles = Array.Empty<CrewVoiceRoleBinding>();
 
         public static CrewVoiceProfileCatalog Parse(string json)
@@ -116,7 +134,7 @@ namespace LocalTanks
         public string LanguageFor(TankNation nation)
         {
             string name = nation.ToString();
-            foreach (CrewVoiceNationLanguage entry in nations ?? Array.Empty<CrewVoiceNationLanguage>())
+            foreach (CrewVoiceNationBinding entry in nations ?? Array.Empty<CrewVoiceNationBinding>())
             {
                 if (entry != null && string.Equals(entry.nation, name, StringComparison.Ordinal))
                 {
@@ -125,6 +143,21 @@ namespace LocalTanks
             }
 
             return defaultLanguage;
+        }
+
+        /// <summary>The voice a nation's crew speaks with, falling back to the default voice.</summary>
+        public string VoiceFor(TankNation nation)
+        {
+            string name = nation.ToString();
+            foreach (CrewVoiceNationBinding entry in nations ?? Array.Empty<CrewVoiceNationBinding>())
+            {
+                if (entry != null && string.Equals(entry.nation, name, StringComparison.Ordinal))
+                {
+                    return string.IsNullOrWhiteSpace(entry.voice) ? defaultVoice : entry.voice;
+                }
+            }
+
+            return defaultVoice;
         }
 
         public bool TryGetLanguage(string id, out CrewVoiceLanguage language)
@@ -142,18 +175,28 @@ namespace LocalTanks
             return false;
         }
 
-        /// <summary>The clip ID for one role in the nation's language, or an empty string when unknown.</summary>
+        /// <summary>The clip ID for one role in the nation's language and voice, or an empty string.</summary>
         public string ClipIdFor(CrewVoiceRole role, TankNation nation)
         {
-            return ClipIdForLanguage(role, LanguageFor(nation));
+            return ClipIdForLanguage(role, LanguageFor(nation), VoiceFor(nation));
         }
 
         public string ClipIdForLanguage(CrewVoiceRole role, string language)
         {
+            return ClipIdForLanguage(role, language, defaultVoice);
+        }
+
+        public string ClipIdForLanguage(CrewVoiceRole role, string language, string voice)
+        {
             string pattern = PatternFor(role);
-            return string.IsNullOrWhiteSpace(pattern)
-                ? string.Empty
-                : pattern.Replace(LanguagePlaceholder, language ?? defaultLanguage);
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                return string.Empty;
+            }
+
+            return pattern
+                .Replace(LanguagePlaceholder, language ?? defaultLanguage)
+                .Replace(VoicePlaceholder, string.IsNullOrWhiteSpace(voice) ? defaultVoice : voice);
         }
 
         public string DescriptionFor(CrewVoiceRole role)
@@ -186,7 +229,7 @@ namespace LocalTanks
         public string[] UsedLanguages()
         {
             HashSet<string> used = new HashSet<string>(StringComparer.Ordinal) { defaultLanguage };
-            foreach (CrewVoiceNationLanguage entry in nations ?? Array.Empty<CrewVoiceNationLanguage>())
+            foreach (CrewVoiceNationBinding entry in nations ?? Array.Empty<CrewVoiceNationBinding>())
             {
                 if (entry != null && !string.IsNullOrWhiteSpace(entry.language))
                 {
@@ -201,18 +244,45 @@ namespace LocalTanks
             return result;
         }
 
-        /// <summary>Every clip ID the currently used languages ask for, in a stable order.</summary>
+        /// <summary>Every voice some nation actually uses. Only these have to exist locally.</summary>
+        public string[] UsedVoices()
+        {
+            HashSet<string> used = new HashSet<string>(StringComparer.Ordinal);
+            if (!string.IsNullOrWhiteSpace(defaultVoice))
+            {
+                used.Add(defaultVoice);
+            }
+
+            foreach (CrewVoiceNationBinding entry in nations ?? Array.Empty<CrewVoiceNationBinding>())
+            {
+                if (entry != null && !string.IsNullOrWhiteSpace(entry.voice))
+                {
+                    used.Add(entry.voice);
+                }
+            }
+
+            used.Remove(string.Empty);
+            string[] result = new string[used.Count];
+            used.CopyTo(result);
+            Array.Sort(result, StringComparer.Ordinal);
+            return result;
+        }
+
+        /// <summary>Every clip ID the currently used languages and voices ask for, in a stable order.</summary>
         public string[] ReferencedClipIds()
         {
             List<string> ids = new List<string>();
             foreach (string language in UsedLanguages())
             {
-                foreach (CrewVoiceRole role in Enum.GetValues(typeof(CrewVoiceRole)))
+                foreach (string voice in UsedVoices())
                 {
-                    string clipId = ClipIdForLanguage(role, language);
-                    if (!string.IsNullOrWhiteSpace(clipId) && !ids.Contains(clipId))
+                    foreach (CrewVoiceRole role in Enum.GetValues(typeof(CrewVoiceRole)))
                     {
-                        ids.Add(clipId);
+                        string clipId = ClipIdForLanguage(role, language, voice);
+                        if (!string.IsNullOrWhiteSpace(clipId) && !ids.Contains(clipId))
+                        {
+                            ids.Add(clipId);
+                        }
                     }
                 }
             }
@@ -224,7 +294,7 @@ namespace LocalTanks
         public string[] Validate()
         {
             List<string> errors = new List<string>();
-            if (schemaVersion != 1)
+            if (schemaVersion != 2)
                 errors.Add($"Crew voice profile has unsupported schemaVersion {schemaVersion}.");
             if (volume < 0f || volume > 1f)
                 errors.Add($"Crew voice volume is outside 0..1 ({volume}).");
@@ -236,6 +306,8 @@ namespace LocalTanks
                 errors.Add("Crew voice profile has no default language.");
             else if (!TryGetLanguage(defaultLanguage, out CrewVoiceLanguage _))
                 errors.Add($"Crew voice default language '{defaultLanguage}' is not declared in languages.");
+            if (string.IsNullOrWhiteSpace(defaultVoice))
+                errors.Add("Crew voice profile has no default voice.");
 
             string[] roleNames = Enum.GetNames(typeof(CrewVoiceRole));
             foreach (string role in roleNames)
@@ -251,6 +323,13 @@ namespace LocalTanks
                         {
                             errors.Add($"Crew voice role '{role}' must use a clip ID pattern containing " +
                                        $"'{LanguagePlaceholder}'.");
+                        }
+
+                        if (string.IsNullOrWhiteSpace(binding.clipIdPattern) ||
+                            !binding.clipIdPattern.Contains(VoicePlaceholder))
+                        {
+                            errors.Add($"Crew voice role '{role}' must use a clip ID pattern containing " +
+                                       $"'{VoicePlaceholder}'; a hardcoded voice would defeat the scaffold.");
                         }
                     }
                 }
@@ -273,7 +352,7 @@ namespace LocalTanks
             {
                 int matches = 0;
                 string language = null;
-                foreach (CrewVoiceNationLanguage entry in nations ?? Array.Empty<CrewVoiceNationLanguage>())
+                foreach (CrewVoiceNationBinding entry in nations ?? Array.Empty<CrewVoiceNationBinding>())
                 {
                     if (entry != null && string.Equals(entry.nation, nation, StringComparison.Ordinal))
                     {
@@ -298,11 +377,14 @@ namespace LocalTanks
                 }
             }
 
-            foreach (CrewVoiceNationLanguage entry in nations ?? Array.Empty<CrewVoiceNationLanguage>())
+            foreach (CrewVoiceNationBinding entry in nations ?? Array.Empty<CrewVoiceNationBinding>())
             {
                 if (entry == null) continue;
                 if (Array.IndexOf(nationNames, entry.nation) < 0)
                     errors.Add($"Crew voice profile declares unknown nation '{entry.nation}'.");
+                if (!string.IsNullOrWhiteSpace(entry.voice) && !VoiceIdPattern.IsMatch(entry.voice))
+                    errors.Add($"Crew voice nation '{entry.nation}' uses invalid voice '{entry.voice}'; " +
+                               "use lowercase letters or digits, for example 'male' or 'female'.");
             }
 
             foreach (CrewVoiceLanguage language in languages ?? Array.Empty<CrewVoiceLanguage>())
@@ -320,5 +402,6 @@ namespace LocalTanks
         }
 
         private static readonly Regex LanguageIdPattern = new Regex("^[a-z0-9_]+$", RegexOptions.Compiled);
+        private static readonly Regex VoiceIdPattern = new Regex("^[a-z0-9_]+$", RegexOptions.Compiled);
     }
 }

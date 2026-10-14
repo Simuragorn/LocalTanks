@@ -36,6 +36,10 @@ namespace LocalTanks
 
         public bool IsActive => playerMember != null;
         public string Language { get; private set; } = string.Empty;
+
+        /// <summary>The voice the nation's crew speaks with: `male` or `female`.</summary>
+        public string Voice { get; private set; } = string.Empty;
+
         public string LastClipId { get; private set; } = string.Empty;
         public string LastRole { get; private set; } = "реплик ещё не было";
         public int PlayCount { get; private set; }
@@ -143,6 +147,7 @@ namespace LocalTanks
             TankDefinition definition = playerMember.Definition;
             playerNation = definition != null ? definition.nation : TankNation.USSR;
             Language = catalog.LanguageFor(playerNation);
+            Voice = catalog.VoiceFor(playerNation);
 
             if (members != null)
             {
