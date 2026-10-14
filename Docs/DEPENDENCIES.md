@@ -10,15 +10,15 @@
 ## Локальный конвейер спрайтов
 
 - [WoT-Blender-Toolkit](https://github.com/wotcuk/WoT-Blender-Toolkit), commit `7739e42655ae305d6bd3c00eeffedb7fdc6df33d`, лицензия GPL-3.0 — чтение структуры и ресурсов локальных `.pkg` в Blender 4.3.
-- Локальная установка инструмента находится в `Tools/WoTSpritePipeline/ThirdParty/` и исключена из Git; закреплённая ревизия записывается в manifest каждого результата.
-- Путь к установленной игре и Blender хранится только в `Tools/WoTSpritePipeline/config.local.json`.
+- Локальная установка инструмента находится в `Automation/pipelines/WoTSpritePipeline/ThirdParty/` и исключена из Git; закреплённая ревизия записывается в manifest каждого результата.
+- Путь к установленной игре и Blender хранится только в `Automation/pipelines/WoTSpritePipeline/config.local.json`.
 - Пакеты игры, кэш импортёра, Blender-сцены и извлечённые текстуры не являются зависимостями runtime и не передаются в репозиторий. Финальные листы техники также остаются локальными и воспроизводятся конвейером при необходимости.
 - Использование материалов третьей стороны не становится разрешённым из-за технической локальности конвейера; перед любой публикацией требуется отдельное разрешение правообладателя.
 
 ## Локальный конвейер карт
 
 - [wot-space.bin-utils](https://bitbucket.org/SkepticalFox/wot-space.bin-utils), commit `08b226cea3b485935a5118e94d84c3abf908f953`, лицензия WTFPL v2 — разбор секций compiled space (`BWT2`, `BSMI`, `BSMO`, `SpTr`, `BWWa`) и packed XML арены.
-- Закреплённый checkout устанавливается скриптом в `Tools/WoTMapPrimitivePipeline/Local/ThirdParty` и исключён из Git. Unity и runtime игры от parser не зависят.
+- Закреплённый checkout устанавливается скриптом в `Automation/pipelines/WoTMapPrimitivePipeline/Local/ThirdParty` и исключён из Git. Unity и runtime игры от parser не зависят.
 - Конвейер использует штатный Python 3.11+ и стандартную библиотеку; heightmap PNG, water depth DDS и обзорный PNG читаются/создаются без дополнительной графической зависимости.
 - Исходные пакеты и производные семантические карты находятся только локально. Числовая производная карта также не публикуется без разрешения правообладателя.
 
@@ -46,7 +46,7 @@
 - `QuickBMS 0.12.0` и закреплённый `wwise_pck_extractor.bms` commit `ae22a94e33fc981feafd53327ce9d3f4aa6afa0f` — выборочное извлечение Wwise `.pck`.
 - Бинарники устанавливаются в `LocalData/WoTAudioPipeline/ThirdParty`, кэш — в `LocalData/WoTAudioPipeline/Work`; оба каталога исключены из Git.
 - Unity не зависит от этих инструментов во время игры. Подготовленные клипы находятся в игнорируемом `Assets/LocalOnly/Resources/WoTAudio` и воспроизводятся обычным `AudioSource`.
-- Установка и полный воспроизводимый запуск описаны в `Tools/WoTAudioPipeline/README.md`.
+- Установка и полный воспроизводимый запуск описаны в `Automation/pipelines/WoTAudioPipeline/README.md`.
 
 ## Ollama
 

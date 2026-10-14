@@ -73,7 +73,7 @@
 
 Изменено:
 
-- `WeaponDefinition.caliberMm` и `caliberMm` в четырёх определениях орудий; `Tools/WoTDataPipeline` переносит калибр из клиента, поэтому значение не поддерживается вручную;
+- `WeaponDefinition.caliberMm` и `caliberMm` в четырёх определениях орудий; `Automation/pipelines/WoTDataPipeline` переносит калибр из клиента, поэтому значение не поддерживается вручную;
 - `TankArmor.LastImpactPoint` / `LastImpactNormal` — точка и нормаль последнего попадания для визуального слоя; общая структура `ArmorImpactObservation` остаётся записью угрозы ИИ и координат не хранит;
 - `Projectile2D` сообщает о попадании в карту одной строкой через `CombatVfxEmitter`;
 - `BattleDirector` подключает систему и выдаёт каждой машине `TankVfxRig`;

@@ -2,6 +2,8 @@
 
 Одиночная 2D-игра о командных танковых боях с видом сверху. Проект разрабатывается в Unity при совместной работе человека и ИИ.
 
+Новый ИИ-агент начинает с `Docs/README.md` и `Automation/README.md`. Все проектные скиллы и контентные конвейеры находятся только в `Automation/`; внешние одноимённые копии не используются.
+
 ## Запуск текущего прототипа
 
 1. Откройте проект в Unity 6000.6.4f1.
@@ -12,7 +14,7 @@
 
 Боевые параметры находятся в JSON под `Assets/Game/GameData/Definitions`. После их изменения импорт выполняется автоматически; его также можно запустить через `Local Tanks > Data > Reimport Combat Definitions`.
 
-Локальные звуки MS-1 и Leichttraktor воспроизводятся из игнорируемого `Assets/LocalOnly`. Если их нужно восстановить после клонирования или обновления WoT, запустите `Tools/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1`, затем `Local Tanks > Build Combat Assets`; подробности находятся в `Tools/WoTAudioPipeline/README.md`.
+Локальные звуки MS-1 и Leichttraktor воспроизводятся из игнорируемого `Assets/LocalOnly`. Если их нужно восстановить после клонирования или обновления WoT, запустите `Automation/pipelines/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1`, затем `Local Tanks > Build Combat Assets`; подробности находятся в `Automation/pipelines/WoTAudioPipeline/README.md`.
 
 Если префабы, сгенерированные данные или сцена были удалены, выберите `Local Tanks > Build Sprint 002 Prototype`.
 

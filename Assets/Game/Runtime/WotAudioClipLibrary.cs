@@ -28,7 +28,7 @@ namespace LocalTanks
     /// <remarks>
     /// The pipeline writes clips into group folders (`Clips/Mines/Music/...`), while the first vehicle
     /// clips stayed flat in `Clips/`. The manifest it writes next to them is therefore the single source
-    /// of truth for the real path: declaring a clip in `Tools/WoTAudioPipeline/audio_clips.json` and
+    /// of truth for the real path: declaring a clip in `Automation/pipelines/WoTAudioPipeline/audio_clips.json` and
     /// running the pipeline is enough, and no code has to learn a second table of paths. A missing
     /// manifest, a missing clip and a batchmode run all degrade to silence instead of an exception,
     /// because a battle has to stay playable without the local WoT files.

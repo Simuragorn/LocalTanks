@@ -43,7 +43,7 @@ namespace LocalTanks.Editor
             {
                 throw new FileNotFoundException(
                     $"Runtime ground for '{mapId}' is missing. Run " +
-                    "Tools/WoTEnvironmentPipeline/Scripts/Invoke-WoTEnvironmentPipeline.ps1 " +
+                    "Automation/pipelines/WoTEnvironmentPipeline/Scripts/Invoke-WoTEnvironmentPipeline.ps1 " +
                     "-Mode BuildGround before rebuilding the scene.", absolute);
             }
 
@@ -64,7 +64,7 @@ namespace LocalTanks.Editor
             {
                 throw new FileNotFoundException(
                     $"Runtime ground for '{mapId}' is missing. Run " +
-                    "Tools/WoTEnvironmentPipeline/Scripts/Invoke-WoTEnvironmentPipeline.ps1 " +
+                    "Automation/pipelines/WoTEnvironmentPipeline/Scripts/Invoke-WoTEnvironmentPipeline.ps1 " +
                     "-Mode BuildGround before rebuilding the scene.", absolute);
             }
 

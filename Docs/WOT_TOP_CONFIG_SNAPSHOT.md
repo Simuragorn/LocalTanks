@@ -1,6 +1,6 @@
 # Снимок топовых конфигураций World of Tanks
 
-Документ генерируется `Tools/WoTDataPipeline/Scripts/Sync-WoTTopProfiles.ps1` из локального `scripts.pkg`. Числа вручную не редактируются.
+Документ генерируется `Automation/pipelines/WoTDataPipeline/Scripts/Sync-WoTTopProfiles.ps1` из локального `scripts.pkg`. Числа вручную не редактируются.
 
 Клиент-источник: World of Tanks v.2.4.0.2 #966.
 

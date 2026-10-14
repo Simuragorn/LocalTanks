@@ -10,7 +10,7 @@ namespace LocalTanks.Editor
 {
     /// <summary>
     /// Imports a converted World of Tanks arena into Unity. The pipeline under
-    /// <c>Tools/WoTMapPrimitivePipeline</c> owns the conversion; this class owns everything Unity:
+    /// <c>Automation/pipelines/WoTMapPrimitivePipeline</c> owns the conversion; this class owns everything Unity:
     /// the map asset, and later the battle scene built from it.
     /// </summary>
     public static class WoTMapImporter

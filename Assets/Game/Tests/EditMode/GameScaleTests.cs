@@ -68,7 +68,7 @@ namespace LocalTanks.Tests
         [Test]
         public void TheDataPipeline_DoesNotCarryASecondScaleOrAViewRangeDivisor()
         {
-            string conversion = File.ReadAllText("Tools/WoTDataPipeline/vehicle_profiles.json");
+            string conversion = File.ReadAllText("Automation/pipelines/WoTDataPipeline/vehicle_profiles.json");
             Assert.That(conversion, Does.Not.Contain("viewRangeMetresPerUnityUnit"));
             Assert.That(conversion, Does.Not.Contain("guaranteedDetectionRange"));
         }

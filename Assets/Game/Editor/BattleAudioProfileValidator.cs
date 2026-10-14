@@ -21,7 +21,7 @@ namespace LocalTanks.Editor
     {
         public const string SourcePath = BattleAudioProfileCatalog.SourcePath;
         public const string CrewVoiceSourcePath = CrewVoiceProfileCatalog.SourcePath;
-        public const string ClipCatalogPath = "Tools/WoTAudioPipeline/audio_clips.json";
+        public const string ClipCatalogPath = "Automation/pipelines/WoTAudioPipeline/audio_clips.json";
         public const string TacticalSourceFolder = "Assets/Game/GameData/Maps";
 
         [MenuItem("Local Tanks/Data/Validate Battle Audio Profiles")]

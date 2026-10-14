@@ -129,7 +129,7 @@ namespace LocalTanks.Tests
         [Test]
         public void TheDataPipeline_NoLongerWritesAViewRange()
         {
-            string script = File.ReadAllText("Tools/WoTDataPipeline/Scripts/sync_wot_top_profiles.py");
+            string script = File.ReadAllText("Automation/pipelines/WoTDataPipeline/Scripts/sync_wot_top_profiles.py");
             Assert.That(script, Does.Not.Contain("\"viewRange\""));
             Assert.That(script, Does.Not.Contain("\"guaranteedDetectionRange\""));
         }

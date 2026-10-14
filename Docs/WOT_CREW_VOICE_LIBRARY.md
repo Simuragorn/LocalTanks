@@ -64,11 +64,11 @@ Assets/LocalOnly/Resources/WoTAudio/Clips/Universal/CrewVoice/
 Имена не подбирались: они найдены в самом клиенте, в `scripts/client/SoundGroups.pyc`
 (`CREW_GENDER_SWITCHES`, `SWITCH_ext_vo_gender_male`, `SWITCH_ext_vo_gender_female`), и подтверждены
 хэшами — FNV-1 32 бита от имени совпадает с `ulGroupID` и `ulSwitchID` объектов банка. Проверка
-входит в штатный инструмент, а имена лежат в `Tools/WoTAudioPipeline/wwnames.txt`:
+входит в штатный инструмент, а имена лежат в `Automation/pipelines/WoTAudioPipeline/wwnames.txt`:
 
 ```powershell
 # дамп банка лежит в рабочем кэше конвейера и создаётся его же запуском
-python Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py `
+python Automation/pipelines/WoTAudioPipeline/Scripts/inspect_wot_voice.py `
     --dump LocalData/WoTAudioPipeline/Work/Banks/audioww/ussr/banks.txt
 #   ...
 #     2680972683  SWITCH_ext_vo_gender                                         switch
@@ -139,8 +139,8 @@ variantMatch : SWITCH_ext_vo_gender_female
 ## Как воспроизвести
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File Tools/WoTAudioPipeline/Scripts/Setup-WoTAudioPipeline.ps1
-powershell -ExecutionPolicy Bypass -File Tools/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1
+powershell -ExecutionPolicy Bypass -File Automation/pipelines/WoTAudioPipeline/Scripts/Setup-WoTAudioPipeline.ps1
+powershell -ExecutionPolicy Bypass -File Automation/pipelines/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1
 ```
 
 `-Force` переизвлекает банки, TXTP и WAV и нужен после смены привязки события. Обычный повторный
@@ -153,7 +153,7 @@ powershell -ExecutionPolicy Bypass -File Tools/WoTAudioPipeline/Scripts/Invoke-W
 
 1. конвейер завершается кодом 0 и печатает число клипов;
 2. `audio_manifest.json` перечисляет ровно те клипы, что объявлены в
-   `Tools/WoTAudioPipeline/audio_clips.json` (128 из 128), у каждого совпадает группа, существует файл и
+   `Automation/pipelines/WoTAudioPipeline/audio_clips.json` (128 из 128), у каждого совпадает группа, существует файл и
    совпадает SHA-256;
 3. `Local Tanks > Data/Validate Battle Audio Profiles` и Edit Mode тесты подтверждают, что каждый клип,
    который запрашивает игра, объявлен, а `mapId` арены существует;
@@ -185,17 +185,17 @@ powershell -ExecutionPolicy Bypass -File Tools/WoTAudioPipeline/Scripts/Invoke-W
 
 ```powershell
 # языковые ID всех банков, у которых есть voiceover.bnk, и отметка «уже объявлен»
-python Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py
+python Automation/pipelines/WoTAudioPipeline/Scripts/inspect_wot_voice.py
 
 # то же плюс 172 вложенных набора командиров, блогеров и событий
-python Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py --show-special
+python Automation/pipelines/WoTAudioPipeline/Scripts/inspect_wot_voice.py --show-special
 
 # какие имена из wwnames.txt вообще есть в конкретном банке (события и значения свитчей)
-python Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py `
+python Automation/pipelines/WoTAudioPipeline/Scripts/inspect_wot_voice.py `
     --dump LocalData/WoTAudioPipeline/Work/Banks/audioww/ussr/banks.txt
 ```
 
-Языковые ID одиннадцати наций продублированы таблицей в `Tools/WoTAudioPipeline/README.md` (она
+Языковые ID одиннадцати наций продублированы таблицей в `Automation/pipelines/WoTAudioPipeline/README.md` (она
 читается из заголовков `BKHD`), а метод доказательства имён — в `Docs/WOT_MEDIA_AUDIT.md`.
 
 ### Рецепт: добавить национальный набор
@@ -204,12 +204,12 @@ python Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py `
 # 1. Найти банк и языковой ID (шаг выше). Например для Польши: poland/voiceover.bnk, 2614272111.
 
 # 2. Добавить 20 клипов и объявить язык. --dry-run печатает, что будет записано, и ничего не пишет.
-python Tools/WoTAudioPipeline/Scripts/add_crew_voice_language.py `
+python Automation/pipelines/WoTAudioPipeline/Scripts/add_crew_voice_language.py `
     --language pl --folder Polish --bank-entry poland/voiceover.bnk `
     --language-id 2614272111 --display-name "Польский"
 
 # 3. Извлечь. Конвейер сам скачает банк, сгенерирует TXTP обеих веток и декодирует WAV.
-powershell -ExecutionPolicy Bypass -File Tools/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1
+powershell -ExecutionPolicy Bypass -File Automation/pipelines/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1
 
 # 4. Если нация есть в игре — привязать язык и голос в Assets/Game/Resources/CrewVoiceProfiles.json:
 #    { "nation": "Poland", "language": "pl", "voice": "male" }
@@ -231,7 +231,7 @@ powershell -ExecutionPolicy Bypass -File Tools/WoTAudioPipeline/Scripts/Invoke-W
 Убрать набор так же просто, и это защищено от ошибки:
 
 ```powershell
-python Tools/WoTAudioPipeline/Scripts/add_crew_voice_language.py --language pl --remove
+python Automation/pipelines/WoTAudioPipeline/Scripts/add_crew_voice_language.py --language pl --remove
 ```
 
 Скрипт откажется удалять язык, на который указывает нация («language 'de' is bound to Germany»), а
@@ -251,11 +251,11 @@ python Tools/WoTAudioPipeline/Scripts/add_crew_voice_language.py --language pl -
 
 | Что | Файл |
 |---|---|
-| Список клипов, банки, значения свитча | `Tools/WoTAudioPipeline/audio_clips.json` (источник истины) |
+| Список клипов, банки, значения свитча | `Automation/pipelines/WoTAudioPipeline/audio_clips.json` (источник истины) |
 | Язык и голос нации, шаблоны ролей | `Assets/Game/Resources/CrewVoiceProfiles.json` (schema 2) |
-| Подсказки имён для `wwiser` | `Tools/WoTAudioPipeline/wwnames.txt` |
-| Порядок действий для агента | `.dsh/skills/wot-tank-audio/SKILL.md`, шаг 6 |
-| Языковые ID по нациям, поля записи | `Tools/WoTAudioPipeline/README.md` |
+| Подсказки имён для `wwiser` | `Automation/pipelines/WoTAudioPipeline/wwnames.txt` |
+| Порядок действий для агента | `Automation/skills/wot-tank-audio/SKILL.md`, шаг 6 |
+| Языковые ID по нациям, поля записи | `Automation/pipelines/WoTAudioPipeline/README.md` |
 | Метод доказательства имён и языков | `Docs/WOT_MEDIA_AUDIT.md` |
 | Эта документ | `Docs/WOT_CREW_VOICE_LIBRARY.md` |
 

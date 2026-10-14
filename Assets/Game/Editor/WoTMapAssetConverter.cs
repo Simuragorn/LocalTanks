@@ -8,7 +8,7 @@ using UnityEngine;
 namespace LocalTanks.Editor
 {
     /// <summary>
-    /// Reads the authoritative JSON produced by <c>Tools/WoTMapPrimitivePipeline</c> and builds the
+    /// Reads the authoritative JSON produced by <c>Automation/pipelines/WoTMapPrimitivePipeline</c> and builds the
     /// single map asset the scene builder and the runtime read. The source JSON stays the only
     /// maintained description of the arena; this class is a projection of it into Unity types.
     /// </summary>

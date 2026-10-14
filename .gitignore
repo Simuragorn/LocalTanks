@@ -87,9 +87,11 @@ InitTestScene*.unity*
 # Local batchmode test logs and NUnit result files
 /TestResults/
 
-# Local harness state; the project skills under .dsh/skills are tracked on purpose.
-/.dsh/*
-!/.dsh/skills/
+# Local harness state; project-owned agent automation under Automation is tracked on purpose.
+/Automation/*
+!/Automation/README.md
+!/Automation/skills/
+!/Automation/pipelines/
 
 # Addressables default ignores, before user customizations
 /ServerData
@@ -121,11 +123,11 @@ InitTestScene*.unity*
 /LocalOnly/
 /Assets/LocalOnly/
 /Assets/LocalOnly.meta
-/Tools/WoTSpritePipeline/ThirdParty/
-/Tools/WoTSpritePipeline/Local/
-/Tools/WoTSpritePipeline/config.local.json
-/Tools/WoTEnvironmentPipeline/Local/
-/Tools/WoTMapPrimitivePipeline/Local/
+/Automation/pipelines/WoTSpritePipeline/ThirdParty/
+/Automation/pipelines/WoTSpritePipeline/Local/
+/Automation/pipelines/WoTSpritePipeline/config.local.json
+/Automation/pipelines/WoTEnvironmentPipeline/Local/
+/Automation/pipelines/WoTMapPrimitivePipeline/Local/
 
 # Local LLM runtime and model cache. The game can provision these files on the
 # developer machine, but multi-gigabyte third-party binaries/models never enter Git.

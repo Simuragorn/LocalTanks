@@ -16,7 +16,7 @@ namespace LocalTanks.Tests
     {
         private const string GeneratedRoot = "Assets/LocalOnly/WoTGenerated";
 
-        /// <summary>Colour floor that mirrors the mask writer in Tools/WoTSpritePipeline.</summary>
+        /// <summary>Colour floor that mirrors the mask writer in Automation/pipelines/WoTSpritePipeline.</summary>
         private const byte MaskAlphaCutoff = 8;
 
         private static string[] VehicleDirectories()
@@ -40,7 +40,7 @@ namespace LocalTanks.Tests
             string[] vehicles = VehicleDirectories();
             Assert.That(vehicles, Is.Not.Empty,
                 "No generated vehicle with a track mask was found. The local sprite bundle is missing; " +
-                "run Tools/WoTSpritePipeline for at least one vehicle.");
+                "run Automation/pipelines/WoTSpritePipeline for at least one vehicle.");
 
             foreach (string directory in vehicles)
             {

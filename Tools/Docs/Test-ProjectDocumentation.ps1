@@ -47,7 +47,8 @@ if (Test-Path -LiteralPath $statusPath) {
         'Docs/STATUS.md does not name the active execution plan.'
 }
 
-$skillsRoot = Join-Path $ProjectRoot '.dsh/skills'
+$skillsRoot = Join-Path $ProjectRoot 'Automation/skills'
+$pipelinesRoot = Join-Path $ProjectRoot 'Automation/pipelines'
 $allowedFrontmatterKeys = @('name', 'description', 'license', 'allowed-tools', 'metadata')
 $skillDirectories = @(Get-ChildItem -LiteralPath $skillsRoot -Directory | Sort-Object Name)
 $docsIndex = Get-Content -LiteralPath (Join-Path $ProjectRoot 'Docs/README.md') -Raw -Encoding UTF8
@@ -91,16 +92,37 @@ foreach ($skillDirectory in $skillDirectories) {
 }
 
 $pipelinePairs = @{
-    'render-wot-tank-sprite' = 'Tools/WoTSpritePipeline/README.md'
-    'sync-wot-vehicle-data' = 'Tools/WoTDataPipeline/README.md'
-    'wot-tank-audio' = 'Tools/WoTAudioPipeline/README.md'
-    'build-wot-environment-library' = 'Tools/WoTEnvironmentPipeline/README.md'
-    'convert-wot-map-to-primitives' = 'Tools/WoTMapPrimitivePipeline/README.md'
+    'render-wot-tank-sprite' = 'Automation/pipelines/WoTSpritePipeline/README.md'
+    'sync-wot-vehicle-data' = 'Automation/pipelines/WoTDataPipeline/README.md'
+    'wot-tank-audio' = 'Automation/pipelines/WoTAudioPipeline/README.md'
+    'build-wot-environment-library' = 'Automation/pipelines/WoTEnvironmentPipeline/README.md'
+    'convert-wot-map-to-primitives' = 'Automation/pipelines/WoTMapPrimitivePipeline/README.md'
 }
 
 foreach ($entry in $pipelinePairs.GetEnumerator()) {
     Test-Contract (Test-Path -LiteralPath (Join-Path $ProjectRoot $entry.Value) -PathType Leaf) `
         "Skill '$($entry.Key)' points to a missing pipeline README: $($entry.Value)"
+    $skillContent = Get-Content -LiteralPath (Join-Path $skillsRoot "$($entry.Key)/SKILL.md") -Raw -Encoding UTF8
+    $pipelineDirectory = (Split-Path -Parent $entry.Value).Replace('\', '/')
+    Test-Contract ($skillContent -match [regex]::Escape($pipelineDirectory)) `
+        "Skill '$($entry.Key)' does not reference its canonical pipeline: $pipelineDirectory"
+}
+
+Test-Contract (Test-Path -LiteralPath (Join-Path $ProjectRoot 'Automation/README.md') -PathType Leaf) `
+    'The central Automation root has no README.md.'
+Test-Contract (Test-Path -LiteralPath $pipelinesRoot -PathType Container) `
+    'The central Automation/pipelines directory is missing.'
+$automationReadme = Get-Content -LiteralPath (Join-Path $ProjectRoot 'Automation/README.md') -Raw -Encoding UTF8
+$agentRules = Get-Content -LiteralPath (Join-Path $ProjectRoot 'AGENTS.md') -Raw -Encoding UTF8
+Test-Contract ($automationReadme -match 'Automation/skills/' -and $automationReadme -match 'Automation/pipelines/') `
+    'Automation/README.md does not explain both canonical automation directories.'
+Test-Contract ($automationReadme -match 'пользовательских каталогах' -and $automationReadme -match 'Test-ProjectDocumentation\.ps1') `
+    'Automation/README.md does not contain the handover rule or validation command.'
+Test-Contract ($agentRules -match 'Automation/README\.md' -and $agentRules -match 'Automation/skills/' -and $agentRules -match 'Automation/pipelines/') `
+    'AGENTS.md does not force a new agent through the canonical Automation root.'
+foreach ($legacyName in @('WoTSpritePipeline', 'WoTDataPipeline', 'WoTAudioPipeline', 'WoTEnvironmentPipeline', 'WoTMapPrimitivePipeline')) {
+    Test-Contract (-not (Test-Path -LiteralPath (Join-Path $ProjectRoot "Tools/$legacyName"))) `
+        "Legacy pipeline directory still exists outside Automation: Tools/$legacyName"
 }
 
 $markdownFiles = @(

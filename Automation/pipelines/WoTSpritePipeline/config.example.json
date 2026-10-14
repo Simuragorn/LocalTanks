@@ -1,0 +1,19 @@
+﻿{
+  "schemaVersion": 1,
+  "blenderExecutable": "C:\\Program Files\\Blender Foundation\\Blender 4.3\\blender.exe",
+  "wotRoot": "C:\\Games\\World_of_Tanks_EU",
+  "addonPath": "ThirdParty\\WoT-Blender-Toolkit",
+  "localRoot": "Local",
+  "outputRoot": "..\\..\\..\\Assets\\LocalOnly\\WoTGenerated",
+  "render": {
+    "resolution": 1536,
+    "intermediatePixelsPerMeter": 256,
+    "outputPixelsPerMeter": 108,
+    "paddingPixels": 24,
+    "gapPixels": 24,
+    "shadowless": true,
+    "saveBlend": true,
+    "trackMask": true,
+    "trackFeaturePitchMetres": 0.22
+  }
+}
