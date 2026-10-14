@@ -38,6 +38,33 @@ if (-not (Test-Path -LiteralPath $wwiser) -or
 New-Item -ItemType Directory -Force -Path $bankRoot, $mediaRoot, $txtpRoot, $clipRoot | Out-Null
 Copy-Item -LiteralPath (Join-Path $pipelineRoot "wwnames.txt") -Destination (Join-Path $bankRoot "wwnames.txt") -Force
 
+# Windows PowerShell turns each line a native tool writes to its error stream into an error record, and
+# with `$ErrorActionPreference = 'Stop'` a chatty tool like wwiser would abort a perfectly good run at its
+# first banner line. Every native call therefore goes through this helper: all of its output is captured
+# to a log file, the preference is relaxed for the duration, and only the exit code decides the outcome.
+function Invoke-NativeLogged {
+    param(
+        [Parameter(Mandatory = $true)][string]$FilePath,
+        [Parameter(Mandatory = $true)][string[]]$Arguments,
+        [Parameter(Mandatory = $true)][string]$LogPath
+    )
+
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $FilePath @Arguments *> $LogPath
+        return $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previous
+    }
+}
+
+function Get-LogTail([string]$LogPath, [int]$Lines = 20) {
+    if (-not (Test-Path -LiteralPath $LogPath)) { return "" }
+    return (Get-Content -LiteralPath $LogPath -Tail $Lines) -join [Environment]::NewLine
+}
+
 $profile = Get-Content -Raw -LiteralPath (Join-Path $pipelineRoot "audio_clips.json") | ConvertFrom-Json
 if ($profile.schemaVersion -notin @(1, 2)) { throw "Unsupported audio profile schema: $($profile.schemaVersion)" }
 
@@ -149,11 +176,13 @@ function Resolve-BankVersion {
         if (Test-Path -LiteralPath $logPath) { Remove-Item -LiteralPath $logPath -Force }
         Push-Location $probeRoot
         try {
-            & python $wwiser $probeBank -d none -l *> $null
+            $probeExit = Invoke-NativeLogged -FilePath "python" `
+                -Arguments @($wwiser, $probeBank, "-d", "none", "-l") -LogPath (Join-Path $probeRoot "probe.log")
         }
         finally {
             Pop-Location
         }
+        $null = $probeExit
 
         $log = if (Test-Path -LiteralPath $logPath) { Get-Content -Raw -LiteralPath $logPath } else { "" }
         if ($log -notmatch "encrypted bank version|ERRORS!|SKIPS!|unknown bank version" -and
@@ -271,8 +300,13 @@ foreach ($clip in $profile.clips) {
         if (-not [string]::IsNullOrWhiteSpace($clip.languageId)) {
             $wwiserArguments += @("-gl", [string]$clip.languageId)
         }
-        & python @wwiserArguments
-        if ($LASTEXITCODE -ne 0) { throw "wwiser failed for event '$($clip.event)'." }
+        # wwiser narrates every bank it parses. The log keeps a long extraction readable; its tail is
+        # printed only when the call really fails.
+        $wwiserLog = Join-Path $workRoot "wwiser-$($clip.clipId).log"
+        $wwiserExit = Invoke-NativeLogged -FilePath "python" -Arguments $wwiserArguments -LogPath $wwiserLog
+        if ($wwiserExit -ne 0) {
+            throw "wwiser failed for event '$($clip.event)'.`n$(Get-LogTail $wwiserLog)"
+        }
         $txtpFiles = @(Get-ChildItem -LiteralPath $eventRoot -Filter "*.txtp" | Sort-Object Name)
     }
 
@@ -280,12 +314,38 @@ foreach ($clip in $profile.clips) {
         throw "Event '$($clip.event)' in bank '$(Get-BankEntry $clip)' produced no TXTP variants. Verify the event name and bank mapping."
     }
 
-    $variantIndex = [int]$clip.variantIndex
-    if ($variantIndex -lt 0 -or $variantIndex -ge $txtpFiles.Count) {
-        throw "Event '$($clip.event)' produced $($txtpFiles.Count) variants; requested index $variantIndex."
+    # An event that branches on a Wwise switch produces one TXTP per switch value, and which branch a
+    # clip wants is the whole point of that clip: a crew line is a different recording for a male and
+    # for a female crew. `variantMatch` names the branch by the switch value it selects, so the choice
+    # survives a change in the order of variants; `variantIndex` stays for events that have no switch.
+    $hasMatch = -not [string]::IsNullOrWhiteSpace($clip.variantMatch)
+    $hasIndex = $null -ne $clip.variantIndex
+    if ($hasMatch -and $hasIndex) {
+        throw "Clip '$($clip.clipId)' declares both variantIndex and variantMatch; declare exactly one."
     }
 
-    $selected = $txtpFiles[$variantIndex]
+    if ($hasMatch) {
+        $variantMatches = @($txtpFiles | Where-Object { $_.Name -match $clip.variantMatch })
+        if ($variantMatches.Count -ne 1) {
+            $available = ($txtpFiles | ForEach-Object { $_.Name }) -join "; "
+            throw "Clip '$($clip.clipId)': variantMatch '$($clip.variantMatch)' selected $($variantMatches.Count) of $($txtpFiles.Count) variants of event '$($clip.event)'. Available variants: $available"
+        }
+
+        $selected = $variantMatches[0]
+        $variantIndex = [array]::IndexOf($txtpFiles, $selected)
+    }
+    else {
+        if (-not $hasIndex) {
+            throw "Clip '$($clip.clipId)' declares neither variantIndex nor variantMatch; the extracted variant would be arbitrary."
+        }
+
+        $variantIndex = [int]$clip.variantIndex
+        if ($variantIndex -lt 0 -or $variantIndex -ge $txtpFiles.Count) {
+            throw "Event '$($clip.event)' produced $($txtpFiles.Count) variants; requested index $variantIndex."
+        }
+
+        $selected = $txtpFiles[$variantIndex]
+    }
     $group = if ([string]::IsNullOrWhiteSpace($clip.group)) { "Vehicles" } else { [string]$clip.group }
     if ([IO.Path]::IsPathRooted($group) -or $group -match '(^|[\\/])\.\.([\\/]|$)') {
         throw "Invalid output group '$group' for '$($clip.clipId)'."
@@ -294,15 +354,20 @@ foreach ($clip in $profile.clips) {
     New-Item -ItemType Directory -Force -Path $destinationRoot | Out-Null
     $destination = Join-Path $destinationRoot "$($clip.clipId).wav"
     if ($Force -or -not (Test-Path -LiteralPath $destination)) {
-        & $vgmstream -i -o $destination $selected.FullName
-        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $destination)) {
-            throw "vgmstream failed for '$($clip.clipId)'."
+        $decodeLog = Join-Path $workRoot "vgmstream-$($clip.clipId).log"
+        $decodeExit = Invoke-NativeLogged -FilePath $vgmstream `
+            -Arguments @("-i", "-o", $destination, $selected.FullName) -LogPath $decodeLog
+        if ($decodeExit -ne 0 -or -not (Test-Path -LiteralPath $destination)) {
+            throw "vgmstream failed for '$($clip.clipId)'.`n$(Get-LogTail $decodeLog)"
         }
     }
     if ($null -ne $clip.trimTrailingSilenceDb) {
-        & python (Join-Path $PSScriptRoot "trim_wav_silence.py") $destination `
-            --threshold-db ([string]$clip.trimTrailingSilenceDb) --tail-ms 150
-        if ($LASTEXITCODE -ne 0) { throw "Silence trimming failed for '$($clip.clipId)'." }
+        $trimLog = Join-Path $workRoot "trim-$($clip.clipId).log"
+        $trimExit = Invoke-NativeLogged -FilePath "python" `
+            -Arguments @((Join-Path $PSScriptRoot "trim_wav_silence.py"), $destination,
+                "--threshold-db", ([string]$clip.trimTrailingSilenceDb), "--tail-ms", "150") `
+            -LogPath $trimLog
+        if ($trimExit -ne 0) { throw "Silence trimming failed for '$($clip.clipId)'.`n$(Get-LogTail $trimLog)" }
     }
 
     $file = Get-Item -LiteralPath $destination
@@ -317,6 +382,7 @@ foreach ($clip in $profile.clips) {
         event = $clip.event
         variantIndex = $variantIndex
         variantCount = $txtpFiles.Count
+        variantMatch = if ($hasMatch) { [string]$clip.variantMatch } else { $null }
         selectedTxtp = $selected.Name
         usage = $clip.usage
         trimTrailingSilenceDb = if ($null -eq $clip.trimTrailingSilenceDb) { $null } else { [double]$clip.trimTrailingSilenceDb }
@@ -333,7 +399,27 @@ $manifest = [ordered]@{
     wwiseBankVersion = $bankVersion
     clips = $manifestClips
 }
-$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $outputRoot "audio_manifest.json") -Encoding utf8
+# Written without a byte-order mark on purpose: Unity loads this file as a TextAsset and parses it with
+# JsonUtility, and a leading BOM is not part of the JSON document.
+$manifestJson = $manifest | ConvertTo-Json -Depth 8
+[IO.File]::WriteAllText((Join-Path $outputRoot "audio_manifest.json"), $manifestJson, (New-Object Text.UTF8Encoding($false)))
+
+# A renamed or retired clip leaves its WAV behind, and a stale file next to the manifest is the kind of
+# silent difference that makes a local cache stop matching the catalog. Only files under the clip root
+# are considered, and only ones this manifest does not name.
+$expected = @{}
+foreach ($entry in $manifestClips) { $expected[(Split-Path -Leaf $entry.relativePath)] = $true }
+$removed = 0
+foreach ($stale in Get-ChildItem -LiteralPath $clipRoot -Filter "*.wav" -File -Recurse) {
+    if ($expected.ContainsKey($stale.Name)) { continue }
+    $resolved = $stale.FullName
+    if (-not $resolved.StartsWith($clipRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove a WAV outside the clip root: $resolved"
+    }
+    Remove-Item -LiteralPath $resolved -Force
+    $removed++
+}
+if ($removed -gt 0) { Write-Host "Removed $removed WAV file(s) that the catalog no longer declares." }
 
 Write-Host "Generated $($manifestClips.Count) local WoT clips in $clipRoot"
 Write-Host "Run Unity's 'Local Tanks > Build Combat Assets' to refresh tank prefabs."

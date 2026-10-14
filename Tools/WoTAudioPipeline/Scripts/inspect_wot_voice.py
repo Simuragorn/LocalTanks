@@ -73,6 +73,27 @@ def read_event_hashes(dump: Path) -> set[int]:
     return hashes
 
 
+def read_switch_hashes(dump: Path) -> set[int]:
+    """Switch group and switch value ids from a wwiser text dump.
+
+    A crew voice line is not one recording: every national bank branches it on the Wwise switch that
+    names the speaking crew's sex, so the two takes of a line are two switch values of one event. Those
+    ids are hashes of names too, and are verified here the same way an event name is.
+    """
+    text = dump.read_text(encoding="utf-8", errors="ignore")
+    hashes: set[int] = set()
+    for match in re.finditer(r"(?:tid|sid)\s+(?:ulGroupID|ulSwitchID|ulDefaultSwitch|SwitchGroupID)\s*=\s*(\d+)", text):
+        hashes.add(int(match.group(1)))
+    return hashes
+
+
+def read_hint_names(path: Path) -> list[str]:
+    """Every name the project claims to know, from the hint file the pipeline copies into its work bank."""
+    if not path.exists():
+        return []
+    return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
 def read_language_ids(packages: list[Path]) -> dict[str, dict[str, tuple[int, int]]]:
     """Per bank folder: bank name -> (Wwise language id, media id), read from the BKHD header."""
     found: dict[str, dict[str, tuple[int, int]]] = {}
@@ -100,6 +121,15 @@ def declared_clips(project_root: Path) -> tuple[set[str], set[str]]:
     clips = {clip["clipId"] for clip in catalog["clips"]}
     events = {clip.get("event", "") for clip in catalog["clips"]}
     return clips, events
+
+
+def declared_bank_entries(project_root: Path) -> set[str]:
+    """Every bank entry some declared clip extracts from, which is what 'extracted' really means."""
+    path = project_root / "Tools/WoTAudioPipeline/audio_clips.json"
+    if not path.exists():
+        return set()
+    catalog = json.loads(path.read_text(encoding="utf-8"))
+    return {clip["bankEntry"] for clip in catalog["clips"] if clip.get("bankEntry")}
 
 
 def main() -> int:
@@ -145,10 +175,27 @@ def main() -> int:
             print(f"--- candidates that are not events in this bank: {len(unverified)} ---")
             for name in unverified:
                 print(f"  {name}")
+
+        # The hint file is what makes a hash readable for wwiser, and every hint in it is a claim about
+        # this installation: an event name or a switch name. Checking them here keeps that claim testable
+        # instead of trusting the file, which matters because a crew line is two switch values, not one.
+        switches = read_switch_hashes(dump)
+        hints = read_hint_names(Path(arguments.project_root) / "Tools/WoTAudioPipeline/wwnames.txt")
+        print(f"--- hints in wwnames.txt: {len(hints)} ---")
+        for name in hints:
+            digest = fnv1(name)
+            if digest in hashes:
+                print(f"  {digest:>12}  {name:<60} event")
+            elif digest in switches:
+                print(f"  {digest:>12}  {name:<60} switch")
+            else:
+                print(f"  {digest:>12}  {name:<60} NOT in this dump")
+        print(f"switch objects in {dump.name}: {len(switches)}")
     else:
         print("no --dump given: names were collected but not verified against a bank")
 
     language_ids = read_language_ids(packages)
+    extracted = declared_bank_entries(Path(arguments.project_root))
     print("--- voice banks per nation (Wwise language id / bank entry) ---")
     for folder in sorted(language_ids):
         entry = language_ids[folder].get("voiceover.bnk")
@@ -156,7 +203,7 @@ def main() -> int:
             continue
         language_id, _ = entry
         bank_entry = f"{folder}/voiceover.bnk"
-        mark = "extracted" if any(clip.startswith("crew_") or clip.startswith("battle_") for clip in clips) and folder == "ussr" else ""
+        mark = "declared" if bank_entry in extracted else ""
         print(f"  {folder:<10} languageId={language_id:<12} {bank_entry:<32} {mark}")
     return 0
 

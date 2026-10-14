@@ -36,3 +36,6 @@ vo_enemy_killed_by_player
 vo_enemy_killed
 vo_ally_killed_by_player
 vo_vehicle_destroyed
+SWITCH_ext_vo_gender
+SWITCH_ext_vo_gender_male
+SWITCH_ext_vo_gender_female
