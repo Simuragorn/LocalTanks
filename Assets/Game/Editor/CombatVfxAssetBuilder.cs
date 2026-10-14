@@ -691,24 +691,26 @@ namespace LocalTanks.Editor
         private static void BuildExhaustSmoke(GameObject root, Dictionary<string, Material> materials)
         {
             // A short dark pulse reads as combustion at the pipe; the larger pale layer carries it away
-            // and dissolves it. The rig still controls both rates from engine load and the start-up puff.
-            ParticleSystem dense = AddSystem(root, "DensePuffs", materials["exhaust"], DustSortingOrder, 2f, 0.55f, 1.05f, 0.16f, 0.3f);
+            // and dissolves it. Both layers move towards the rear of the hull, rather than disappearing
+            // over the engine deck, and retain enough size/opacity to survive the close inspection zoom.
+            // The rig still controls both rates from engine load and the start-up puff.
+            ParticleSystem dense = AddSystem(root, "DensePuffs", materials["exhaust"], DustSortingOrder, 2.4f, 0.72f, 1.38f, 0.22f, 0.4f);
             SetRate(dense, 6f);
-            SetPlanarVelocity(dense, -0.1f, 0.1f, 0.18f, 0.48f);
-            SetStartRotation(dense, -0.42f, 0.42f);
-            SetSizeOverLifetime(dense, 0.72f, 1.75f);
-            SetFade(dense, 0.09f);
-            SetTurbulence(dense, 0.13f, 0.92f);
-            SetStartColor(dense, new Color(0.72f, 0.69f, 0.65f, 0.74f));
+            SetPlanarVelocity(dense, -0.14f, 0.14f, -0.62f, -0.22f);
+            SetStartRotation(dense, Mathf.PI - 0.48f, Mathf.PI + 0.48f);
+            SetSizeOverLifetime(dense, 0.78f, 1.95f);
+            SetFade(dense, 0.07f);
+            SetTurbulence(dense, 0.15f, 0.86f);
+            SetStartColor(dense, new Color(0.68f, 0.65f, 0.61f, 0.88f));
 
-            ParticleSystem drift = AddSystem(root, "Drift", materials["smoke_wisp"], DustSortingOrder - 1, 2f, 0.95f, 1.85f, 0.21f, 0.42f);
+            ParticleSystem drift = AddSystem(root, "Drift", materials["smoke_wisp"], DustSortingOrder - 1, 2.8f, 1.15f, 2.25f, 0.28f, 0.56f);
             SetRate(drift, 6f);
-            SetPlanarVelocity(drift, -0.24f, 0.24f, 0.16f, 0.62f);
-            SetStartRotation(drift, -0.75f, 0.75f);
-            SetSizeOverLifetime(drift, 0.62f, 2.35f);
-            SetFade(drift, 0.14f);
-            SetTurbulence(drift, 0.2f, 0.58f);
-            SetStartColor(drift, new Color(0.52f, 0.5f, 0.47f, 0.3f));
+            SetPlanarVelocity(drift, -0.3f, 0.3f, -0.82f, -0.18f);
+            SetStartRotation(drift, Mathf.PI - 0.82f, Mathf.PI + 0.82f);
+            SetSizeOverLifetime(drift, 0.68f, 2.5f);
+            SetFade(drift, 0.1f);
+            SetTurbulence(drift, 0.22f, 0.54f);
+            SetStartColor(drift, new Color(0.58f, 0.56f, 0.53f, 0.48f));
         }
 
         private static ParticleSystem AddSystem(

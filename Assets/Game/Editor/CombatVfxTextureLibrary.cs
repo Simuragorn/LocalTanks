@@ -119,15 +119,15 @@ namespace LocalTanks.Editor
             // Exhaust is darkest and tightest at the pipe. Successive asymmetric lobes break the old
             // blurred-disc silhouette and leave gaps through which the ground remains visible.
             canvas.SoftEllipse(0.5f, 0.2f, 0.15f, 0.17f,
-                new Color(0.3f, 0.29f, 0.28f, 0.58f), 1.7f, 0.58f, 41, -0.08f);
+                new Color(0.3f, 0.29f, 0.28f, 0.68f), 1.7f, 0.58f, 41, -0.08f);
             canvas.SoftEllipse(0.43f, 0.38f, 0.24f, 0.23f,
-                new Color(0.36f, 0.35f, 0.33f, 0.5f), 1.9f, 0.66f, 42, -0.24f);
+                new Color(0.36f, 0.35f, 0.33f, 0.61f), 1.9f, 0.66f, 42, -0.24f);
             canvas.SoftEllipse(0.6f, 0.56f, 0.3f, 0.27f,
-                new Color(0.42f, 0.41f, 0.39f, 0.36f), 2.1f, 0.74f, 43, 0.26f);
+                new Color(0.42f, 0.41f, 0.39f, 0.48f), 2.1f, 0.74f, 43, 0.26f);
             canvas.SoftEllipse(0.4f, 0.74f, 0.25f, 0.2f,
-                new Color(0.46f, 0.45f, 0.43f, 0.22f), 2.3f, 0.82f, 44, -0.38f);
+                new Color(0.46f, 0.45f, 0.43f, 0.32f), 2.3f, 0.82f, 44, -0.38f);
             canvas.SoftCircle(0.66f, 0.7f, 0.15f,
-                new Color(0.38f, 0.37f, 0.35f, 0.18f), 2.2f, 0.84f, 45);
+                new Color(0.38f, 0.37f, 0.35f, 0.27f), 2.2f, 0.84f, 45);
         }
 
         private static void DrawSpark(VfxPixelCanvas canvas)

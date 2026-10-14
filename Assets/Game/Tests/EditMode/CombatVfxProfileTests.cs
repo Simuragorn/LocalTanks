@@ -96,6 +96,10 @@ namespace LocalTanks.Tests
             Assert.That(heavy.dustRate, Is.GreaterThan(scout.dustRate));
             Assert.That(heavy.markOpacity, Is.GreaterThan(scout.markOpacity));
             Assert.That(heavy.markLimit, Is.GreaterThanOrEqualTo(scout.markLimit));
+            Assert.That(catalog.movementProfiles.All(profile => profile.exhaustIdleRate >= 3f), Is.True,
+                "Even idle exhaust must remain faintly legible at the inspection zoom.");
+            Assert.That(catalog.movementProfiles.All(profile => profile.exhaustLoadedRate >= 13f), Is.True,
+                "Loaded exhaust must form a readable trail instead of isolated transparent particles.");
         }
 
         [Test]
@@ -263,6 +267,19 @@ namespace LocalTanks.Tests
                 Is.EquivalentTo(new[] { "Jet", "Residual" }));
             Assert.That(exhaust.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
                 Is.EquivalentTo(new[] { "DensePuffs", "Drift" }));
+            ParticleSystem denseExhaust = exhaust.GetComponentsInChildren<ParticleSystem>(true)
+                .Single(item => item.name == "DensePuffs");
+            ParticleSystem driftExhaust = exhaust.GetComponentsInChildren<ParticleSystem>(true)
+                .Single(item => item.name == "Drift");
+            Assert.That(denseExhaust.main.startSize.constantMin, Is.GreaterThanOrEqualTo(0.2f),
+                "The dense exhaust pulse must remain legible at the inspection zoom.");
+            Assert.That(denseExhaust.main.startColor.color.a, Is.GreaterThanOrEqualTo(0.8f));
+            Assert.That(driftExhaust.main.startLifetime.constantMax, Is.GreaterThanOrEqualTo(2f),
+                "The pale exhaust layer must persist long enough to form a trail instead of isolated dots.");
+            Assert.That(driftExhaust.main.startColor.color.a, Is.GreaterThanOrEqualTo(0.45f));
+            Assert.That(denseExhaust.velocityOverLifetime.y.constantMax, Is.LessThan(0f));
+            Assert.That(driftExhaust.velocityOverLifetime.y.constantMax, Is.LessThan(0f),
+                "Both exhaust layers must leave towards the rear instead of fading over the engine deck.");
             Assert.That(fire.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
                 Is.EquivalentTo(new[] { "Soot", "Glow", "Tongues", "TallTongues", "Core", "Ember" }));
         }
