@@ -30,6 +30,21 @@ namespace LocalTanks.Tests
             Assert.That(DamagePopupLayer.FormatIndicator("MS-1", 123.6f), Is.EqualTo("MS-1  124 м"));
             Assert.That(DamagePopupLayer.ArrowGlyph(0f), Is.EqualTo("▶"));
             Assert.That(DamagePopupLayer.ArrowGlyph(90f), Is.EqualTo("▲"));
+            Assert.That(DamagePopupLayer.DamageClass(true), Is.EqualTo(DamagePopupLayer.AllyDamageClass));
+            Assert.That(DamagePopupLayer.DamageClass(false), Is.EqualTo(DamagePopupLayer.EnemyDamageClass));
+        }
+
+        [Test]
+        public void DamagePopup_GrowsBeforeItFades()
+        {
+            Assert.That(DamagePopupLayer.PopupScale(0f), Is.EqualTo(0.84f).Within(0.001f));
+            Assert.That(DamagePopupLayer.PopupScale(DamagePopupLayer.PopupGrowthFraction),
+                Is.EqualTo(1.1f).Within(0.001f));
+            Assert.That(DamagePopupLayer.PopupOpacity(0f), Is.EqualTo(1f).Within(0.001f));
+            Assert.That(DamagePopupLayer.PopupOpacity(DamagePopupLayer.PopupGrowthFraction),
+                Is.EqualTo(1f).Within(0.001f));
+            Assert.That(DamagePopupLayer.PopupOpacity(0.75f), Is.LessThan(1f).And.GreaterThan(0f));
+            Assert.That(DamagePopupLayer.PopupOpacity(1f), Is.EqualTo(0f).Within(0.001f));
         }
 
         [Test]

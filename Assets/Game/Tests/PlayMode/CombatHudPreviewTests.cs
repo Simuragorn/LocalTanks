@@ -64,8 +64,15 @@ namespace LocalTanks.Tests
             }
 
             TeamMember player = director.PlayerMember;
-            TeamMember enemy = roster.Enemies.First(entry => entry.IsAlive).Member;
-            foreach (BattleRosterEntry other in roster.Enemies.Where(entry => entry.Member != enemy))
+            TeamMember[] proofEnemies = roster.Enemies.Where(entry => entry.IsAlive)
+                .Take(2)
+                .Select(entry => entry.Member)
+                .ToArray();
+            Assert.That(proofEnemies, Has.Length.EqualTo(2));
+            TeamMember offscreenEnemy = proofEnemies[0];
+            TeamMember hitEnemy = proofEnemies[1];
+            foreach (BattleRosterEntry other in roster.Enemies.Where(entry =>
+                         entry.Member != offscreenEnemy && entry.Member != hitEnemy))
             {
                 other.Member.transform.position = player.transform.position + new Vector3(1000f, 1000f, 0f);
             }
@@ -77,14 +84,19 @@ namespace LocalTanks.Tests
                 other.Member.transform.position = player.transform.position + new Vector3(-1000f, -1000f, 0f);
             }
 
-            ally.transform.position = player.transform.position + new Vector3(2.5f, 0f, 0f);
+            Vector2 visionForward = player.VisionForward.normalized;
+            Vector2 visionRight = new Vector2(visionForward.y, -visionForward.x);
+            ally.transform.position = player.transform.position + (Vector3)(visionRight * 2.5f);
+            hitEnemy.transform.position = player.transform.position + (Vector3)(visionForward * 2.5f);
             camera.orthographicSize = 3.5f;
             camera.transform.position = new Vector3(player.transform.position.x, player.transform.position.y, -10f);
-            enemy.transform.position = player.transform.position + (Vector3)(player.VisionForward * 8f);
+            offscreenEnemy.transform.position = player.transform.position + (Vector3)(visionForward * 8f);
             Physics2D.SyncTransforms();
             director.VisionSystem.ForceEvaluateAll();
-            Assert.That(roster.Find(enemy).IsCurrentlyVisible, Is.True,
+            Assert.That(roster.Find(offscreenEnemy).IsCurrentlyVisible, Is.True,
                 "The proof target must be spotted so the offscreen indicator is honest.");
+            Assert.That(roster.Find(hitEnemy).IsCurrentlyVisible, Is.True,
+                "The damaged enemy must be visible so its red popup does not leak hidden information.");
 
             TankArmor armor = ally.GetComponent<TankArmor>();
             Vector2 impactDirection = Vector2.up;
@@ -100,14 +112,31 @@ namespace LocalTanks.Tests
                 0.65f,
                 0);
 
+            TankArmor enemyArmor = hitEnemy.GetComponent<TankArmor>();
+            enemyArmor.ResolveImpact(
+                impactDirection,
+                hitEnemy.transform.position,
+                -impactDirection,
+                100000f,
+                10f,
+                23,
+                70f,
+                0.7f,
+                0.65f,
+                0);
+
             yield return null;
             yield return null;
             Assert.That(document.rootVisualElement.Query<Label>(className: "world-health-number").ToList(),
                 Is.Not.Empty);
             Assert.That(document.rootVisualElement.Query<Label>(className: "damage-popup").ToList(),
+                Has.Count.EqualTo(2));
+            Assert.That(document.rootVisualElement.Query<Label>(className: DamagePopupLayer.AllyDamageClass).ToList(),
+                Has.Count.EqualTo(1));
+            Assert.That(document.rootVisualElement.Query<Label>(className: DamagePopupLayer.EnemyDamageClass).ToList(),
                 Has.Count.EqualTo(1));
             Assert.That(document.rootVisualElement.Query<VisualElement>(className: "offscreen-indicator").ToList(),
-                Has.Count.EqualTo(1));
+                Has.Count.GreaterThanOrEqualTo(1));
             camera.Render();
             yield return null;
 

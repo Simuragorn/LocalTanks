@@ -216,12 +216,19 @@
     position: absolute;
     width: 90px;
     height: 28px;
-    color: rgb(255, 226, 117);
     font-size: 22px;
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     -unity-text-outline-width: 1px;
     -unity-text-outline-color: rgba(0, 0, 0, 0.95);
+}
+
+.damage-popup--enemy {
+    color: rgb(255, 82, 82);
+}
+
+.damage-popup--ally {
+    color: rgb(90, 196, 255);
 }
 
 .offscreen-indicator {

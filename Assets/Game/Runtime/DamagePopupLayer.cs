@@ -13,6 +13,9 @@ namespace LocalTanks
     public sealed class DamagePopupLayer : MonoBehaviour
     {
         public const float PopupLifetimeSeconds = 1.25f;
+        public const float PopupGrowthFraction = 0.35f;
+        public const string AllyDamageClass = "damage-popup--ally";
+        public const string EnemyDamageClass = "damage-popup--enemy";
 
         private readonly List<DamagePopup> popups = new List<DamagePopup>();
         private readonly HashSet<TankArmor> subscribedArmor = new HashSet<TankArmor>();
@@ -98,7 +101,9 @@ namespace LocalTanks
                 popup.Label.style.display = DisplayStyle.Flex;
                 popup.Label.style.left = point.x - 45f;
                 popup.Label.style.top = point.y - 38f - progress * 28f;
-                popup.Label.style.opacity = 1f - progress;
+                float scale = PopupScale(progress);
+                popup.Label.style.scale = new Scale(new Vector3(scale, scale, 1f));
+                popup.Label.style.opacity = PopupOpacity(progress);
             }
         }
 
@@ -305,6 +310,7 @@ namespace LocalTanks
             if (point == Vector2.zero && member != null) point = member.transform.position;
             Label label = new Label(FormatDamage(observation.Damage)) { pickingMode = PickingMode.Ignore };
             label.AddToClassList("damage-popup");
+            label.AddToClassList(DamageClass(entry.IsAlly));
             overlay.Add(label);
             popups.Add(new DamagePopup(point, Time.unscaledTime, label));
         }
@@ -364,6 +370,20 @@ namespace LocalTanks
         }
 
         public static string FormatDamage(int damage) => $"-{Mathf.Max(0, damage)}";
+
+        public static string DamageClass(bool isAlly) => isAlly ? AllyDamageClass : EnemyDamageClass;
+
+        public static float PopupScale(float normalizedProgress)
+        {
+            float growth = Mathf.Clamp01(normalizedProgress / PopupGrowthFraction);
+            return Mathf.Lerp(0.84f, 1.1f, Mathf.SmoothStep(0f, 1f, growth));
+        }
+
+        public static float PopupOpacity(float normalizedProgress)
+        {
+            float fade = Mathf.InverseLerp(PopupGrowthFraction, 1f, Mathf.Clamp01(normalizedProgress));
+            return 1f - Mathf.SmoothStep(0f, 1f, fade);
+        }
 
         public static string FormatIndicator(string tankName, float distanceMetres)
         {
