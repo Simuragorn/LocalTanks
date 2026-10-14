@@ -25,16 +25,16 @@
       "bankEntry": "uk/voiceover.bnk"
     },
     {
-      "id": "fr",
-      "displayName": "Французский",
-      "wwiseLanguageId": "2225046800",
-      "bankEntry": "france/voiceover.bnk"
-    },
-    {
       "id": "en_us",
       "displayName": "Американский",
       "wwiseLanguageId": "3035750793",
       "bankEntry": "usa/voiceover.bnk"
+    },
+    {
+      "id": "fr",
+      "displayName": "Французский",
+      "wwiseLanguageId": "2225046800",
+      "bankEntry": "france/voiceover.bnk"
     }
   ],
   "nations": [

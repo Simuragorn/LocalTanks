@@ -13,6 +13,8 @@ Extract only the Wwise events the project actually names, decode them to WAV in 
 - `Tools/WoTAudioPipeline/README.md` — maintained commands and storage contract.
 - `Tools/WoTAudioPipeline/audio_clips.json` — the single list of named vehicle, map and universal events; this is the only place a new event is declared.
 - `Tools/WoTAudioPipeline/Scripts/Invoke-WoTAudioPipeline.ps1` — extraction, bank-version detection, TXTP generation, decoding and manifest.
+- `Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py` — proves event and switch names by hash, and enumerates every voice bank the client ships.
+- `Tools/WoTAudioPipeline/Scripts/add_crew_voice_language.py` — adds or removes a whole national crew voice set (twenty clips) and can declare the language.
 - `Tools/WoTAudioPipeline/Scripts/Setup-WoTAudioPipeline.ps1` — pinned third-party tools.
 - `Tools/WoTAudioPipeline/wwnames.txt` — Wwise name hints copied into the work bank folder.
 - `Docs/WOT_MEDIA_AUDIT.md` — how module → Wwise event mapping was proven for this installation.
@@ -135,8 +137,14 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
 
 6. **Add a language or a voice to the crew voice.** Crew lines live in localized banks (`audioww/<nation>/voiceover.bnk`), so the same role is a different recording per language, and every bank branches each line on the gender switch, so it is also a different recording per voice. The data decides which suffixes a machine asks for: `Assets/Game/Resources/CrewVoiceProfiles.json` schema 2 maps a nation to a `language` and a `voice`, and a role to a clip ID pattern with `{lang}` and `{voice}`.
 
-   1. Take the language ID and bank entry from the table in `Tools/WoTAudioPipeline/README.md` (they are read from the bank headers, not guessed). Five sets are extracted (`ru`, `de`, `en_gb`, `fr`, `en_us`), each with both voices.
-   2. Declare one clip per role **per voice** in `audio_clips.json`, copying an existing entry and changing the `clipId` suffixes, `bankEntry`, `languageId` and `variantMatch`:
+   1. Find the bank and its language ID. All eleven national banks are already verified to share the ten roles and the gender switch, so a national set is a data edit and one pipeline run; `python Tools/WoTAudioPipeline/Scripts/inspect_wot_voice.py` prints every `voiceover.bnk` with its language ID and whether it is declared, and `--show-special` adds the 172 nested commander, event and blogger banks. Language IDs are also tabulated in `Tools/WoTAudioPipeline/README.md`.
+   2. Add the whole set with one command instead of twenty hand-written entries. It copies the roles, switch values, folder shape and trimming from an extracted set, checks that the bank exists in the client, and can declare the language in the profile:
+      ```powershell
+      python Tools/WoTAudioPipeline/Scripts/add_crew_voice_language.py `
+          --language pl --folder Polish --bank-entry poland/voiceover.bnk `
+          --language-id 2614272111 --display-name "Польский" [--dry-run]
+      ```
+      Declare clips by hand only for a different shape: one clip per role **per voice**, with `variantMatch` naming the switch value rather than `variantIndex`.
       ```json
       {
         "clipId": "crew_not_penetrated_de_female",
@@ -150,8 +158,10 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
         "usage": "voice"
       }
       ```
-   3. Run the pipeline, then point the nation at the new language and voice in `CrewVoiceProfiles.json`. `Local Tanks > Data/Validate Battle Audio Profiles` fails until every clip of every language and voice in use is declared, so a half-finished set cannot ship as silence.
+   3. Run the pipeline, then point the nation at the new language and voice in `CrewVoiceProfiles.json`. `Local Tanks > Data/Validate Battle Audio Profiles` fails until every clip of every language and voice in use is declared, so a half-finished set cannot ship as silence. A nation the game does not have yet cannot be bound: leave the language declared and unused, which the validator accepts, and add the nation to `TankNation` only when it is a gameplay decision.
    4. Keep the `<role>_{lang}_{voice}` naming and never inline a language or a voice in a role pattern: the validator rejects a pattern without `{lang}` or without `{voice}`.
+   5. Remove a set with `--language <id> --remove`; it refuses while a nation still points at the language, and the next pipeline run deletes the WAVs the catalog no longer declares.
+   6. For a nested commander or blogger bank the roles may be named differently and cover only part of the battle, so its event set must be proven by hash first (dump the bank, check candidates, add the confirmed names to `wwnames.txt`) — never assume it matches a national bank. `Docs/WOT_CREW_VOICE_LIBRARY.md`, section "Как добавить ещё одну озвучку", has the full recipe and the file map.
 
 7. **Refresh Unity.** Run `Local Tanks > Build Combat Assets` (or reimport combat definitions) so `TankAudioProfile` and the prefabs are rebuilt from JSON.
 

@@ -95,20 +95,27 @@ def read_hint_names(path: Path) -> list[str]:
 
 
 def read_language_ids(packages: list[Path]) -> dict[str, dict[str, tuple[int, int]]]:
-    """Per bank folder: bank name -> (Wwise language id, media id), read from the BKHD header."""
+    """Per bank folder: bank name -> (Wwise language id, media id), read from the BKHD header.
+
+    The folder is every path segment between `audioww/` and the bank file, so a national bank is
+    `ussr` and a commander or event bank is `bloggers/Cygan` or `HW25/HW25_de_DE_Mailand`. Those
+    nested banks are the other place a crew voice can live, and they are enumerated here so that
+    finding them does not depend on someone remembering their names.
+    """
     found: dict[str, dict[str, tuple[int, int]]] = {}
     for package in packages:
         with zipfile.ZipFile(package) as archive:
             for info in archive.infolist():
                 parts = info.filename.split("/")
-                if len(parts) != 3 or parts[0] != "audioww" or parts[2] not in LANGUAGE_BANKS:
+                if len(parts) < 3 or parts[0] != "audioww" or parts[-1] not in LANGUAGE_BANKS:
                     continue
                 with archive.open(info.filename) as stream:
                     header = stream.read(0x18)
                 if header[:4] != b"BKHD":
                     continue
                 _, media_id, language_id = struct.unpack_from("<III", header, 8)
-                found.setdefault(parts[1], {})[parts[2]] = (language_id, media_id)
+                folder = "/".join(parts[1:-1])
+                found.setdefault(folder, {})[parts[-1]] = (language_id, media_id)
     return found
 
 
@@ -139,6 +146,8 @@ def main() -> int:
     parser.add_argument("--dump", help="wwiser text dump of the bank whose events must be verified")
     parser.add_argument("--pattern", default=r"(?:ev_wt_)?vo_[a-z0-9_]+")
     parser.add_argument("--show-unverified", action="store_true")
+    parser.add_argument("--show-special", action="store_true",
+                        help="list the nested commander, event and blogger voice banks as well")
     arguments = parser.parse_args()
 
     wot_root = Path(arguments.wot_root)
@@ -196,8 +205,10 @@ def main() -> int:
 
     language_ids = read_language_ids(packages)
     extracted = declared_bank_entries(Path(arguments.project_root))
-    print("--- voice banks per nation (Wwise language id / bank entry) ---")
-    for folder in sorted(language_ids):
+    national = sorted(folder for folder in language_ids if "/" not in folder)
+    special = sorted(folder for folder in language_ids if "/" in folder)
+    print("--- national voice banks (Wwise language id / bank entry) ---")
+    for folder in national:
         entry = language_ids[folder].get("voiceover.bnk")
         if entry is None:
             continue
@@ -205,6 +216,19 @@ def main() -> int:
         bank_entry = f"{folder}/voiceover.bnk"
         mark = "declared" if bank_entry in extracted else ""
         print(f"  {folder:<10} languageId={language_id:<12} {bank_entry:<32} {mark}")
+    print(f"--- other voice banks: {len(special)} commander, event and blogger sets ---")
+    if arguments.show_special:
+        for folder in special:
+            entry = language_ids[folder].get("voiceover.bnk")
+            if entry is None:
+                continue
+            language_id, _ = entry
+            bank_entry = f"{folder}/voiceover.bnk"
+            mark = "declared" if bank_entry in extracted else ""
+            print(f"  {folder:<40} languageId={language_id:<12} {mark}")
+    else:
+        print("  pass --show-special to list them; they hold the same kind of localized crew lines "
+              "under their own bank folders")
     return 0
 
 
