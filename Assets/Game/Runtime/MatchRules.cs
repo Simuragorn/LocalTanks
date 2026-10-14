@@ -22,6 +22,12 @@ namespace LocalTanks
     [Serializable]
     public sealed class MatchRules
     {
+        /// <summary>Authored fallback seed; a command-line test may replace it before the match starts.</summary>
+        public int randomSeed = 1701;
+
+        /// <summary>Armor limits and independent penetration/damage ranges used by every shot.</summary>
+        public CombatRules combat = new CombatRules();
+
         /// <summary>Battle length in seconds. The match ends in a draw when it expires.</summary>
         [Min(1f)] public float timeLimitSeconds = 900f;
 
@@ -41,6 +47,15 @@ namespace LocalTanks
             if (timeLimitSeconds < 1f)
             {
                 errors.Add($"{owner} time limit must be at least one second, found {timeLimitSeconds}.");
+            }
+
+            if (combat == null)
+            {
+                errors.Add($"{owner} combat rules are missing.");
+            }
+            else
+            {
+                errors.AddRange(combat.Validate(owner + " combat rules:"));
             }
 
             return errors.ToArray();

@@ -48,7 +48,12 @@ namespace LocalTanks
             int count = catalog?.cases?.Length ?? 0;
             if (count <= 0) return;
             int caseIndex = (requestedCaseIndex % count + count) % count;
-            UnityEngine.Random.InitState(catalog.cases[caseIndex].seed);
+            int caseSeed = catalog.cases[caseIndex].seed;
+            UnityEngine.Random.InitState(caseSeed);
+            // The case seed owns every reproducible decision in this duel, including the match-wide shot
+            // stream that BattleDirector creates in Start after every Awake has completed.
+            if (director != null && director.Scenario != null && director.Scenario.rules != null)
+                director.Scenario.rules.randomSeed = caseSeed;
         }
 
         /// <summary>

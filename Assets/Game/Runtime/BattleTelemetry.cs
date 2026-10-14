@@ -387,11 +387,33 @@ namespace LocalTanks
         }
 
         /// <summary>Records a shot. Called by the weapon path so no sampling can miss a shot.</summary>
-        public void RecordShot(TeamMember shooter, TeamMember victim, string outcome, int damage, string shellId)
+        public void RecordFire(TeamMember shooter, string shellId, ShotRandomization randomization)
+        {
+            if (!recording || shooter == null) return;
+            TankTelemetryTrack track = Register(shooter);
+            string detail = $"shell={shellId} sequence={randomization.Sequence} " +
+                            $"penetrationMultiplier={Number(randomization.PenetrationMultiplier)} " +
+                            $"damageMultiplier={Number(randomization.DamageMultiplier)}";
+            AddEvent(Time.time - startedAt, "fire", track.id, track.name, detail);
+        }
+
+        /// <summary>Records the impact without rolling again; both multipliers came from the original fire.</summary>
+        public void RecordShot(
+            TeamMember shooter,
+            TeamMember victim,
+            string outcome,
+            int damage,
+            string shellId,
+            ShotRandomization randomization = default,
+            float penetrationChance = 0f)
         {
             if (!recording || shooter == null) return;
             TankTelemetryTrack track = Register(shooter);
             string detail = $"{outcome} dmg={damage} shell={shellId} " +
+                            $"sequence={randomization.Sequence} " +
+                            $"penetrationMultiplier={Number(randomization.PenetrationMultiplier)} " +
+                            $"damageMultiplier={Number(randomization.DamageMultiplier)} " +
+                            $"penetrationChance={Number(penetrationChance)} " +
                             $"at {Round(victim != null ? victim.transform.position.x : 0f)}," +
                             $"{Round(victim != null ? victim.transform.position.y : 0f)}";
             AddEvent(Time.time - startedAt, "shot", track.id, track.name, detail);
@@ -472,6 +494,7 @@ namespace LocalTanks
             return new StringBuilder()
                 .Append('{')
                 .Append($"\"scene\":\"{Escape(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name)}\",")
+                .Append($"\"randomSeed\":{(battle != null ? battle.RandomSeed : 0)},")
                 .Append($"\"seconds\":{Round(elapsed).ToString(CultureInfo.InvariantCulture)},")
                 .Append($"\"samples\":{samples.Count},")
                 .Append($"\"events\":{events.Count},")

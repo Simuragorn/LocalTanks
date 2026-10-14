@@ -65,7 +65,10 @@ namespace LocalTanks
             float ricochetSpeedMultiplier,
             float ricochetPenetrationMultiplier,
             int remainingRicochets,
-            float minimumCosine = ArmorMath.DefaultMinimumCosine)
+            float minimumCosine = ArmorMath.DefaultMinimumCosine,
+            float basePenetration = -1f,
+            float penetrationRandomMinimum = 1f,
+            float penetrationRandomMaximum = 1f)
         {
             ProjectileDirection = projectileDirection;
             SurfaceNormal = surfaceNormal;
@@ -78,6 +81,9 @@ namespace LocalTanks
             RicochetPenetrationMultiplier = ricochetPenetrationMultiplier;
             RemainingRicochets = remainingRicochets;
             MinimumCosine = minimumCosine;
+            BasePenetration = basePenetration >= 0f ? basePenetration : penetration;
+            PenetrationRandomMinimum = penetrationRandomMinimum;
+            PenetrationRandomMaximum = penetrationRandomMaximum;
         }
 
         public Vector2 ProjectileDirection { get; }
@@ -91,6 +97,9 @@ namespace LocalTanks
         public float RicochetPenetrationMultiplier { get; }
         public int RemainingRicochets { get; }
         public float MinimumCosine { get; }
+        public float BasePenetration { get; }
+        public float PenetrationRandomMinimum { get; }
+        public float PenetrationRandomMaximum { get; }
     }
 
     public readonly struct ImpactResult
@@ -100,6 +109,7 @@ namespace LocalTanks
             ArmorZone zone,
             float impactAngle,
             float effectiveArmor,
+            float penetrationChance,
             Vector2 outgoingDirection,
             float remainingPenetration,
             float outgoingSpeed)
@@ -108,6 +118,7 @@ namespace LocalTanks
             Zone = zone;
             ImpactAngle = impactAngle;
             EffectiveArmor = effectiveArmor;
+            PenetrationChance = penetrationChance;
             OutgoingDirection = outgoingDirection;
             RemainingPenetration = remainingPenetration;
             OutgoingSpeed = outgoingSpeed;
@@ -117,9 +128,24 @@ namespace LocalTanks
         public ArmorZone Zone { get; }
         public float ImpactAngle { get; }
         public float EffectiveArmor { get; }
+        public float PenetrationChance { get; }
         public Vector2 OutgoingDirection { get; }
         public float RemainingPenetration { get; }
         public float OutgoingSpeed { get; }
+    }
+
+    public readonly struct ArmorProjection
+    {
+        public ArmorProjection(ArmorZone zone, float impactAngle, float effectiveArmor)
+        {
+            Zone = zone;
+            ImpactAngle = impactAngle;
+            EffectiveArmor = effectiveArmor;
+        }
+
+        public ArmorZone Zone { get; }
+        public float ImpactAngle { get; }
+        public float EffectiveArmor { get; }
     }
 
     public static class ArmorMath
@@ -164,37 +190,80 @@ namespace LocalTanks
         }
     }
 
+    public static class ArmorCombatMath
+    {
+        public static ArmorProjection EvaluateProjection(
+            Vector2 projectileDirection,
+            Vector2 surfaceNormal,
+            Vector2 localSurfaceNormal,
+            ArmorProfile armor,
+            float minimumCosine)
+        {
+            ArmorZone zone = ArmorMath.SelectZone(localSurfaceNormal);
+            float cosine = ArmorMath.IncidenceCosine(projectileDirection, surfaceNormal);
+            return new ArmorProjection(
+                zone,
+                Mathf.Acos(cosine) * Mathf.Rad2Deg,
+                ArmorMath.EffectiveArmor(armor.ThicknessFor(zone), cosine, minimumCosine));
+        }
+
+        /// <summary>Chance that a uniform penetration roll reaches the effective plate thickness.</summary>
+        public static float PenetrationChance(
+            float basePenetration,
+            float effectiveArmor,
+            float minimumMultiplier,
+            float maximumMultiplier)
+        {
+            float safePenetration = Mathf.Max(0f, basePenetration);
+            float minimum = Mathf.Max(0f, Mathf.Min(minimumMultiplier, maximumMultiplier));
+            float maximum = Mathf.Max(minimum, Mathf.Max(minimumMultiplier, maximumMultiplier));
+            if (safePenetration <= 0f) return effectiveArmor <= 0f ? 1f : 0f;
+            if (Mathf.Approximately(minimum, maximum))
+                return safePenetration * minimum >= effectiveArmor ? 1f : 0f;
+
+            float requiredMultiplier = Mathf.Max(0f, effectiveArmor) / safePenetration;
+            return Mathf.Clamp01((maximum - requiredMultiplier) / (maximum - minimum));
+        }
+    }
+
     public static class ImpactResolver
     {
         public static ImpactResult Resolve(ImpactRequest request)
         {
-            ArmorZone zone = ArmorMath.SelectZone(request.LocalSurfaceNormal);
-            float cosine = ArmorMath.IncidenceCosine(request.ProjectileDirection, request.SurfaceNormal);
-            float angle = Mathf.Acos(cosine) * Mathf.Rad2Deg;
-            float effectiveArmor = ArmorMath.EffectiveArmor(
-                request.Armor.ThicknessFor(zone),
-                cosine,
+            ArmorProjection projection = ArmorCombatMath.EvaluateProjection(
+                request.ProjectileDirection,
+                request.SurfaceNormal,
+                request.LocalSurfaceNormal,
+                request.Armor,
                 request.MinimumCosine);
+            float chance = ArmorCombatMath.PenetrationChance(
+                request.BasePenetration,
+                projection.EffectiveArmor,
+                request.PenetrationRandomMinimum,
+                request.PenetrationRandomMaximum);
 
-            if (Mathf.Max(0f, request.Penetration) >= effectiveArmor)
+            if (Mathf.Max(0f, request.Penetration) >= projection.EffectiveArmor)
             {
                 return new ImpactResult(
                     ImpactOutcome.Penetrated,
-                    zone,
-                    angle,
-                    effectiveArmor,
+                    projection.Zone,
+                    projection.ImpactAngle,
+                    projection.EffectiveArmor,
+                    chance,
                     Vector2.zero,
                     0f,
                     0f);
             }
 
-            if (request.RemainingRicochets > 0 && angle >= Mathf.Clamp(request.RicochetAngle, 0f, 90f))
+            if (request.RemainingRicochets > 0 &&
+                projection.ImpactAngle >= Mathf.Clamp(request.RicochetAngle, 0f, 90f))
             {
                 return new ImpactResult(
                     ImpactOutcome.Ricocheted,
-                    zone,
-                    angle,
-                    effectiveArmor,
+                    projection.Zone,
+                    projection.ImpactAngle,
+                    projection.EffectiveArmor,
+                    chance,
                     RicochetMath.Reflect(request.ProjectileDirection, request.SurfaceNormal),
                     Mathf.Max(0f, request.Penetration) * Mathf.Clamp01(request.RicochetPenetrationMultiplier),
                     Mathf.Max(0f, request.Speed) * Mathf.Clamp01(request.RicochetSpeedMultiplier));
@@ -202,9 +271,10 @@ namespace LocalTanks
 
             return new ImpactResult(
                 ImpactOutcome.Blocked,
-                zone,
-                angle,
-                effectiveArmor,
+                projection.Zone,
+                projection.ImpactAngle,
+                projection.EffectiveArmor,
+                chance,
                 Vector2.zero,
                 0f,
                 0f);

@@ -22,6 +22,8 @@ namespace LocalTanks
 
         /// <summary>Surface normal of the newest impact, in world space.</summary>
         public Vector2 LastImpactNormal { get; private set; } = Vector2.up;
+        public int LastAppliedDamage { get; private set; }
+        public TankDefinition Definition => definition;
 
         private void Awake()
         {
@@ -47,7 +49,9 @@ namespace LocalTanks
             float ricochetAngle,
             float ricochetSpeedMultiplier,
             float ricochetPenetrationMultiplier,
-            int remainingRicochets)
+            int remainingRicochets,
+            float basePenetration = -1f,
+            CombatRules combatRules = null)
         {
             if (definition == null)
             {
@@ -55,6 +59,14 @@ namespace LocalTanks
             }
 
             Vector2 localNormal = transform.InverseTransformDirection(surfaceNormal).normalized;
+            CombatRules rules = combatRules ?? new CombatRules
+            {
+                minimumArmorCosine = ArmorMath.DefaultMinimumCosine,
+                penetrationRandomMinimum = 1f,
+                penetrationRandomMaximum = 1f,
+                damageRandomMinimum = 1f,
+                damageRandomMaximum = 1f
+            };
             ImpactResult result = ImpactResolver.Resolve(new ImpactRequest(
                 projectileDirection,
                 surfaceNormal,
@@ -65,13 +77,18 @@ namespace LocalTanks
                 ricochetAngle,
                 ricochetSpeedMultiplier,
                 ricochetPenetrationMultiplier,
-                remainingRicochets));
+                remainingRicochets,
+                rules.minimumArmorCosine,
+                basePenetration >= 0f ? basePenetration : penetration,
+                rules.penetrationRandomMinimum,
+                rules.penetrationRandomMaximum));
 
             int appliedDamage = 0;
             if (result.Outcome == ImpactOutcome.Penetrated && health != null)
             {
                 appliedDamage = health.ApplyDamage(damage).AppliedDamage;
             }
+            LastAppliedDamage = appliedDamage;
 
             LastImpactPoint = impactPoint;
             LastImpactNormal = surfaceNormal.sqrMagnitude > 0f ? surfaceNormal.normalized : Vector2.up;

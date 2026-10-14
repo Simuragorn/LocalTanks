@@ -25,6 +25,8 @@ namespace LocalTanks
         public Transform ControlledTank => controlledTank;
         public bool IsLineOfFireBlocked { get; private set; }
         public bool UiInteractionActive => uiInteractionActive;
+        public bool HasPenetrationSolution { get; private set; }
+        public float CurrentPenetrationChance { get; private set; }
 
         public void Configure(Transform tank)
         {
@@ -63,6 +65,8 @@ namespace LocalTanks
 
         private void OnGUI()
         {
+            HasPenetrationSolution = false;
+            CurrentPenetrationChance = 0f;
             Mouse mouse = Mouse.current;
             bool pointerBlocked = mouse != null && ModalUiState.BlocksPointer(mouse.position.ReadValue());
             Cursor.visible = uiInteractionActive || pointerBlocked || controlledTank == null;
@@ -102,9 +106,22 @@ namespace LocalTanks
             Vector3 gunScreen3 = worldCamera.WorldToScreenPoint(gunPoint);
             Vector2 gunGui = new Vector2(gunScreen3.x, Screen.height - gunScreen3.y);
             float radius = CalculateRadiusPixels(turretPosition, gunPoint, aimDistance, dispersion.CurrentDispersionDegrees);
-            Color stateColor = Color.Lerp(ReloadingColor, ReadyColor, weapon.ReloadProgress);
-            DrawDottedCircle(gunGui, radius, stateColor);
-            DrawReloadSegments(gunGui, radius + 8f, weapon.ReloadProgress, stateColor);
+            Color reloadColor = Color.Lerp(ReloadingColor, ReadyColor, weapon.ReloadProgress);
+            ShellDefinition shell = weapon.CurrentShell;
+            ArmorAimSolution aimSolution = default;
+            HasPenetrationSolution = shell != null && ArmorAimProbe.TryEvaluate(
+                controlledTank,
+                lineOrigin,
+                cursorWorld,
+                shell.penetration,
+                weapon.CombatRules,
+                out aimSolution);
+            CurrentPenetrationChance = HasPenetrationSolution ? aimSolution.PenetrationChance : 0f;
+            Color aimColor = HasPenetrationSolution
+                ? PenetrationChanceColor(CurrentPenetrationChance)
+                : reloadColor;
+            DrawDottedCircle(gunGui, radius, aimColor);
+            DrawReloadSegments(gunGui, radius + 8f, weapon.ReloadProgress, reloadColor);
         }
 
         private void RefreshCursorVisibility()
@@ -116,11 +133,16 @@ namespace LocalTanks
 
         private float CalculateRadiusPixels(Vector2 origin, Vector2 center, float distance, float degrees)
         {
-            float worldRadius = Mathf.Tan(Mathf.Deg2Rad * Mathf.Max(0f, degrees)) * distance;
+            float worldRadius = GunDispersionMath.RadiusAtDistance(distance, degrees);
             Vector2 perpendicular = Vector2.Perpendicular((center - origin).normalized);
             Vector3 centerScreen = worldCamera.WorldToScreenPoint(center);
             Vector3 edgeScreen = worldCamera.WorldToScreenPoint(center + perpendicular * worldRadius);
-            return Mathf.Clamp(Vector2.Distance(centerScreen, edgeScreen), 15f, 150f);
+            return Vector2.Distance(centerScreen, edgeScreen);
+        }
+
+        public static Color PenetrationChanceColor(float chance)
+        {
+            return Color.Lerp(BlockedLineColor, ReadyColor, Mathf.Clamp01(chance));
         }
 
         private static void DrawCross(Vector2 center)

@@ -58,5 +58,19 @@ namespace LocalTanks
             float normalized = (value & 0x00FFFFFFu) / 16777215f;
             return Mathf.Lerp(-dispersionDegrees, dispersionDegrees, normalized);
         }
+
+        /// <summary>
+        /// Radius of the shot cone where it intersects the map plane at the aimed distance. The reticle
+        /// and tests use this exact geometry instead of a separately tuned pixel limit.
+        /// </summary>
+        public static float RadiusAtDistance(float distance, float dispersionDegrees)
+        {
+            return Mathf.Tan(Mathf.Deg2Rad * Mathf.Max(0f, dispersionDegrees)) * Mathf.Max(0f, distance);
+        }
+
+        public static float OffsetAtDistance(float distance, float offsetDegrees)
+        {
+            return Mathf.Abs(Mathf.Tan(Mathf.Deg2Rad * offsetDegrees)) * Mathf.Max(0f, distance);
+        }
     }
 }

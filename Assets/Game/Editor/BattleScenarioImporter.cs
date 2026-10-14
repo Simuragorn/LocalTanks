@@ -39,6 +39,8 @@ namespace LocalTanks.Editor
     [Serializable]
     public sealed class ScenarioRulesJson
     {
+        public int randomSeed;
+        public CombatRules combat;
         public float timeLimitSeconds;
         public bool timeLimitIsDraw;
         public bool friendlyFire;
@@ -157,6 +159,8 @@ namespace LocalTanks.Editor
 
             return new MatchRules
             {
+                randomSeed = source.randomSeed,
+                combat = source.combat,
                 timeLimitSeconds = source.timeLimitSeconds,
                 timeLimitIsDraw = source.timeLimitIsDraw,
                 friendlyFire = source.friendlyFire

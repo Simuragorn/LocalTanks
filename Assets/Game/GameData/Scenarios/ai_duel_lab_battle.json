@@ -4,6 +4,14 @@
   "sceneId": "Battle_RiverCrossing",
   "kind": "AiDuelLab",
   "rules": {
+    "randomSeed": 1701,
+    "combat": {
+      "minimumArmorCosine": 0.1,
+      "penetrationRandomMinimum": 0.75,
+      "penetrationRandomMaximum": 1.25,
+      "damageRandomMinimum": 0.75,
+      "damageRandomMaximum": 1.25
+    },
     "timeLimitSeconds": 900,
     "timeLimitIsDraw": true,
     "friendlyFire": true

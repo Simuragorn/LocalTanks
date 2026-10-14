@@ -60,7 +60,7 @@ namespace LocalTanks
             return new LineOfFireResult(blocked, blocked ? nearest.point : destination);
         }
 
-        private static Transform FindLivingTankAt(Vector2 point)
+        public static Transform FindLivingTankAt(Vector2 point)
         {
             foreach (Collider2D collider in Physics2D.OverlapPointAll(point))
             {

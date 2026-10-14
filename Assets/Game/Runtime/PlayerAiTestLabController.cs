@@ -108,12 +108,34 @@ namespace LocalTanks
             result.id = $"player_ai_test_{settings.seed}";
             result.sceneId = template.sceneId;
             result.kind = BattleScenarioKind.PlayerAiTestLab;
+            result.rules = CloneRules(template.rules, settings.seed);
             result.entries = entries.ToArray();
             string[] scenarioErrors = result.Validate(director.CombatDatabase);
             if (scenarioErrors.Length > 0)
                 throw new InvalidOperationException("Generated Player AI Test Lab scenario is invalid:\n- " +
                                                     string.Join("\n- ", scenarioErrors));
             return result;
+        }
+
+        private static MatchRules CloneRules(MatchRules source, int seed)
+        {
+            MatchRules template = source ?? new MatchRules();
+            CombatRules combat = template.combat ?? new CombatRules();
+            return new MatchRules
+            {
+                randomSeed = seed,
+                timeLimitSeconds = template.timeLimitSeconds,
+                timeLimitIsDraw = template.timeLimitIsDraw,
+                friendlyFire = template.friendlyFire,
+                combat = new CombatRules
+                {
+                    minimumArmorCosine = combat.minimumArmorCosine,
+                    penetrationRandomMinimum = combat.penetrationRandomMinimum,
+                    penetrationRandomMaximum = combat.penetrationRandomMaximum,
+                    damageRandomMinimum = combat.damageRandomMinimum,
+                    damageRandomMaximum = combat.damageRandomMaximum
+                }
+            };
         }
 
         private static BattleScenarioEntry[] OrderedTemplates(

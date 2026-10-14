@@ -10,6 +10,7 @@ namespace LocalTanks
         private float speed;
         private float radius;
         private float penetration;
+        private float nominalPenetration;
         private int damage;
         private float ricochetAngle;
         private float ricochetSpeedMultiplier;
@@ -21,6 +22,10 @@ namespace LocalTanks
         private Collider2D temporarilyIgnoredCollider;
         private MatchRules matchRules;
         private TeamId shooterTeam = TeamId.Neutral;
+        private TeamMember shooterMember;
+        private string shellId = string.Empty;
+        private ShotRandomization randomization = ShotRandomization.Identity;
+        private CombatRules combatRules;
         private bool initialized;
         private readonly ProjectileTravelBudget travelBudget = new ProjectileTravelBudget();
 
@@ -28,6 +33,7 @@ namespace LocalTanks
         public float Speed => speed;
         public float Penetration => penetration;
         public int RemainingRicochets => remainingRicochets;
+        public ShotRandomization Randomization => randomization;
 
         public void Initialize(
             Vector2 travelDirection,
@@ -55,7 +61,18 @@ namespace LocalTanks
             ShellDefinition shell,
             Transform newOwnerRoot,
             MatchRules rules)
-        {            if (shell == null)
+        {
+            Initialize(travelDirection, shell, newOwnerRoot, rules, ShotRandomization.Identity);
+        }
+
+        public void Initialize(
+            Vector2 travelDirection,
+            ShellDefinition shell,
+            Transform newOwnerRoot,
+            MatchRules rules,
+            ShotRandomization shotRandomization)
+        {
+            if (shell == null)
             {
                 throw new System.ArgumentNullException(nameof(shell));
             }
@@ -67,8 +84,12 @@ namespace LocalTanks
                 shell.lifetimeSeconds,
                 shell.maximumRange,
                 newOwnerRoot);
-            penetration = Mathf.Max(0f, shell.penetration);
-            damage = Mathf.Max(0, shell.damage);
+            randomization = shotRandomization;
+            nominalPenetration = Mathf.Max(0f, shell.penetration);
+            penetration = CombatRandomMath.ApplyPenetration(
+                nominalPenetration,
+                randomization.PenetrationMultiplier);
+            damage = CombatRandomMath.ApplyDamage(shell.damage, randomization.DamageMultiplier);
             ricochetAngle = Mathf.Clamp(shell.ricochetAngle, 0f, 90f);
             ricochetSpeedMultiplier = Mathf.Clamp01(shell.ricochetSpeedMultiplier);
             ricochetPenetrationMultiplier = Mathf.Clamp01(shell.ricochetPenetrationMultiplier);
@@ -76,8 +97,10 @@ namespace LocalTanks
             audioProfile = shell.audio;
             crewVoice = FindCrewVoice(newOwnerRoot);
             matchRules = rules;
-            TeamMember shooter = newOwnerRoot != null ? newOwnerRoot.GetComponentInChildren<TeamMember>() : null;
-            shooterTeam = shooter != null ? shooter.Team : TeamId.Neutral;
+            combatRules = rules?.combat ?? new CombatRules();
+            shellId = shell.id ?? string.Empty;
+            shooterMember = newOwnerRoot != null ? newOwnerRoot.GetComponentInChildren<TeamMember>() : null;
+            shooterTeam = shooterMember != null ? shooterMember.Team : TeamId.Neutral;
         }
 
         /// <summary>
@@ -175,7 +198,19 @@ namespace LocalTanks
                     ricochetAngle,
                     ricochetSpeedMultiplier,
                     ricochetPenetrationMultiplier,
-                    remainingRicochets);
+                    remainingRicochets,
+                    nominalPenetration,
+                    combatRules);
+
+                TeamMember victim = armor.GetComponentInParent<TeamMember>();
+                BattleTelemetry.Active?.RecordShot(
+                    shooterMember,
+                    victim,
+                    result.Outcome.ToString(),
+                    armor.LastAppliedDamage,
+                    shellId,
+                    randomization,
+                    result.PenetrationChance);
 
                 CombatAudioEmitter.PlayImpact(audioProfile, result.Outcome, hit.point);
 
@@ -192,6 +227,7 @@ namespace LocalTanks
                 direction = result.OutgoingDirection;
                 speed = result.OutgoingSpeed;
                 penetration = result.RemainingPenetration;
+                nominalPenetration *= ricochetPenetrationMultiplier;
                 remainingRicochets--;
                 temporarilyIgnoredCollider = hit.collider;
                 transform.position = hit.centroid + hit.normal * (radius + 0.002f);

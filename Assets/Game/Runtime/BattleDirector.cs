@@ -44,6 +44,7 @@ namespace LocalTanks
         private float matchElapsed;
         private bool matchEnded;
         private TeamId capturedBy = TeamId.Neutral;
+        private ShotRandomStream shotRandomStream;
 
         /// <summary>A scenario without rules — a laboratory that builds one in code — reads this one instead.</summary>
         private MatchRules fallbackRules;
@@ -84,6 +85,7 @@ namespace LocalTanks
         public float ElapsedSeconds => matchEnded ? matchElapsed : spawned ? Time.time - matchStartedAt : 0f;
 
         public float RemainingSeconds => Mathf.Max(0f, Rules.timeLimitSeconds - ElapsedSeconds);
+        public int RandomSeed => shotRandomStream != null ? shotRandomStream.Seed : Rules.randomSeed;
         public IReadOnlyDictionary<string, BotIdentity> BotIdentities => botIdentities;
         public IReadOnlyList<TankDefinition> SpawnableTankDefinitions => (combatDatabase?.tanks ?? Array.Empty<TankDefinition>())
             .Where(item => item != null && item.availableInGame && CanSpawnTank(item.id))
@@ -257,6 +259,7 @@ namespace LocalTanks
 
             ValidateConfiguration();
             spawned = true;
+            shotRandomStream = new ShotRandomStream(LocalTanksOverrides.RequestedSeed(Rules.randomSeed));
             matchStartedAt = Time.time;
             matchElapsed = 0f;
             matchEnded = false;
@@ -347,7 +350,7 @@ namespace LocalTanks
             {
                 // Friendly fire is a match rule, so it reaches the shell through the weapon that fires it
                 // rather than through a global lookup inside the projectile.
-                weapon.MatchRules = Rules;
+                weapon.ConfigureMatchRules(Rules, shotRandomStream);
             }
 
             membersByEntityId.Add(entry.id, member);
