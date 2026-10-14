@@ -16,16 +16,26 @@ namespace LocalTanks
     public sealed class NavigationDebugOverlay : MonoBehaviour
     {
         [SerializeField] private NavigationMap map;
-        [SerializeField] private bool visible = true;
+        [SerializeField] private bool startVisible;
+
+        private bool visible;
 
         private Texture2D gridTexture;
         private int gridMapVersion = -1;
 
         public bool Visible => visible;
+        public bool StartsVisible => startVisible;
 
-        public void Configure(NavigationMap navigationMap)
+        private void Awake()
+        {
+            visible = startVisible;
+        }
+
+        public void Configure(NavigationMap navigationMap, bool initiallyVisible = false)
         {
             map = navigationMap;
+            startVisible = initiallyVisible;
+            visible = initiallyVisible;
             gridMapVersion = -1;
         }
 

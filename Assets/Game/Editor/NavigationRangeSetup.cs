@@ -359,7 +359,7 @@ namespace LocalTanks.Editor
             cameraObject.AddComponent<PlayerAimReticle>().Configure(player.transform);
 
             NavigationDebugOverlay overlay = cameraObject.AddComponent<NavigationDebugOverlay>();
-            overlay.Configure(map);
+            overlay.Configure(map, true);
         }
 
         private static void CreateInstructions(DestructibleObstacle wall)

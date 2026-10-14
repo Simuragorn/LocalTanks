@@ -1,5 +1,9 @@
+using System.Linq;
+using LocalTanks.Editor;
 using NUnit.Framework;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace LocalTanks.Tests
 {
@@ -25,7 +29,8 @@ namespace LocalTanks.Tests
                 NavigationDebugOverlay overlay = host.AddComponent<NavigationDebugOverlay>();
                 overlay.Configure(map);
 
-                Assert.That(overlay.Visible, Is.True, "The navigation view starts visible.");
+                Assert.That(overlay.Visible, Is.False,
+                    "A battle must start without its developer navigation layer covering the map.");
 
                 Texture2D texture = overlay.BuildGridTexture();
 
@@ -92,6 +97,49 @@ namespace LocalTanks.Tests
                 Assert.That(overlay.Visible, Is.True);
                 overlay.Toggle();
                 Assert.That(overlay.Visible, Is.False, "F2, the button and a test all go through the same state.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(mapObject);
+            }
+        }
+
+        [Test]
+        public void PlayableMaps_StartWithNavigationHidden()
+        {
+            foreach (string sceneName in BattleSceneLayout.KnownMapScenes)
+            {
+                string path = BattleSceneLayout.Path(sceneName);
+                Scene scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+                try
+                {
+                    NavigationDebugOverlay overlay = scene.GetRootGameObjects()
+                        .SelectMany(root => root.GetComponentsInChildren<NavigationDebugOverlay>(true))
+                        .Single();
+                    Assert.That(overlay.StartsVisible, Is.False,
+                        $"Map '{sceneName}' must wait for F2 before showing navigation.");
+                }
+                finally
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+        }
+
+        [Test]
+        public void Configure_CanOptIntoAnInitiallyVisibleDiagnostic()
+        {
+            GameObject host = new GameObject("NavigationOverlayHost");
+            GameObject mapObject = new GameObject("NavigationOverlayMap");
+            try
+            {
+                NavigationDebugOverlay overlay = host.AddComponent<NavigationDebugOverlay>();
+                overlay.Configure(BuildMap(mapObject), true);
+
+                Assert.That(overlay.StartsVisible, Is.True,
+                    "A dedicated navigation laboratory may explicitly keep its diagnostic-first default.");
+                Assert.That(overlay.Visible, Is.True);
             }
             finally
             {

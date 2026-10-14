@@ -454,6 +454,8 @@ namespace LocalTanks.Tests
             GameObject player = GameObject.Find("Navigation_Player");
             TankMotor motor = player.GetComponent<TankMotor>();
             TerrainMotorModifier modifier = player.GetComponent<TerrainMotorModifier>();
+            Assert.That(Object.FindAnyObjectByType<NavigationDebugOverlay>().Visible, Is.True,
+                "The dedicated navigation range may start with its diagnostic visible.");
 
             player.transform.position = map.CellToWorld(new Vector2Int(5, 2));
             yield return new WaitForFixedUpdate();
@@ -476,6 +478,8 @@ namespace LocalTanks.Tests
             NavigationMap map = Object.FindAnyObjectByType<NavigationMap>();
             NavigationAgent[] agents = Object.FindObjectsByType<NavigationAgent>();
             Assert.That(map, Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<NavigationDebugOverlay>().Visible, Is.False,
+                "A playable map must wait for F2 before showing navigation.");
             Assert.That(map.Width, Is.EqualTo(72));
             Assert.That(map.Height, Is.EqualTo(44));
             Vector2Int riverEdge = new Vector2Int(34, 1);

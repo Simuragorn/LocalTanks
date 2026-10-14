@@ -104,8 +104,11 @@ namespace LocalTanks.Tests
             Assert.That(director, Is.Not.Null);
             Assert.That(director.DiagnosticsOverlay, Is.Not.Null,
                 "Without the diagnostics overlay F1 shows no help and F6 no map analysis.");
-            Assert.That(Object.FindAnyObjectByType<NavigationDebugOverlay>(), Is.Not.Null,
+            NavigationDebugOverlay navigation = Object.FindAnyObjectByType<NavigationDebugOverlay>();
+            Assert.That(navigation, Is.Not.Null,
                 "Without this overlay F2 cannot show the navigation grid.");
+            Assert.That(navigation.Visible, Is.False,
+                "A playable map must wait for F2 before showing navigation.");
         }
 
         /// <summary>

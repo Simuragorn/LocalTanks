@@ -11,6 +11,13 @@ namespace LocalTanks
             wall = destructibleWall;
         }
 
+        private void Start()
+        {
+            // This scene exists specifically to inspect pathfinding, so it opts back into the diagnostic
+            // that normal battle maps now keep hidden until F2 is pressed.
+            FindAnyObjectByType<NavigationDebugOverlay>()?.SetVisible(true);
+        }
+
         private void OnGUI()
         {
             string wallState = wall == null
