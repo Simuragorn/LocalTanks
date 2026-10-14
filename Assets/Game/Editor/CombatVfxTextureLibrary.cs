@@ -132,11 +132,16 @@ namespace LocalTanks.Editor
 
         private static void DrawSpark(VfxPixelCanvas canvas)
         {
-            // Sparks are drawn along +Y, which is the axis every effect prefab emits along.
-            Color hot = new Color(1f, 0.95f, 0.72f, 1f);
-            canvas.SoftEllipse(0.5f, 0.5f, 0.045f, 0.34f, hot, 0.8f, 0.25f, 51);
-            canvas.SoftEllipse(0.5f, 0.5f, 0.09f, 0.2f, new Color(1f, 0.88f, 0.55f, 0.6f), 1.4f, 0.3f, 52);
-            canvas.SoftCircle(0.5f, 0.5f, 0.08f, Color.white, 1f, 0f, 53);
+            // The particle renderer stretches this sprite along its velocity. Keep the source narrow,
+            // with a white-hot head and a tapered amber tail, so the result reads as a steel spark
+            // instead of a glowing pebble even when the camera is far from the impact.
+            canvas.SoftEllipse(0.5f, 0.46f, 0.024f, 0.43f,
+                new Color(1f, 0.58f, 0.12f, 0.72f), 1.35f, 0.35f, 51);
+            canvas.SoftEllipse(0.5f, 0.57f, 0.017f, 0.31f,
+                new Color(1f, 0.92f, 0.5f, 0.96f), 0.9f, 0.2f, 52);
+            canvas.SoftEllipse(0.5f, 0.68f, 0.028f, 0.1f,
+                new Color(1f, 0.99f, 0.88f, 1f), 0.85f, 0.05f, 53);
+            canvas.SoftCircle(0.5f, 0.72f, 0.035f, Color.white, 0.95f, 0f, 54);
         }
 
         private static void DrawFlashStar(VfxPixelCanvas canvas)

@@ -522,16 +522,16 @@ namespace LocalTanks.Editor
         {
             float speed = Max(catalog.impactProfiles, profile => profile.sparkSpeed);
             int burst = Mathf.Max(1, Max(catalog.impactProfiles, profile => profile.sparkCount));
-            // Sparks were the one effect the first in-game look rejected outright: at a fifth of a tank's
-            // length each they read as flying pebbles. They are now small, thin and short-lived, which is
-            // what makes them read as sparks rather than as debris.
-            ParticleSystem spark = AddSystem(root, "Sparks", materials["spark"], SparkSortingOrder, 0.3f, 0.1f, 0.2f, 0.04f, 0.08f);
+            // A WoT-like armour hit is a shallow fan of incandescent streaks reflected from the plate,
+            // not a circular cloud of glowing dots. Local +Y is aligned with the collision normal by the
+            // runtime; the width below gives the fan its spread while every particle still leaves the hull.
+            ParticleSystem spark = AddSystem(root, "Sparks", materials["spark"], SparkSortingOrder,
+                0.46f, 0.16f, 0.4f, 0.035f, 0.075f);
             SetBurst(spark, burst);
-            // Sparks fly outward in the plane of the map: an omnidirectional burst in three dimensions
-            // would look like a static dot from a top-down camera.
-            SetPlanarVelocity(spark, -speed, speed, -speed, speed);
-            SetSizeOverLifetime(spark, 1f, 0.15f);
-            SetFade(spark, 0.05f);
+            SetPlanarVelocity(spark, -speed * 0.58f, speed * 0.58f, speed * 0.34f, speed);
+            SetSizeOverLifetime(spark, 1f, 0.08f);
+            SetSparkColourOverLifetime(spark);
+            SetStretchedBillboard(spark, 8.5f, 0.09f);
         }
 
         private static void BuildImpactDebris(GameObject root, CombatVfxCatalog catalog, Dictionary<string, Material> materials)
@@ -836,6 +836,37 @@ namespace LocalTanks.Editor
             ParticleSystem.ColorOverLifetimeModule colour = system.colorOverLifetime;
             colour.enabled = true;
             colour.color = new ParticleSystem.MinMaxGradient(gradient);
+        }
+
+        private static void SetSparkColourOverLifetime(ParticleSystem system)
+        {
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(new Color(1f, 0.93f, 0.58f), 0.22f),
+                    new GradientColorKey(new Color(1f, 0.38f, 0.05f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(1f, 0.035f),
+                    new GradientAlphaKey(0.88f, 0.58f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            ParticleSystem.ColorOverLifetimeModule colour = system.colorOverLifetime;
+            colour.enabled = true;
+            colour.color = new ParticleSystem.MinMaxGradient(gradient);
+        }
+
+        private static void SetStretchedBillboard(ParticleSystem system, float lengthScale, float velocityScale)
+        {
+            ParticleSystemRenderer renderer = system.GetComponent<ParticleSystemRenderer>();
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.lengthScale = Mathf.Max(0f, lengthScale);
+            renderer.velocityScale = Mathf.Max(0f, velocityScale);
+            renderer.cameraVelocityScale = 0f;
         }
 
         private static void SetBurst(ParticleSystem system, int count)

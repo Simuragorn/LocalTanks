@@ -73,7 +73,7 @@ ParticleSystem:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1126284337533779025}
   serializedVersion: 8
-  lengthInSec: 0.3
+  lengthInSec: 0.46
   simulationSpeed: 1
   stopAction: 0
   cullingMode: 0
@@ -112,8 +112,8 @@ ParticleSystem:
     startLifetime:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.2
-      minScalar: 0.1
+      scalar: 0.4
+      minScalar: 0.16
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -211,8 +211,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 0.08
-      minScalar: 0.04
+      scalar: 0.075
+      minScalar: 0.035
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -472,7 +472,7 @@ ParticleSystem:
       countCurve:
         serializedVersion: 3
         minMaxState: 0
-        scalar: 20
+        scalar: 32
         minScalar: 30
         maxCurve:
           serializedVersion: 2
@@ -510,7 +510,7 @@ ParticleSystem:
           outWeight: 0
         - serializedVersion: 3
           time: 1
-          value: 0.15
+          value: 0.08
           inSlope: 0
           outSlope: 0
           tangentMode: 0
@@ -661,33 +661,33 @@ ParticleSystem:
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 0}
-        key1: {r: 1, g: 1, b: 1, a: 1}
-        key2: {r: 0, g: 0, b: 0, a: 0}
+        key1: {r: 1, g: 0.93, b: 0.58, a: 1}
+        key2: {r: 1, g: 0.38, b: 0.05, a: 0.88}
         key3: {r: 0, g: 0, b: 0, a: 0}
         key4: {r: 0, g: 0, b: 0, a: 0}
         key5: {r: 0, g: 0, b: 0, a: 0}
         key6: {r: 0, g: 0, b: 0, a: 0}
         key7: {r: 0, g: 0, b: 0, a: 0}
         ctime0: 0
-        ctime1: 65535
-        ctime2: 0
+        ctime1: 14418
+        ctime2: 65535
         ctime3: 0
         ctime4: 0
         ctime5: 0
         ctime6: 0
         ctime7: 0
         atime0: 0
-        atime1: 3277
-        atime2: 65535
-        atime3: 0
+        atime1: 2294
+        atime2: 38010
+        atime3: 65535
         atime4: 0
         atime5: 0
         atime6: 0
         atime7: 0
         m_Mode: 0
         m_ColorSpace: -1
-        m_NumColorKeys: 2
-        m_NumAlphaKeys: 3
+        m_NumColorKeys: 3
+        m_NumAlphaKeys: 4
       minGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -793,8 +793,8 @@ ParticleSystem:
     x:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 6
-      minScalar: -6
+      scalar: 4.64
+      minScalar: -4.64
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -810,8 +810,8 @@ ParticleSystem:
     y:
       serializedVersion: 3
       minMaxState: 3
-      scalar: 6
-      minScalar: -6
+      scalar: 8
+      minScalar: 2.72
       maxCurve:
         serializedVersion: 2
         m_Curve: []
@@ -2321,14 +2321,14 @@ ParticleSystemRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 16
   m_MaskInteraction: 0
-  m_RenderMode: 0
+  m_RenderMode: 1
   m_MeshDistribution: 0
   m_SortMode: 0
   m_MinParticleSize: 0
   m_MaxParticleSize: 0.5
   m_CameraVelocityScale: 0
-  m_VelocityScale: 0
-  m_LengthScale: 2
+  m_VelocityScale: 0.09
+  m_LengthScale: 8.5
   m_SortingFudge: 0
   m_NormalDirection: 1
   m_ShadowBias: 0

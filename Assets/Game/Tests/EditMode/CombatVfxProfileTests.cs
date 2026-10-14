@@ -266,5 +266,26 @@ namespace LocalTanks.Tests
             Assert.That(fire.GetComponentsInChildren<ParticleSystem>(true).Select(item => item.name),
                 Is.EquivalentTo(new[] { "Soot", "Glow", "Tongues", "TallTongues", "Core", "Ember" }));
         }
+
+        [Test]
+        public void GeneratedArmorSparks_AreStretchedIntoAnOutwardFan()
+        {
+            GameObject impact = AssetDatabase.LoadAssetAtPath<GameObject>(
+                CombatVfxAssetBuilder.PrefabPath(CombatVfxEffects.ImpactSpark));
+
+            Assert.That(impact, Is.Not.Null);
+            ParticleSystem sparks = impact.GetComponentsInChildren<ParticleSystem>(true)
+                .Single(item => item.name == "Sparks");
+            ParticleSystemRenderer renderer = sparks.GetComponent<ParticleSystemRenderer>();
+            ParticleSystem.VelocityOverLifetimeModule velocity = sparks.velocityOverLifetime;
+
+            Assert.That(renderer.renderMode, Is.EqualTo(ParticleSystemRenderMode.Stretch));
+            Assert.That(renderer.lengthScale, Is.GreaterThan(2f));
+            Assert.That(velocity.space, Is.EqualTo(ParticleSystemSimulationSpace.Local));
+            Assert.That(velocity.x.constantMin, Is.LessThan(0f));
+            Assert.That(velocity.x.constantMax, Is.GreaterThan(0f));
+            Assert.That(velocity.y.constantMin, Is.GreaterThan(0f),
+                "Every armour spark must leave the plate along its outward normal.");
+        }
     }
 }

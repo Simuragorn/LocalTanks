@@ -173,14 +173,14 @@ namespace LocalTanks.Editor
             TankGeometry targetGeometry = Measure(target);
             ImpactVfxProfile impact = catalog.ResolveImpact(ImpactOutcome.Blocked);
             Vector3 hitPoint = targetGeometry.Centre + targetGeometry.Right * (targetGeometry.Width * 0.45f);
-            Vector2 hitNormal = -(Vector2)targetGeometry.Right;
+            Vector2 hitNormal = targetGeometry.Right;
             Quaternion hitRotation = CombatVfxSystem.PlaneRotation(hitNormal);
             SurfaceVfxProfile surface = catalog.ResolveSurface(TerrainKind.Grass);
 
             AddOneShot(spawned, target.transform, CombatVfxEffects.ImpactSpark, "Sparks",
-                hitPoint, hitRotation, impact.flashScale, 0.12f, impact.sparkCount);
+                hitPoint, hitRotation, impact.flashScale, 0.1f, impact.sparkCount);
             AddOneShot(spawned, target.transform, CombatVfxEffects.ImpactDust, "ImpactDust",
-                hitPoint, hitRotation, impact.dustScale * 1.6f, 0.4f);
+                hitPoint, hitRotation, impact.dustScale, 0.4f);
             AddOneShot(spawned, target.transform, CombatVfxEffects.ImpactDebris, "ImpactDebris",
                 hitPoint, hitRotation, impact.flashScale, 0.25f, impact.debrisCount);
         }
