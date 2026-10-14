@@ -149,5 +149,32 @@ namespace LocalTanks
             if (role == CombatAiRole.Support) factor += 0.08f;
             return Mathf.Max(definition.guaranteedDetectionRange * 1.5f, definition.viewRange * factor);
         }
+
+        /// <summary>
+        /// Distance at which a visible enemy is treated as an immediate threat rather than as a contact to be
+        /// fought from a proper position. It is the same floor the preferred distance uses, so a bot that
+        /// already considers itself at fighting range also defends itself while it is still deploying.
+        /// </summary>
+        public static float CloseThreatDistance(TankDefinition definition)
+        {
+            return definition == null ? 5f : Mathf.Max(5f, definition.guaranteedDetectionRange * 1.5f);
+        }
+
+        /// <summary>
+        /// True while an unfinished deployment must keep moving even though an enemy is visible.
+        ///
+        /// The team plan exists to take positions, and a merely visible enemy is not a reason to fight from a
+        /// spawn slot. Measured need: on River Crossing the class-based view range (62.58 units) covers the
+        /// whole 54-unit map, so contact exists from the first frame, every bot stopped where it appeared and
+        /// the bots stopped deploying altogether. A close enemy still outranks the route, so self-defence is
+        /// unchanged.
+        /// </summary>
+        public static bool ShouldDeploymentOutrankContact(
+            bool routeComplete,
+            float targetDistance,
+            float closeThreatDistance)
+        {
+            return !routeComplete && targetDistance > closeThreatDistance;
+        }
     }
 }

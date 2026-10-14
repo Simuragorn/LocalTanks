@@ -486,6 +486,19 @@ namespace LocalTanks
                     }
                 }
 
+                // An unfinished deployment outranks a distant contact: the bot keeps walking to its assigned
+                // position while the enemy stays tracked, and fights from where it was told to be. Without this
+                // a map whose whole surface is visible from the spawn freezes every bot on its slot.
+                if (CombatAiPolicy.ShouldDeploymentOutrankContact(
+                        routeComplete,
+                        Vector2.Distance(transform.position, selected.transform.position),
+                        CombatAiPolicy.CloseThreatDistance(member != null ? member.Definition : null)))
+                {
+                    ClearTacticalTask("Развёртывание продолжается: контакт дальше дистанции ближней угрозы");
+                    ContinueRoute();
+                    return;
+                }
+
                 State = CombatAiState.Engage;
                 return;
             }
@@ -533,6 +546,22 @@ namespace LocalTanks
             if ((State != CombatAiState.Engage && State != CombatAiState.Reposition &&
                  State != CombatAiState.Hold) || !IsTargetVisible(target))
             {
+                // A bot that is still deploying keeps its turret on a visible enemy without stopping for it:
+                // its slot is the worst place to fight from, and the route is the team's decision. The hull is
+                // turned toward the enemy as well, because driving to a position is no reason to show the rear.
+                if (State == CombatAiState.Deploy || State == CombatAiState.Advance)
+                {
+                    if (target != null && IsTargetVisible(target))
+                    {
+                        turret?.SetTarget(target.transform.position);
+                        UpdateArmorFacing((Vector2)target.transform.position - (Vector2)transform.position);
+                    }
+                    else
+                    {
+                        navigation?.ClearFacingDirection();
+                    }
+                }
+
                 aimingBlockedSince = -1f;
                 if (State != CombatAiState.Investigate)
                 {

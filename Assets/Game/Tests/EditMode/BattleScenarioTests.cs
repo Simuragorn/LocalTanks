@@ -367,6 +367,30 @@ namespace LocalTanks.Tests
             Assert.That(CombatAiPolicy.ShouldSwitchVisibleTarget(4f, 3f, 50f, 60f), Is.True);
         }
 
+        [Test]
+        public void CombatAiPolicy_KeepsDeployingAgainstADistantContactOnly()
+        {
+            // While the route is unfinished a distant enemy does not stop the march, and a close one does.
+            Assert.That(CombatAiPolicy.ShouldDeploymentOutrankContact(false, 40f, 15f), Is.True);
+            Assert.That(CombatAiPolicy.ShouldDeploymentOutrankContact(false, 15f, 15f), Is.False);
+            Assert.That(CombatAiPolicy.ShouldDeploymentOutrankContact(false, 8f, 15f), Is.False);
+            // Once the position is taken the route no longer outranks anything.
+            Assert.That(CombatAiPolicy.ShouldDeploymentOutrankContact(true, 40f, 15f), Is.False);
+        }
+
+        [Test]
+        public void CombatAiPolicy_CloseThreatDistanceComesFromTheGuaranteedRadius()
+        {
+            TankDefinition light = CreateTank("light", TankNation.USSR, 1);
+            light.vehicleClass = VehicleClass.LightTank;
+            light.viewRange = 62.58f;
+            light.guaranteedDetectionRange = 10.01f;
+            Assert.That(CombatAiPolicy.CloseThreatDistance(light), Is.EqualTo(15.015f).Within(0.001f));
+
+            // A missing definition must not produce a zero radius that would stop the deployment on any contact.
+            Assert.That(CombatAiPolicy.CloseThreatDistance(null), Is.GreaterThan(0f));
+        }
+
         private static TankDefinition CreateTank(string id, TankNation nation, int tier)
         {
             TankDefinition tank = ScriptableObject.CreateInstance<TankDefinition>();
