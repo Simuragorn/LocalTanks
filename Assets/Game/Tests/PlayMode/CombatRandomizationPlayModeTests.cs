@@ -120,6 +120,25 @@ namespace LocalTanks.Tests
             Assert.That(visibleSolution, Is.True);
             Assert.That(solution.Armor, Is.SameAs(armor));
             Assert.That(solution.PenetrationChance, Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(ArmorAimProbe.TryEvaluateAlongDirection(
+                owner.transform,
+                target.transform,
+                new Vector2(2000f, 2001f),
+                Vector2.up,
+                10f,
+                100f,
+                new CombatRules(),
+                out _), Is.True);
+            Assert.That(ArmorAimProbe.TryEvaluateAlongDirection(
+                owner.transform,
+                target.transform,
+                new Vector2(2000f, 2001f),
+                Vector2.right,
+                10f,
+                100f,
+                new CombatRules(),
+                out _), Is.False,
+                "The forecast must follow the barrel instead of bending its ray toward the cursor target.");
 
             visibility.SetVisible(false);
             Assert.That(ArmorAimProbe.TryEvaluate(
@@ -132,6 +151,57 @@ namespace LocalTanks.Tests
 
             Object.Destroy(owner);
             Object.Destroy(target);
+            Object.Destroy(definition);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator HoverOutline_UsesRelationAndDisappearsWithVisibilityOrDeath()
+        {
+            TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
+            definition.maxHitPoints = 100;
+            definition.armor = new ArmorProfile(25f, 20f, 20f, 15f);
+            GameObject owner = CreateHoverTank("HoverOwner", new Vector2(2200f, 2200f), TeamId.TeamA, definition);
+            GameObject ally = CreateHoverTank("HoverAlly", new Vector2(2200f, 2204f), TeamId.TeamA, definition);
+            GameObject enemy = CreateHoverTank("HoverEnemy", new Vector2(2204f, 2204f), TeamId.TeamB, definition);
+            GameObject cameraObject = new GameObject("HoverReticleCamera");
+            PlayerAimReticle reticle = cameraObject.AddComponent<Camera>().gameObject.AddComponent<PlayerAimReticle>();
+            reticle.Configure(owner.transform);
+            Physics2D.SyncTransforms();
+
+            Assert.That(reticle.RefreshHoverTargetAt(ally.transform.position), Is.True);
+            TankDebugSelectionOutline allyOutline = ally.GetComponent<TankDebugSelectionOutline>();
+            Assert.That(reticle.HoveredTank, Is.SameAs(ally.transform));
+            Assert.That(allyOutline.IsVisible, Is.True);
+            Assert.That(allyOutline.CurrentColor, Is.EqualTo(TeamPalette.Ally));
+
+            allyOutline.SetVisible(true);
+            reticle.ClearHoverOutline();
+            Assert.That(allyOutline.IsVisible, Is.True,
+                "Releasing hover must preserve the independent F4/debug selection request.");
+            Assert.That(allyOutline.CurrentColor, Is.Not.EqualTo(TeamPalette.Ally));
+            allyOutline.SetVisible(false);
+
+            Assert.That(reticle.RefreshHoverTargetAt(enemy.transform.position), Is.True);
+            TankDebugSelectionOutline enemyOutline = enemy.GetComponent<TankDebugSelectionOutline>();
+            Assert.That(allyOutline.IsVisible, Is.False, "Moving the pointer must release the previous hull.");
+            Assert.That(enemyOutline.IsVisible, Is.True);
+            Assert.That(enemyOutline.CurrentColor, Is.EqualTo(TeamPalette.Enemy));
+
+            enemy.GetComponent<TankVisibilityPresenter>().SetVisible(false);
+            Assert.That(reticle.RefreshHoverTargetAt(enemy.transform.position), Is.False);
+            Assert.That(enemyOutline.IsVisible, Is.False);
+
+            enemy.GetComponent<TankVisibilityPresenter>().SetVisible(true);
+            Assert.That(reticle.RefreshHoverTargetAt(enemy.transform.position), Is.True);
+            enemy.GetComponent<TankHealth>().ApplyDamage(definition.maxHitPoints);
+            Assert.That(reticle.RefreshHoverTargetAt(enemy.transform.position), Is.False);
+            Assert.That(enemyOutline.IsVisible, Is.False);
+
+            Object.Destroy(cameraObject);
+            Object.Destroy(enemy);
+            Object.Destroy(ally);
+            Object.Destroy(owner);
             Object.Destroy(definition);
             yield return null;
         }
@@ -162,6 +232,29 @@ namespace LocalTanks.Tests
             Object.Destroy(directorObject);
             if (File.Exists(path)) File.Delete(path);
             yield return null;
+        }
+
+        private static GameObject CreateHoverTank(
+            string name,
+            Vector2 position,
+            TeamId team,
+            TankDefinition definition)
+        {
+            GameObject tank = new GameObject(name);
+            tank.transform.position = position;
+            PolygonCollider2D collider = tank.AddComponent<PolygonCollider2D>();
+            collider.points = new[]
+            {
+                new Vector2(-0.6f, -1f),
+                new Vector2(0.6f, -1f),
+                new Vector2(0.6f, 1f),
+                new Vector2(-0.6f, 1f)
+            };
+            TankHealth health = tank.AddComponent<TankHealth>();
+            health.Configure(definition);
+            tank.AddComponent<TankVisibilityPresenter>().SetVisible(true);
+            tank.AddComponent<TeamMember>().Configure(team, tank.name == "HoverOwner");
+            return tank;
         }
     }
 }

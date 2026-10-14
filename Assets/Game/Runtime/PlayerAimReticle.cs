@@ -22,8 +22,10 @@ namespace LocalTanks
         private Camera worldCamera;
         private bool uiInteractionActive;
         private GUIStyle distanceStyle;
+        private TankDebugSelectionOutline hoverOutline;
 
         public Transform ControlledTank => controlledTank;
+        public Transform HoveredTank { get; private set; }
         public bool IsLineOfFireBlocked { get; private set; }
         public bool UiInteractionActive => uiInteractionActive;
         public bool HasPenetrationSolution { get; private set; }
@@ -31,6 +33,7 @@ namespace LocalTanks
 
         public void Configure(Transform tank)
         {
+            ClearHoverOutline();
             controlledTank = tank;
             turret = tank != null ? tank.GetComponentInChildren<TurretAiming>() : null;
             weapon = tank != null ? tank.GetComponent<WeaponController>() : null;
@@ -56,11 +59,13 @@ namespace LocalTanks
 
         private void OnDisable()
         {
+            ClearHoverOutline();
             Cursor.visible = true;
         }
 
         private void OnDestroy()
         {
+            ClearHoverOutline();
             Cursor.visible = true;
         }
 
@@ -71,10 +76,15 @@ namespace LocalTanks
             Mouse mouse = Mouse.current;
             bool pointerBlocked = mouse != null && ModalUiState.BlocksPointer(mouse.position.ReadValue());
             Cursor.visible = uiInteractionActive || pointerBlocked || controlledTank == null;
-            if (uiInteractionActive || pointerBlocked) return;
+            if (uiInteractionActive || pointerBlocked)
+            {
+                ClearHoverOutline();
+                return;
+            }
 
             if (mouse == null || controlledTank == null || turret == null || weapon == null || dispersion == null)
             {
+                ClearHoverOutline();
                 return;
             }
 
@@ -83,6 +93,7 @@ namespace LocalTanks
             Vector2 cursorGui = new Vector2(mouseScreen.x, Screen.height - mouseScreen.y);
             Vector3 cursorWorld3 = worldCamera.ScreenToWorldPoint(new Vector3(mouseScreen.x, mouseScreen.y, -worldCamera.transform.position.z));
             Vector2 cursorWorld = cursorWorld3;
+            RefreshHoverTargetAt(cursorWorld);
             Vector2 lineOrigin = weapon.Muzzle != null ? weapon.Muzzle.position : turret.transform.position;
             LineOfFireResult lineResult = LineOfFireProbe.Evaluate(controlledTank, lineOrigin, cursorWorld);
             IsLineOfFireBlocked = lineResult.IsBlocked;
@@ -111,10 +122,15 @@ namespace LocalTanks
             Color reloadColor = Color.Lerp(ReloadingColor, ReadyColor, weapon.ReloadProgress);
             ShellDefinition shell = weapon.CurrentShell;
             ArmorAimSolution aimSolution = default;
-            HasPenetrationSolution = shell != null && ArmorAimProbe.TryEvaluate(
+            float probeDistance = shell != null && shell.maximumRange > 0f
+                ? shell.maximumRange
+                : actualDistance + GameScale.MetresToUnits(2f);
+            HasPenetrationSolution = shell != null && HoveredTank != null && ArmorAimProbe.TryEvaluateAlongDirection(
                 controlledTank,
+                HoveredTank,
                 lineOrigin,
-                cursorWorld,
+                weapon.Muzzle != null ? weapon.Muzzle.up : turret.transform.up,
+                probeDistance,
                 shell.penetration,
                 weapon.CombatRules,
                 out aimSolution);
@@ -125,6 +141,67 @@ namespace LocalTanks
             DrawDottedCircle(gunGui, radius, aimColor);
             DrawReloadSegments(gunGui, radius + 8f, weapon.ReloadProgress, reloadColor);
             DrawDistanceLabel(gunGui, radius, actualDistance);
+        }
+
+        /// <summary>
+        /// Updates the hull outline from a point query, without scanning the battle roster. The same
+        /// method is public so Play Mode can verify visibility and team-colour rules without faking an
+        /// operating-system cursor.
+        /// </summary>
+        public bool RefreshHoverTargetAt(Vector2 worldPoint)
+        {
+            Transform target = LineOfFireProbe.FindLivingTankAt(worldPoint);
+            if (!IsEligibleHoverTarget(controlledTank, target))
+            {
+                ClearHoverOutline();
+                return false;
+            }
+
+            TankDebugSelectionOutline next = target.GetComponent<TankDebugSelectionOutline>();
+            if (next == null) next = target.gameObject.AddComponent<TankDebugSelectionOutline>();
+            if (hoverOutline != null && hoverOutline != next)
+            {
+                hoverOutline.SetHoverVisible(false, Color.clear);
+            }
+
+            HoveredTank = target;
+            hoverOutline = next;
+            TeamMember ownerMember = controlledTank.GetComponent<TeamMember>();
+            TeamMember targetMember = target.GetComponent<TeamMember>();
+            hoverOutline.SetHoverVisible(
+                true,
+                RelationOutlineColor(
+                    ownerMember != null ? ownerMember.Team : TeamId.Neutral,
+                    targetMember != null ? targetMember.Team : TeamId.Neutral));
+            return true;
+        }
+
+        public void ClearHoverOutline()
+        {
+            if (hoverOutline != null)
+            {
+                hoverOutline.SetHoverVisible(false, Color.clear);
+            }
+
+            hoverOutline = null;
+            HoveredTank = null;
+            HasPenetrationSolution = false;
+            CurrentPenetrationChance = 0f;
+        }
+
+        public static bool IsEligibleHoverTarget(Transform owner, Transform target)
+        {
+            if (owner == null || target == null || target == owner || target.IsChildOf(owner)) return false;
+            TankHealth health = target.GetComponent<TankHealth>();
+            if (health == null || health.IsDestroyed) return false;
+            TankVisibilityPresenter visibility = target.GetComponent<TankVisibilityPresenter>();
+            return visibility == null || visibility.IsVisible;
+        }
+
+        public static Color RelationOutlineColor(TeamId owner, TeamId target)
+        {
+            if (owner == TeamId.Neutral || target == TeamId.Neutral) return TeamPalette.Neutral;
+            return TeamPalette.ForRelation(owner == target);
         }
 
         private void RefreshCursorVisibility()

@@ -267,6 +267,17 @@
       ]
     },
     {
+      "name": "CaptureAimProof",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.AimProofRenderer.Render",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the real hull outline component for an ally and an enemy together with penetration-chance colours from the combat reticle.",
+      "outputs": [
+        "Docs/Media/AimProof.png"
+      ]
+    },
+    {
       "name": "RenderCombatVfxProof",
       "kind": "ExecuteMethod",
       "executeMethod": "LocalTanks.Editor.CombatVfxProofRenderer.Render",

@@ -157,6 +157,17 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void HoverOutlineColor_FollowsTeamRelation()
+        {
+            Assert.That(PlayerAimReticle.RelationOutlineColor(TeamId.TeamA, TeamId.TeamA),
+                Is.EqualTo(TeamPalette.Ally));
+            Assert.That(PlayerAimReticle.RelationOutlineColor(TeamId.TeamA, TeamId.TeamB),
+                Is.EqualTo(TeamPalette.Enemy));
+            Assert.That(PlayerAimReticle.RelationOutlineColor(TeamId.Neutral, TeamId.TeamB),
+                Is.EqualTo(TeamPalette.Neutral));
+        }
+
+        [Test]
         public void ScenarioData_CarriesSeedAndCompleteCombatRules()
         {
             BattleScenarioJson source = BattleScenarioImporter.LoadSource();

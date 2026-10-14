@@ -32,18 +32,51 @@ namespace LocalTanks
         {
             solution = default;
             Transform intendedTank = LineOfFireProbe.FindLivingTankAt(destination);
-            if (intendedTank == null || BelongsTo(intendedTank, ownerRoot)) return false;
-
-            TankVisibilityPresenter visibility = intendedTank.GetComponent<TankVisibilityPresenter>();
-            if (visibility != null && !visibility.IsVisible) return false;
-
             Vector2 delta = destination - origin;
             float distance = delta.magnitude;
             if (distance <= 0.001f) return false;
 
+            return TryEvaluateAlongDirection(
+                ownerRoot,
+                intendedTank,
+                origin,
+                delta / distance,
+                distance,
+                basePenetration,
+                rules,
+                out solution);
+        }
+
+        /// <summary>
+        /// Forecasts the plate intersected by the direction the barrel actually faces. The hovered tank
+        /// is supplied separately: cursor position selects a vehicle, but it cannot bend the ballistic
+        /// ray while the turret is still traversing toward it.
+        /// </summary>
+        public static bool TryEvaluateAlongDirection(
+            Transform ownerRoot,
+            Transform intendedTank,
+            Vector2 origin,
+            Vector2 shotDirection,
+            float maximumDistance,
+            float basePenetration,
+            CombatRules rules,
+            out ArmorAimSolution solution)
+        {
+            solution = default;
+            if (intendedTank == null || BelongsTo(intendedTank, ownerRoot)) return false;
+
+            TankHealth health = intendedTank.GetComponent<TankHealth>();
+            if (health == null || health.IsDestroyed) return false;
+            TankVisibilityPresenter visibility = intendedTank.GetComponent<TankVisibilityPresenter>();
+            if (visibility != null && !visibility.IsVisible) return false;
+
+            float distance = Mathf.Max(0f, maximumDistance);
+            if (distance <= 0.001f || shotDirection.sqrMagnitude <= 0.0001f) return false;
+            Vector2 direction = shotDirection.normalized;
+
             RaycastHit2D nearest = default;
             float nearestDistance = float.PositiveInfinity;
-            foreach (RaycastHit2D hit in Physics2D.RaycastAll(origin, delta / distance, distance))
+            foreach (RaycastHit2D hit in Physics2D.RaycastAll(origin, direction, distance))
             {
                 if (hit.collider == null || hit.collider.isTrigger ||
                     hit.collider.GetComponentInParent<FirePassThroughObstacle>() != null ||
@@ -66,10 +99,10 @@ namespace LocalTanks
             CombatRules effectiveRules = rules ?? new CombatRules();
             Vector2 surfaceNormal = nearest.normal.sqrMagnitude > 0.0001f
                 ? nearest.normal.normalized
-                : -(delta / distance);
+                : -direction;
             Vector2 localNormal = armor.transform.InverseTransformDirection(surfaceNormal).normalized;
             ArmorProjection projection = ArmorCombatMath.EvaluateProjection(
-                delta / distance,
+                direction,
                 surfaceNormal,
                 localNormal,
                 armor.Definition.armor,

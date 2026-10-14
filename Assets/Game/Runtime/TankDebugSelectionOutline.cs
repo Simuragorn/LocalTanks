@@ -12,20 +12,53 @@ namespace LocalTanks
 
         private PolygonCollider2D hullCollider;
         private LineRenderer line;
+        private bool debugVisible;
+        private bool hoverVisible;
+        private Color hoverColor;
 
         public bool IsVisible => line != null && line.enabled;
+        public Color CurrentColor => line != null ? line.startColor : color;
 
         public void SetVisible(bool value)
         {
+            debugVisible = value;
+            RefreshPresentation();
+        }
+
+        /// <summary>
+        /// The combat sight and the F4 inspector are independent owners of the same measured hull
+        /// contour. Keeping their requests separate prevents closing the inspector from erasing a
+        /// hover highlight, or moving the cursor from erasing the selected-bot outline.
+        /// </summary>
+        public void SetHoverVisible(bool value, Color relationColor)
+        {
+            hoverVisible = value;
+            hoverColor = relationColor;
+            RefreshPresentation();
+        }
+
+        private void RefreshPresentation()
+        {
             EnsureInitialized();
-            if (line != null) line.enabled = value;
-            if (value) RefreshGeometry();
+            if (line == null) return;
+
+            bool visible = debugVisible || hoverVisible;
+            Color activeColor = hoverVisible ? hoverColor : color;
+            line.startColor = activeColor;
+            line.endColor = activeColor;
+            line.enabled = visible;
+            if (visible) RefreshGeometry();
         }
 
         private void Awake()
         {
             EnsureInitialized();
             SetVisible(false);
+        }
+
+        private void OnEnable()
+        {
+            if (line != null) RefreshPresentation();
         }
 
         private void LateUpdate()
