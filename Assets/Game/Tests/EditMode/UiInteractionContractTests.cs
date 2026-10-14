@@ -10,6 +10,7 @@ namespace LocalTanks.Tests
         private static readonly string[] InteractiveImguiFiles =
         {
             "Assets/Game/Runtime/AiDuelLabController.cs",
+            "Assets/Game/Runtime/AiSquadLabController.cs",
             "Assets/Game/Runtime/CombatAiDebugOverlay.cs",
             "Assets/Game/Runtime/DeveloperTimeScaleController.cs",
             "Assets/Game/Runtime/GroundAppearanceTuner.cs",

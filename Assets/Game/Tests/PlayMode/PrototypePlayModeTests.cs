@@ -168,6 +168,68 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator AiSquadLab_RunsThreeVersusThreeAuditAcrossThreeSeedsWithoutStrategicLlm()
+        {
+            string[] expectedCases = { "group_seed_2711", "group_seed_2712", "group_seed_2713" };
+            string[] expectedBots =
+            {
+                "squad_a_north", "squad_a_center", "squad_a_south",
+                "squad_b_north", "squad_b_center", "squad_b_south"
+            };
+            float previousScale = Time.timeScale;
+            float previousCaptureDeltaTime = Time.captureDeltaTime;
+            Time.captureDeltaTime = 1f / 60f;
+            SceneManager.LoadScene("Battle_AiSquadLab");
+
+            try
+            {
+                for (int caseIndex = 0; caseIndex < expectedCases.Length; caseIndex++)
+                {
+                    AiSquadLabController lab = null;
+                    for (int frame = 0; frame < 120; frame++)
+                    {
+                        yield return null;
+                        lab = Object.FindAnyObjectByType<AiSquadLabController>();
+                        if (lab != null && lab.IsReady && lab.ActiveCaseIndex == caseIndex) break;
+                    }
+
+                    BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+                    Assert.That(lab, Is.Not.Null, $"AI Squad Lab case {caseIndex} did not load.");
+                    Assert.That(lab.IsReady, Is.True, $"AI Squad Lab case {caseIndex} did not become ready.");
+                    Assert.That(lab.ActiveCase.id, Is.EqualTo(expectedCases[caseIndex]));
+                    Assert.That(director.Scenario.kind, Is.EqualTo(BattleScenarioKind.AiSquadLab));
+                    Assert.That(director.SpawnedMembers.Count(item => item.Team == TeamId.TeamA), Is.EqualTo(3));
+                    Assert.That(director.SpawnedMembers.Count(item => item.Team == TeamId.TeamB), Is.EqualTo(3));
+                    Assert.That(director.SpawnedMembers.Any(item => item.IsPlayerControlled), Is.False);
+                    Assert.That(Object.FindObjectsByType<CombatTankAI>(), Has.Length.EqualTo(6));
+                    Assert.That(director.StrategicPlanner, Is.Null);
+                    Assert.That(director.StrategicCoordinator, Is.Null);
+
+                    Time.timeScale = 10f;
+                    while (!lab.IsComplete) yield return null;
+                    Time.timeScale = 1f;
+
+                    string report = lab.FinalReport;
+                    int minimumSamples = Mathf.FloorToInt(lab.ActiveCase.durationSeconds / 0.2f) * 6;
+                    Assert.That(lab.Auditor.SampleCount, Is.GreaterThanOrEqualTo(minimumSamples));
+                    foreach (string botId in expectedBots) Assert.That(report, Does.Contain(botId));
+                    Debug.Log($"AI_SQUAD_DIAGNOSTIC case={lab.ActiveCase.id} seed={lab.ActiveCase.seed}\n" +
+                              report + "\n" + lab.Auditor.BuildTransitionReport());
+
+                    if (caseIndex + 1 < expectedCases.Length)
+                        lab.ReloadCase(caseIndex + 1);
+                    else
+                        lab.ReloadCase(0);
+                }
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+                Time.captureDeltaTime = previousCaptureDeltaTime;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator PlayerAiTestLab_WaitsForSelectionThenSpawnsConfiguredTierFilteredBattle()
         {
             PlayerAiTestLabSettings settings = PlayerAiTestLabController.CurrentSettings;

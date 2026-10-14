@@ -64,6 +64,8 @@ namespace LocalTanks.Editor
         public const string AssetPath = "Assets/Game/GameData/Generated/Scenarios/river_crossing_battle.asset";
         public const string DuelSourcePath = "Assets/Game/GameData/Scenarios/ai_duel_lab_battle.json";
         public const string DuelAssetPath = "Assets/Game/GameData/Generated/Scenarios/ai_duel_lab_battle.asset";
+        public const string SquadSourcePath = "Assets/Game/GameData/Scenarios/ai_squad_lab_battle.json";
+        public const string SquadAssetPath = "Assets/Game/GameData/Generated/Scenarios/ai_squad_lab_battle.asset";
 
         [MenuItem("Local Tanks/Data/Reimport Battle Scenario")]
         public static BattleScenario Reimport()
@@ -75,6 +77,12 @@ namespace LocalTanks.Editor
         public static BattleScenario ReimportDuelLab()
         {
             return Reimport(DuelSourcePath, DuelAssetPath);
+        }
+
+        [MenuItem("Local Tanks/Data/Reimport AI Squad Lab Scenario")]
+        public static BattleScenario ReimportSquadLab()
+        {
+            return Reimport(SquadSourcePath, SquadAssetPath);
         }
 
         private static BattleScenario Reimport(string sourcePath, string assetPath)
@@ -240,7 +248,8 @@ namespace LocalTanks.Editor
         {
             if (scheduled || !importedAssets.Concat(deletedAssets).Concat(movedAssets).Concat(movedFromAssetPaths)
                     .Any(path => path == BattleScenarioImporter.SourcePath ||
-                                 path == BattleScenarioImporter.DuelSourcePath))
+                                 path == BattleScenarioImporter.DuelSourcePath ||
+                                 path == BattleScenarioImporter.SquadSourcePath))
                 return;
             scheduled = true;
             EditorApplication.delayCall += () =>
@@ -250,6 +259,7 @@ namespace LocalTanks.Editor
                 {
                     BattleScenarioImporter.Reimport();
                     BattleScenarioImporter.ReimportDuelLab();
+                    BattleScenarioImporter.ReimportSquadLab();
                 }
                 catch (Exception exception) { Debug.LogException(exception); }
             };

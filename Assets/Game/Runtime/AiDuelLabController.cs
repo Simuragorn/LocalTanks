@@ -101,9 +101,9 @@ namespace LocalTanks
 
             if (!ready || paused || complete || auditSession == null) return;
             float elapsed = Time.time - startedAt;
-            if (elapsed >= nextSampleAt)
+            while (elapsed >= nextSampleAt && nextSampleAt < activeCase.durationSeconds)
             {
-                auditSession.Sample(elapsed);
+                auditSession.Sample(nextSampleAt);
                 nextSampleAt += SampleInterval;
             }
             if (elapsed >= activeCase.durationSeconds)

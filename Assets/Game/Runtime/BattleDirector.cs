@@ -276,7 +276,7 @@ namespace LocalTanks
                 Spawn(entries[index], index);
             }
 
-            if (scenario.kind != BattleScenarioKind.AiDuelLab)
+            if (scenario.UsesStrategicCoordinator)
             {
                 StrategicPlanner = GetComponent<BattleStrategicPlanner>();
                 if (StrategicPlanner == null) StrategicPlanner = gameObject.AddComponent<BattleStrategicPlanner>();

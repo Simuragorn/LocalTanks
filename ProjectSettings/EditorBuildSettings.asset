@@ -7,21 +7,24 @@ EditorBuildSettings:
   m_Scenes:
   - enabled: 1
     path: Assets/Game/Scenes/Labs/Battle_TestRange.unity
-    guid: 00000000000000000000000000000000
+    guid: 02a9c92e76789484d9b9f97c71084e95
   - enabled: 1
     path: Assets/Game/Scenes/Labs/Battle_NavigationRange.unity
-    guid: 00000000000000000000000000000000
+    guid: 0e73cb955a645a446a71a0e3056423b0
   - enabled: 1
     path: Assets/Game/Scenes/Maps/Battle_RiverCrossing.unity
     guid: e7efd54ab432e5646bd1ede4fd18badc
   - enabled: 1
     path: Assets/Game/Scenes/Labs/Battle_AiDuelLab.unity
-    guid: 00000000000000000000000000000000
+    guid: 34bdda29ab1f482408613090fc744ee7
   - enabled: 1
     path: Assets/Game/Scenes/Labs/Battle_PlayerAiTestLab.unity
-    guid: 00000000000000000000000000000000
+    guid: 0145d8465a071024caa6ef591db7e3f7
   - enabled: 1
     path: Assets/Game/Scenes/Maps/Battle_10_hills.unity
-    guid: 00000000000000000000000000000000
+    guid: 71d616839ca12c74e94e5a3c5a043c4b
+  - enabled: 1
+    path: Assets/Game/Scenes/Labs/Battle_AiSquadLab.unity
+    guid: e2971f10c2c08004bae4e7cd41639342
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

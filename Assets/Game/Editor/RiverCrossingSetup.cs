@@ -16,10 +16,11 @@ namespace LocalTanks.Editor
     {
         private const string SourcePath = "Assets/Game/GameData/Maps/river_crossing.json";
 
-        // River Crossing is a playable map; the duel and player test laboratories are derived from it and
+        // River Crossing is a playable map; the AI and player test laboratories are derived from it and
         // stay service scenes. Both paths come from the scene layout, the only place that knows the split.
         private static string ScenePath => BattleSceneLayout.Path(BattleSceneLayout.RiverCrossing);
         private static string DuelScenePath => BattleSceneLayout.Path(BattleSceneLayout.AiDuelLab);
+        private static string SquadScenePath => BattleSceneLayout.Path(BattleSceneLayout.AiSquadLab);
         private static string PlayerTestScenePath => BattleSceneLayout.Path(BattleSceneLayout.PlayerAiTestLab);
         private const string GeneratedRoot = "Assets/Game/Generated/RiverCrossing";
         private const string TilesRoot = GeneratedRoot + "/Tiles";
@@ -62,6 +63,7 @@ namespace LocalTanks.Editor
         {
             BattleSceneLayout.EnsurePlaced(BattleSceneLayout.RiverCrossing);
             BattleSceneLayout.EnsurePlaced(BattleSceneLayout.AiDuelLab);
+            BattleSceneLayout.EnsurePlaced(BattleSceneLayout.AiSquadLab);
             BattleSceneLayout.EnsurePlaced(BattleSceneLayout.PlayerAiTestLab);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             MapSource source = LoadAndValidateSource();
@@ -75,7 +77,9 @@ namespace LocalTanks.Editor
             CaptureRules captureRules = GetOrCreateCaptureRules();
             BattleScenario battleScenario = BattleScenarioImporter.Reimport();
             BattleScenarioImporter.ReimportDuelLab();
+            BattleScenarioImporter.ReimportSquadLab();
             AiDuelLabCatalogImporter.Reimport();
+            AiSquadLabCatalogImporter.Reimport();
 
             Scene previousScene = SceneManager.GetActiveScene();
             bool preservePreviousScene = previousScene.IsValid() && previousScene.isLoaded &&
@@ -104,6 +108,7 @@ namespace LocalTanks.Editor
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 BuildAiDuelLabScene(scene);
+                BuildAiSquadLabScene(scene);
                 BuildPlayerAiTestLabScene(scene);
                 EnsureSceneInBuildSettings();
                 AssetDatabase.SaveAssets();
@@ -180,6 +185,39 @@ namespace LocalTanks.Editor
             {
                 if (testScene.IsValid() && testScene.isLoaded)
                     EditorSceneManager.CloseScene(testScene, true);
+            }
+        }
+
+        private static void BuildAiSquadLabScene(Scene sourceScene)
+        {
+            EditorSceneManager.SaveScene(sourceScene, SquadScenePath, true);
+            Scene squadScene = EditorSceneManager.OpenScene(SquadScenePath, OpenSceneMode.Additive);
+            try
+            {
+                BattleScenario squadScenario = AssetDatabase.LoadAssetAtPath<BattleScenario>(
+                    BattleScenarioImporter.SquadAssetPath);
+                AiSquadLabCatalog squadCatalog = AssetDatabase.LoadAssetAtPath<AiSquadLabCatalog>(
+                    AiSquadLabCatalogImporter.AssetPath);
+                if (squadScenario == null || squadCatalog == null)
+                    throw new InvalidOperationException("AI Squad Lab data assets were not generated.");
+                BattleDirector director = FindInScene<BattleDirector>(squadScene);
+                if (director == null) throw new InvalidOperationException("Copied AI Squad Lab scene has no BattleDirector.");
+                director.OverrideScenario(squadScenario);
+
+                RiverCrossingInstructions instructions = FindInScene<RiverCrossingInstructions>(squadScene);
+                if (instructions != null) UnityEngine.Object.DestroyImmediate(instructions.gameObject);
+                GameObject controllerObject = new GameObject("AiSquadLabController");
+                SceneManager.MoveGameObjectToScene(controllerObject, squadScene);
+                controllerObject.AddComponent<AiSquadLabController>()
+                    .Configure(director, squadCatalog, showHiddenTanks: true);
+
+                EditorSceneManager.MarkSceneDirty(squadScene);
+                EditorSceneManager.SaveScene(squadScene, SquadScenePath);
+            }
+            finally
+            {
+                if (squadScene.IsValid() && squadScene.isLoaded)
+                    EditorSceneManager.CloseScene(squadScene, true);
             }
         }
 
@@ -1105,7 +1143,7 @@ namespace LocalTanks.Editor
         private static void EnsureSceneInBuildSettings()
         {
             List<EditorBuildSettingsScene> scenes = EditorBuildSettings.scenes.ToList();
-            foreach (string path in new[] { ScenePath, DuelScenePath, PlayerTestScenePath })
+            foreach (string path in new[] { ScenePath, DuelScenePath, SquadScenePath, PlayerTestScenePath })
             {
                 if (scenes.All(item => item.path != path))
                     scenes.Add(new EditorBuildSettingsScene(path, true));

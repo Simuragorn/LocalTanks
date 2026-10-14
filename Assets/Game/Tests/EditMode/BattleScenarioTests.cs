@@ -61,6 +61,27 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void AiSquadLabScenarioAndCases_AreValidThreeVersusThreeInputs()
+        {
+            BattleScenario scenario = BattleScenarioImporter.ReimportSquadLab();
+            AiSquadLabCatalog catalog = AiSquadLabCatalogImporter.Reimport();
+            CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(
+                CombatDefinitionImporter.DatabasePath);
+
+            Assert.That(scenario.kind, Is.EqualTo(BattleScenarioKind.AiSquadLab));
+            Assert.That(scenario.Validate(database), Is.Empty);
+            Assert.That(scenario.entries, Has.Length.EqualTo(6));
+            Assert.That(scenario.entries.Count(item => item.team == TeamId.TeamA), Is.EqualTo(3));
+            Assert.That(scenario.entries.Count(item => item.team == TeamId.TeamB), Is.EqualTo(3));
+            Assert.That(scenario.entries.Any(item => item.playerControlled), Is.False);
+            Assert.That(scenario.entries.Select(item => item.lane).Distinct(),
+                Is.EquivalentTo(new[] { BattleLane.North, BattleLane.Center, BattleLane.South }));
+            Assert.That(catalog.Validate(), Is.Empty);
+            Assert.That(catalog.cases, Has.Length.EqualTo(3));
+            Assert.That(catalog.cases.Select(item => item.seed).Distinct().Count(), Is.EqualTo(3));
+        }
+
+        [Test]
         public void ScenarioValidator_RejectsDuplicatedSpawnAndUnknownTank()
         {
             CombatDatabase database = ScriptableObject.CreateInstance<CombatDatabase>();

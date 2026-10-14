@@ -9,6 +9,7 @@ namespace LocalTanks
     {
         StandardBattle,
         AiDuelLab,
+        AiSquadLab,
         PlayerAiTestLab
     }
 
@@ -57,9 +58,17 @@ namespace LocalTanks
 
         public BattleScenarioEntry[] entries;
 
-        public int ExpectedTeamSize => kind == BattleScenarioKind.AiDuelLab ? 1 : TeamSize;
-        public int RequiredPlayerCount => kind == BattleScenarioKind.AiDuelLab ? 0 : 1;
+        public int ExpectedTeamSize => kind switch
+        {
+            BattleScenarioKind.AiDuelLab => 1,
+            BattleScenarioKind.AiSquadLab => 3,
+            _ => TeamSize
+        };
+        public int RequiredPlayerCount =>
+            kind == BattleScenarioKind.AiDuelLab || kind == BattleScenarioKind.AiSquadLab ? 0 : 1;
         public bool UsesRemoteStrategy => kind == BattleScenarioKind.StandardBattle;
+        public bool UsesStrategicCoordinator =>
+            kind != BattleScenarioKind.AiDuelLab && kind != BattleScenarioKind.AiSquadLab;
 
         public string[] Validate(CombatDatabase database)
         {

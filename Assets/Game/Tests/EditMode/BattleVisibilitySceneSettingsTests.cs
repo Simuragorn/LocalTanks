@@ -19,6 +19,7 @@ namespace LocalTanks.Tests
         // opening a folder that no longer exists.
         private static string RiverCrossingScene => BattleSceneLayout.Path(BattleSceneLayout.RiverCrossing);
         private static string AiDuelLabScene => BattleSceneLayout.Path(BattleSceneLayout.AiDuelLab);
+        private static string AiSquadLabScene => BattleSceneLayout.Path(BattleSceneLayout.AiSquadLab);
         private static string PlayerAiTestLabScene => BattleSceneLayout.Path(BattleSceneLayout.PlayerAiTestLab);
 
         [Test]
@@ -35,7 +36,20 @@ namespace LocalTanks.Tests
                 }
 
                 Assert.That(Find<AiDuelLabController>(scope.Scene), Is.Null);
+                Assert.That(Find<AiSquadLabController>(scope.Scene), Is.Null);
                 Assert.That(Find<PlayerAiTestLabController>(scope.Scene), Is.Null);
+            }
+        }
+
+        [Test]
+        public void AiSquadLab_KeepsTheDebugSilhouette()
+        {
+            using (SceneScope scope = SceneScope.Open(AiSquadLabScene))
+            {
+                AiSquadLabController controller = Find<AiSquadLabController>(scope.Scene);
+                Assert.That(controller, Is.Not.Null);
+                Assert.That(controller.ShowHiddenTanksForTesting, Is.True,
+                    "The squad laboratory must keep every tactical participant observable.");
             }
         }
 
@@ -66,19 +80,25 @@ namespace LocalTanks.Tests
         [Test]
         public void EveryBattleScene_ResolvesTheVisibilityItExpects()
         {
-            foreach (string path in new[] { RiverCrossingScene, AiDuelLabScene, PlayerAiTestLabScene })
+            foreach (string path in new[]
+                     { RiverCrossingScene, AiDuelLabScene, AiSquadLabScene, PlayerAiTestLabScene })
             {
                 using (SceneScope scope = SceneScope.Open(path))
                 {
                     BattleVisibilitySettings settings = Find<BattleVisibilitySettings>(scope.Scene);
                     AiDuelLabController duel = Find<AiDuelLabController>(scope.Scene);
+                    AiSquadLabController squad = Find<AiSquadLabController>(scope.Scene);
                     PlayerAiTestLabController playerLab = Find<PlayerAiTestLabController>(scope.Scene);
-                    bool hasLaboratory = duel != null || playerLab != null;
+                    bool hasLaboratory = duel != null || squad != null || playerLab != null;
 
                     // A laboratory owns the value through its own controller and turns the silhouette
                     // on at runtime, so the scene component itself must keep the safe default.
                     bool effective = hasLaboratory
-                        ? (duel != null ? duel.ShowHiddenTanksForTesting : playerLab.ShowHiddenTanksForTesting)
+                        ? duel != null
+                            ? duel.ShowHiddenTanksForTesting
+                            : squad != null
+                                ? squad.ShowHiddenTanksForTesting
+                                : playerLab.ShowHiddenTanksForTesting
                         : settings != null && settings.ShowHiddenTanksForTesting;
 
                     Assert.That(effective, Is.EqualTo(hasLaboratory),

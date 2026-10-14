@@ -29,13 +29,15 @@ namespace LocalTanks.Editor
         public const string TestRange = "Battle_TestRange";
         public const string NavigationRange = "Battle_NavigationRange";
         public const string AiDuelLab = "Battle_AiDuelLab";
+        public const string AiSquadLab = "Battle_AiSquadLab";
         public const string PlayerAiTestLab = "Battle_PlayerAiTestLab";
 
         /// <summary>The maps the project currently builds. River Crossing is a temporary test map (ADR-064).</summary>
         public static readonly string[] KnownMapScenes = { RiverCrossing, Mines };
 
-        /// <summary>Everything that is not a playable map: the ranges and the two laboratories.</summary>
-        public static readonly string[] LabScenes = { TestRange, NavigationRange, AiDuelLab, PlayerAiTestLab };
+        /// <summary>Everything that is not a playable map: the ranges and the three laboratories.</summary>
+        public static readonly string[] LabScenes =
+            { TestRange, NavigationRange, AiDuelLab, AiSquadLab, PlayerAiTestLab };
 
         public const string TemplateScenePath = "Assets/Settings/Scenes/URP2DSceneTemplate.unity";
 

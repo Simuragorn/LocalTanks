@@ -164,6 +164,28 @@
       ]
     },
     {
+      "name": "ReimportAiSquadLabScenario",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.BattleScenarioImporter.ReimportSquadLab",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Reimport the AI three-versus-three squad lab scenario into its generated asset.",
+      "outputs": [
+        "Assets/Game/GameData/Generated/Scenarios"
+      ]
+    },
+    {
+      "name": "ReimportAiSquadLabCases",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.AiSquadLabCatalogImporter.Reimport",
+      "requiresGraphics": false,
+      "timeoutSeconds": 1800,
+      "description": "Reimport the AI three-versus-three seed catalogue from its source.",
+      "outputs": [
+        "Assets/Game/GameData/Generated/Scenarios"
+      ]
+    },
+    {
       "name": "RebuildTacticalMapAnalysis",
       "kind": "ExecuteMethod",
       "executeMethod": "LocalTanks.Editor.TacticalMapDescriptorImporter.Reimport",
