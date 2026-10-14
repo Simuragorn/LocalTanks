@@ -26,8 +26,10 @@ namespace LocalTanks
 
         public event Action<WeaponController> Fired;
         public event Action<WeaponController> ReloadStarted;
+        public event Action<WeaponController> StateChanged;
 
         public bool IsReady => reloadTimer.IsReady && shotIntervalTimer.IsReady && roundsRemaining > 0;
+        public bool IsReloading => !reloadTimer.IsReady;
         public Transform Muzzle => muzzle;
         public float RemainingReloadSeconds => reloadTimer.IsReady ? shotIntervalTimer.Remaining : reloadTimer.Remaining;
         public int RoundsRemaining => roundsRemaining;
@@ -66,6 +68,7 @@ namespace LocalTanks
             reloadTimer.Reset();
             shotIntervalTimer.Reset();
             ResolveProjectileOwner();
+            StateChanged?.Invoke(this);
         }
 
         private void Awake()
@@ -91,7 +94,22 @@ namespace LocalTanks
             if (reloadTimer.IsReady && roundsRemaining <= 0)
             {
                 roundsRemaining = MagazineSize;
+                StateChanged?.Invoke(this);
             }
+        }
+
+        public bool TryStartReload()
+        {
+            if (!reloadTimer.IsReady || roundsRemaining >= MagazineSize || EffectiveReloadSeconds <= 0f)
+            {
+                return false;
+            }
+
+            roundsRemaining = 0;
+            reloadTimer.Start(EffectiveReloadSeconds);
+            ReloadStarted?.Invoke(this);
+            StateChanged?.Invoke(this);
+            return true;
         }
 
         public bool TryFire()
@@ -124,6 +142,7 @@ namespace LocalTanks
                 shotIntervalTimer.Start(EffectiveShotIntervalSeconds);
             }
             Fired?.Invoke(this);
+            StateChanged?.Invoke(this);
             return true;
         }
 

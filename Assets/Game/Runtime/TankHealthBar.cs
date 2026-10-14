@@ -19,6 +19,9 @@ namespace LocalTanks
         public Color FillColor => useTeamColor
             ? TeamPalette.ForRelation(allied)
             : GetHealthColor(HealthRatio);
+        public string HealthText => health != null
+            ? FormatHitPoints(health.CurrentHitPoints, health.MaximumHitPoints)
+            : string.Empty;
 
         private void Awake()
         {
@@ -69,6 +72,12 @@ namespace LocalTanks
             GUI.color = FillColor;
             GUI.DrawTexture(fill, Texture2D.whiteTexture);
             GUI.color = previousColor;
+
+        }
+
+        public static string FormatHitPoints(int current, int maximum)
+        {
+            return $"{Mathf.Max(0, current)} / {Mathf.Max(0, maximum)}";
         }
 
         private static Color GetHealthColor(float ratio)

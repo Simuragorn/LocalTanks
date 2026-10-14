@@ -67,9 +67,10 @@ namespace LocalTanks
                 ricochetPenetrationMultiplier,
                 remainingRicochets));
 
+            int appliedDamage = 0;
             if (result.Outcome == ImpactOutcome.Penetrated && health != null)
             {
-                health.ApplyDamage(damage);
+                appliedDamage = health.ApplyDamage(damage).AppliedDamage;
             }
 
             LastImpactPoint = impactPoint;
@@ -79,7 +80,7 @@ namespace LocalTanks
                 -projectileDirection,
                 result.Outcome,
                 result.Zone,
-                result.Outcome == ImpactOutcome.Penetrated ? damage : 0,
+                appliedDamage,
                 Time.time));
 
             if (logImpacts)

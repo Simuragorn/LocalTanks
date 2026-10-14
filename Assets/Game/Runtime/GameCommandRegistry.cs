@@ -34,6 +34,7 @@ namespace LocalTanks
             new GameCommandInfo("turn", "A / D", "Поворот корпуса", GameCommandGroup.Battle),
             new GameCommandInfo("aim", "Мышь", "Наведение башни и орудия", GameCommandGroup.Battle),
             new GameCommandInfo("fire", "ЛКМ", "Огонь; удерживание ведёт непрерывную стрельбу", GameCommandGroup.Battle),
+            new GameCommandInfo("reload", "R", "Принудительная перезарядка магазина", GameCommandGroup.Battle),
             new GameCommandInfo("zoom", "Колесо мыши", "Изменение масштаба камеры", GameCommandGroup.Battle),
             new GameCommandInfo("help", "F1", "Открыть или закрыть эту справку", GameCommandGroup.Interface),
             new GameCommandInfo("bot_selection", "Tab / Shift+Tab", "Следующий или предыдущий живой бот при открытом F4", GameCommandGroup.Interface),
@@ -45,7 +46,7 @@ namespace LocalTanks
             new GameCommandInfo("time_scale", "F5", "Переключить скорость времени ×1 / ×3", GameCommandGroup.Development),
             new GameCommandInfo("map_analysis", "F6", "Показать оценку карты и планы команд", GameCommandGroup.Development),
             new GameCommandInfo("duel_pause", "Space", "Пауза в AI Duel Lab", GameCommandGroup.Development),
-            new GameCommandInfo("duel_restart", "R", "Перезапустить текущую дуэль AI Duel Lab", GameCommandGroup.Development),
+            new GameCommandInfo("duel_restart", "Ctrl+R", "Перезапустить текущую дуэль AI Duel Lab", GameCommandGroup.Development),
             new GameCommandInfo("duel_cases", "B / N", "Предыдущий или следующий сценарий AI Duel Lab", GameCommandGroup.Development)
         };
 

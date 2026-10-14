@@ -20,12 +20,19 @@ namespace LocalTanks
         private VisualElement enemyList;
         private Label allyScore;
         private Label enemyScore;
+        private Label allyHealthTotal;
+        private Label enemyHealthTotal;
         private VisualElement baseStatusList;
         private Label battleTimer;
         private Label battleResult;
+        private Label weaponAmmo;
+        private Label weaponReload;
         private BattleDirector director;
+        private WeaponController playerWeapon;
+        private DamagePopupLayer combatOverlay;
         private float nextCaptureRefreshTime;
         private float nextClockRefreshTime;
+        private float nextWeaponRefreshTime;
 
         public VisualElement AllyList => allyList;
         public VisualElement EnemyList => enemyList;
@@ -52,6 +59,12 @@ namespace LocalTanks
             {
                 roster.Changed -= Rebuild;
             }
+
+            if (playerWeapon != null)
+            {
+                playerWeapon.StateChanged -= OnWeaponStateChanged;
+                playerWeapon = null;
+            }
         }
 
         public void Configure(BattleRoster battleRoster, StyleSheet[] styles, CaptureBase[] bases)
@@ -67,6 +80,11 @@ namespace LocalTanks
             if (isActiveAndEnabled && roster != null)
             {
                 roster.Changed += Rebuild;
+            }
+
+            if (combatOverlay != null && document != null)
+            {
+                combatOverlay.Configure(roster, Camera.main, document.rootVisualElement);
             }
         }
 
@@ -93,13 +111,21 @@ namespace LocalTanks
             enemyList = root.Q<VisualElement>("enemy-list");
             allyScore = root.Q<Label>("ally-score");
             enemyScore = root.Q<Label>("enemy-score");
+            allyHealthTotal = root.Q<Label>("ally-health-total");
+            enemyHealthTotal = root.Q<Label>("enemy-health-total");
             baseStatusList = root.Q<VisualElement>("base-status-list");
             battleTimer = root.Q<Label>("battle-timer");
             battleResult = root.Q<Label>("battle-result");
+            weaponAmmo = root.Q<Label>("weapon-ammo");
+            weaponReload = root.Q<Label>("weapon-reload");
             director = FindAnyObjectByType<BattleDirector>();
+            combatOverlay = GetComponent<DamagePopupLayer>();
+            if (combatOverlay == null) combatOverlay = gameObject.AddComponent<DamagePopupLayer>();
+            combatOverlay.Configure(roster, Camera.main, root);
             Rebuild();
             RefreshCaptureStatus();
             RefreshClock();
+            RefreshWeaponStatus();
         }
 
         private void Update()
@@ -110,6 +136,12 @@ namespace LocalTanks
             {
                 nextClockRefreshTime = Time.unscaledTime + 0.25f;
                 RefreshClock();
+            }
+
+            if (Time.unscaledTime >= nextWeaponRefreshTime)
+            {
+                nextWeaponRefreshTime = Time.unscaledTime + 0.1f;
+                RefreshWeaponStatus();
             }
 
             if (Time.unscaledTime < nextCaptureRefreshTime)
@@ -174,6 +206,11 @@ namespace LocalTanks
             BuildSide(enemyList, roster.Enemies, false);
             allyScore.text = roster.AlliesAlive.ToString();
             enemyScore.text = roster.EnemiesAlive.ToString();
+            if (allyHealthTotal != null)
+                allyHealthTotal.text = FormatHitPoints(roster.AlliesCurrentHitPoints, roster.AlliesMaximumHitPoints);
+            if (enemyHealthTotal != null)
+                enemyHealthTotal.text = FormatHitPoints(roster.EnemiesCurrentHitPoints, roster.EnemiesMaximumHitPoints);
+            ResolvePlayerWeapon();
         }
 
         private static void BuildSide(
@@ -210,6 +247,12 @@ namespace LocalTanks
                     tooltip = entry.TankName
                 };
                 name.AddToClassList("tank-name");
+                Label hitPoints = new Label(VisibleHitPoints(entry));
+                hitPoints.AddToClassList("health-number");
+                if (string.IsNullOrEmpty(hitPoints.text))
+                {
+                    hitPoints.style.display = DisplayStyle.None;
+                }
                 VisualElement title = new VisualElement();
                 title.AddToClassList("tank-title");
                 title.AddToClassList(ally ? "ally-title" : "enemy-title");
@@ -217,9 +260,11 @@ namespace LocalTanks
                 {
                     title.Add(classIcon);
                     title.Add(name);
+                    title.Add(hitPoints);
                 }
                 else
                 {
+                    title.Add(hitPoints);
                     title.Add(name);
                     title.Add(classIcon);
                 }
@@ -259,6 +304,67 @@ namespace LocalTanks
             }
 
             return tankName.Substring(0, MaximumTankNameLength - 1) + "…";
+        }
+
+        public static string FormatHitPoints(int current, int maximum)
+        {
+            return TankHealthBar.FormatHitPoints(current, maximum);
+        }
+
+        public static string VisibleHitPoints(BattleRosterEntry entry)
+        {
+            return entry != null && (entry.IsAlly || entry.IsCurrentlyVisible || !entry.IsAlive)
+                ? FormatHitPoints(entry.LastKnownHitPoints, entry.MaximumHitPoints)
+                : string.Empty;
+        }
+
+        private void RefreshWeaponStatus()
+        {
+            if (weaponAmmo == null || weaponReload == null)
+            {
+                return;
+            }
+
+            ResolvePlayerWeapon();
+            VisualElement panel = weaponAmmo.parent;
+            if (playerWeapon == null)
+            {
+                if (panel != null) panel.style.display = DisplayStyle.None;
+                return;
+            }
+
+            if (panel != null) panel.style.display = DisplayStyle.Flex;
+            weaponAmmo.text = $"Снаряды  {playerWeapon.RoundsRemaining} / {playerWeapon.MagazineSize}";
+            weaponReload.text = playerWeapon.IsReloading
+                ? $"Перезарядка  {playerWeapon.RemainingReloadSeconds:0.0} / {playerWeapon.EffectiveReloadSeconds:0.0} с"
+                : $"Перезарядка  {playerWeapon.EffectiveReloadSeconds:0.0} с";
+            weaponReload.EnableInClassList("is-reloading", playerWeapon.IsReloading);
+        }
+
+        private void ResolvePlayerWeapon()
+        {
+            TeamMember player = roster != null ? roster.PlayerMember : null;
+            WeaponController resolved = player != null ? player.GetComponent<WeaponController>() : null;
+            if (resolved == playerWeapon)
+            {
+                return;
+            }
+
+            if (playerWeapon != null)
+            {
+                playerWeapon.StateChanged -= OnWeaponStateChanged;
+            }
+
+            playerWeapon = resolved;
+            if (playerWeapon != null)
+            {
+                playerWeapon.StateChanged += OnWeaponStateChanged;
+            }
+        }
+
+        private void OnWeaponStateChanged(WeaponController source)
+        {
+            RefreshWeaponStatus();
         }
 
         private void RefreshCaptureStatus()

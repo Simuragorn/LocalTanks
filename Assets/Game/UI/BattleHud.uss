@@ -29,6 +29,11 @@
     border-radius: 5px;
 }
 
+.score-side {
+    min-width: 78px;
+    align-items: center;
+}
+
 .score-number {
     font-size: 22px;
     -unity-font-style: bold;
@@ -37,6 +42,12 @@
 .score-separator {
     color: rgb(190, 190, 185);
     font-size: 22px;
+}
+
+.score-health {
+    font-size: 11px;
+    -unity-font-style: bold;
+    margin-top: -3px;
 }
 
 .base-status-list {
@@ -101,6 +112,16 @@
     overflow: hidden;
 }
 
+.health-number {
+    min-width: 62px;
+    margin-left: 4px;
+    margin-right: 4px;
+    color: rgb(228, 228, 218);
+    font-size: 11px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
 .health-track {
     height: 9px;
     background-color: rgba(4, 5, 4, 0.90);
@@ -144,3 +165,101 @@
 
 .battle-result.has-result { display: flex; }
 
+.weapon-status {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    translate: -50% 0;
+    min-width: 238px;
+    padding: 7px 13px;
+    align-items: center;
+    background-color: rgba(15, 18, 16, 0.82);
+    border-radius: 5px;
+}
+
+.weapon-ammo {
+    color: rgb(235, 235, 228);
+    font-size: 15px;
+    -unity-font-style: bold;
+}
+
+.weapon-reload {
+    color: rgb(190, 190, 180);
+    font-size: 12px;
+}
+
+.weapon-reload.is-reloading {
+    color: rgb(239, 190, 91);
+}
+
+.combat-screen-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.world-health-number {
+    position: absolute;
+    width: 100px;
+    height: 18px;
+    color: rgb(235, 235, 228);
+    font-size: 11px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.92);
+}
+
+.damage-popup {
+    position: absolute;
+    width: 90px;
+    height: 28px;
+    color: rgb(255, 226, 117);
+    font-size: 22px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.95);
+}
+
+.offscreen-indicator {
+    position: absolute;
+    width: 176px;
+    height: 52px;
+    align-items: center;
+}
+
+.offscreen-arrow {
+    height: 27px;
+    color: rgb(220, 115, 105);
+    font-size: 27px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    -unity-text-outline-width: 1px;
+    -unity-text-outline-color: rgba(0, 0, 0, 0.95);
+}
+
+.offscreen-details {
+    height: 25px;
+    padding-left: 6px;
+    padding-right: 6px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(15, 18, 16, 0.84);
+    border-radius: 4px;
+}
+
+.offscreen-class-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+}
+
+.offscreen-text {
+    color: rgb(235, 235, 228);
+    font-size: 12px;
+    -unity-font-style: bold;
+}

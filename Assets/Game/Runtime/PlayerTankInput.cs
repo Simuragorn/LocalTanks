@@ -38,6 +38,11 @@ namespace LocalTanks
                 motor.SetInput(drive, turn);
             }
 
+            if (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+            {
+                weapon?.TryStartReload();
+            }
+
             if (mouse == null)
             {
                 return;

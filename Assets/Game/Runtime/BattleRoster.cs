@@ -60,6 +60,14 @@ namespace LocalTanks
             .ToArray();
         public int AlliesAlive => entries.Values.Count(entry => entry.IsAlly && entry.IsAlive);
         public int EnemiesAlive => entries.Values.Count(entry => !entry.IsAlly && entry.IsAlive);
+        public int AlliesCurrentHitPoints => SumHitPoints(true, false);
+        public int AlliesMaximumHitPoints => SumHitPoints(true, true);
+        public int EnemiesCurrentHitPoints => SumHitPoints(false, false);
+        public int EnemiesMaximumHitPoints => SumHitPoints(false, true);
+        public TeamMember PlayerMember => entries.Values
+            .Where(entry => entry.IsAlly && entry.Member != null && entry.Member.IsPlayerControlled)
+            .Select(entry => entry.Member)
+            .FirstOrDefault();
 
         private void OnEnable()
         {
@@ -219,6 +227,13 @@ namespace LocalTanks
             {
                 visionSystem.VisibilityChanged -= OnVisibilityChanged;
             }
+        }
+
+        private int SumHitPoints(bool allied, bool maximum)
+        {
+            return entries.Values
+                .Where(entry => entry.IsAlly == allied && entry.IsAlive)
+                .Sum(entry => maximum ? entry.MaximumHitPoints : entry.LastKnownHitPoints);
         }
     }
 }

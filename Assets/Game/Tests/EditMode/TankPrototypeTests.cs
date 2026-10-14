@@ -22,6 +22,55 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void BattleHud_FormatsHitPointsAndDamageWithoutRecalculatingThem()
+        {
+            Assert.That(BattleHudController.FormatHitPoints(73, 100), Is.EqualTo("73 / 100"));
+            Assert.That(TankHealthBar.FormatHitPoints(-5, 100), Is.EqualTo("0 / 100"));
+            Assert.That(DamagePopupLayer.FormatDamage(27), Is.EqualTo("-27"));
+            Assert.That(DamagePopupLayer.FormatIndicator("MS-1", 123.6f), Is.EqualTo("MS-1  124 м"));
+            Assert.That(DamagePopupLayer.ArrowGlyph(0f), Is.EqualTo("▶"));
+            Assert.That(DamagePopupLayer.ArrowGlyph(90f), Is.EqualTo("▲"));
+        }
+
+        [Test]
+        public void OffscreenIndicator_ClampsAllEightDirectionsToTheSafeArea()
+        {
+            Rect safeArea = new Rect(100f, 80f, 800f, 600f);
+            Vector2[] directions =
+            {
+                Vector2.up,
+                Vector2.down,
+                Vector2.left,
+                Vector2.right,
+                new Vector2(1f, 1f),
+                new Vector2(-1f, 1f),
+                new Vector2(1f, -1f),
+                new Vector2(-1f, -1f)
+            };
+
+            foreach (Vector2 direction in directions)
+            {
+                Assert.That(HudProjectionMath.TryPlaceAtEdge(
+                    safeArea.center + direction.normalized * 2000f,
+                    safeArea,
+                    out EdgeIndicatorPlacement placement), Is.True, direction.ToString());
+                Assert.That(safeArea.Contains(placement.Position) ||
+                            Mathf.Approximately(placement.Position.x, safeArea.xMax) ||
+                            Mathf.Approximately(placement.Position.y, safeArea.yMax), Is.True,
+                    $"{direction}: {placement.Position}");
+                Assert.That(
+                    Mathf.Approximately(placement.Position.x, safeArea.xMin) ||
+                    Mathf.Approximately(placement.Position.x, safeArea.xMax) ||
+                    Mathf.Approximately(placement.Position.y, safeArea.yMin) ||
+                    Mathf.Approximately(placement.Position.y, safeArea.yMax),
+                    Is.True,
+                    $"{direction}: {placement.Position}");
+            }
+
+            Assert.That(HudProjectionMath.TryPlaceAtEdge(safeArea.center, safeArea, out _), Is.False);
+        }
+
+        [Test]
         public void TankArt_UsesOnlyCanonicalWoTGeneratedRoot()
         {
             Assert.That(AssetDatabase.IsValidFolder("Assets/Game/Art/Tanks"), Is.False);

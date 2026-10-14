@@ -255,6 +255,18 @@
       ]
     },
     {
+      "name": "CaptureBattleHudProof",
+      "kind": "Tests",
+      "testPlatform": "PlayMode",
+      "filter": "CombatHudPreviewTests",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the real River Crossing battle HUD with numeric HP, weapon state, an applied-damage popup and a spotted enemy beyond the camera edge.",
+      "outputs": [
+        "Docs/Media/BattleHud.png"
+      ]
+    },
+    {
       "name": "RenderCombatVfxProof",
       "kind": "ExecuteMethod",
       "executeMethod": "LocalTanks.Editor.CombatVfxProofRenderer.Render",

@@ -1,0 +1,407 @@
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+namespace LocalTanks
+{
+    /// <summary>
+    /// One screen-space owner for tank HP, transient damage numbers and spotted enemies outside the camera.
+    /// It writes into the battle UIDocument, so fourteen machines do not create fourteen screen-space layers
+    /// and graphical proofs can render the exact same elements without an interactive game window.
+    /// </summary>
+    public sealed class DamagePopupLayer : MonoBehaviour
+    {
+        public const float PopupLifetimeSeconds = 1.25f;
+
+        private readonly List<DamagePopup> popups = new List<DamagePopup>();
+        private readonly HashSet<TankArmor> subscribedArmor = new HashSet<TankArmor>();
+        private readonly Dictionary<TeamMember, Label> healthLabels = new Dictionary<TeamMember, Label>();
+        private readonly Dictionary<TeamMember, IndicatorView> indicators = new Dictionary<TeamMember, IndicatorView>();
+        private BattleRoster roster;
+        private Camera worldCamera;
+        private VisualElement root;
+        private VisualElement overlay;
+
+        public int ActivePopupCount => popups.Count;
+
+        private void OnEnable()
+        {
+            TeamMember.MembershipChanged += OnMembershipChanged;
+            RebindArmor();
+        }
+
+        private void OnDisable()
+        {
+            TeamMember.MembershipChanged -= OnMembershipChanged;
+            foreach (TankArmor armor in subscribedArmor.ToArray())
+            {
+                Unsubscribe(armor);
+            }
+
+            ClearViews();
+        }
+
+        public void Configure(BattleRoster battleRoster, Camera camera, VisualElement uiRoot)
+        {
+            roster = battleRoster;
+            worldCamera = camera;
+            if (root != uiRoot)
+            {
+                ClearViews();
+                root = uiRoot;
+            }
+
+            EnsureOverlay();
+            RebindArmor();
+        }
+
+        private void Update()
+        {
+            if (roster == null || root == null)
+            {
+                return;
+            }
+
+            EnsureOverlay();
+            Camera camera = worldCamera != null ? worldCamera : Camera.main;
+            if (camera == null)
+            {
+                return;
+            }
+
+            RefreshPopups(camera);
+            RefreshTankHealth(camera);
+            RefreshIndicators(camera);
+        }
+
+        private void RefreshPopups(Camera camera)
+        {
+            float now = Time.unscaledTime;
+            for (int index = popups.Count - 1; index >= 0; index--)
+            {
+                DamagePopup popup = popups[index];
+                float progress = Mathf.Clamp01((now - popup.StartedAt) / PopupLifetimeSeconds);
+                if (progress >= 1f)
+                {
+                    popup.Label.RemoveFromHierarchy();
+                    popups.RemoveAt(index);
+                    continue;
+                }
+
+                if (!TryProject(camera, popup.WorldPosition, out Vector2 point))
+                {
+                    popup.Label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                popup.Label.style.display = DisplayStyle.Flex;
+                popup.Label.style.left = point.x - 45f;
+                popup.Label.style.top = point.y - 38f - progress * 28f;
+                popup.Label.style.opacity = 1f - progress;
+            }
+        }
+
+        private void RefreshTankHealth(Camera camera)
+        {
+            HashSet<TeamMember> active = new HashSet<TeamMember>();
+            foreach (BattleRosterEntry entry in roster.Allies.Concat(roster.Enemies))
+            {
+                if (entry.Member == null || !entry.IsAlive || !entry.IsAlly && !entry.IsCurrentlyVisible)
+                {
+                    continue;
+                }
+
+                active.Add(entry.Member);
+                if (!healthLabels.TryGetValue(entry.Member, out Label label))
+                {
+                    label = new Label { name = "world-health-number", pickingMode = PickingMode.Ignore };
+                    label.AddToClassList("world-health-number");
+                    healthLabels.Add(entry.Member, label);
+                    overlay.Add(label);
+                }
+
+                if (!TryProject(camera, entry.Member.transform.position + Vector3.up * 1.18f, out Vector2 point))
+                {
+                    label.style.display = DisplayStyle.None;
+                    continue;
+                }
+
+                label.text = BattleHudController.FormatHitPoints(entry.LastKnownHitPoints, entry.MaximumHitPoints);
+                label.style.color = entry.TeamColor;
+                label.style.display = DisplayStyle.Flex;
+                label.style.left = point.x - 50f;
+                label.style.top = point.y;
+            }
+
+            foreach (TeamMember member in healthLabels.Keys.Where(member => !active.Contains(member)).ToArray())
+            {
+                healthLabels[member].RemoveFromHierarchy();
+                healthLabels.Remove(member);
+            }
+        }
+
+        private void RefreshIndicators(Camera camera)
+        {
+            TeamMember player = roster.PlayerMember;
+            HashSet<TeamMember> active = new HashSet<TeamMember>();
+            if (player == null)
+            {
+                HideUnusedIndicators(active);
+                return;
+            }
+
+            Vector2 panelSize = PanelSize();
+            float horizontalInset = panelSize.x >= 1000f ? 292f : 46f;
+            float verticalInset = panelSize.y >= 700f ? 88f : 42f;
+            Rect safeArea = new Rect(
+                horizontalInset,
+                verticalInset,
+                Mathf.Max(1f, panelSize.x - horizontalInset * 2f),
+                Mathf.Max(1f, panelSize.y - verticalInset * 2f));
+            List<Rect> occupied = new List<Rect>();
+
+            foreach (BattleRosterEntry entry in roster.Enemies)
+            {
+                if (!entry.IsAlive || !entry.IsCurrentlyVisible || entry.Member == null)
+                {
+                    continue;
+                }
+
+                Vector3 projected = camera.WorldToScreenPoint(entry.Member.transform.position);
+                Vector2 screen = ToPanelBottomLeft(camera, projected);
+                if (projected.z < 0f)
+                {
+                    screen = safeArea.center - (screen - safeArea.center);
+                }
+
+                if (!HudProjectionMath.TryPlaceAtEdge(screen, safeArea, out EdgeIndicatorPlacement placement))
+                {
+                    continue;
+                }
+
+                active.Add(entry.Member);
+                if (!indicators.TryGetValue(entry.Member, out IndicatorView view))
+                {
+                    view = CreateIndicator(entry);
+                    indicators.Add(entry.Member, view);
+                    overlay.Add(view.Root);
+                }
+
+                float distanceMetres = GameScale.UnitsToMetres(
+                    Vector2.Distance(player.transform.position, entry.Member.transform.position));
+                view.Arrow.text = ArrowGlyph(placement.AngleDegrees);
+                view.Text.text = FormatIndicator(entry.TankName, distanceMetres);
+                view.Root.style.display = DisplayStyle.Flex;
+                Vector2 position = ResolveIndicatorPosition(
+                    new Vector2(
+                        Mathf.Clamp(placement.Position.x - 88f, 4f, panelSize.x - 180f),
+                        Mathf.Clamp(panelSize.y - placement.Position.y - 24f, 4f, panelSize.y - 54f)),
+                    panelSize,
+                    occupied);
+                view.Root.style.left = position.x;
+                view.Root.style.top = position.y;
+                occupied.Add(new Rect(position.x, position.y, 176f, 52f));
+            }
+
+            HideUnusedIndicators(active);
+        }
+
+        private static Vector2 ResolveIndicatorPosition(
+            Vector2 desired,
+            Vector2 panelSize,
+            IReadOnlyList<Rect> occupied)
+        {
+            for (int step = 0; step <= occupied.Count; step++)
+            {
+                float signedStep = step == 0 ? 0f : ((step + 1) / 2) * 56f * (step % 2 == 1 ? 1f : -1f);
+                Vector2 candidate = new Vector2(
+                    desired.x,
+                    Mathf.Clamp(desired.y + signedStep, 4f, Mathf.Max(4f, panelSize.y - 54f)));
+                Rect candidateRect = new Rect(candidate.x, candidate.y, 176f, 52f);
+                if (!occupied.Any(candidateRect.Overlaps))
+                {
+                    return candidate;
+                }
+            }
+
+            return desired;
+        }
+
+        private IndicatorView CreateIndicator(BattleRosterEntry entry)
+        {
+            VisualElement container = new VisualElement { pickingMode = PickingMode.Ignore };
+            container.AddToClassList("offscreen-indicator");
+            Label arrow = new Label { pickingMode = PickingMode.Ignore };
+            arrow.AddToClassList("offscreen-arrow");
+            Image icon = new Image
+            {
+                sprite = entry.ClassIcon,
+                tintColor = entry.TeamColor,
+                scaleMode = ScaleMode.ScaleToFit,
+                pickingMode = PickingMode.Ignore
+            };
+            icon.AddToClassList("offscreen-class-icon");
+            Label text = new Label { pickingMode = PickingMode.Ignore };
+            text.AddToClassList("offscreen-text");
+            VisualElement details = new VisualElement { pickingMode = PickingMode.Ignore };
+            details.AddToClassList("offscreen-details");
+            details.Add(icon);
+            details.Add(text);
+            container.Add(arrow);
+            container.Add(details);
+            return new IndicatorView(container, arrow, text);
+        }
+
+        private void HideUnusedIndicators(HashSet<TeamMember> active)
+        {
+            foreach (KeyValuePair<TeamMember, IndicatorView> pair in indicators)
+            {
+                if (!active.Contains(pair.Key)) pair.Value.Root.style.display = DisplayStyle.None;
+            }
+        }
+
+        private bool TryProject(Camera camera, Vector3 worldPosition, out Vector2 point)
+        {
+            Vector3 projected = camera.WorldToScreenPoint(worldPosition);
+            if (projected.z <= 0f)
+            {
+                point = default;
+                return false;
+            }
+
+            Vector2 bottomLeft = ToPanelBottomLeft(camera, projected);
+            Vector2 size = PanelSize();
+            point = new Vector2(bottomLeft.x, size.y - bottomLeft.y);
+            return point.x >= 0f && point.x <= size.x && point.y >= 0f && point.y <= size.y;
+        }
+
+        private Vector2 ToPanelBottomLeft(Camera camera, Vector3 projected)
+        {
+            Vector2 size = PanelSize();
+            return new Vector2(
+                projected.x / Mathf.Max(1f, camera.pixelWidth) * size.x,
+                projected.y / Mathf.Max(1f, camera.pixelHeight) * size.y);
+        }
+
+        private Vector2 PanelSize()
+        {
+            float width = root != null ? root.resolvedStyle.width : 0f;
+            float height = root != null ? root.resolvedStyle.height : 0f;
+            return new Vector2(
+                width > 1f ? width : Mathf.Max(1f, Screen.width),
+                height > 1f ? height : Mathf.Max(1f, Screen.height));
+        }
+
+        private void OnImpactResolved(TankArmor armor, ArmorImpactObservation observation)
+        {
+            if (armor == null || observation.Damage <= 0 || roster == null) return;
+            TeamMember member = armor.GetComponentInParent<TeamMember>();
+            BattleRosterEntry entry = roster.Find(member);
+            if (entry == null || !entry.IsAlly && !entry.IsCurrentlyVisible) return;
+
+            EnsureOverlay();
+            Vector2 point = armor.LastImpactPoint;
+            if (point == Vector2.zero && member != null) point = member.transform.position;
+            Label label = new Label(FormatDamage(observation.Damage)) { pickingMode = PickingMode.Ignore };
+            label.AddToClassList("damage-popup");
+            overlay.Add(label);
+            popups.Add(new DamagePopup(point, Time.unscaledTime, label));
+        }
+
+        private void OnMembershipChanged(TeamMember member, bool added)
+        {
+            TankArmor armor = member != null ? member.GetComponent<TankArmor>() : null;
+            if (armor != null)
+            {
+                if (added) Subscribe(armor);
+                else Unsubscribe(armor);
+            }
+
+            if (!added && member != null)
+            {
+                if (healthLabels.TryGetValue(member, out Label health)) health.RemoveFromHierarchy();
+                healthLabels.Remove(member);
+                if (indicators.TryGetValue(member, out IndicatorView indicator)) indicator.Root.RemoveFromHierarchy();
+                indicators.Remove(member);
+            }
+        }
+
+        private void RebindArmor()
+        {
+            foreach (TankArmor armor in subscribedArmor.ToArray()) Unsubscribe(armor);
+            foreach (TeamMember member in TeamMember.ActiveMembers)
+                Subscribe(member != null ? member.GetComponent<TankArmor>() : null);
+        }
+
+        private void Subscribe(TankArmor armor)
+        {
+            if (armor == null || !subscribedArmor.Add(armor)) return;
+            armor.ImpactResolved += OnImpactResolved;
+        }
+
+        private void Unsubscribe(TankArmor armor)
+        {
+            if (armor == null || !subscribedArmor.Remove(armor)) return;
+            armor.ImpactResolved -= OnImpactResolved;
+        }
+
+        private void EnsureOverlay()
+        {
+            if (overlay != null || root == null) return;
+            overlay = new VisualElement { name = "combat-screen-overlay", pickingMode = PickingMode.Ignore };
+            overlay.AddToClassList("combat-screen-overlay");
+            root.Add(overlay);
+        }
+
+        private void ClearViews()
+        {
+            popups.Clear();
+            healthLabels.Clear();
+            indicators.Clear();
+            overlay?.RemoveFromHierarchy();
+            overlay = null;
+        }
+
+        public static string FormatDamage(int damage) => $"-{Mathf.Max(0, damage)}";
+
+        public static string FormatIndicator(string tankName, float distanceMetres)
+        {
+            return $"{tankName}  {Mathf.RoundToInt(Mathf.Max(0f, distanceMetres))} м";
+        }
+
+        public static string ArrowGlyph(float angleDegrees)
+        {
+            int octant = Mathf.RoundToInt(Mathf.Repeat(angleDegrees, 360f) / 45f) % 8;
+            return new[] { "▶", "↗", "▲", "↖", "◀", "↙", "▼", "↘" }[octant];
+        }
+
+        private sealed class IndicatorView
+        {
+            public IndicatorView(VisualElement root, Label arrow, Label text)
+            {
+                Root = root;
+                Arrow = arrow;
+                Text = text;
+            }
+
+            public VisualElement Root { get; }
+            public Label Arrow { get; }
+            public Label Text { get; }
+        }
+
+        private readonly struct DamagePopup
+        {
+            public DamagePopup(Vector2 worldPosition, float startedAt, Label label)
+            {
+                WorldPosition = worldPosition;
+                StartedAt = startedAt;
+                Label = label;
+            }
+
+            public Vector2 WorldPosition { get; }
+            public float StartedAt { get; }
+            public Label Label { get; }
+        }
+    }
+}

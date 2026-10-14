@@ -86,7 +86,9 @@ namespace LocalTanks
             Keyboard keyboard = Keyboard.current;
             if (keyboard != null)
             {
-                if (keyboard.rKey.wasPressedThisFrame) ReloadCase(ActiveCaseIndex);
+                if (keyboard.rKey.wasPressedThisFrame &&
+                    (keyboard.leftCtrlKey.isPressed || keyboard.rightCtrlKey.isPressed))
+                    ReloadCase(ActiveCaseIndex);
                 else if (keyboard.nKey.wasPressedThisFrame) ReloadCase(ActiveCaseIndex + 1);
                 else if (keyboard.bKey.wasPressedThisFrame) ReloadCase(ActiveCaseIndex - 1);
                 else if (keyboard.spaceKey.wasPressedThisFrame) SetPaused(!paused);

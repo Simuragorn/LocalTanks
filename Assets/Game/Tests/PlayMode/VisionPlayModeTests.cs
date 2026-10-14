@@ -191,6 +191,9 @@ namespace LocalTanks.Tests
             BattleRosterEntry entry = roster.Find(enemy);
             Assert.That(vision.IsVisibleTo(TeamId.TeamA, enemy), Is.True, "scout shares contact");
             Assert.That(entry.IsCurrentlyVisible, Is.True);
+            Assert.That(roster.EnemiesCurrentHitPoints, Is.EqualTo(100));
+            Assert.That(roster.EnemiesMaximumHitPoints, Is.EqualTo(100));
+            Assert.That(BattleHudController.VisibleHitPoints(entry), Is.EqualTo("100 / 100"));
 
             enemy.transform.position = new Vector2(0f, 15f);
             Physics2D.SyncTransforms();
@@ -201,6 +204,9 @@ namespace LocalTanks.Tests
             Assert.That(entry.IsCurrentlyVisible, Is.False);
             Assert.That(entry.LastKnownHitPoints, Is.EqualTo(lastKnown));
             Assert.That(enemy.Health.CurrentHitPoints, Is.EqualTo(lastKnown - 30));
+            Assert.That(roster.EnemiesCurrentHitPoints, Is.EqualTo(lastKnown),
+                "The team total must use last-known HP instead of leaking hidden damage.");
+            Assert.That(BattleHudController.VisibleHitPoints(entry), Is.Empty);
 
             Cleanup(systems, distantAlly.gameObject, scout.gameObject, enemy.gameObject, rules);
             yield return null;
