@@ -251,6 +251,8 @@ namespace LocalTanks
             text.AddToClassList("offscreen-text");
             VisualElement details = new VisualElement { pickingMode = PickingMode.Ignore };
             details.AddToClassList("offscreen-details");
+            details.AddToClassList("lt-panel");
+            details.AddToClassList("lt-panel--quiet");
             details.Add(icon);
             details.Add(text);
             container.Add(arrow);

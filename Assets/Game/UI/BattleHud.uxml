@@ -1,8 +1,8 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:template="UnityEngine.UIElements">
     <ui:Template name="SettingsOverlay" src="project://database/Assets/Game/UI/SettingsOverlay.uxml" />
     <ui:VisualElement name="battle-hud" class="battle-hud">
-        <ui:VisualElement name="ally-list" class="roster-panel ally-panel" />
-        <ui:VisualElement name="score" class="score-panel">
+        <ui:VisualElement name="ally-list" class="roster-panel ally-panel lt-panel lt-panel--quiet" />
+        <ui:VisualElement name="score" class="score-panel lt-panel lt-panel--quiet">
             <ui:VisualElement class="score-side">
                 <ui:Label name="ally-score" text="0" class="score-number ally-text" />
                 <ui:Label name="ally-health-total" text="0 / 0" class="score-health ally-text" />
@@ -14,17 +14,17 @@
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="base-status-list" class="base-status-list" />
-        <ui:VisualElement name="enemy-list" class="roster-panel enemy-panel" />
+        <ui:VisualElement name="enemy-list" class="roster-panel enemy-panel lt-panel lt-panel--quiet" />
 
         <!-- The clock is always visible and the result replaces nothing: the timer keeps the value the battle
              ended with, so the player can see how long it lasted. Both are filled by BattleHudController from
              BattleDirector, which is the only thing that decides that the battle is over. -->
-        <ui:VisualElement name="battle-clock" class="battle-clock">
+        <ui:VisualElement name="battle-clock" class="battle-clock lt-panel lt-panel--quiet">
             <ui:Label name="battle-timer" text="--:--" class="battle-timer" />
             <ui:Label name="battle-result" text="" class="battle-result" />
         </ui:VisualElement>
 
-        <ui:VisualElement name="weapon-status" class="weapon-status">
+        <ui:VisualElement name="weapon-status" class="weapon-status lt-panel lt-panel--quiet">
             <ui:Label name="weapon-ammo" text="Снаряды  0 / 0" class="weapon-ammo" />
             <ui:Label name="weapon-reload" text="Перезарядка  0.0 с" class="weapon-reload" />
         </ui:VisualElement>

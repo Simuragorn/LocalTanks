@@ -1,3 +1,5 @@
+@import url("LocalTanksTheme.uss");
+
 /* Settings overlay styles. Shared by every scene: the battle HUD and the test range both load this
    sheet, so the panel looks the same wherever it appears. */
 
@@ -28,21 +30,16 @@
 .settings-overlay.hidden { display: none; }
 
 .settings-panel {
-    width: 470px;
-    padding: 18px 22px 18px 22px;
-    background-color: rgba(12, 15, 13, 0.97);
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: rgba(210, 212, 202, 0.30);
+    width: 500px;
+    padding: 22px 24px 20px 24px;
+    border-left-width: 3px;
+    border-left-color: rgb(112, 134, 108);
     /* Never shrink: a squeezed panel is exactly what made the labels collide with the next row. */
     flex-shrink: 0;
 }
 
 .settings-title {
-    font-size: 20px;
-    -unity-font-style: bold;
-    color: rgb(240, 241, 236);
-    margin-bottom: 14px;
+    margin-bottom: 16px;
     flex-shrink: 0;
 }
 
@@ -50,59 +47,59 @@
     flex-direction: row;
     align-items: center;
     /* The text needs a real line box; a zero-height row draws its contents on top of the next one. */
-    min-height: 24px;
+    min-height: 30px;
     flex-shrink: 0;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .settings-label {
-    width: 155px;
-    font-size: 14px;
-    color: rgb(232, 233, 227);
+    width: 160px;
     flex-shrink: 0;
 }
 
 .settings-slider {
     flex-grow: 1;
-    height: 24px;
+    height: 26px;
     margin-right: 12px;
 }
 
 /* A visible handle: the default one is a hairline that disappears against a dark panel. */
 .settings-slider .unity-base-slider__dragger {
-    width: 14px;
-    background-color: rgb(228, 230, 222);
+    width: 12px;
+    background-color: rgb(224, 228, 218);
     border-width: 1px;
     border-color: rgba(20, 24, 20, 0.9);
 }
 
 .settings-slider .unity-base-slider__track {
-    background-color: rgba(6, 8, 6, 0.92);
+    background-color: rgba(4, 6, 5, 0.94);
     border-width: 1px;
     border-color: rgba(200, 202, 192, 0.28);
 }
 
 .settings-slider .unity-base-slider__input {
-    background-color: rgba(120, 169, 123, 0.85);
+    background-color: rgba(111, 143, 112, 0.92);
 }
 
 .settings-value {
     width: 56px;
-    font-size: 14px;
-    color: rgb(232, 233, 227);
-    -unity-text-align: upper-right;
+    height: 24px;
+    background-color: rgba(36, 42, 37, 0.86);
+    border-radius: 2px;
+    -unity-text-align: middle-center;
     flex-shrink: 0;
 }
 
 .settings-hint-row {
     flex-shrink: 0;
-    margin-top: 4px;
+    margin-top: 8px;
     margin-bottom: 16px;
+    padding-top: 12px;
+    border-top-width: 1px;
+    border-top-color: rgba(205, 210, 200, 0.18);
 }
 
 .settings-hint {
-    font-size: 12px;
-    color: rgb(186, 189, 180);
     white-space: normal;
 }
 
@@ -114,17 +111,7 @@
 
 .settings-button {
     width: 195px;
-    height: 32px;
+    height: 34px;
     margin-left: 10px;
     padding: 0;
-    font-size: 13px;
-    color: rgb(236, 238, 231);
-    background-color: rgba(62, 72, 64, 0.95);
-    border-width: 1px;
-    border-color: rgba(214, 216, 206, 0.35);
-    border-radius: 4px;
-    -unity-text-align: middle-center;
 }
-
-.settings-button:hover { background-color: rgba(78, 90, 80, 0.98); }
-.settings-button:active { background-color: rgba(46, 54, 48, 0.98); }

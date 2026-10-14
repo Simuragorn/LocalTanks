@@ -3,40 +3,40 @@
          shares that document and draws above the roster; the test range, which has no HUD, uses this
          document directly. Keeping one definition avoids two copies drifting apart. -->
     <ui:VisualElement name="settings-overlay" class="settings-overlay hidden">
-        <ui:VisualElement name="settings-panel" class="settings-panel">
-            <ui:Label text="Настройки" class="settings-title" />
+        <ui:VisualElement name="settings-panel" class="settings-panel lt-panel lt-panel--solid">
+            <ui:Label text="Настройки" class="settings-title lt-title" />
             <ui:VisualElement class="settings-row">
-                <ui:Label text="Общая громкость" class="settings-label" />
+                <ui:Label text="Общая громкость" class="settings-label lt-label" />
                 <ui:Slider name="slider-master" low-value="0" high-value="100" value="100" class="settings-slider" />
-                <ui:Label name="value-master" text="100%" class="settings-value" />
+                <ui:Label name="value-master" text="100%" class="settings-value lt-value" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-row">
-                <ui:Label text="Техника" class="settings-label" />
+                <ui:Label text="Техника" class="settings-label lt-label" />
                 <ui:Slider name="slider-tank" low-value="0" high-value="100" value="100" class="settings-slider" />
-                <ui:Label name="value-tank" text="100%" class="settings-value" />
+                <ui:Label name="value-tank" text="100%" class="settings-value lt-value" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-row">
-                <ui:Label text="Эффекты" class="settings-label" />
+                <ui:Label text="Эффекты" class="settings-label lt-label" />
                 <ui:Slider name="slider-effects" low-value="0" high-value="100" value="100" class="settings-slider" />
-                <ui:Label name="value-effects" text="100%" class="settings-value" />
+                <ui:Label name="value-effects" text="100%" class="settings-value lt-value" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-row">
-                <ui:Label text="Музыка" class="settings-label" />
+                <ui:Label text="Музыка" class="settings-label lt-label" />
                 <ui:Slider name="slider-music" low-value="0" high-value="100" value="100" class="settings-slider" />
-                <ui:Label name="value-music" text="100%" class="settings-value" />
+                <ui:Label name="value-music" text="100%" class="settings-value lt-value" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-row">
-                <ui:Label text="Голос и сигналы" class="settings-label" />
+                <ui:Label text="Голос и сигналы" class="settings-label lt-label" />
                 <ui:Slider name="slider-voice" low-value="0" high-value="100" value="100" class="settings-slider" />
-                <ui:Label name="value-voice" text="100%" class="settings-value" />
+                <ui:Label name="value-voice" text="100%" class="settings-value lt-value" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-hint-row">
                 <ui:Label text="Техника — двигатель, гусеницы, башня. Эффекты — выстрелы, попадания, уничтожение. Музыка — музыка и атмосфера арены. Голос — реплики экипажа и сигналы боя."
-                    class="settings-hint" />
+                    class="settings-hint lt-caption" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-button-row">
-                <ui:Button name="button-reset" text="Вернуть по умолчанию" class="settings-button" />
-                <ui:Button name="button-close" text="Закрыть" class="settings-button" />
+                <ui:Button name="button-reset" text="Вернуть по умолчанию" class="settings-button lt-button" />
+                <ui:Button name="button-close" text="Закрыть" class="settings-button lt-button lt-button--primary" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

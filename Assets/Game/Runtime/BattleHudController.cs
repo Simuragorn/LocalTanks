@@ -273,6 +273,7 @@ namespace LocalTanks
                 data.AddToClassList("tank-data");
                 VisualElement bar = new VisualElement();
                 bar.AddToClassList("health-track");
+                bar.AddToClassList("lt-meter-track");
                 VisualElement fill = new VisualElement();
                 fill.AddToClassList("health-fill");
                 fill.style.backgroundColor = entry.TeamColor;
@@ -387,6 +388,8 @@ namespace LocalTanks
                 bool alliedCapture = captureBase.CapturingTeam == roster.LocalPlayerTeam;
                 VisualElement row = new VisualElement();
                 row.AddToClassList("base-status-row");
+                row.AddToClassList("lt-panel");
+                row.AddToClassList("lt-panel--quiet");
                 Label title = new Label(captureBase.State == BaseCaptureState.Contested
                     ? $"{captureBase.DisplayName} • захват остановлен"
                     : alliedCapture
@@ -410,6 +413,7 @@ namespace LocalTanks
                 header.Add(timer);
                 VisualElement track = new VisualElement();
                 track.AddToClassList("base-capture-track");
+                track.AddToClassList("lt-meter-track");
                 VisualElement fill = new VisualElement();
                 fill.AddToClassList("base-capture-fill");
                 fill.style.backgroundColor = color;

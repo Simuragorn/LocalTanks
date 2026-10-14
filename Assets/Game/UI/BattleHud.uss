@@ -1,3 +1,5 @@
+@import url("LocalTanksTheme.uss");
+
 .battle-hud {
     position: absolute;
     left: 0;
@@ -9,14 +11,21 @@
 .roster-panel {
     position: absolute;
     top: 18px;
-    width: 250px;
-    padding: 8px;
-    background-color: rgba(15, 18, 16, 0.70);
-    border-radius: 5px;
+    width: 258px;
+    padding: 9px 10px 9px 10px;
 }
 
-.ally-panel { left: 18px; }
-.enemy-panel { right: 18px; }
+.ally-panel {
+    left: 18px;
+    border-top-width: 2px;
+    border-top-color: rgb(107, 148, 109);
+}
+
+.enemy-panel {
+    right: 18px;
+    border-top-width: 2px;
+    border-top-color: rgb(160, 91, 91);
+}
 
 .score-panel {
     position: absolute;
@@ -25,8 +34,6 @@
     translate: -50% 0;
     flex-direction: row;
     padding: 7px 15px;
-    background-color: rgba(15, 18, 16, 0.78);
-    border-radius: 5px;
 }
 
 .score-side {
@@ -60,8 +67,6 @@
 .base-status-row {
     margin-bottom: 5px;
     padding: 7px 10px;
-    background-color: rgba(15, 18, 16, 0.82);
-    border-radius: 4px;
 }
 
 .base-status-header {
@@ -77,9 +82,6 @@
 .base-capture-track {
     height: 8px;
     margin-top: 4px;
-    background-color: rgba(4, 5, 4, 0.92);
-    border-width: 1px;
-    border-color: rgba(200, 200, 190, 0.20);
 }
 
 .base-capture-fill { height: 100%; }
@@ -123,10 +125,7 @@
 }
 
 .health-track {
-    height: 9px;
-    background-color: rgba(4, 5, 4, 0.90);
-    border-width: 1px;
-    border-color: rgba(200, 200, 190, 0.20);
+    height: 8px;
 }
 
 .health-fill { height: 100%; background-color: rgb(120, 169, 123); }
@@ -140,8 +139,6 @@
     right: 286px;
     align-items: flex-end;
     padding: 6px 12px;
-    background-color: rgba(15, 18, 16, 0.78);
-    border-radius: 5px;
 }
 
 /* Read from across the screen, and never wider than the time itself: the battle clock is the one number the
@@ -173,8 +170,6 @@
     min-width: 238px;
     padding: 7px 13px;
     align-items: center;
-    background-color: rgba(15, 18, 16, 0.82);
-    border-radius: 5px;
 }
 
 .weapon-ammo {
@@ -255,8 +250,6 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    background-color: rgba(15, 18, 16, 0.84);
-    border-radius: 4px;
 }
 
 .offscreen-class-icon {

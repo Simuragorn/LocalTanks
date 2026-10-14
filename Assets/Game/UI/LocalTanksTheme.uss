@@ -1,0 +1,106 @@
+/*
+ * LocalTanks UI foundation.
+ *
+ * Player-facing UXML/USS screens import this file before their component sheet and compose these
+ * semantic classes instead of inventing another panel, text or button treatment. The intentionally
+ * restrained palette leaves saturated colours to gameplay meaning: teams, damage and warnings.
+ */
+
+.lt-panel {
+    background-color: rgba(12, 15, 13, 0.88);
+    border-width: 1px;
+    border-color: rgba(205, 210, 200, 0.26);
+    border-radius: 3px;
+}
+
+.lt-panel--solid {
+    background-color: rgba(12, 15, 13, 0.98);
+    border-color: rgba(214, 219, 208, 0.38);
+}
+
+.lt-panel--quiet {
+    background-color: rgba(12, 15, 13, 0.86);
+}
+
+.lt-title {
+    color: rgb(239, 241, 235);
+    font-size: 20px;
+    -unity-font-style: bold;
+}
+
+.lt-section-title {
+    color: rgb(174, 190, 169);
+    font-size: 12px;
+    -unity-font-style: bold;
+}
+
+.lt-label {
+    color: rgb(226, 229, 221);
+    font-size: 14px;
+}
+
+.lt-caption {
+    color: rgb(174, 180, 171);
+    font-size: 12px;
+}
+
+.lt-value {
+    color: rgb(238, 240, 234);
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+.lt-divider {
+    height: 1px;
+    background-color: rgba(205, 210, 200, 0.18);
+}
+
+.lt-meter-track {
+    background-color: rgba(4, 6, 5, 0.92);
+    border-width: 1px;
+    border-color: rgba(205, 210, 200, 0.22);
+    border-radius: 1px;
+}
+
+.lt-button {
+    min-height: 34px;
+    padding-left: 14px;
+    padding-right: 14px;
+    color: rgb(230, 233, 225);
+    background-color: rgba(49, 56, 50, 0.98);
+    border-width: 1px;
+    border-color: rgba(211, 216, 205, 0.34);
+    border-radius: 3px;
+    font-size: 13px;
+    -unity-text-align: middle-center;
+}
+
+.lt-button:hover {
+    color: rgb(244, 246, 240);
+    background-color: rgba(65, 74, 66, 0.98);
+    border-color: rgba(222, 226, 216, 0.54);
+}
+
+.lt-button:active {
+    background-color: rgba(38, 44, 39, 0.98);
+    border-color: rgba(177, 188, 173, 0.56);
+}
+
+.lt-button:focus {
+    border-color: rgb(151, 171, 145);
+}
+
+.lt-button:disabled {
+    color: rgba(205, 208, 200, 0.46);
+    background-color: rgba(39, 43, 39, 0.78);
+    border-color: rgba(190, 194, 185, 0.16);
+}
+
+.lt-button--primary {
+    background-color: rgb(65, 78, 67);
+    border-color: rgba(183, 200, 178, 0.52);
+}
+
+.lt-button--primary:hover {
+    background-color: rgb(79, 94, 81);
+}
