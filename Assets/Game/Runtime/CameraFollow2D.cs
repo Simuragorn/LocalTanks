@@ -6,9 +6,11 @@ namespace LocalTanks
     [RequireComponent(typeof(Camera))]
     public sealed class CameraFollow2D : MonoBehaviour
     {
+        public const float CloseInspectionZoom = 0.75f;
+
         [SerializeField] private Transform target;
         [SerializeField, Min(0f)] private float smoothTime = 0.15f;
-        [SerializeField, Min(0.1f)] private float minimumZoom = 4f;
+        [SerializeField, Min(0.1f)] private float minimumZoom = CloseInspectionZoom;
         [SerializeField, Min(0.1f)] private float maximumZoom = 12f;
         [SerializeField, Min(0.1f)] private float zoomStep = 1f;
         [SerializeField, Min(0.1f)] private float zoomSpeed = 10f;
@@ -20,7 +22,9 @@ namespace LocalTanks
         public Transform Target => target;
         public float CurrentZoom => cameraComponent != null ? cameraComponent.orthographicSize : 0f;
         public float TargetZoom => targetZoom;
-        public float MinimumZoom => minimumZoom;
+        // Older generated scenes serialize larger minima. Keeping the inspection limit here makes the
+        // close view available immediately on every map and also survives future scene regeneration.
+        public float MinimumZoom => Mathf.Min(minimumZoom, CloseInspectionZoom);
         public float MaximumZoom => maximumZoom;
 
         private void Awake()
@@ -48,7 +52,7 @@ namespace LocalTanks
         public void SetZoom(float size, bool immediate = false)
         {
             InitializeCamera();
-            targetZoom = Mathf.Clamp(size, minimumZoom, maximumZoom);
+            targetZoom = Mathf.Clamp(size, MinimumZoom, maximumZoom);
             if (immediate && cameraComponent != null)
             {
                 cameraComponent.orthographicSize = targetZoom;
@@ -103,8 +107,8 @@ namespace LocalTanks
 
             if (cameraComponent != null && targetZoom <= 0f)
             {
-                maximumZoom = Mathf.Max(minimumZoom, maximumZoom);
-                targetZoom = Mathf.Clamp(cameraComponent.orthographicSize, minimumZoom, maximumZoom);
+                maximumZoom = Mathf.Max(MinimumZoom, maximumZoom);
+                targetZoom = Mathf.Clamp(cameraComponent.orthographicSize, MinimumZoom, maximumZoom);
             }
         }
 

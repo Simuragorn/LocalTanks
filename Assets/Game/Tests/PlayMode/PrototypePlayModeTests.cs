@@ -270,6 +270,7 @@ namespace LocalTanks.Tests
             yield return null;
 
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
+            Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CloseInspectionZoom));
             follow.SetZoom(100f, true);
             Assert.That(follow.TargetZoom, Is.EqualTo(follow.MaximumZoom));
             Assert.That(follow.CurrentZoom, Is.EqualTo(follow.MaximumZoom));
@@ -693,6 +694,7 @@ namespace LocalTanks.Tests
 
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
             Assert.That(follow.Target, Is.EqualTo(playerMember.transform));
+            Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CloseInspectionZoom));
             Assert.That(follow.MaximumZoom, Is.EqualTo(22f));
         }
 
