@@ -333,7 +333,7 @@ namespace LocalTanks
             if (point == Vector2.zero && member != null) point = member.transform.position;
             Label label = new Label(FormatDamage(observation.Damage)) { pickingMode = PickingMode.Ignore };
             label.AddToClassList("damage-popup");
-            label.AddToClassList(DamageClass(entry.IsAlly));
+            label.AddToClassList(DamageClass(observation.AttackerTeam, member.Team));
             overlay.Add(label);
             popups.Add(new DamagePopup(point, Time.unscaledTime, label));
         }
@@ -399,7 +399,11 @@ namespace LocalTanks
 
         public static string FormatDamage(int damage) => $"-{Mathf.Max(0, damage)}";
 
-        public static string DamageClass(bool isAlly) => isAlly ? AllyDamageClass : EnemyDamageClass;
+        public static string DamageClass(TeamId attackerTeam, TeamId targetTeam)
+        {
+            bool isFriendlyFire = attackerTeam != TeamId.Neutral && attackerTeam == targetTeam;
+            return isFriendlyFire ? AllyDamageClass : EnemyDamageClass;
+        }
 
         public static float PopupScale(float normalizedProgress)
         {

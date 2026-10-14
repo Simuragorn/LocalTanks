@@ -110,7 +110,8 @@ namespace LocalTanks.Tests
                 70f,
                 0.7f,
                 0.65f,
-                0);
+                0,
+                attackerTeam: ally.Team);
 
             TankArmor enemyArmor = hitEnemy.GetComponent<TankArmor>();
             enemyArmor.ResolveImpact(
@@ -123,7 +124,8 @@ namespace LocalTanks.Tests
                 70f,
                 0.7f,
                 0.65f,
-                0);
+                0,
+                attackerTeam: player.Team);
 
             yield return null;
             yield return null;

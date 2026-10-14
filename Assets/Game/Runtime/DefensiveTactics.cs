@@ -230,7 +230,8 @@ namespace LocalTanks
             ImpactOutcome outcome,
             ArmorZone zone,
             int damage,
-            float time)
+            float time,
+            TeamId attackerTeam = TeamId.Neutral)
         {
             ThreatDirection = threatDirection.sqrMagnitude > 0.0001f
                 ? threatDirection.normalized
@@ -239,6 +240,7 @@ namespace LocalTanks
             Zone = zone;
             Damage = Mathf.Max(0, damage);
             Time = time;
+            AttackerTeam = attackerTeam;
         }
 
         public Vector2 ThreatDirection { get; }
@@ -246,6 +248,7 @@ namespace LocalTanks
         public ArmorZone Zone { get; }
         public int Damage { get; }
         public float Time { get; }
+        public TeamId AttackerTeam { get; }
     }
 
     public readonly struct ThreatSector

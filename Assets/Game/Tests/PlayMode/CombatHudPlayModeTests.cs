@@ -85,12 +85,15 @@ namespace LocalTanks.Tests
                 70f,
                 0.7f,
                 0.65f,
-                1);
+                1,
+                attackerTeam: TeamId.TeamB);
 
             Assert.That(result.Outcome, Is.EqualTo(ImpactOutcome.Penetrated));
             Assert.That(health.CurrentHitPoints, Is.Zero);
             Assert.That(observed.Damage, Is.EqualTo(25),
                 "A popup must show the applied 25 HP, not the requested 40 damage.");
+            Assert.That(observed.AttackerTeam, Is.EqualTo(TeamId.TeamB),
+                "The popup must classify the hit from the attacker's team, not from the local player's roster.");
 
             Object.Destroy(target);
             Object.Destroy(definition);

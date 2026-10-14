@@ -32,8 +32,14 @@ namespace LocalTanks.Tests
             Assert.That(DamagePopupLayer.FormatIndicator("MS-1", 123.6f), Is.EqualTo("MS-1  124 м"));
             Assert.That(DamagePopupLayer.ArrowGlyph(0f), Is.EqualTo("▶"));
             Assert.That(DamagePopupLayer.ArrowGlyph(90f), Is.EqualTo("▲"));
-            Assert.That(DamagePopupLayer.DamageClass(true), Is.EqualTo(DamagePopupLayer.AllyDamageClass));
-            Assert.That(DamagePopupLayer.DamageClass(false), Is.EqualTo(DamagePopupLayer.EnemyDamageClass));
+            Assert.That(DamagePopupLayer.DamageClass(TeamId.TeamA, TeamId.TeamA),
+                Is.EqualTo(DamagePopupLayer.AllyDamageClass));
+            Assert.That(DamagePopupLayer.DamageClass(TeamId.TeamA, TeamId.TeamB),
+                Is.EqualTo(DamagePopupLayer.EnemyDamageClass));
+            Assert.That(DamagePopupLayer.DamageClass(TeamId.TeamB, TeamId.TeamA),
+                Is.EqualTo(DamagePopupLayer.EnemyDamageClass));
+            Assert.That(DamagePopupLayer.DamageClass(TeamId.Neutral, TeamId.TeamA),
+                Is.EqualTo(DamagePopupLayer.EnemyDamageClass));
         }
 
         [Test]

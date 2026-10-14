@@ -51,7 +51,8 @@ namespace LocalTanks
             float ricochetPenetrationMultiplier,
             int remainingRicochets,
             float basePenetration = -1f,
-            CombatRules combatRules = null)
+            CombatRules combatRules = null,
+            TeamId attackerTeam = TeamId.Neutral)
         {
             if (definition == null)
             {
@@ -98,7 +99,8 @@ namespace LocalTanks
                 result.Outcome,
                 result.Zone,
                 appliedDamage,
-                Time.time));
+                Time.time,
+                attackerTeam));
 
             if (logImpacts)
             {

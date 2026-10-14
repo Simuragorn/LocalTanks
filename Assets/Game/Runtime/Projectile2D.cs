@@ -200,7 +200,8 @@ namespace LocalTanks
                     ricochetPenetrationMultiplier,
                     remainingRicochets,
                     nominalPenetration,
-                    combatRules);
+                    combatRules,
+                    shooterTeam);
 
                 TeamMember victim = armor.GetComponentInParent<TeamMember>();
                 BattleTelemetry.Active?.RecordShot(
