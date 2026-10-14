@@ -17,22 +17,29 @@ Shader "LocalTanks/TankTrackOverlay"
 
         // x lightens a tread plate, y darkens the gap between two links. Both are multipliers around
         // one, so 0.2 means twenty percent brighter and 0.3 thirty percent darker.
-        _TrackStrength ("Lighten and darken strength", Vector) = (0.5, 0.65, 0, 0)
+        _TrackStrength ("Lighten and darken strength", Vector) = (0.32, 0.5, 0, 0)
 
         // x is how many links span the mask and y how many coarse sweeps span it.
-        _TrackParams ("Link repeats, sweep repeats", Vector) = (8, 2.2, 0, 0)
+        _TrackParams ("Link repeats, sweep repeats", Vector) = (8, 5.5, 0, 0)
 
         // x and y are how far the left and right track have travelled, in mask heights.
         _TrackTravel ("Left and right track travel", Vector) = (0, 0, 0, 0)
+
+        // x/y are the visible motion amount of the left and right track; z is the distant-pattern
+        // gain. A stopped machine leaves its original painted tracks untouched.
+        _TrackMotion ("Left motion, right motion, distant gain", Vector) = (0, 0, 0.62, 0)
+
+        // Centres of the red and green mask bands, followed by their half-width, in mask UV.
+        _TrackGeometry ("Red centre, green centre, half width", Vector) = (0.85, 0.15, 0.08, 0)
 
         // The hull sprite and the rectangle it occupies inside its own texture. Reading it lets the
         // highlight land on what is already painted instead of adding a flat sheen over it.
         _HullTex ("Hull sprite texture", 2D) = "white" {}
         _HullRect ("Hull rectangle in that texture", Vector) = (0, 0, 1, 1)
 
-        // x is how much of the darkening survives on the darkest art, z is the luma gain of the hull
-        // response and w is the gain of the coarse links that replace the fine ones at a distance.
-        _HullLighting ("Darkening floor, unused, luma gain, coarse gain", Vector) = (0.5, 0, 1.5, 1)
+        // x is how much of the darkening survives on the darkest art and z is the luma gain of the
+        // hull response. The remaining channels are reserved.
+        _HullLighting ("Darkening floor, unused, luma gain, reserved", Vector) = (0.5, 0, 1.5, 0)
 
         [MaterialToggle] PixelSnap ("Pixel snap", Float) = 0
         [HideInInspector] _RendererColor ("RendererColor", Color) = (1, 1, 1, 1)
@@ -82,24 +89,50 @@ Shader "LocalTanks/TankTrackOverlay"
             float4 _TrackStrength;
             float4 _TrackParams;
             float4 _TrackTravel;
+            float4 _TrackMotion;
+            float4 _TrackGeometry;
 
             sampler2D _HullTex;
             float4 _HullRect;
             float4 _HullLighting;
 
-            // One link per period: a plate with a thin gap at its end, centred on zero so the same
-            // term both lightens the plate and darkens the gap. The gap shifts and deepens unevenly
-            // from link to link and a slow wear term runs along the whole track, so a long run does
-            // not look printed. The same profile is used at two frequencies: fine links for a close
-            // camera and coarse ones for a distant one.
+            // One link per period. Most of a plate contributes nothing: only its shallow leading ridge,
+            // the dark joint behind it and a trace of uneven wear are re-shaded. Lighting the whole plate
+            // made the former effect read as broad bars sliding over a fender rather than steel links.
             float TrackLinkProfile(float phase, float seed)
             {
                 float link = floor(phase);
                 float noise = frac(sin((link + seed) * 12.9898) * 43758.5453);
                 float wear = frac(sin(link * 0.13 + seed) * 78.233);
-                float f = frac(phase) - (noise - 0.5) * 0.06;
-                float gap = smoothstep(0.78, 0.88, f) * (1.0 - smoothstep(0.94, 1.04, f));
-                return ((1.0 - gap) * 1.7 - 1.0) * (0.78 + 0.36 * noise) * (0.9 + 0.16 * wear);
+                float f = frac(phase - (noise - 0.5) * 0.06);
+                float ridge = smoothstep(0.04, 0.1, f) * (1.0 - smoothstep(0.2, 0.3, f));
+                float joint = smoothstep(0.79, 0.85, f) * (1.0 - smoothstep(0.96, 1.01, f));
+                float faceWear = (wear - 0.5) * 0.1 *
+                                 smoothstep(0.28, 0.38, f) * (1.0 - smoothstep(0.68, 0.78, f));
+                return ridge * (0.42 + 0.12 * noise) - joint * (0.78 + 0.2 * noise) + faceWear;
+            }
+
+            // Distant links cannot be resolved individually. A short irregular pair of ridge and joint
+            // survives instead of the old two enormous bands that flashed along the whole running gear.
+            float TrackClusterProfile(float phase, float seed)
+            {
+                float cluster = floor(phase);
+                float noise = frac(sin((cluster + seed) * 19.193) * 15731.743);
+                float f = frac(phase - (noise - 0.5) * 0.09);
+                float ridge = smoothstep(0.08, 0.18, f) * (1.0 - smoothstep(0.3, 0.4, f));
+                float joint = smoothstep(0.55, 0.64, f) * (1.0 - smoothstep(0.78, 0.88, f));
+                return ridge * 0.3 - joint * (0.34 + 0.08 * noise);
+            }
+
+            // A real link is not a uniformly lit bar across the whole belt. Its central plate and both
+            // grouser edges catch slightly different light; the measured band centre/width lets every
+            // machine use that shape without guessing from screen coordinates.
+            float TrackLateralShape(float u, float centre, float halfWidth)
+            {
+                float across = saturate(abs(u - centre) / max(halfWidth, 1e-4));
+                float centrePlate = 1.0 - smoothstep(0.08, 0.42, across);
+                float grouserEdge = smoothstep(0.58, 0.78, across) * (1.0 - smoothstep(0.9, 1.0, across));
+                return 0.5 + centrePlate * 0.2 + grouserEdge * 0.38;
             }
 
             fixed4 TrackOverlayFragment(v2f IN) : SV_Target
@@ -111,7 +144,8 @@ Shader "LocalTanks/TankTrackOverlay"
                 // weight, so a band fades out towards its own silhouette instead of ending in a
                 // straight edge.
                 float tint = IN.color.a * max(IN.color.r, max(IN.color.g, IN.color.b));
-                float coverage = mask.a * mask.b * tint;
+                float sideMotion = saturate(mask.r * _TrackMotion.x + mask.g * _TrackMotion.y);
+                float coverage = mask.a * mask.b * tint * sideMotion;
 
                 // Travel is measured in mask heights, so the same value drives both scales and the
                 // machine's own speed decides the rate of each.
@@ -128,12 +162,15 @@ Shader "LocalTanks/TankTrackOverlay"
                 // that changes brightness without moving is what looks plastic.
                 float linksPerPixel = max(fwidth(left * links), 1e-5);
                 float resolvable = saturate(1.0 - (linksPerPixel - 0.25) / 0.5);
-                float coarseShare = (1.0 - resolvable) * _HullLighting.w;
+                float coarseShare = (1.0 - resolvable) * _TrackMotion.z;
 
-                float fine = TrackLinkProfile(left * links, 0.0) * mask.r
-                             + TrackLinkProfile(right * links, 17.0) * mask.g;
-                float coarse = TrackLinkProfile(left * sweeps, 3.0) * mask.r
-                               + TrackLinkProfile(right * sweeps, 29.0) * mask.g;
+                float redShape = TrackLateralShape(IN.texcoord.x, _TrackGeometry.x, _TrackGeometry.z);
+                float greenShape = TrackLateralShape(IN.texcoord.x, _TrackGeometry.y, _TrackGeometry.z);
+
+                float fine = TrackLinkProfile(left * links, 0.0) * mask.r * redShape * _TrackMotion.x
+                             + TrackLinkProfile(right * links, 17.0) * mask.g * greenShape * _TrackMotion.y;
+                float coarse = TrackClusterProfile(left * sweeps, 3.0) * mask.r * redShape * _TrackMotion.x
+                               + TrackClusterProfile(right * sweeps, 29.0) * mask.g * greenShape * _TrackMotion.y;
                 float detail = fine * resolvable + coarse * coarseShare;
 
                 // The mask sprite lines up with the hull rectangle of the source texture, so the

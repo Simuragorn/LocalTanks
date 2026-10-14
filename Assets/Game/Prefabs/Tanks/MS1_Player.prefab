@@ -1107,11 +1107,12 @@ MonoBehaviour:
   overlay: {fileID: 8117173926025192644}
   hull: {fileID: 6442487074086379141}
   hullTextureRect: {x: 0.0625, y: 0.045801528, z: 0.5, w: 0.90839696}
-  halfGaugeUnits: 0.17990881
-  treadPitchUnits: 0.05737886
+  halfGaugeUnits: 0.17986962
+  treadPitchUnits: 0.05736636
   maskHeightUnits: 1.1423609
   forwardSign: -1
-  strength: {x: 0.5, y: 0.65}
+  trackGeometry: {x: 0.8856198, y: 0.10959375, z: 0.07895573}
+  strength: {x: 0.32, y: 0.5}
 --- !u!114 &686540037047855952
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1130,7 +1131,7 @@ MonoBehaviour:
   weapon: {fileID: 2163121968646552784}
   terrain: {fileID: 0}
   visibility: {fileID: 0}
-  measuredTrackSeparation: 0.35981762
+  measuredTrackSeparation: 0.35973924
 --- !u!1 &5036319374214341540
 GameObject:
   m_ObjectHideFlags: 0

@@ -403,6 +403,16 @@ namespace LocalTanks.Editor
                     "usable as a differential.");
             }
 
+            if (tracks.left == null || tracks.right == null ||
+                tracks.left.centroidX < 0f || tracks.left.centroidX > tracks.mask.width ||
+                tracks.right.centroidX < 0f || tracks.right.centroidX > tracks.mask.width ||
+                tracks.bandWidthPixels <= 0f || tracks.bandWidthPixels > tracks.mask.width)
+            {
+                throw new System.InvalidOperationException(
+                    $"Track bands of '{spec.DisplayName}' do not contain usable measured centres and width. " +
+                    "Re-run Tools\\WoTSpritePipeline instead of estimating their position in Unity.");
+            }
+
             if (tracks.treadPitchMetres <= 0f || tracks.treadPitchMetres >= tracks.mask.height / PixelsPerMetre)
             {
                 throw new System.InvalidOperationException(
@@ -496,9 +506,28 @@ namespace LocalTanks.Editor
             Material material = AssetDatabase.LoadAssetAtPath<Material>(TrackOverlayMaterialPath);
             if (material != null)
             {
+                bool changed = false;
                 if (material.shader != shader)
                 {
                     material.shader = shader;
+                    changed = true;
+                }
+
+                changed |= SetMaterialVector(
+                    material,
+                    "_TrackStrength",
+                    new Vector4(TankTrackAnimator.DefaultStrength.x, TankTrackAnimator.DefaultStrength.y, 0f, 0f));
+                changed |= SetMaterialVector(
+                    material,
+                    "_TrackParams",
+                    new Vector4(8f, TankTrackAnimator.SweepRepeats, 0f, 0f));
+                changed |= SetMaterialVector(
+                    material,
+                    "_TrackMotion",
+                    new Vector4(0f, 0f, TankTrackAnimator.DistantPatternGain, 0f));
+                changed |= SetMaterialVector(material, "_HullLighting", new Vector4(0.5f, 0f, 1.5f, 0f));
+                if (changed)
+                {
                     EditorUtility.SetDirty(material);
                 }
 
@@ -520,6 +549,17 @@ namespace LocalTanks.Editor
                 new Vector4(TankTrackAnimator.DefaultStrength.x, TankTrackAnimator.DefaultStrength.y, 0f, 0f));
             AssetDatabase.CreateAsset(material, TrackOverlayMaterialPath);
             return material;
+        }
+
+        private static bool SetMaterialVector(Material material, string property, Vector4 value)
+        {
+            if ((material.GetVector(property) - value).sqrMagnitude <= 0.000001f)
+            {
+                return false;
+            }
+
+            material.SetVector(property, value);
+            return true;
         }
 
         /// <summary>
@@ -566,7 +606,10 @@ namespace LocalTanks.Editor
                 tracks.treadPitchMetres / GameScale.MetresPerUnit,
                 maskHeightUnits,
                 tracks.forwardSignV,
-                TankTrackAnimator.DefaultStrength);
+                TankTrackAnimator.DefaultStrength,
+                tracks.left.centroidX / tracks.mask.width,
+                tracks.right.centroidX / tracks.mask.width,
+                tracks.bandWidthPixels * 0.5f / tracks.mask.width);
             return animator;
         }
 
@@ -1233,8 +1276,16 @@ namespace LocalTanks.Editor
             public float bandWidthPixels;
             public float bandWidthMetres;
             public float treadPitchMetres;
+            public TrackBandLayoutJson left;
+            public TrackBandLayoutJson right;
             public string diagnostic;
             public string fallbackReason;
+        }
+
+        [System.Serializable]
+        private sealed class TrackBandLayoutJson
+        {
+            public float centroidX;
         }
 
         [System.Serializable]

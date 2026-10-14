@@ -23,6 +23,8 @@ namespace LocalTanks
         private static readonly int TrackTravelId = Shader.PropertyToID("_TrackTravel");
         private static readonly int TrackParamsId = Shader.PropertyToID("_TrackParams");
         private static readonly int TrackStrengthId = Shader.PropertyToID("_TrackStrength");
+        private static readonly int TrackMotionId = Shader.PropertyToID("_TrackMotion");
+        private static readonly int TrackGeometryId = Shader.PropertyToID("_TrackGeometry");
         private static readonly int HullTexId = Shader.PropertyToID("_HullTex");
         private static readonly int HullRectId = Shader.PropertyToID("_HullRect");
 
@@ -31,7 +33,13 @@ namespace LocalTanks
         /// distant camera, so it is counted in mask heights rather than metres: every machine then
         /// shows the same number of sweeps no matter how long its hull is.
         /// </summary>
-        public const float SweepRepeats = 2.2f;
+        public const float SweepRepeats = 5.5f;
+
+        /// <summary>Rendered motion reaches full strength at this achieved belt speed.</summary>
+        public const float FullMotionSpeedUnitsPerSecond = 0.55f;
+
+        /// <summary>The distant pattern stays subordinate to individually resolved links.</summary>
+        public const float DistantPatternGain = 0.62f;
 
         [SerializeField] private Rigidbody2D body;
         [SerializeField] private TankHealth health;
@@ -57,14 +65,19 @@ namespace LocalTanks
         /// <summary>+1 when the machine's front points towards increasing sprite V, otherwise -1.</summary>
         [SerializeField] private float forwardSign = -1f;
 
+        /// <summary>Centres of the red and green mask bands, and their shared half-width, in mask UV.</summary>
+        [SerializeField] private Vector3 trackGeometry = new Vector3(0.85f, 0.15f, 0.08f);
+
         /// <summary>x lightens a tread plate, y darkens the gap between two links.</summary>
-        [SerializeField] private Vector2 strength = new Vector2(0.5f, 0.65f);
+        [SerializeField] private Vector2 strength = new Vector2(0.32f, 0.5f);
 
         private MaterialPropertyBlock properties;
         private Vector2 previousPosition;
         private float previousRotation;
         private float leftTravel;
         private float rightTravel;
+        private float leftMotion;
+        private float rightMotion;
         private bool running = true;
 
         public bool IsRunning => running;
@@ -75,12 +88,18 @@ namespace LocalTanks
         /// <summary>How far the right track has travelled, in mask heights.</summary>
         public float RightTravel => rightTravel;
 
+        /// <summary>Current visible contribution of each moving belt.</summary>
+        public Vector2 MotionAmount => new Vector2(leftMotion, rightMotion);
+
+        /// <summary>Measured band geometry supplied to the preview and shader.</summary>
+        public Vector4 TrackGeometry => new Vector4(trackGeometry.x, trackGeometry.y, trackGeometry.z, 0f);
+
         /// <summary>
         /// How strongly a tread plate is lightened and the gap between two links is darkened, as
         /// multipliers around one. Deliberately low: the tread is a movement cue, not a conveyor
         /// belt, and the pattern is fine enough that a strong contrast would look painted on.
         /// </summary>
-        public static Vector2 DefaultStrength => new Vector2(0.5f, 0.65f);
+        public static Vector2 DefaultStrength => new Vector2(0.32f, 0.5f);
 
         /// <summary>
         /// Splits the hull's real motion into the distance each track travelled over the ground.
@@ -168,7 +187,10 @@ namespace LocalTanks
             float treadPitch,
             float maskHeight,
             float forwardSignV,
-            Vector2 effectStrength)
+            Vector2 effectStrength,
+            float redBandCentreU = 0.85f,
+            float greenBandCentreU = 0.15f,
+            float bandHalfWidthU = 0.08f)
         {
             body = trackedBody != null ? trackedBody : GetComponent<Rigidbody2D>();
             health = tankHealth;
@@ -180,6 +202,10 @@ namespace LocalTanks
             maskHeightUnits = Mathf.Max(0.0001f, maskHeight);
             forwardSign = forwardSignV < 0f ? -1f : 1f;
             strength = effectStrength;
+            trackGeometry = new Vector3(
+                Mathf.Clamp01(redBandCentreU),
+                Mathf.Clamp01(greenBandCentreU),
+                Mathf.Max(0.001f, bandHalfWidthU));
             properties = new MaterialPropertyBlock();
             previousPosition = CurrentPosition();
             previousRotation = CurrentRotation();
@@ -204,6 +230,11 @@ namespace LocalTanks
             SplitTrackDistances(forwardUnits, deltaRotation, halfGaugeUnits, out float leftUnits, out float rightUnits);
             leftTravel = AdvanceTrackTravel(leftTravel, leftUnits, maskHeightUnits, forwardSign);
             rightTravel = AdvanceTrackTravel(rightTravel, rightUnits, maskHeightUnits, forwardSign);
+            float seconds = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+            float leftTarget = Mathf.Clamp01(Mathf.Abs(leftUnits) / seconds / FullMotionSpeedUnitsPerSecond);
+            float rightTarget = Mathf.Clamp01(Mathf.Abs(rightUnits) / seconds / FullMotionSpeedUnitsPerSecond);
+            leftMotion = ApproachMotion(leftMotion, leftTarget, seconds);
+            rightMotion = ApproachMotion(rightMotion, rightTarget, seconds);
             ApplyProperties();
         }
 
@@ -211,7 +242,17 @@ namespace LocalTanks
         {
             running = false;
             strength = Vector2.zero;
+            leftMotion = 0f;
+            rightMotion = 0f;
             ApplyProperties();
+        }
+
+        private static float ApproachMotion(float current, float target, float seconds)
+        {
+            // Start decisively, then settle without one-frame flashes; stopping is slightly softer so a
+            // low frame rate cannot make the belt blink between physics samples.
+            float response = target > current ? 9f : 5f;
+            return Mathf.MoveTowards(current, target, response * seconds);
         }
 
         private void ApplyProperties()
@@ -231,6 +272,10 @@ namespace LocalTanks
                 new Vector4(LinkRepeats(maskHeightUnits, treadPitchUnits), SweepRepeats, 0f, 0f));
             properties.SetVector(TrackTravelId, new Vector4(leftTravel, rightTravel, 0f, 0f));
             properties.SetVector(TrackStrengthId, new Vector4(strength.x, strength.y, 0f, 0f));
+            properties.SetVector(
+                TrackMotionId,
+                new Vector4(leftMotion, rightMotion, DistantPatternGain, 0f));
+            properties.SetVector(TrackGeometryId, TrackGeometry);
             properties.SetVector(HullRectId, hullTextureRect);
 
             // The hull texture is bound per instance rather than owned by the material, so one

@@ -41,15 +41,15 @@ namespace LocalTanks.Editor
         /// </summary>
         private static readonly Vector4[] Looks =
         {
-            new Vector4(0.32f, 0.45f, 0.5f, 1f),
-            new Vector4(0.5f, 0.65f, 0.45f, 1f),
-            new Vector4(0.65f, 0.85f, 0.45f, 1f),
+            new Vector4(0.22f, 0.34f, 0.5f, 1f),
+            new Vector4(0.32f, 0.5f, 0.45f, 1f),
+            new Vector4(0.42f, 0.62f, 0.45f, 1f),
             // Gaps only, exaggerated: this must visibly darken the band, because additive blending
             // silently clamped exactly this half of the pattern away.
             new Vector4(0f, 1.2f, 0.7f, 1f)
         };
 
-        private static readonly float[] Phases = { 0f, 0.5f };
+        private static readonly float[] Phases = { 0f, 0.25f, 0.5f, 0.75f };
 
         [MenuItem("Local Tanks/Diagnostics/Capture Track Effect Preview")]
         public static void Capture()
@@ -140,6 +140,7 @@ namespace LocalTanks.Editor
             MaterialPropertyBlock properties = new MaterialPropertyBlock();
             overlay.GetPropertyBlock(properties);
             float maskHeightUnits = overlay.bounds.size.y;
+            TankTrackAnimator animator = overlay.GetComponentInParent<TankTrackAnimator>();
 
             // The animator is not running in the editor, so the preview supplies what its Awake would
             // have written, including the hull pixels the shader reads.
@@ -153,6 +154,12 @@ namespace LocalTanks.Editor
                     hullRect.width / hullTexture.width,
                     hullRect.height / hullTexture.height));
             properties.SetTexture("_HullTex", hullTexture);
+            properties.SetVector(
+                "_TrackGeometry",
+                animator != null ? animator.TrackGeometry : new Vector4(0.85f, 0.15f, 0.08f, 0f));
+            properties.SetVector(
+                "_TrackMotion",
+                new Vector4(1f, 1f, TankTrackAnimator.DistantPatternGain, 0f));
 
             foreach (float pitchMetres in TreadPitches)
             {

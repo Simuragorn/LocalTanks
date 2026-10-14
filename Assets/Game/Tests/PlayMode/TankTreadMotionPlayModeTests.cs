@@ -73,12 +73,19 @@ namespace LocalTanks.Tests
                 Vector4 travelBefore = properties.GetVector("_TrackTravel");
                 Vector4 parameters = properties.GetVector("_TrackParams");
                 Vector4 strength = properties.GetVector("_TrackStrength");
+                Vector4 motionBefore = properties.GetVector("_TrackMotion");
+                Vector4 geometry = properties.GetVector("_TrackGeometry");
                 Vector4 hullRect = properties.GetVector("_HullRect");
 
                 Assert.That(parameters.x, Is.GreaterThan(1f),
                     $"The property block must carry the link count of this machine, but it holds {parameters.x}.");
                 Assert.That(parameters.y, Is.GreaterThan(0f), "The property block must carry the coarse link count.");
                 Assert.That(strength.x, Is.GreaterThan(0f), "The property block must carry the tread strength.");
+                Assert.That(motionBefore.x, Is.EqualTo(0f).Within(0.001f),
+                    "A stationary machine must not carry a moving highlight on its left track.");
+                Assert.That(motionBefore.y, Is.EqualTo(0f).Within(0.001f),
+                    "A stationary machine must not carry a moving highlight on its right track.");
+                Assert.That(geometry.z, Is.GreaterThan(0f), "The shader needs the measured half-width of a track band.");
                 Assert.That(hullRect.z, Is.GreaterThan(0f), "The property block must carry the hull rectangle.");
                 Assert.That(properties.GetTexture("_HullTex"), Is.Not.Null,
                     "The property block must carry the hull texture the shader re-shades.");
@@ -91,12 +98,15 @@ namespace LocalTanks.Tests
 
                 overlay.GetPropertyBlock(properties);
                 Vector4 travelAfter = properties.GetVector("_TrackTravel");
+                Vector4 motionAfter = properties.GetVector("_TrackMotion");
                 Assert.That(travelAfter.x, Is.Not.EqualTo(travelBefore.x).Within(0.0001f),
                     "Driving must push the left track's travel into the overlay material.");
                 Assert.That(travelAfter.y, Is.Not.EqualTo(travelBefore.y).Within(0.0001f),
                     "Driving must push the right track's travel into the overlay material.");
                 Assert.That(travelAfter.x, Is.EqualTo(travelAfter.y).Within(0.01f),
                     "Driving straight must move both tracks by the same amount.");
+                Assert.That(motionAfter.x, Is.GreaterThan(0f), "An achieved movement must reveal the left track pattern.");
+                Assert.That(motionAfter.y, Is.GreaterThan(0f), "An achieved movement must reveal the right track pattern.");
             }
             finally
             {
