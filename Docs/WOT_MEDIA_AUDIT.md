@@ -188,7 +188,7 @@ Assets/Game/GameData/Definitions/Tanks/
 - Из стандартных банков СССР извлечены `ibc_vo_pc_reply_affirmative`, `ibc_vo_pc_request_sos`, `ibc_vo_pc_reply_sos`, `ibc_vo_pc_request_retreat`, `ibc_vo_pc_reply_thank_you`, `vo_start_battle` и `vo_target_captured`.
 - Числовой Wwise language ID стандартного русского экипажа в этой установке — `3110496415`. Он хранится в каталоге явно, поэтому выбор языка не зависит от порядка банков.
 - Двенадцать частей `music_interactive_part_*.pck` объединяются hard link-ами без второй копии гигабайта медиаданных. Голосовые события автоматически обрезают только доказанный длинный хвост почти полной тишины; содержательная реплика и радиосигнал сохраняются.
-- Локальная библиотека содержит 30 зарегистрированных клипов: 13 машинных и 17 карточных/универсальных. Manifest schema 2 проверен по существованию файлов и SHA-256.
+- Локальная библиотека содержит 128 зарегистрированных клипов: 13 машинных и 115 карточных/универсальных, включая 100 реплик экипажа. Manifest schema 2 проверен по существованию файлов и SHA-256.
 
 Подготовленные файлы находятся в `Assets/LocalOnly/Resources/WoTAudio/Clips/Mines` и `.../Universal`. Включение музыкальных состояний, сигналов базы и быстрых команд в runtime остаётся отдельной задачей: текущий этап намеренно извлекает и каталогизирует материал, не меняя логику боя.
 
@@ -199,20 +199,20 @@ Assets/Game/GameData/Definitions/Tanks/
 
 ## Реализованные реплики экипажа и заготовка языков
 
-2026-10-13 из локализованного банка `ussr/voiceover.bnk` извлечены восемь реплик экипажа и подключены к бою; ещё две роли переиспользуют уже извлечённые `vo_start_battle` и `vo_target_captured`.
+2026-10-13 из локализованного банка `ussr/voiceover.bnk` извлечены восемь реплик экипажа и подключены к бою; ещё две роли переиспользуют уже извлечённые `vo_start_battle` и `vo_target_captured`. 2026-10-14 к ним добавлены ещё четыре национальных набора и женские записи — см. `Docs/WOT_CREW_VOICE_LIBRARY.md`; имена клипов теперь несут и язык, и голос (`crew_ricochet_ru_male`).
 
 | Роль в игре | Событие Wwise | Клип | Проверка |
 |---|---|---|---|
-| начало боя | `vo_start_battle` | `battle_start_ru` | извлечён ранее |
-| база захвачена | `vo_target_captured` | `base_captured_ru` | извлечён ранее |
-| база потеряна | `vo_target_lost` | `crew_base_lost_ru` | 0.81 с, RMS 0.25 |
-| пробил | `vo_enemy_hp_damaged_by_projectile_by_player` | `crew_penetrated_ru` | 1.03 с, RMS 0.29 |
-| не пробил | `vo_armor_not_pierced_by_player` | `crew_not_penetrated_ru` | 0.66 с, RMS 0.28 |
-| рикошет | `vo_armor_ricochet_by_player` | `crew_ricochet_ru` | 0.59 с, RMS 0.26 |
-| противник уничтожен нами | `vo_enemy_killed_by_player` | `crew_enemy_destroyed_ru` | 0.66 с, RMS 0.30 |
-| противник уничтожен союзником | `vo_enemy_killed` | `crew_enemy_destroyed_by_ally_ru` | 0.84 с, RMS 0.28 |
-| союзник уничтожен нами | `vo_ally_killed_by_player` | `crew_ally_destroyed_ru` | 1.10 с, RMS 0.28 |
-| наша машина уничтожена | `vo_vehicle_destroyed` | `crew_vehicle_destroyed_ru` | 1.00 с, RMS 0.29 |
+| начало боя | `vo_start_battle` | `battle_start_ru_male` | извлечён ранее |
+| база захвачена | `vo_target_captured` | `base_captured_ru_male` | извлечён ранее |
+| база потеряна | `vo_target_lost` | `crew_base_lost_ru_male` | 0.81 с, RMS 0.25 |
+| пробил | `vo_enemy_hp_damaged_by_projectile_by_player` | `crew_penetrated_ru_male` | 1.03 с, RMS 0.29 |
+| не пробил | `vo_armor_not_pierced_by_player` | `crew_not_penetrated_ru_male` | 0.66 с, RMS 0.28 |
+| рикошет | `vo_armor_ricochet_by_player` | `crew_ricochet_ru_male` | 0.59 с, RMS 0.26 |
+| противник уничтожен нами | `vo_enemy_killed_by_player` | `crew_enemy_destroyed_ru_male` | 0.66 с, RMS 0.30 |
+| противник уничтожен союзником | `vo_enemy_killed` | `crew_enemy_destroyed_by_ally_ru_male` | 0.84 с, RMS 0.28 |
+| союзник уничтожен нами | `vo_ally_killed_by_player` | `crew_ally_destroyed_ru_male` | 1.10 с, RMS 0.28 |
+| наша машина уничтожена | `vo_vehicle_destroyed` | `crew_vehicle_destroyed_ru_male` | 1.00 с, RMS 0.29 |
 
 ### Имена событий не угадывались
 
@@ -232,9 +232,9 @@ Wwise хранит в банке только хэши имён, поэтому 
 |---|---|---|
 | `ru` | `ussr/voiceover.bnk` | 3110496415 |
 | `de` | `germany/voiceover.bnk` | 665432976 |
-| `en` | `usa/voiceover.bnk` | 3035750793 |
+| `en_us` | `usa/voiceover.bnk` | 3035750793 |
 | `fr` | `france/voiceover.bnk` | 2225046800 |
-| `uk` | `uk/voiceover.bnk` | 2733768290 |
+| `en_gb` | `uk/voiceover.bnk` | 2733768290 |
 | `cn` | `china/voiceover.bnk` | 463139818 |
 | `jp` | `japan/voiceover.bnk` | 1791915706 |
 | `pl` | `poland/voiceover.bnk` | 2614272111 |
@@ -242,7 +242,7 @@ Wwise хранит в банке только хэши имён, поэтому 
 | `se` | `sweden/voiceover.bnk` | 3314220208 |
 | `cz` | `czech/voiceover.bnk` | 1682751570 |
 
-Clip ID несёт языковой суффикс, потому что физически это разные файлы, а какой суффикс запросит машина, решают данные Unity: `Assets/Game/Resources/CrewVoiceProfiles.json` сопоставляет нацию с языком, а роль — с шаблоном clip ID. Извлечён только русский набор, поэтому **все нации временно указывают на `ru`**; переключение нации на `de` или `en` — правка одной строки в этом файле, после которой валидатор потребует объявить немецкие или английские клипы и прогнать конвейер с `languageId` из таблицы выше.
+Clip ID несёт суффиксы языка и голоса, потому что физически это разные файлы, а какие именно — решают данные Unity: `Assets/Game/Resources/CrewVoiceProfiles.json` сопоставляет нацию с языком и голосом, а роль — с шаблоном clip ID вида `crew_ricochet_{lang}_{voice}`. Извлечены пять наборов (`ru`, `de`, `en_us`, `fr`, `en_gb`) в мужском и женском голосе, поэтому немецкие машины говорят по-немецки, американские — по-американски, а советские — по-русски. Подробности, доказательство значений свитча пола и измерения — в `Docs/WOT_CREW_VOICE_LIBRARY.md`; добавление шестого языка остаётся правкой строк в этом файле и прогоном конвейера с `languageId` из таблицы выше.
 
 ## Решение по результатам аудита
 
