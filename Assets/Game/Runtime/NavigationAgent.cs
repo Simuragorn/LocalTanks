@@ -107,6 +107,7 @@ namespace LocalTanks
         private Vector2 facingDirection;
         private int activeClearanceCells;
         private bool movingInReverse;
+        private BattleDirector battleDirector;
 
         public IReadOnlyList<Vector2> CurrentPath => path;
         public bool HasPath => pathIndex < path.Count;
@@ -137,6 +138,7 @@ namespace LocalTanks
         public int StallRecoveryCount { get; private set; }
         public NavigationMap Map => map;
         public int ClearanceCells => clearanceCells;
+        private float Now => battleDirector != null ? (float)battleDirector.SimulationTime : Time.time;
 
         /// <summary>
         /// How close a tank must come to a waypoint before it counts as reached. Route consumers need
@@ -159,6 +161,7 @@ namespace LocalTanks
             int clearance = 0,
             bool loop = true)
         {
+            battleDirector ??= GetComponentInParent<BattleDirector>();
             map = navigationMap;
             motor = tankMotor;
             patrolPoints = waypoints;
@@ -168,7 +171,7 @@ namespace LocalTanks
             destinationReached = false;
             movementPaused = false;
             progressSamplePosition = transform.position;
-            progressSampleTime = Time.time;
+            progressSampleTime = Now;
             progressSampleAngle = transform.eulerAngles.z;
             unstuckAttempt = 0;
             unstuckTime = 0f;
@@ -513,12 +516,12 @@ namespace LocalTanks
                     RebuildPath();
                     progressSamplePosition = position;
                     progressSampleAngle = transform.eulerAngles.z;
-                    progressSampleTime = Time.time;
+                    progressSampleTime = Now;
                 }
                 return;
             }
 
-            if (Time.time - progressSampleTime < 2f)
+            if (Now - progressSampleTime < 2f)
             {
                 return;
             }
@@ -527,7 +530,7 @@ namespace LocalTanks
             float turnProgress = Mathf.Abs(Mathf.DeltaAngle(progressSampleAngle, transform.eulerAngles.z));
             progressSamplePosition = position;
             progressSampleAngle = transform.eulerAngles.z;
-            progressSampleTime = Time.time;
+            progressSampleTime = Now;
             if (HasPath && progress < minimumProgressDistance && turnProgress < minimumProgressTurn)
             {
                 unstuckAttempt++;

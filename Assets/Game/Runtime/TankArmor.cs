@@ -99,7 +99,9 @@ namespace LocalTanks
                 result.Outcome,
                 result.Zone,
                 appliedDamage,
-                Time.time,
+                GetComponentInParent<BattleDirector>() is BattleDirector director
+                    ? (float)director.SimulationTime
+                    : Time.time,
                 attackerTeam));
 
             if (logImpacts)

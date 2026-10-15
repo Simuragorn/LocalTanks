@@ -26,6 +26,7 @@ namespace LocalTanks
         [SerializeField] private WeaponController weapon;
         [SerializeField] private TankVisibilityPresenter visibilityPresenter;
         [SerializeField] private Transform visionDirection;
+        private BattleDirector battleDirector;
 
         public static event Action<TeamMember, bool> MembershipChanged;
         /// <summary>
@@ -135,11 +136,12 @@ namespace LocalTanks
                 TurretAiming turret = GetComponentInChildren<TurretAiming>(true);
                 visionDirection = turret != null ? turret.transform : transform;
             }
+            if (battleDirector == null) battleDirector = GetComponentInParent<BattleDirector>();
         }
 
         private void OnFired(WeaponController source)
         {
-            LastFiredTime = Time.time;
+            LastFiredTime = battleDirector != null ? (float)battleDirector.SimulationTime : Time.time;
         }
     }
 }

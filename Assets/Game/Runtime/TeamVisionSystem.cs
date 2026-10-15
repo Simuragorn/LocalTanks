@@ -48,6 +48,7 @@ namespace LocalTanks
         private readonly List<VisionDiagnostic> diagnostics = new List<VisionDiagnostic>();
         private readonly List<RaycastHit2D> worldPointHits = new List<RaycastHit2D>(16);
         private ContactFilter2D worldPointFilter = new ContactFilter2D().NoFilter();
+        private BattleDirector battleDirector;
         private float nextSweepTime;
         private bool sweepInProgress;
 
@@ -56,9 +57,12 @@ namespace LocalTanks
         public VisionRules Rules => rules;
         public TeamId LocalPlayerTeam => localPlayerTeam;
         public IReadOnlyList<VisionDiagnostic> Diagnostics => diagnostics;
+        private float Now => battleDirector != null ? (float)battleDirector.SimulationTime : Time.time;
 
         private void OnEnable()
         {
+            battleDirector = FindObjectsByType<BattleDirector>()
+                .FirstOrDefault(item => item != null && item.gameObject.scene == gameObject.scene);
             TeamMember.MembershipChanged += OnMembershipChanged;
             nextSweepTime = 0f;
             RefreshPresenters();
@@ -80,7 +84,7 @@ namespace LocalTanks
                 return;
             }
 
-            if (pendingPairs.Count == 0 && Time.time >= nextSweepTime)
+            if (pendingPairs.Count == 0 && Now >= nextSweepTime)
             {
                 BeginSweep();
             }
@@ -274,7 +278,7 @@ namespace LocalTanks
             TankDefinition observerDefinition = observer.Definition;
             TankDefinition targetDefinition = target.Definition;
             float movementPenalty = target.IsMoving ? targetDefinition.movementRevealPenalty : 0f;
-            float firingPenalty = Time.time - target.LastFiredTime <= targetDefinition.firingRevealDuration
+            float firingPenalty = Now - target.LastFiredTime <= targetDefinition.firingRevealDuration
                 ? targetDefinition.firingRevealPenalty
                 : 0f;
             return new DetectionInput(
@@ -365,11 +369,11 @@ namespace LocalTanks
                 if (visible)
                 {
                     contact.LastKnownPosition = target.transform.position;
-                    contact.LastSeenTime = Time.time;
+                    contact.LastSeenTime = Now;
                     contact.HasMemory = true;
                 }
                 else if (contact.HasMemory && rules != null &&
-                         Time.time - contact.LastSeenTime > rules.contactMemorySeconds)
+                         Now - contact.LastSeenTime > rules.contactMemorySeconds)
                 {
                     contact.HasMemory = false;
                 }
@@ -381,7 +385,7 @@ namespace LocalTanks
             }
 
             RefreshPresenters();
-            nextSweepTime = Time.time + Mathf.Max(0.05f, rules != null ? rules.checkInterval : 0.2f);
+            nextSweepTime = Now + Mathf.Max(0.05f, rules != null ? rules.checkInterval : 0.2f);
         }
 
         private void RefreshPresenters()
