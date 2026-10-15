@@ -765,51 +765,6 @@ namespace LocalTanks.Editor
         }
 
         /// <summary>
-        /// Returns the path running away from <paramref name="fromWorld"/>, with points a tank cannot
-        /// occupy removed.
-        /// <para>
-        /// The tactical analysis draws every lane from one base to the other without recording which, so
-        /// the direction is decided by geometry: the endpoint nearest the team's own base becomes the
-        /// start. Assuming the direction instead sent one team across the map from the enemy's side.
-        /// </para>
-        /// <para>
-        /// Unwalkable points are dropped as well. A route that begins on the spawn point offers its first
-        /// waypoint as a destination the tank already stands on, which it can never satisfy, so it circles
-        /// there for a whole battle while reporting a valid path and the Deploy state.
-        /// </para>
-        /// </summary>
-        private static Vector2Int[] OrientFrom(
-            Vector2Int[] path,
-            Vector2 fromWorld,
-            float cellSize,
-            Vector2 origin,
-            WoTMapAsset asset)
-        {
-            if (path == null || path.Length < 2) return path;
-
-            Vector2 firstWorld = origin + new Vector2(
-                (path[0].x + 0.5f) * cellSize, (path[0].y + 0.5f) * cellSize);
-            Vector2 lastWorld = origin + new Vector2(
-                (path[path.Length - 1].x + 0.5f) * cellSize,
-                (path[path.Length - 1].y + 0.5f) * cellSize);
-            Vector2Int[] oriented = Vector2.Distance(firstWorld, fromWorld) <= Vector2.Distance(lastWorld, fromWorld)
-                ? path
-                : path.Reverse().ToArray();
-
-            List<Vector2Int> walkable = new List<Vector2Int>(oriented.Length);
-            foreach (Vector2Int cell in oriented)
-            {
-                Vector2 world = origin + new Vector2(
-                    (cell.x + 0.5f) * cellSize, (cell.y + 0.5f) * cellSize);
-                if (!IsBlocked(asset, world)) walkable.Add(cell);
-            }
-
-            return walkable.Count >= 2
-                ? WeightedAStar.SimplifyCollinear(walkable).ToArray()
-                : oriented;
-        }
-
-        /// <summary>
         /// Whether a world position falls on ground the navigation grid marks as closed. A tank spawned
         /// there is boxed in by geometry, which looks exactly like a broken AI.
         /// </summary>
@@ -976,13 +931,7 @@ namespace LocalTanks.Editor
             }
 
             TankPrefabBinding[] prefabs = CreatePrefabBindings(asset);
-            BattleScenario scenario = CreateScenario(
-                database,
-                prefabs,
-                tacticalMap,
-                asset,
-                asset.basePositions,
-                BattleSceneLayout.MapSceneName(asset.mapId));
+            BattleScenario scenario = CreateScenario(database, BattleSceneLayout.MapSceneName(asset.mapId));
             GameObject root = new GameObject("BattleDirector");
             SceneManager.MoveGameObjectToScene(root, SceneManager.GetActiveScene());
             root.AddComponent<BattleDirector>().Configure(
@@ -1022,57 +971,24 @@ namespace LocalTanks.Editor
         /// A symmetric roster on the arena's two bases. Each side fields the same tank, chosen as the
         /// lowest-tier playable machine so both teams are matched, and each slot uses one of the base's
         /// own spawn markers.
-        /// <para>
-        /// Every AI entry carries the route of a real analysed lane. The tactical analysis produces paths
-        /// from base B to base A, so a Team B entry follows the path as given and a Team A entry follows
-        /// it reversed. Bots are spread across the lanes in turn, which is what makes them use the whole
-        /// arena instead of walking into the same wall.
-        /// </para>
+        /// Routes are deliberately absent: the loaded scene is analysed before every battle, so a rebuilt
+        /// arena cannot preserve stale tactical geometry in its scenario.
         /// </summary>
-        private static BattleScenario CreateScenario(
-            CombatDatabase database,
-            TankPrefabBinding[] prefabs,
-            TacticalMapDescriptorAsset tacticalMap,
-            WoTMapAsset mapAsset,
-            Vector2[] baseSpawnPositions,
-            string sceneId)
+        private static BattleScenario CreateScenario(CombatDatabase database, string sceneId)
         {
             TankDefinition chosen = database.tanks
                 .Where(tank => tank != null && tank.availableInGame)
                 .OrderBy(tank => tank.tier)
                 .ThenBy(tank => tank.id, StringComparer.Ordinal)
                 .First();
-            int teamSize = BattleScenario.TeamSize;
-
-            Vector2Int[][] paths = tacticalMap.descriptor.lanes
-                .Where(lane => lane != null && lane.pathCells != null && lane.pathCells.Length >= 2)
-                .OrderByDescending(lane => lane.lengthWorld)
-                .Select(lane => lane.pathCells)
-                .ToArray();
-            if (paths.Length == 0)
-            {
-                throw new InvalidOperationException(
-                    "The tactical analysis produced no lane with a usable path, so bots would have no route.");
-            }
-
-            // The game enforces a fixed shape: two bots per flank lane and three down the middle. The
-            // analysed lanes are assigned to those three roles so the arena's real routes drive the
-            // formation instead of the bots sharing one path.
+            // The game enforces a fixed formation shape. Which concrete paths satisfy these roles is
+            // resolved from the scene's runtime tactical descriptor.
             BattleLane[] formation = { BattleLane.Center, BattleLane.North, BattleLane.South };
             int[] perLane = { 3, 2, 2 };
-
-            // The route must leave the tank's own base, so every lane is oriented from that team's spawn.
-            // The tactical source is also transformed by the grid origin and cell size, so those travel
-            // with the paths to keep one definition of where a cell sits.
-            Vector2 worldOrigin = mapAsset.worldCenter - mapAsset.playableSize * 0.5f;
-            Vector2 spawnA = baseSpawnPositions[0];
-            Vector2 spawnB = baseSpawnPositions[1];
-            Vector2[] spawnOrigins = { spawnA, spawnA, spawnA, spawnB, spawnB, spawnB };
 
             List<BattleScenarioEntry> entries = new List<BattleScenarioEntry>();
             for (int laneIndex = 0; laneIndex < formation.Length; laneIndex++)
             {
-                Vector2Int[] forward = paths[laneIndex % paths.Length];
                 for (int within = 0; within < perLane[laneIndex]; within++)
                 {
                     bool player = laneIndex == 1 && within == 0;
@@ -1085,11 +1001,7 @@ namespace LocalTanks.Editor
                         baseId = "A",
                         spawnSlot = entries.Count(entry => entry.team == TeamId.TeamA),
                         lane = formation[laneIndex],
-                        role = laneIndex == 0 ? CombatAiRole.Assault : CombatAiRole.Flank,
-                        // The route must leave the tank's own base. Orienting it by geometry rather than by
-                        // assuming the analysis direction cannot silently send a team across the map from
-                        // the enemy's side, which is what happened when the assumption was wrong.
-                        routeCells = player ? null : OrientFrom(forward, spawnOrigins[laneIndex], mapAsset.navigationCellSize, worldOrigin, mapAsset)
+                        role = laneIndex == 0 ? CombatAiRole.Assault : CombatAiRole.Flank
                     });
                     entries.Add(new BattleScenarioEntry
                     {
@@ -1100,8 +1012,7 @@ namespace LocalTanks.Editor
                         baseId = "B",
                         spawnSlot = entries.Count(entry => entry.team == TeamId.TeamB),
                         lane = formation[laneIndex],
-                        role = laneIndex == 0 ? CombatAiRole.Assault : CombatAiRole.Flank,
-                        routeCells = OrientFrom(forward, spawnOrigins[laneIndex + 3], mapAsset.navigationCellSize, worldOrigin, mapAsset)
+                        role = laneIndex == 0 ? CombatAiRole.Assault : CombatAiRole.Flank
                     });
                 }
             }

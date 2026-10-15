@@ -41,6 +41,27 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void ScenarioValidator_DoesNotRequirePrecomputedMapRoutes()
+        {
+            BattleScenario imported = BattleScenarioImporter.Reimport();
+            BattleScenario scenario = Object.Instantiate(imported);
+            CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(
+                CombatDefinitionImporter.DatabasePath);
+            foreach (BattleScenarioEntry entry in scenario.entries.Where(item => !item.playerControlled))
+                entry.routeCells = null;
+
+            try
+            {
+                Assert.That(scenario.Validate(database), Is.Empty,
+                    "Runtime map analysis, not scenario data, owns bot routes.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(scenario);
+            }
+        }
+
+        [Test]
         public void AiDuelLabScenarioAndCases_AreValidAndContainOnlyTwoBots()
         {
             BattleScenario scenario = BattleScenarioImporter.ReimportDuelLab();

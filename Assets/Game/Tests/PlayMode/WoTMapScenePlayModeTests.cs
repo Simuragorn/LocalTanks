@@ -51,6 +51,11 @@ namespace LocalTanks.Tests
             Assert.That(director.NavigationBakeReport.ColliderCount, Is.GreaterThan(1000),
                 "Runtime navigation must inspect the actual arena colliders before tanks spawn.");
             Assert.That(director.NavigationBakeReport.BlockedCellCount, Is.GreaterThan(1000));
+            Assert.That(director.TacticalAnalysisReport.WasAnalyzed, Is.True,
+                "Bots must discover tactical lanes from the freshly baked runtime grid.");
+            Assert.That(director.PreBattleAnalysisMilliseconds, Is.LessThan(1000),
+                "Runtime analysis should finish during ordinary scene loading without a countdown.");
+            Assert.That(director.TacticalMap.mapId, Is.EqualTo("Battle_Mines_runtime"));
             Assert.That(Object.FindObjectsByType<CaptureBase>(FindObjectsSortMode.None).Length,
                 Is.EqualTo(2), "The arena has two bases.");
         }

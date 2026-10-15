@@ -225,15 +225,7 @@ namespace LocalTanks
 
         public static string ResolveLaneId(TacticalMapDescriptor descriptor, BattleLane lane)
         {
-            TacticalLaneDescriptor[] lanes = descriptor?.lanes ?? Array.Empty<TacticalLaneDescriptor>();
-            string token = lane.ToString().ToLowerInvariant();
-            TacticalLaneDescriptor matched = lanes.FirstOrDefault(item => item != null &&
-                ((item.id ?? string.Empty).IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                 (item.provisionalName ?? string.Empty).IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0));
-            if (matched != null) return matched.id;
-            TacticalLaneDescriptor[] ordered = lanes.Where(item => item != null).OrderBy(item => item.order).ToArray();
-            int index = lane == BattleLane.North ? 0 : lane == BattleLane.Center ? 1 : 2;
-            return ordered.Length == 0 ? string.Empty : ordered[Mathf.Clamp(index, 0, ordered.Length - 1)].id;
+            return RuntimeTacticalMapAnalyzer.SelectLane(descriptor, lane)?.id ?? string.Empty;
         }
     }
 

@@ -45,6 +45,7 @@ namespace LocalTanks
         private bool matchEnded;
         private TeamId capturedBy = TeamId.Neutral;
         private ShotRandomStream shotRandomStream;
+        private TacticalMapDescriptor runtimeTacticalMap;
 
         /// <summary>A scenario without rules — a laboratory that builds one in code — reads this one instead.</summary>
         private MatchRules fallbackRules;
@@ -57,7 +58,8 @@ namespace LocalTanks
 
         public IReadOnlyList<TeamMember> SpawnedMembers => spawnedMembers;
         public TeamMember PlayerMember { get; private set; }
-        public TacticalMapDescriptor TacticalMap => tacticalMap != null ? tacticalMap.descriptor : null;
+        public TacticalMapDescriptor TacticalMap => runtimeTacticalMap ??
+            (tacticalMap != null ? tacticalMap.descriptor : null);
         public BattleStrategicPlanner StrategicPlanner { get; private set; }
         public BotStrategicCoordinator StrategicCoordinator { get; private set; }
         public BattleDiagnosticsOverlay DiagnosticsOverlay { get; private set; }
@@ -71,6 +73,9 @@ namespace LocalTanks
         public int TeamAAlive { get; private set; }
         public int TeamBAlive { get; private set; }
         public SceneNavigationBakeReport NavigationBakeReport { get; private set; }
+        public RuntimeTacticalAnalysisReport TacticalAnalysisReport { get; private set; }
+        public long PreBattleAnalysisMilliseconds =>
+            NavigationBakeReport.ElapsedMilliseconds + TacticalAnalysisReport.ElapsedMilliseconds;
 
         /// <summary>Match rules of the current scenario: battle length and friendly fire come from data.</summary>
         public MatchRules Rules => scenario != null && scenario.rules != null
@@ -112,9 +117,8 @@ namespace LocalTanks
         private void Awake()
         {
             // The audio layer is attached here rather than in Start so the loading track covers the
-            // moment between the scene waking up and the machines appearing. The map is already known
-            // from the serialised descriptor, and a laboratory that replaces its scenario at runtime
-            // never replaces the map.
+            // moment between the scene waking up and the machines appearing. The map itself is analysed
+            // in SpawnAll after its real colliders have rebuilt navigation.
             AudioDirector = BattleAudioDirector.Attach(this);
             // The visual layer is attached here for the same reason: it owns one pool and one profile
             // catalog for the whole battle, so no machine and no scene has to hold a second copy.
@@ -261,6 +265,13 @@ namespace LocalTanks
 
             ValidateConfiguration();
             NavigationBakeReport = SceneNavigationBaker.Rebuild(navigationMap, gameObject.scene);
+            RuntimeTacticalAnalysisResult tacticalAnalysis = RuntimeTacticalMapAnalyzer.Analyze(
+                navigationMap,
+                gameObject.scene,
+                Bases,
+                scenario.sceneId);
+            runtimeTacticalMap = tacticalAnalysis.Descriptor;
+            TacticalAnalysisReport = tacticalAnalysis.Report;
             spawned = true;
             shotRandomStream = new ShotRandomStream(LocalTanksOverrides.RequestedSeed(Rules.randomSeed));
             matchStartedAt = Time.timeAsDouble;
@@ -383,15 +394,20 @@ namespace LocalTanks
                 if (navigation == null) navigation = tank.AddComponent<NavigationAgent>();
                 navigation.Configure(navigationMap, motor, Array.Empty<Vector2>(), 0, false);
                 CaptureBase destinationBase = bases.FirstOrDefault(item =>
-                    item != null && item.Owner != TeamId.Neutral && item.Owner != entry.team);
+                    item != null && item.Owner != TeamId.Neutral && item.Owner != entry.team) ??
+                    bases.FirstOrDefault(item => item != null && item.BaseId != entry.baseId);
                 Vector2 destination = destinationBase != null
                     ? (Vector2)destinationBase.transform.position
                     : entry.routeCells != null && entry.routeCells.Length > 0
                         ? navigationMap.CellToWorld(entry.routeCells[entry.routeCells.Length - 1])
                         : position;
+                TacticalLaneDescriptor tacticalLane = RuntimeTacticalMapAnalyzer.SelectLane(TacticalMap, entry.lane);
+                Vector2Int[] laneHints = RuntimeTacticalMapAnalyzer.OrientFrom(
+                    tacticalLane,
+                    navigationMap.WorldToCell(position));
                 Vector2[] route = SceneNavigationBaker.BuildConnectedRoute(
                     navigationMap,
-                    entry.routeCells,
+                    laneHints,
                     position,
                     destination);
                 CombatTankAI ai = tank.GetComponent<CombatTankAI>();
@@ -523,10 +539,6 @@ namespace LocalTanks
         private void ValidateConfiguration()
         {
             if (scenario == null) throw new InvalidOperationException("BattleDirector has no scenario.");
-            if (tacticalMap == null || tacticalMap.Validate().Length > 0)
-                throw new InvalidOperationException("BattleDirector has no valid tactical map descriptor.");
-            if (!string.Equals(tacticalMap.descriptor.sceneId, scenario.sceneId, StringComparison.Ordinal))
-                throw new InvalidOperationException("Battle scenario and tactical map descriptor refer to different maps.");
             string[] errors = scenario.Validate(combatDatabase);
             if (errors.Length > 0)
                 throw new InvalidOperationException("Battle scenario is invalid:\n- " + string.Join("\n- ", errors));

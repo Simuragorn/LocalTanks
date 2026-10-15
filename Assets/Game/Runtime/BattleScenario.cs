@@ -134,8 +134,6 @@ namespace LocalTanks
                 string spawnKey = $"{entry.baseId}:{entry.spawnSlot}";
                 if (!spawnKeys.Add(spawnKey))
                     errors.Add($"Spawn point '{spawnKey}' is assigned more than once.");
-                if (!entry.playerControlled && (entry.routeCells == null || entry.routeCells.Length < 2))
-                    errors.Add($"AI entry '{entry.id}' needs at least two route cells.");
             }
 
             foreach (TeamId team in new[] { TeamId.TeamA, TeamId.TeamB })
