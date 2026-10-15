@@ -174,6 +174,9 @@ namespace LocalTanks
         public int EventCount => events.Count;
         public string DecisionFingerprint => decisionFingerprint.Value;
         public int FingerprintedDecisionCount => decisionFingerprint.Count;
+        public string DecisionTrace => string.Join("\n", events
+            .Where(item => ContributesToDecisionFingerprint(item.kind))
+            .Select(item => $"{item.kind}|{item.name}|{item.detail}"));
 
         /// <summary>
         /// Attaches a recorder to a director when the command line asked for one. Returns null otherwise,

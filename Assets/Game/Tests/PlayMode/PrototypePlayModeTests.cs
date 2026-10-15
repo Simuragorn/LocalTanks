@@ -220,7 +220,8 @@ namespace LocalTanks.Tests
                     foreach (string botId in expectedBots) Assert.That(report, Does.Contain(botId));
                     Debug.Log($"AI_SQUAD_DIAGNOSTIC case={lab.ActiveCase.id} seed={lab.ActiveCase.seed}\n" +
                               report + "\n" + lab.Auditor.BuildTransitionReport() +
-                              $"\nfingerprint={telemetry.DecisionFingerprint} decisions={telemetry.FingerprintedDecisionCount}");
+                              $"\nfingerprint={telemetry.DecisionFingerprint} decisions={telemetry.FingerprintedDecisionCount}" +
+                              $"\n{telemetry.DecisionTrace}");
 
                     var signature = (telemetry.DecisionFingerprint, telemetry.FingerprintedDecisionCount);
                     if (runIndex < expectedCases.Length)
