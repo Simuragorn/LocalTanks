@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace LocalTanks
 {
+    [DefaultExecutionOrder(-200)]
     public sealed class TurretAiming : MonoBehaviour
     {
         [SerializeField] private TankDefinition config;
@@ -38,7 +39,7 @@ namespace LocalTanks
             hasTarget = false;
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             AngularVelocityDegreesPerSecond = 0f;
             if (!hasTarget || config == null)

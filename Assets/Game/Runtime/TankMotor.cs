@@ -3,6 +3,7 @@ using UnityEngine;
 namespace LocalTanks
 {
     [RequireComponent(typeof(Rigidbody2D))]
+    [DefaultExecutionOrder(100)]
     public sealed class TankMotor : MonoBehaviour
     {
         [SerializeField] private TankDefinition config;

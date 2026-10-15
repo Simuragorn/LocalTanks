@@ -33,6 +33,7 @@ namespace LocalTanks
     }
 
     [RequireComponent(typeof(TankMotor), typeof(Rigidbody2D))]
+    [DefaultExecutionOrder(0)]
     public sealed class NavigationAgent : MonoBehaviour
     {
         [SerializeField] private NavigationMap map;
@@ -267,7 +268,7 @@ namespace LocalTanks
             }
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             if (map == null || motor == null)
             {

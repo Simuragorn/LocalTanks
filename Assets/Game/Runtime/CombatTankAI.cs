@@ -6,6 +6,7 @@ using UnityEngine;
 namespace LocalTanks
 {
     [RequireComponent(typeof(TeamMember), typeof(NavigationAgent), typeof(TankMotor))]
+    [DefaultExecutionOrder(-100)]
     public sealed class CombatTankAI : MonoBehaviour
     {
         private const float DecisionInterval = 0.22f;
@@ -346,7 +347,7 @@ namespace LocalTanks
             turret?.ClearTarget();
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             if (health == null || health.IsDestroyed)
             {

@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace LocalTanks
 {
+    [DefaultExecutionOrder(-250)]
     public sealed class WeaponController : MonoBehaviour
     {
         [SerializeField] private TankDefinition config;
@@ -102,7 +103,7 @@ namespace LocalTanks
             shotRandomStream = randomStream ?? throw new ArgumentNullException(nameof(randomStream));
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             reloadTimer.Tick(Time.deltaTime);
             shotIntervalTimer.Tick(Time.deltaTime);

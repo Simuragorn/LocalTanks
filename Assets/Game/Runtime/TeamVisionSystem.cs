@@ -36,6 +36,7 @@ namespace LocalTanks
         public float BushBonus { get; }
     }
 
+    [DefaultExecutionOrder(-300)]
     public sealed class TeamVisionSystem : MonoBehaviour
     {
         [SerializeField] private VisionRules rules;
@@ -72,7 +73,7 @@ namespace LocalTanks
             }
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             if (rules == null)
             {
