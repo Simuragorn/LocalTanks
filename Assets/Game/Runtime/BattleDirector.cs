@@ -40,7 +40,7 @@ namespace LocalTanks
         private readonly Dictionary<string, TeamMember> membersByEntityId = new Dictionary<string, TeamMember>(StringComparer.Ordinal);
         private readonly Dictionary<TeamMember, string> entityIdsByMember = new Dictionary<TeamMember, string>();
         private bool spawned;
-        private float matchStartedAt;
+        private double matchStartedAt;
         private float matchElapsed;
         private bool matchEnded;
         private TeamId capturedBy = TeamId.Neutral;
@@ -82,7 +82,8 @@ namespace LocalTanks
         public bool HasEnded => matchEnded;
 
         /// <summary>Battle time in seconds. It stops when the match ends, so the result keeps its own moment.</summary>
-        public float ElapsedSeconds => matchEnded ? matchElapsed : spawned ? Time.time - matchStartedAt : 0f;
+        public double SimulationTime => spawned ? Time.timeAsDouble - matchStartedAt : 0d;
+        public float ElapsedSeconds => matchEnded ? matchElapsed : (float)SimulationTime;
 
         public float RemainingSeconds => Mathf.Max(0f, Rules.timeLimitSeconds - ElapsedSeconds);
         public int RandomSeed => shotRandomStream != null ? shotRandomStream.Seed : Rules.randomSeed;
@@ -150,7 +151,7 @@ namespace LocalTanks
                 return;
             }
 
-            matchElapsed = Time.time - matchStartedAt;
+            matchElapsed = (float)SimulationTime;
             MatchResult result = MatchOutcomeRules.Resolve(TeamAAlive, TeamBAlive, capturedBy, matchElapsed, Rules);
             if (result.HasEnded)
             {
@@ -260,7 +261,7 @@ namespace LocalTanks
             ValidateConfiguration();
             spawned = true;
             shotRandomStream = new ShotRandomStream(LocalTanksOverrides.RequestedSeed(Rules.randomSeed));
-            matchStartedAt = Time.time;
+            matchStartedAt = Time.timeAsDouble;
             matchElapsed = 0f;
             matchEnded = false;
             capturedBy = TeamId.Neutral;
