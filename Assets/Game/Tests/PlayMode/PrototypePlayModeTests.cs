@@ -216,10 +216,16 @@ namespace LocalTanks.Tests
                     foreach (string botId in expectedBots) Assert.That(report, Does.Contain(botId));
                     Debug.Log($"AI_SQUAD_DIAGNOSTIC case={lab.ActiveCase.id} seed={lab.ActiveCase.seed}\n" +
                               report + "\n" + lab.Auditor.BuildTransitionReport() +
-                              $"\nfingerprint={telemetry.DecisionFingerprint} decisions={telemetry.FingerprintedDecisionCount}");
+                              $"\nfingerprint={telemetry.DecisionFingerprint} decisions={telemetry.FingerprintedDecisionCount}" +
+                              $" motorControl={telemetry.MotorControlFingerprint}" +
+                              $" motorPhysics={telemetry.MotorPhysicsFingerprint}" +
+                              $" motorSteps={telemetry.FingerprintedMotorStepCount}");
 
                     Assert.That(telemetry.FingerprintedDecisionCount, Is.GreaterThan(0));
                     Assert.That(telemetry.DecisionFingerprint, Has.Length.EqualTo(16));
+                    Assert.That(telemetry.FingerprintedMotorStepCount, Is.GreaterThan(0));
+                    Assert.That(telemetry.MotorControlFingerprint, Has.Length.EqualTo(16));
+                    Assert.That(telemetry.MotorPhysicsFingerprint, Has.Length.EqualTo(16));
 
                     if (caseIndex + 1 < expectedCases.Length) lab.ReloadCase(caseIndex + 1);
                 }

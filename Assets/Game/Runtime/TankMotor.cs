@@ -6,6 +6,8 @@ namespace LocalTanks
     [DefaultExecutionOrder(100)]
     public sealed class TankMotor : MonoBehaviour
     {
+        private static double lastCoordinatedFixedTime = double.NegativeInfinity;
+
         [SerializeField] private TankDefinition config;
 
         private Rigidbody2D body;
@@ -62,10 +64,46 @@ namespace LocalTanks
 
         private void FixedUpdate()
         {
+            TeamMember member = GetComponent<TeamMember>();
+            if (member == null)
+            {
+                TickMotor(null);
+                return;
+            }
+
+            double fixedTime = Time.fixedTimeAsDouble;
+            if (fixedTime.Equals(lastCoordinatedFixedTime)) return;
+            lastCoordinatedFixedTime = fixedTime;
+
+            // Unity orders component classes, but not multiple instances of the same class. The order in
+            // which six kinematic bodies submit MovePosition/MoveRotation affects Box2D contact solving,
+            // so identical seeded squad battles could diverge after the first vehicle contact. Submit all
+            // tank motion in the canonical TeamMember order and let the remaining callbacks be no-ops.
+            foreach (TeamMember activeMember in TeamMember.ActiveMembers)
+            {
+                TankMotor activeMotor = activeMember != null ? activeMember.GetComponent<TankMotor>() : null;
+                if (activeMotor != null && activeMotor.isActiveAndEnabled)
+                    activeMotor.TickMotor(activeMember);
+            }
+        }
+
+        private void TickMotor(TeamMember member)
+        {
             if (config == null)
             {
                 return;
             }
+
+            BattleTelemetry.Active?.RecordMotorStep(
+                member,
+                driveInput,
+                turnInput,
+                terrainSpeedMultiplier,
+                terrainAccelerationMultiplier,
+                terrainResistanceMultiplier,
+                body,
+                CurrentSpeed,
+                CurrentTurnRate);
 
             float deltaTime = Time.fixedDeltaTime;
             float targetSpeed = TankMotionMath.TargetSpeed(

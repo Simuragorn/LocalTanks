@@ -46,7 +46,7 @@ namespace LocalTanks
     [DisallowMultipleComponent]
     public sealed class BattleTelemetry : MonoBehaviour
     {
-        public const int SchemaVersion = 2;
+        public const int SchemaVersion = 3;
 
         /// <summary>Command line switch that starts recording. Consumed by the batch runners.</summary>
         public const string SwitchName = "-localtanksTelemetry";
@@ -67,6 +67,8 @@ namespace LocalTanks
         private readonly List<BattleEvent> events = new List<BattleEvent>();
         private readonly Dictionary<UnityEngine.EntityId, TankTelemetryTrack> tracks = new Dictionary<UnityEngine.EntityId, TankTelemetryTrack>();
         private readonly AiDecisionFingerprint decisionFingerprint = new AiDecisionFingerprint();
+        private readonly AiDecisionFingerprint motorControlFingerprint = new AiDecisionFingerprint();
+        private readonly AiDecisionFingerprint motorPhysicsFingerprint = new AiDecisionFingerprint();
         private ConcealmentZone[] concealmentZones;
         private BattleDirector director;
         private float startedAt;
@@ -174,6 +176,9 @@ namespace LocalTanks
         public int EventCount => events.Count;
         public string DecisionFingerprint => decisionFingerprint.Value;
         public int FingerprintedDecisionCount => decisionFingerprint.Count;
+        public string MotorControlFingerprint => motorControlFingerprint.Value;
+        public string MotorPhysicsFingerprint => motorPhysicsFingerprint.Value;
+        public int FingerprintedMotorStepCount => motorControlFingerprint.Count;
         public string DecisionTrace => string.Join("\n", events
             .Where(item => ContributesToDecisionFingerprint(item.kind))
             .Select(item => $"{item.kind}|{item.name}|{item.detail}"));
@@ -218,6 +223,8 @@ namespace LocalTanks
             events.Clear();
             tracks.Clear();
             decisionFingerprint.Reset();
+            motorControlFingerprint.Reset();
+            motorPhysicsFingerprint.Reset();
             startedAt = Time.time;
             nextSampleAt = 0f;
             recording = true;
@@ -433,6 +440,42 @@ namespace LocalTanks
             AddEvent(Time.time - startedAt, "shot", track.id, track.name, detail);
         }
 
+        /// <summary>
+        /// Separates the command stream from the Box2D state it acts on. If two seeded runs disagree,
+        /// these hashes show whether navigation produced a different input first or physics had already
+        /// diverged while receiving the same ordered commands.
+        /// </summary>
+        public void RecordMotorStep(
+            TeamMember member,
+            float drive,
+            float turn,
+            float speedTerrain,
+            float accelerationTerrain,
+            float resistanceTerrain,
+            Rigidbody2D body,
+            float currentSpeed,
+            float currentTurnRate)
+        {
+            if (!recording || member == null || body == null) return;
+            TankTelemetryTrack track = Register(member);
+            track.motorSteps++;
+            string actor = TeamMember.StableOrderKey(member);
+            string sequence = track.motorSteps.ToString(CultureInfo.InvariantCulture);
+            motorControlFingerprint.Append(
+                "motor-control",
+                actor,
+                sequence + "|" + Precise(drive) + "|" + Precise(turn) + "|" +
+                Precise(speedTerrain) + "|" + Precise(accelerationTerrain) + "|" +
+                Precise(resistanceTerrain));
+            motorPhysicsFingerprint.Append(
+                "motor-physics",
+                actor,
+                sequence + "|" + Precise(body.position.x) + "|" + Precise(body.position.y) + "|" +
+                Precise(body.rotation) + "|" + Precise(body.linearVelocity.x) + "|" +
+                Precise(body.linearVelocity.y) + "|" + Precise(body.angularVelocity) + "|" +
+                Precise(currentSpeed) + "|" + Precise(currentTurnRate));
+        }
+
         private void AddEvent(float elapsed, string kind, int id, string name, string detail)
         {
             events.Add(new BattleEvent
@@ -525,6 +568,9 @@ namespace LocalTanks
                 .Append($"\"events\":{events.Count},")
                 .Append($"\"decisionFingerprint\":\"{decisionFingerprint.Value}\",")
                 .Append($"\"fingerprintedDecisions\":{decisionFingerprint.Count},")
+                .Append($"\"motorControlFingerprint\":\"{motorControlFingerprint.Value}\",")
+                .Append($"\"motorPhysicsFingerprint\":\"{motorPhysicsFingerprint.Value}\",")
+                .Append($"\"fingerprintedMotorSteps\":{motorControlFingerprint.Count},")
                 .Append($"\"teamAAlive\":{aliveA},\"teamBAlive\":{aliveB},")
                 .Append($"\"teamAHealth\":{healthA},\"teamBHealth\":{healthB},")
                 .Append($"\"closestApproach\":{(closest == float.MaxValue ? 0f : Round(closest)).ToString(CultureInfo.InvariantCulture)}")
@@ -572,6 +618,8 @@ namespace LocalTanks
 
         private static string Number(float value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 
+        private static string Precise(float value) => value.ToString("R", CultureInfo.InvariantCulture);
+
         private static string Escape(string value)
         {
             if (string.IsNullOrEmpty(value)) return string.Empty;
@@ -614,6 +662,7 @@ namespace LocalTanks
             public string previousState;
             public string previousReason;
             public string previousTarget = string.Empty;
+            public int motorSteps;
         }
 
         private struct TankSample
