@@ -42,7 +42,7 @@ namespace LocalTanks.Editor
         public static TacticalMapDescriptorAsset Build(string mapId)
         {
             WoTMapAsset map = WoTMapImporter.ImportAsset(mapId);
-            string sceneId = $"Battle_{mapId}";
+            string sceneId = BattleSceneLayout.MapSceneName(mapId);
             TacticalMapSource source = CreateSource(map, mapId, sceneId);
             string[] errors = source.Validate();
             if (errors.Length > 0)

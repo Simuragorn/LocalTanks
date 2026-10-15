@@ -69,7 +69,8 @@ namespace LocalTanks
         private readonly AiDecisionFingerprint decisionFingerprint = new AiDecisionFingerprint();
         private readonly AiDecisionFingerprint motorControlFingerprint = new AiDecisionFingerprint();
         private readonly AiDecisionFingerprint motorPhysicsFingerprint = new AiDecisionFingerprint();
-        private ConcealmentZone[] concealmentZones;
+        private readonly List<Collider2D> concealmentHits = new List<Collider2D>(32);
+        private ContactFilter2D concealmentFilter = new ContactFilter2D().NoFilter();
         private BattleDirector director;
         private float startedAt;
         private float nextSampleAt;
@@ -460,20 +461,25 @@ namespace LocalTanks
             TankTelemetryTrack track = Register(member);
             track.motorSteps++;
             string actor = TeamMember.StableOrderKey(member);
-            string sequence = track.motorSteps.ToString(CultureInfo.InvariantCulture);
-            motorControlFingerprint.Append(
-                "motor-control",
+            motorControlFingerprint.AppendMotorControl(
                 actor,
-                sequence + "|" + Precise(drive) + "|" + Precise(turn) + "|" +
-                Precise(speedTerrain) + "|" + Precise(accelerationTerrain) + "|" +
-                Precise(resistanceTerrain));
-            motorPhysicsFingerprint.Append(
-                "motor-physics",
+                track.motorSteps,
+                drive,
+                turn,
+                speedTerrain,
+                accelerationTerrain,
+                resistanceTerrain);
+            motorPhysicsFingerprint.AppendMotorPhysics(
                 actor,
-                sequence + "|" + Precise(body.position.x) + "|" + Precise(body.position.y) + "|" +
-                Precise(body.rotation) + "|" + Precise(body.linearVelocity.x) + "|" +
-                Precise(body.linearVelocity.y) + "|" + Precise(body.angularVelocity) + "|" +
-                Precise(currentSpeed) + "|" + Precise(currentTurnRate));
+                track.motorSteps,
+                body.position.x,
+                body.position.y,
+                body.rotation,
+                body.linearVelocity.x,
+                body.linearVelocity.y,
+                body.angularVelocity,
+                currentSpeed,
+                currentTurnRate);
         }
 
         private void AddEvent(float elapsed, string kind, int id, string name, string detail)
@@ -499,27 +505,28 @@ namespace LocalTanks
         }
 
         /// <summary>
-        /// Concealment bonus the tank is standing in, as recorded cover. The zone list is collected once
-        /// per sample pass rather than once per tank: the converted arena carries three thousand plants,
-        /// and searching them per tank per second was the only part of recording that could be felt.
+        /// Concealment bonus the tank is standing in, as recorded cover. A non-allocating local physics
+        /// query avoids walking all three thousand plants on Mines for every tank and every sample.
         /// </summary>
         private string ConcealmentAt(Vector2 position)
         {
-            if (concealmentZones == null)
+            concealmentHits.Clear();
+            Physics2D.OverlapCircle(position, 6f, concealmentFilter, concealmentHits);
+            float largestBonus = 0f;
+            foreach (Collider2D collider in concealmentHits)
             {
-                concealmentZones = FindObjectsByType<ConcealmentZone>(FindObjectsSortMode.None);
-            }
-
-            foreach (ConcealmentZone zone in concealmentZones)
-            {
-                if (zone == null) continue;
-                if (Vector2.Distance(zone.transform.position, position) <= 6f)
+                ConcealmentZone zone = collider != null
+                    ? collider.GetComponentInParent<ConcealmentZone>()
+                    : null;
+                if (zone != null)
                 {
-                    return zone.ConcealmentBonus.ToString("0.00", CultureInfo.InvariantCulture);
+                    largestBonus = Mathf.Max(largestBonus, zone.ConcealmentBonus);
                 }
             }
 
-            return "0";
+            return largestBonus > 0f
+                ? largestBonus.ToString("0.00", CultureInfo.InvariantCulture)
+                : "0";
         }
 
         private static float Round(float value) => Mathf.Round(value * 100f) / 100f;
@@ -617,8 +624,6 @@ namespace LocalTanks
         }
 
         private static string Number(float value) => value.ToString("0.##", CultureInfo.InvariantCulture);
-
-        private static string Precise(float value) => value.ToString("R", CultureInfo.InvariantCulture);
 
         private static string Escape(string value)
         {

@@ -260,9 +260,10 @@ namespace LocalTanks.Editor
             WoTMapAsset asset = WoTMapImporter.ImportAsset(mapId);
             // The arena is a playable map, so the scene belongs under Maps; placing it first means a scene
             // that has not been moved yet is never rebuilt as a second copy next to the old one.
-            string scenePath = BattleSceneLayout.EnsurePlaced(BattleSceneLayout.MapSceneName(mapId));
+            string sceneName = BattleSceneLayout.MapSceneName(mapId);
+            string scenePath = BattleSceneLayout.EnsurePlaced(sceneName);
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            scene.name = $"Battle_{mapId}";
+            scene.name = sceneName;
             SceneManager.SetActiveScene(scene);
 
             NavigationMap navigation = CreateNavigationMap(asset);
@@ -975,7 +976,13 @@ namespace LocalTanks.Editor
             }
 
             TankPrefabBinding[] prefabs = CreatePrefabBindings(asset);
-            BattleScenario scenario = CreateScenario(database, prefabs, tacticalMap, asset, asset.basePositions, $"Battle_{asset.mapId}");
+            BattleScenario scenario = CreateScenario(
+                database,
+                prefabs,
+                tacticalMap,
+                asset,
+                asset.basePositions,
+                BattleSceneLayout.MapSceneName(asset.mapId));
             GameObject root = new GameObject("BattleDirector");
             SceneManager.MoveGameObjectToScene(root, SceneManager.GetActiveScene());
             root.AddComponent<BattleDirector>().Configure(

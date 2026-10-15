@@ -47,7 +47,10 @@ namespace LocalTanks
         private readonly Dictionary<ContactKey, VisionContact> contacts = new Dictionary<ContactKey, VisionContact>();
         private readonly List<VisionDiagnostic> diagnostics = new List<VisionDiagnostic>();
         private readonly List<RaycastHit2D> worldPointHits = new List<RaycastHit2D>(16);
+        private readonly List<RaycastHit2D> detectionHits = new List<RaycastHit2D>(64);
+        private readonly HashSet<ConcealmentZone> detectionZones = new HashSet<ConcealmentZone>();
         private ContactFilter2D worldPointFilter = new ContactFilter2D().NoFilter();
+        private ContactFilter2D detectionFilter = new ContactFilter2D().NoFilter();
         private BattleDirector battleDirector;
         private float nextSweepTime;
         private bool sweepInProgress;
@@ -223,10 +226,12 @@ namespace LocalTanks
             }
 
             bool hardBlocker = false;
-            HashSet<ConcealmentZone> zones = new HashSet<ConcealmentZone>();
+            detectionZones.Clear();
             if (distance > 0.001f)
             {
-                foreach (RaycastHit2D hit in Physics2D.RaycastAll(origin, delta / distance, distance))
+                detectionHits.Clear();
+                Physics2D.Raycast(origin, delta / distance, detectionFilter, detectionHits, distance);
+                foreach (RaycastHit2D hit in detectionHits)
                 {
                     Collider2D collider = hit.collider;
                     if (collider == null || BelongsTo(collider.transform, observer.transform) ||
@@ -241,7 +246,7 @@ namespace LocalTanks
                     }
 
                     ConcealmentZone zone = collider.GetComponentInParent<ConcealmentZone>();
-                    if (zone != null && zones.Add(zone))
+                    if (zone != null && detectionZones.Add(zone))
                     {
                         bushBonus += zone.ConcealmentBonus;
                     }

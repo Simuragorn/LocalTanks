@@ -29,7 +29,7 @@ namespace LocalTanks.Tests
     /// </summary>
     public sealed class WoTMapSweepTests
     {
-        private const string SceneName = "Battle_10_hills";
+        private const string SceneName = "Battle_Mines";
 
         /// <summary>
         /// Field under test and the values to try. Deliberately a small grid: this is a diagnostic tool,

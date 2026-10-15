@@ -28,7 +28,7 @@ namespace LocalTanks
     /// </summary>
     public static class LocalTanksSweepRunner
     {
-        /// <summary>Command line switch giving the scene to load, as <c>-sweepScene Battle_10_hills</c>.</summary>
+        /// <summary>Command line switch giving the scene to load, as <c>-sweepScene Battle_Mines</c>.</summary>
         public const string SceneSwitch = "-sweepScene";
 
         /// <summary>Command line switch giving the field to vary, as <c>-sweepField NavigationAgent.avoidanceRadius</c>.</summary>
@@ -305,7 +305,7 @@ namespace LocalTanks
     /// <summary>What a sweep was asked to do, parsed from the command line or built directly.</summary>
     public sealed class SweepRequest
     {
-        public string SceneName = "Battle_10_hills";
+        public string SceneName = "Battle_Mines";
         public string FieldName;
         public List<float> Values = new List<float>();
         public List<float> Seeds = new List<float> { 1911f };
@@ -328,7 +328,7 @@ namespace LocalTanks
             string[] arguments = Environment.GetCommandLineArgs();
             SweepRequest request = new SweepRequest
             {
-                SceneName = Value(arguments, LocalTanksSweepRunner.SceneSwitch) ?? "Battle_10_hills",
+                SceneName = Value(arguments, LocalTanksSweepRunner.SceneSwitch) ?? "Battle_Mines",
                 FieldName = Value(arguments, LocalTanksSweepRunner.FieldSwitch),
                 OutputDirectory = Value(arguments, LocalTanksSweepRunner.OutputSwitch)
             };

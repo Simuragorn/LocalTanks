@@ -18,6 +18,8 @@ namespace LocalTanks.Tests
             Assert.That(settings.gpuLayerCount, Is.Zero);
             Assert.That(settings.cpuThreadCount, Is.EqualTo(4));
             Assert.That(settings.requestInitialBotDecisions, Is.False);
+            Assert.That(settings.enableDynamicBotDecisions, Is.False,
+                "Live LLM replanning is opt-in so inference cannot cause periodic battle hitches.");
             Assert.That(settings.requestOnContactChanges, Is.False);
         }
 

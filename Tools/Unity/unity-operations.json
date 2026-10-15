@@ -82,7 +82,7 @@
       "timeoutSeconds": 1800,
       "description": "Rebuild the Mines battle scene from the converted WoT arena.",
       "outputs": [
-        "Assets/Game/Scenes/Maps/Battle_10_hills.unity"
+        "Assets/Game/Scenes/Maps/Battle_Mines.unity"
       ]
     },
     {

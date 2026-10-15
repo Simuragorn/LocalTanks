@@ -13,7 +13,7 @@
   "contextTokens": 4096,
   "maxOutputTokens": 320,
   "requestInitialBotDecisions": false,
-  "enableDynamicBotDecisions": true,
+  "enableDynamicBotDecisions": false,
   "requestOnContactChanges": false,
   "dynamicDecisionCooldownSeconds": 45.0
 }

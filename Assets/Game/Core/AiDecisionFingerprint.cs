@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 
 namespace LocalTanks
@@ -32,6 +33,52 @@ namespace LocalTanks
             Count++;
         }
 
+        public void AppendMotorControl(
+            string actor,
+            int sequence,
+            float drive,
+            float turn,
+            float speedTerrain,
+            float accelerationTerrain,
+            float resistanceTerrain)
+        {
+            AppendField("motor-control");
+            AppendField(actor);
+            AppendInt(sequence);
+            AppendFloat(drive);
+            AppendFloat(turn);
+            AppendFloat(speedTerrain);
+            AppendFloat(accelerationTerrain);
+            AppendFloat(resistanceTerrain);
+            Count++;
+        }
+
+        public void AppendMotorPhysics(
+            string actor,
+            int sequence,
+            float x,
+            float y,
+            float rotation,
+            float velocityX,
+            float velocityY,
+            float angularVelocity,
+            float speed,
+            float turnRate)
+        {
+            AppendField("motor-physics");
+            AppendField(actor);
+            AppendInt(sequence);
+            AppendFloat(x);
+            AppendFloat(y);
+            AppendFloat(rotation);
+            AppendFloat(velocityX);
+            AppendFloat(velocityY);
+            AppendFloat(angularVelocity);
+            AppendFloat(speed);
+            AppendFloat(turnRate);
+            Count++;
+        }
+
         private void AppendField(string value)
         {
             string field = value ?? string.Empty;
@@ -52,6 +99,11 @@ namespace LocalTanks
                 AppendByte((byte)(value >> 16));
                 AppendByte((byte)(value >> 24));
             }
+        }
+
+        private void AppendFloat(float value)
+        {
+            AppendInt(BitConverter.SingleToInt32Bits(value));
         }
 
         private void AppendByte(byte value)

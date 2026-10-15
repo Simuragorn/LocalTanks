@@ -14,7 +14,7 @@ namespace LocalTanks.Tests
     /// </summary>
     public sealed class WoTMapScenePlayModeTests
     {
-        private const string SceneName = "Battle_10_hills";
+        private const string SceneName = "Battle_Mines";
 
         private static bool SceneExists =>
             SceneUtility.GetScenePathByBuildIndex(SceneManager.sceneCountInBuildSettings - 1) != null &&

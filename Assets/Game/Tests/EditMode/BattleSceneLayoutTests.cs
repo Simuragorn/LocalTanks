@@ -20,16 +20,20 @@ namespace LocalTanks.Tests
         }
 
         [Test]
-        public void SceneNames_AreUnchanged()
+        public void SceneFiles_MatchTheirRuntimeNames()
         {
-            // Play Mode suites and the sweep runner load a scene by name, so the folder may move but the
-            // name may not: the file name and the loaded name have to stay identical.
             foreach (string sceneName in BattleSceneLayout.KnownScenes)
             {
                 Assert.That(
                     System.IO.Path.GetFileNameWithoutExtension(BattleSceneLayout.Path(sceneName)),
                     Is.EqualTo(sceneName));
             }
+        }
+
+        [Test]
+        public void WoTTechnicalMapId_UsesTheEnglishPlayerFacingSceneName()
+        {
+            Assert.That(BattleSceneLayout.MapSceneName("10_hills"), Is.EqualTo("Battle_Mines"));
         }
 
         [Test]

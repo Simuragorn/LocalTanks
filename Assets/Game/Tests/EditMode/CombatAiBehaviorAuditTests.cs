@@ -53,6 +53,24 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void MotorFingerprint_IsStableWithoutFormattingFloatsAsStrings()
+        {
+            AiDecisionFingerprint first = new AiDecisionFingerprint();
+            AiDecisionFingerprint second = new AiDecisionFingerprint();
+            foreach (AiDecisionFingerprint fingerprint in new[] { first, second })
+            {
+                fingerprint.AppendMotorControl("bot-a", 1, 1f, -0.25f, 0.8f, 0.9f, 1.1f);
+                fingerprint.AppendMotorPhysics("bot-a", 1, 4f, -7f, 45f, 1.5f, 0.5f, 2f, 3f, 4f);
+            }
+
+            Assert.That(first.Value, Is.EqualTo(second.Value));
+            Assert.That(first.Count, Is.EqualTo(2));
+
+            second.AppendMotorControl("bot-a", 2, 0f, -0.25f, 0.8f, 0.9f, 1.1f);
+            Assert.That(second.Value, Is.Not.EqualTo(first.Value));
+        }
+
+        [Test]
         public void Auditor_DetectsRapidStateThrashing()
         {
             CombatAiBehaviorAuditor auditor = new CombatAiBehaviorAuditor(new CombatAiAuditRules

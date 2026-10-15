@@ -11,8 +11,8 @@ namespace LocalTanks.Editor
     /// The one place that knows where the battle scenes live.
     ///
     /// A scene is either a playable map or a service scene used for testing and debugging. The split is
-    /// expressed as folders, and the scene name never changes: Play Mode suites and the sweep runner load
-    /// a scene by name, so a rename would break them for no player-visible gain.
+    /// expressed as folders, and converted maps may translate their technical WoT id to the English map
+    /// name players see.
     ///
     /// The move runs through <see cref="AssetDatabase.MoveAsset"/>, not through a hand edit, because Unity
     /// owns the identity of an asset: moving a scene keeps its GUID, and the GUID is what the build
@@ -25,7 +25,7 @@ namespace LocalTanks.Editor
         public const string LabsFolder = ScenesRoot + "/Labs";
 
         public const string RiverCrossing = "Battle_RiverCrossing";
-        public const string Mines = "Battle_10_hills";
+        public const string Mines = "Battle_Mines";
         public const string TestRange = "Battle_TestRange";
         public const string NavigationRange = "Battle_NavigationRange";
         public const string AiDuelLab = "Battle_AiDuelLab";
@@ -45,6 +45,7 @@ namespace LocalTanks.Editor
         public const string SettingsFilePath = "ProjectSettings/EditorBuildSettings.asset";
 
         private const string SampleScenePath = "Assets/Scenes/SampleScene.unity";
+        private const string PreviousMinesSceneName = "Battle_10_hills";
         private const string ProjectSettingsPath = "ProjectSettings/ProjectSettings.asset";
         private const string TemplateDefaultSceneProperty = "templateDefaultScene";
 
@@ -61,7 +62,8 @@ namespace LocalTanks.Editor
         public static string Path(string sceneName) => $"{Folder(sceneName)}/{sceneName}.unity";
 
         /// <summary>Scene name of a converted arena, whose id is the map id from the WoT pipeline.</summary>
-        public static string MapSceneName(string mapId) => $"Battle_{mapId}";
+        public static string MapSceneName(string mapId) =>
+            string.Equals(mapId, "10_hills", StringComparison.Ordinal) ? Mines : $"Battle_{mapId}";
 
         public static string MapScenePath(string mapId) => Path(MapSceneName(mapId));
 
@@ -81,28 +83,35 @@ namespace LocalTanks.Editor
                 return target;
             }
 
-            string legacy = LegacyPath(sceneName);
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(legacy) == null)
+            string source = PreviousCanonicalPath(sceneName);
+            if (string.IsNullOrEmpty(source) || AssetDatabase.LoadAssetAtPath<SceneAsset>(source) == null)
+            {
+                source = LegacyPath(sceneName);
+            }
+
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(source) == null)
             {
                 return target;
             }
 
             EnsureFolder(Folder(sceneName));
-            string error = AssetDatabase.MoveAsset(legacy, target);
+            string error = AssetDatabase.MoveAsset(source, target);
             if (!string.IsNullOrEmpty(error))
             {
-                throw new InvalidOperationException($"Moving '{legacy}' to '{target}' failed: {error}");
+                throw new InvalidOperationException($"Moving '{source}' to '{target}' failed: {error}");
             }
 
             RelocateBuildSettings();
-            Debug.Log($"Local Tanks scene moved: {legacy} -> {target}");
+            Debug.Log($"Local Tanks scene moved: {source} -> {target}");
             return target;
         }
 
         /// <summary>True when the scene exists in either location, so a generator can tell "not built yet" from "not moved yet".</summary>
         public static bool Exists(string sceneName)
         {
+            string previous = PreviousCanonicalPath(sceneName);
             return AssetDatabase.LoadAssetAtPath<SceneAsset>(Path(sceneName)) != null ||
+                   (!string.IsNullOrEmpty(previous) && AssetDatabase.LoadAssetAtPath<SceneAsset>(previous) != null) ||
                    AssetDatabase.LoadAssetAtPath<SceneAsset>(LegacyPath(sceneName)) != null;
         }
 
@@ -161,6 +170,12 @@ namespace LocalTanks.Editor
                 {
                     problems.Add($"Scene '{sceneName}' still sits in the flat folder at '{legacy}'.");
                 }
+
+                string previous = PreviousCanonicalPath(sceneName);
+                if (!string.IsNullOrEmpty(previous) && AssetDatabase.LoadAssetAtPath<SceneAsset>(previous) != null)
+                {
+                    problems.Add($"Scene '{sceneName}' still uses its technical map id at '{previous}'.");
+                }
             }
 
             EditorBuildSettingsScene[] scenes = EditorBuildSettings.scenes;
@@ -188,7 +203,7 @@ namespace LocalTanks.Editor
 
             foreach (EditorBuildSettingsScene scene in scenes)
             {
-                if (KnownScenes.Any(name => LegacyPath(name) == scene.path))
+                if (KnownScenes.Any(name => LegacyPath(name) == scene.path || PreviousCanonicalPath(name) == scene.path))
                 {
                     problems.Add($"Build settings still point at the flat folder: '{scene.path}'.");
                 }
@@ -245,7 +260,8 @@ namespace LocalTanks.Editor
             foreach (EditorBuildSettingsScene scene in existing)
             {
                 string sceneName = KnownScenes.FirstOrDefault(
-                    name => scene.path == Path(name) || scene.path == LegacyPath(name));
+                    name => scene.path == Path(name) || scene.path == LegacyPath(name) ||
+                            scene.path == PreviousCanonicalPath(name));
                 if (sceneName == null)
                 {
                     rebuilt.Add(scene);
@@ -282,6 +298,13 @@ namespace LocalTanks.Editor
             }
 
             return guid;
+        }
+
+        private static string PreviousCanonicalPath(string sceneName)
+        {
+            return string.Equals(sceneName, Mines, StringComparison.Ordinal)
+                ? $"{MapsFolder}/{PreviousMinesSceneName}.unity"
+                : string.Empty;
         }
 
         /// <summary>

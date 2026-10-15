@@ -15,7 +15,7 @@ namespace LocalTanks.Tests
     /// </summary>
     public sealed class WoTMapPlayabilityTests
     {
-        private const string SceneName = "Battle_10_hills";
+        private const string SceneName = "Battle_Mines";
 
         /// <summary>
         /// Simulated battle length. The sides start on opposite corners of an eight-hundred-metre field,

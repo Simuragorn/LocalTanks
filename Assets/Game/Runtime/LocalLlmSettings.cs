@@ -23,7 +23,7 @@ namespace LocalTanks
         [Min(512)] public int contextTokens = 4096;
         [Min(32)] public int maxOutputTokens = 320;
         public bool requestInitialBotDecisions;
-        public bool enableDynamicBotDecisions = true;
+        public bool enableDynamicBotDecisions;
         public bool requestOnContactChanges;
         [Min(5f)] public float dynamicDecisionCooldownSeconds = 45f;
 
