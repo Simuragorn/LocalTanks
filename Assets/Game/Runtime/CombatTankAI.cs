@@ -304,12 +304,19 @@ namespace LocalTanks
                                      tacticalMovementPurpose == TacticalMovementPurpose.HoldCover ||
                                      tacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit ||
                                      holdingTacticalCover;
-            if (strategicHasDestination && navigation != null && !defensiveOverride)
+            // The connected route is the bot's deployment mission. The coordinator installs its
+            // deterministic fallback immediately after the tank is configured, and used to replace that
+            // route here with a point much farther down the lane. Sixty seconds later the fallback
+            // expired and StartCurrentRoutePoint sent every tank back to the route point it had skipped.
+            // Store the strategic decision now, but do not let it steer or pause an unfinished deployment;
+            // visible contact still takes control in the regular tactical decision loop.
+            bool deploymentInProgress = !routeComplete && routePoints.Length > 1 && !hasRememberedTarget;
+            if (strategicHasDestination && navigation != null && !defensiveOverride && !deploymentInProgress)
             {
                 navigation.SetPaused(false);
                 navigation.SetDestination(strategicDestination);
             }
-            else if (decision.intent == BotStrategicIntentType.Wait && !defensiveOverride)
+            else if (decision.intent == BotStrategicIntentType.Wait && !defensiveOverride && !deploymentInProgress)
             {
                 navigation?.SetPaused(true);
                 State = CombatAiState.Hold;
@@ -1931,7 +1938,10 @@ namespace LocalTanks
                 tacticalMovementPurpose != TacticalMovementPurpose.BreakCloseOrbit &&
                 !holdingTacticalCover)
             {
-                StartCurrentRoutePoint();
+                // Expiration is not a new movement order. If the tank is already walking the current
+                // deployment leg, preserve its detailed path and progress instead of rebuilding from its
+                // present position. Rebuilding was the synchronized U-turn seen at the 60-second mark.
+                ResumeDeploymentRoute("Стратегическое решение завершено; продолжение маршрута");
             }
         }
 

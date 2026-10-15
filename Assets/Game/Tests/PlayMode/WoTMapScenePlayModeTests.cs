@@ -128,6 +128,39 @@ namespace LocalTanks.Tests
         }
 
         /// <summary>
+        /// The deterministic team plan is installed just after each bot receives its connected lane route.
+        /// It may describe the same broad direction, but it must not replace the next route leg: doing so
+        /// skips the early lane anchors, then sends the whole team back to them when the 60-second decision
+        /// expires. That produced a synchronized retreat before either side had made contact.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ConvertedArena_InitialStrategyPreservesUnfinishedDeploymentRoutes()
+        {
+            if (!SceneExists) Assert.Ignore($"Scene '{SceneName}' is not in the build settings yet.");
+
+            SceneManager.LoadScene(SceneName);
+            yield return null;
+            yield return null;
+
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            Assert.That(director, Is.Not.Null);
+            Assert.That(director.StrategicCoordinator, Is.Not.Null);
+            Assert.That(director.StrategicCoordinator.Brains, Has.All.Matches<BotStrategicBrain>(brain =>
+                brain.CurrentDecision != null), "Every bot should have received its deterministic plan.");
+
+            foreach (CombatTankAI ai in Object.FindObjectsByType<CombatTankAI>(FindObjectsSortMode.None))
+            {
+                NavigationAgent agent = ai.GetComponent<NavigationAgent>();
+                Assert.That(ai.RoutePoints.Length, Is.GreaterThan(1), $"{ai.name} has no deployment route.");
+                Assert.That(agent, Is.Not.Null, $"{ai.name} has no navigation agent.");
+                Assert.That(agent.MovementPaused, Is.False,
+                    $"{ai.name} was held at spawn by a strategic Wait before finishing deployment.");
+                Assert.That(Vector2.Distance(agent.Destination, ai.RoutePoints[ai.RouteIndex]), Is.LessThan(0.1f),
+                    $"{ai.name} skipped its current deployment leg for the initial strategic fallback.");
+            }
+        }
+
+        /// <summary>
         /// A capture base marks ground a tank must be able to occupy. CaptureBase carries
         /// RequireComponent for its zone, and a required collider is created solid, which once made each
         /// base a wall the size of its ring and trapped tanks inside their own spawn.
