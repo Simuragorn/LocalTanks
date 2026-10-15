@@ -30,6 +30,7 @@ namespace LocalTanks
         private TeamId ownerTeam = TeamId.Neutral;
         private TeamVisionSystem visionSystem;
         private float visibilityRefreshSecondsLeft;
+        private static int nextVisibilityPhase;
 
         private const float VisibilityRefreshSeconds = 0.2f;
         private const float FadeTailFraction = 0.35f;
@@ -110,7 +111,11 @@ namespace LocalTanks
         {
             ownerTeam = team;
             visionSystem = vision;
-            visibilityRefreshSecondsLeft = 0f;
+            // Tanks are constructed together. Giving every emitter the same refresh phase caused all
+            // enemy trails to perform their visibility work on one frame every 0.2 seconds. A stable
+            // per-instance phase spreads that cosmetic work over the interval.
+            int phase = nextVisibilityPhase++ % 8;
+            visibilityRefreshSecondsLeft = VisibilityRefreshSeconds * (phase + 1) / 8f;
         }
 
         /// <summary>Places one print. Silently does nothing when the mark sprite was never generated.</summary>
@@ -192,11 +197,14 @@ namespace LocalTanks
                     continue;
                 }
 
-                Color color = colors[slot];
                 float fadeStart = life * (1f - FadeTailFraction);
-                float fadeProgress = Mathf.InverseLerp(fadeStart, life, ages[slot]);
-                color.a = colors[slot].a * (1f - fadeProgress);
-                renderer.color = color;
+                if (ages[slot] >= fadeStart)
+                {
+                    Color color = colors[slot];
+                    float fadeProgress = Mathf.InverseLerp(fadeStart, life, ages[slot]);
+                    color.a = colors[slot].a * (1f - fadeProgress);
+                    renderer.color = color;
+                }
                 if (refreshVisibility)
                 {
                     renderer.enabled = ShouldRender(renderer.transform.position);
@@ -256,7 +264,7 @@ namespace LocalTanks
                 return true;
             }
 
-            return visionSystem.IsWorldPositionVisibleTo(
+            return visionSystem.IsWorldPositionVisibleToCached(
                 visionSystem.LocalPlayerTeam,
                 position);
         }

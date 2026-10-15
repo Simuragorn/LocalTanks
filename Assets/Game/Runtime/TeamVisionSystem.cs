@@ -49,6 +49,8 @@ namespace LocalTanks
         private readonly List<RaycastHit2D> worldPointHits = new List<RaycastHit2D>(16);
         private readonly List<RaycastHit2D> detectionHits = new List<RaycastHit2D>(64);
         private readonly HashSet<ConcealmentZone> detectionZones = new HashSet<ConcealmentZone>();
+        private readonly Dictionary<WorldVisibilityCell, bool> worldVisibilityCache =
+            new Dictionary<WorldVisibilityCell, bool>();
         private ContactFilter2D worldPointFilter = new ContactFilter2D().NoFilter();
         private ContactFilter2D detectionFilter = new ContactFilter2D().NoFilter();
         private BattleDirector battleDirector;
@@ -60,7 +62,14 @@ namespace LocalTanks
         public VisionRules Rules => rules;
         public TeamId LocalPlayerTeam => localPlayerTeam;
         public IReadOnlyList<VisionDiagnostic> Diagnostics => diagnostics;
+        public int WorldVisibilityQueryCount { get; private set; }
+        public int WorldVisibilityEvaluationCount { get; private set; }
         private float Now => battleDirector != null ? (float)battleDirector.SimulationTime : Time.time;
+
+        // Track prints are much closer to each other than any useful tactical distinction. Grouping their
+        // cosmetic ground-visibility checks into half-metre cells prevents hundreds of neighbouring
+        // prints from repeating the same team scan and the same obstacle raycasts in one vision sweep.
+        private const float WorldVisibilityCellSize = 0.5f;
 
         private void OnEnable()
         {
@@ -74,6 +83,7 @@ namespace LocalTanks
         private void OnDisable()
         {
             TeamMember.MembershipChanged -= OnMembershipChanged;
+            worldVisibilityCache.Clear();
             foreach (TeamMember member in TeamMember.ActiveMembers)
             {
                 member?.VisibilityPresenter?.SetVisible(true);
@@ -109,6 +119,7 @@ namespace LocalTanks
             rules = newRules;
             localPlayerTeam = playerTeam;
             nextSweepTime = 0f;
+            worldVisibilityCache.Clear();
             RefreshPresenters();
         }
 
@@ -195,6 +206,26 @@ namespace LocalTanks
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Cached variant for dense cosmetic evidence such as track prints. The cache is discarded after
+        /// every completed vision sweep, so moving observers and changing lines of sight remain current at
+        /// the same cadence as tank visibility while adjacent prints share one expensive evaluation.
+        /// </summary>
+        public bool IsWorldPositionVisibleToCached(TeamId viewingTeam, Vector2 position)
+        {
+            WorldVisibilityQueryCount++;
+            WorldVisibilityCell key = new WorldVisibilityCell(viewingTeam, position);
+            if (worldVisibilityCache.TryGetValue(key, out bool visible))
+            {
+                return visible;
+            }
+
+            WorldVisibilityEvaluationCount++;
+            visible = IsWorldPositionVisibleTo(viewingTeam, position);
+            worldVisibilityCache.Add(key, visible);
+            return visible;
         }
 
         public DetectionResult Evaluate(TeamMember observer, TeamMember target, out float bushBonus)
@@ -346,6 +377,7 @@ namespace LocalTanks
         private void CompleteSweep()
         {
             sweepInProgress = false;
+            worldVisibilityCache.Clear();
             TeamMember[] members = TeamMember.ActiveMembers.Where(member => member != null).ToArray();
             foreach (TeamMember target in members)
             {
@@ -408,6 +440,7 @@ namespace LocalTanks
 
         private void OnMembershipChanged(TeamMember member, bool added)
         {
+            worldVisibilityCache.Clear();
             if (!added)
             {
                 foreach (ContactKey key in contacts.Keys.Where(key => key.Target == member).ToArray())
@@ -467,6 +500,40 @@ namespace LocalTanks
             public override int GetHashCode()
             {
                 return ((int)ViewingTeam * 397) ^ (Target != null ? Target.GetEntityId().GetHashCode() : 0);
+            }
+        }
+
+        private readonly struct WorldVisibilityCell : IEquatable<WorldVisibilityCell>
+        {
+            public WorldVisibilityCell(TeamId viewingTeam, Vector2 position)
+            {
+                ViewingTeam = viewingTeam;
+                X = Mathf.FloorToInt(position.x / WorldVisibilityCellSize);
+                Y = Mathf.FloorToInt(position.y / WorldVisibilityCellSize);
+            }
+
+            private TeamId ViewingTeam { get; }
+            private int X { get; }
+            private int Y { get; }
+
+            public bool Equals(WorldVisibilityCell other)
+            {
+                return ViewingTeam == other.ViewingTeam && X == other.X && Y == other.Y;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is WorldVisibilityCell other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = (int)ViewingTeam;
+                    hash = (hash * 397) ^ X;
+                    return (hash * 397) ^ Y;
+                }
             }
         }
     }

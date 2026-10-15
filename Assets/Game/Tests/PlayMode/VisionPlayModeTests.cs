@@ -295,6 +295,7 @@ namespace LocalTanks.Tests
 
             observer.transform.position = new Vector3(0f, 10f, 0f);
             Physics2D.SyncTransforms();
+            vision.ForceEvaluateAll();
             emitter.Tick(0.21f);
 
             Assert.That(emitter.LiveCount, Is.EqualTo(2));
@@ -306,6 +307,31 @@ namespace LocalTanks.Tests
             Assert.That(System.Array.Find(prints, item => item.transform.position.y < 10f).enabled, Is.False);
 
             Cleanup(systems, observer.gameObject, owner, sprite, sprite.texture, rules);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator DenseTrackMarks_ShareGroundVisibilityEvaluationsWithinOneSweep()
+        {
+            VisionRules rules = CreateRules();
+            GameObject systems = new GameObject("Systems");
+            TeamVisionSystem vision = systems.AddComponent<TeamVisionSystem>();
+            vision.Configure(rules, TeamId.TeamA);
+            TeamMember observer = CreateTank("Observer", TeamId.TeamA, Vector2.zero, 20f, 0f);
+            yield return null;
+
+            int evaluationsBefore = vision.WorldVisibilityEvaluationCount;
+            for (int index = 0; index < 100; index++)
+            {
+                Vector2 printPosition = new Vector2(0.01f + index * 0.004f, 5f);
+                Assert.That(vision.IsWorldPositionVisibleToCached(TeamId.TeamA, printPosition), Is.True);
+            }
+
+            int evaluations = vision.WorldVisibilityEvaluationCount - evaluationsBefore;
+            Assert.That(evaluations, Is.EqualTo(1),
+                "Neighbouring prints in one half-metre cell must share the observer scan and raycasts.");
+
+            Cleanup(systems, observer.gameObject, rules);
             yield return null;
         }
 
