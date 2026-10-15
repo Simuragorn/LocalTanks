@@ -36,6 +36,7 @@ namespace LocalTanks.Editor
             }
 
             string[] clipIds = catalog.profiles.SelectMany(profile => profile.ReferencedClipIds())
+                .Concat(catalog.outcomeSignals?.ReferencedClipIds() ?? Array.Empty<string>())
                 .Concat(LoadCrewVoiceSource().ReferencedClipIds())
                 .Distinct()
                 .ToArray();
@@ -88,6 +89,12 @@ namespace LocalTanks.Editor
             HashSet<string> declaredSet = new HashSet<string>(declared, StringComparer.Ordinal);
             string[] arenas = KnownArenaIds();
             HashSet<string> arenaSet = new HashSet<string>(arenas, StringComparer.Ordinal);
+
+            foreach (string clipId in catalog.outcomeSignals?.ReferencedClipIds() ?? Array.Empty<string>())
+            {
+                if (!declaredSet.Contains(clipId))
+                    errors.Add($"Global outcome signals reference undeclared clip '{clipId}'.");
+            }
 
             foreach (BattleAudioProfile profile in catalog.profiles ?? Array.Empty<BattleAudioProfile>())
             {

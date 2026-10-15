@@ -1,5 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "outcomeSignals": {
+    "victory": "mines_music_result_victory",
+    "draw": "mines_music_result_draw",
+    "defeat": "mines_music_result_defeat"
+  },
+  "outcomeSignalVolume": 0.65,
   "profiles": [
     {
       "mapId": "Battle_Mines",

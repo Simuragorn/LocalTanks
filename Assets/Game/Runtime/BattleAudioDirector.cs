@@ -58,21 +58,19 @@ namespace LocalTanks
             // The map never changes between Awake and Start, so the profile can be resolved here even in
             // a laboratory that replaces its scenario at runtime.
             string mapId = ResolveMapId();
-            profile = BattleAudioProfileCatalog.Load().Find(mapId);
-            if (profile == null)
-            {
-                status = $"для арены '{mapId}' нет профиля звука";
-                return;
-            }
-
-            Music ??= gameObject.AddComponent<BattleMusicController>();
-            Music.Configure(profile, library);
+            BattleAudioProfileCatalog catalog = BattleAudioProfileCatalog.Load();
+            profile = catalog.Find(mapId);
             Flow ??= gameObject.AddComponent<BattleFlowAudioController>();
-            Flow.Configure(profile, library);
+            Flow.Configure(profile, library, catalog.outcomeSignals, catalog.outcomeSignalVolume);
+            if (profile != null)
+            {
+                Music ??= gameObject.AddComponent<BattleMusicController>();
+                Music.Configure(profile, library);
+            }
             Subscribe();
-            status = "звук боя готов";
+            status = profile != null ? "звук боя готов" : $"для арены '{mapId}' готовы общие сигналы, но нет музыки";
 
-            if (startLoadingMusic)
+            if (startLoadingMusic && profile != null)
             {
                 Music.BeginLoading();
             }
@@ -100,16 +98,10 @@ namespace LocalTanks
                 director != null ? director.SpawnedMembers : null,
                 director != null ? director.Bases : null);
 
-            if (profile == null)
-            {
-                status = Crew != null ? "звучит только экипаж: у арены нет профиля звука" : status;
-                return;
-            }
-
-            Music.BeginBattle(Time.time);
+            Music?.BeginBattle(Time.time);
             Flow.StartAmbience();
             Crew?.PlayBattleStart();
-            status = "бой звучит";
+            status = profile != null ? "бой звучит" : "звучат экипаж и общие сигналы";
         }
 
         public void RegisterEvent(BattleAudioEventKind kind)
@@ -307,8 +299,8 @@ namespace LocalTanks
             TeamId playerTeam = director != null && director.PlayerMember != null
                 ? director.PlayerMember.Team
                 : TeamId.TeamA;
-            Flow?.PlayBattleEnd(result.Outcome == MatchOutcome.BaseCaptured);
-            Music?.EnterResult(playerTeam, result.Winner);
+            Music?.Stop();
+            Flow?.PlayOutcome(playerTeam, result.Winner);
             status = $"бой окончен: {result.Describe(playerTeam)}";
         }
     }

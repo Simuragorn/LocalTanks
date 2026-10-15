@@ -19,6 +19,8 @@ namespace LocalTanks
         private readonly HashSet<string> capturingBases = new HashSet<string>();
 
         private BattleAudioProfile profile;
+        private BattleOutcomeClipIds outcomeSignals;
+        private float outcomeSignalVolume;
         private WotAudioClipLibrary library;
         private AudioSource signalSource;
         private AudioSource captureSource;
@@ -45,16 +47,22 @@ namespace LocalTanks
         /// <summary>Battle signals share the `Voice` channel with crew lines, so both follow one slider.</summary>
         public float SignalVolume => profile != null
             ? profile.signalVolume * PlayerSettingsStore.VoiceMultiplier
-            : 0f;
+            : outcomeSignalVolume * PlayerSettingsStore.VoiceMultiplier;
 
         /// <summary>The map ambience belongs to the music bus: it is atmosphere, not a battle signal.</summary>
         public float AmbienceVolume => profile != null
             ? profile.ambienceVolume * PlayerSettingsStore.MusicMultiplier
             : 0f;
 
-        public void Configure(BattleAudioProfile audioProfile, WotAudioClipLibrary clipLibrary)
+        public void Configure(
+            BattleAudioProfile audioProfile,
+            WotAudioClipLibrary clipLibrary,
+            BattleOutcomeClipIds globalOutcomeSignals = null,
+            float globalOutcomeSignalVolume = 0.65f)
         {
             profile = audioProfile;
+            outcomeSignals = globalOutcomeSignals;
+            outcomeSignalVolume = Mathf.Clamp01(globalOutcomeSignalVolume);
             library = clipLibrary ?? WotAudioClipLibrary.Shared;
             signalSource ??= CreateSource("BattleSignal", false);
             captureSource ??= CreateSource("BattleCaptureLoop", true);
@@ -110,6 +118,14 @@ namespace LocalTanks
         {
             PlaySignal(byBaseCapture ? profile?.battleEndByCaptureClipId : profile?.battleEndByLastKillClipId,
                 byBaseCapture ? "бой окончен захватом базы" : "бой окончен уничтожением");
+        }
+
+        public void PlayOutcome(TeamId playerTeam, TeamId winner)
+        {
+            bool draw = winner == TeamId.Neutral;
+            bool victory = !draw && winner == playerTeam;
+            string clipId = draw ? outcomeSignals?.draw : victory ? outcomeSignals?.victory : outcomeSignals?.defeat;
+            PlaySignal(clipId, draw ? "ничья" : victory ? "победа" : "поражение");
         }
 
         public void StopAll()

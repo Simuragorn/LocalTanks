@@ -214,6 +214,20 @@ namespace LocalTanks.Tests
                 Assert.That(flow.SignalPlayCount, Is.EqualTo(1));
                 Assert.That(flow.LastClipId, Is.EqualTo("battle_end_by_last_kill"));
 
+                BattleOutcomeClipIds outcomes = new BattleOutcomeClipIds
+                {
+                    victory = "mines_music_result_victory",
+                    draw = "mines_music_result_draw",
+                    defeat = "mines_music_result_defeat"
+                };
+                flow.Configure(BuildProfile(), BuildLibrary(clips), outcomes);
+                flow.PlayOutcome(TeamId.TeamA, TeamId.TeamA);
+                Assert.That(flow.LastClipId, Is.EqualTo("mines_music_result_victory"));
+                flow.PlayOutcome(TeamId.TeamA, TeamId.Neutral);
+                Assert.That(flow.LastClipId, Is.EqualTo("mines_music_result_draw"));
+                flow.PlayOutcome(TeamId.TeamA, TeamId.TeamB);
+                Assert.That(flow.LastClipId, Is.EqualTo("mines_music_result_defeat"));
+
                 PlayerSettingsStore.VoiceVolume = 0.5f;
                 flow.PlayBattleEnd(false);
                 Assert.That(flow.SignalVolume, Is.EqualTo(BuildProfile().signalVolume * 0.5f).Within(0.001f));
@@ -241,7 +255,7 @@ namespace LocalTanks.Tests
                 audio.Configure(null, false);
 
                 Assert.That(audio.HasProfile, Is.False, "Without a map there is no profile and no sound.");
-                Assert.That(audio.Status, Does.Contain("нет профиля звука"));
+                Assert.That(audio.Status, Does.Contain("нет музыки"));
 
                 // Registering combat events while no battle is running must not throw or accumulate.
                 audio.RegisterEvent(BattleAudioEventKind.Shot);

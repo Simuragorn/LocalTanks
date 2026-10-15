@@ -43,6 +43,17 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void EveryArenaHasGlobalVictoryDrawAndDefeatSignals()
+        {
+            BattleAudioProfileCatalog catalog = BattleAudioProfileValidator.LoadSource();
+            Assert.That(catalog.outcomeSignals.victory, Is.EqualTo("mines_music_result_victory"));
+            Assert.That(catalog.outcomeSignals.draw, Is.EqualTo("mines_music_result_draw"));
+            Assert.That(catalog.outcomeSignals.defeat, Is.EqualTo("mines_music_result_defeat"));
+            Assert.That(BattleAudioProfileValidator.KnownArenaIds(), Does.Contain("Battle_RiverCrossing"),
+                "River Crossing has no music profile but must still receive the global outcome signals.");
+        }
+
+        [Test]
         public void CrewVoice_CoversEveryRoleAndNation()
         {
             CrewVoiceProfileCatalog crew = BattleAudioProfileValidator.LoadCrewVoiceSource();
@@ -202,6 +213,12 @@ namespace LocalTanks.Tests
                 Assert.That(declared, Does.Contain(clipId),
                     $"Clip '{clipId}' is referenced by the arena profile but not declared in " +
                     BattleAudioProfileValidator.ClipCatalogPath);
+            }
+
+            foreach (string clipId in BattleAudioProfileValidator.LoadSource().outcomeSignals.ReferencedClipIds())
+            {
+                Assert.That(declared, Does.Contain(clipId),
+                    $"Global result clip '{clipId}' must already be extracted and declared.");
             }
 
             foreach (string clipId in BattleAudioProfileValidator.LoadCrewVoiceSource().ReferencedClipIds())

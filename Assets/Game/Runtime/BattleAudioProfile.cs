@@ -16,6 +16,31 @@ namespace LocalTanks
         public string defeat;
     }
 
+    [Serializable]
+    public sealed class BattleOutcomeClipIds
+    {
+        public string victory;
+        public string draw;
+        public string defeat;
+
+        public IEnumerable<string> ReferencedClipIds()
+        {
+            foreach (string clipId in new[] { victory, draw, defeat })
+                if (!string.IsNullOrWhiteSpace(clipId)) yield return clipId;
+        }
+
+        public string[] Validate()
+        {
+            List<string> errors = new List<string>();
+            if (string.IsNullOrWhiteSpace(victory)) errors.Add("Global outcome signals have no victory clip.");
+            if (string.IsNullOrWhiteSpace(draw)) errors.Add("Global outcome signals have no draw clip.");
+            if (string.IsNullOrWhiteSpace(defeat)) errors.Add("Global outcome signals have no defeat clip.");
+            foreach (string clipId in ReferencedClipIds())
+                if (!Regex.IsMatch(clipId, "^[a-z0-9_]+$")) errors.Add($"Global outcome signal '{clipId}' is invalid.");
+            return errors.ToArray();
+        }
+    }
+
     /// <summary>
     /// Which local clips belong to one arena, and how loud each battle layer is. The scene names no
     /// Wwise event and no file path: it only knows its map ID, and the profile supplies the stable clip
@@ -120,7 +145,9 @@ namespace LocalTanks
         public const string ResourceName = "BattleAudioProfiles";
         public const string SourcePath = "Assets/Game/Resources/BattleAudioProfiles.json";
 
-        public int schemaVersion = 1;
+        public int schemaVersion = 2;
+        public BattleOutcomeClipIds outcomeSignals = new BattleOutcomeClipIds();
+        [Range(0f, 1f)] public float outcomeSignalVolume = 0.65f;
         public BattleAudioProfile[] profiles = Array.Empty<BattleAudioProfile>();
 
         public static BattleAudioProfileCatalog Parse(string json)
@@ -167,8 +194,14 @@ namespace LocalTanks
         public string[] Validate()
         {
             List<string> errors = new List<string>();
-            if (schemaVersion != 1)
+            if (schemaVersion != 2)
                 errors.Add($"Battle audio profile catalog has unsupported schemaVersion {schemaVersion}.");
+            if (outcomeSignals == null)
+                errors.Add("Battle audio profile catalog has no global outcome signals.");
+            else
+                errors.AddRange(outcomeSignals.Validate());
+            if (outcomeSignalVolume < 0f || outcomeSignalVolume > 1f)
+                errors.Add($"Battle audio profile catalog has outcomeSignalVolume outside 0..1 ({outcomeSignalVolume}).");
             if (profiles == null || profiles.Length == 0)
             {
                 errors.Add("Battle audio profile catalog declares no profiles.");
