@@ -122,7 +122,9 @@ namespace LocalTanks
             float steeringInput = TankMotionMath.SteeringInput(turnInput, CurrentSpeed);
             CurrentTurnRate = steeringInput * config.hullTurnSpeed;
             float nextAngle = body.rotation - steeringInput * config.hullTurnSpeed * deltaTime;
-            Vector2 nextPosition = body.position + (Vector2)transform.up * (CurrentSpeed * deltaTime);
+            float radians = body.rotation * Mathf.Deg2Rad;
+            Vector2 bodyForward = new Vector2(-Mathf.Sin(radians), Mathf.Cos(radians));
+            Vector2 nextPosition = body.position + bodyForward * (CurrentSpeed * deltaTime);
             body.MoveRotation(nextAngle);
             body.MovePosition(nextPosition);
         }
