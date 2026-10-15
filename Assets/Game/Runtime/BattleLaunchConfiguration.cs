@@ -125,4 +125,71 @@ namespace LocalTanks
             }
         }
     }
+
+    /// <summary>
+    /// The last player-authored battle setup. It deliberately stores the same stable scene and tank ids
+    /// as <see cref="BattleLaunchConfiguration"/>, so the menu has no second roster format to maintain.
+    /// Availability is resolved by the menu on load because content may have changed between launches.
+    /// </summary>
+    public static class BattleSetupPreferencesStore
+    {
+        public const string PreferencesKey = "localtanks.battleSetup.v1";
+
+        public static BattleLaunchSelection Load()
+        {
+            string json = PlayerPrefs.GetString(PreferencesKey, string.Empty);
+            if (string.IsNullOrWhiteSpace(json)) return null;
+
+            try
+            {
+                BattleLaunchSelection selection = JsonUtility.FromJson<BattleLaunchSelection>(json);
+                if (!HasValidShape(selection)) return null;
+                selection.sceneName = selection.sceneName.Trim();
+                return selection.Clone();
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+        }
+
+        public static void Save(
+            string sceneName,
+            IEnumerable<string> teamATanks,
+            IEnumerable<string> teamBTanks)
+        {
+            BattleLaunchSelection selection = new BattleLaunchSelection
+            {
+                sceneName = sceneName?.Trim(),
+                teamATanks = teamATanks?.ToArray() ?? Array.Empty<string>(),
+                teamBTanks = teamBTanks?.ToArray() ?? Array.Empty<string>()
+            };
+            if (!HasValidShape(selection))
+                throw new ArgumentException("Battle setup preferences need a map and 1-7 tanks per team.");
+
+            PlayerPrefs.SetString(PreferencesKey, JsonUtility.ToJson(selection));
+            PlayerPrefs.Save();
+        }
+
+        public static void Clear()
+        {
+            PlayerPrefs.DeleteKey(PreferencesKey);
+            PlayerPrefs.Save();
+        }
+
+        private static bool HasValidShape(BattleLaunchSelection selection)
+        {
+            return selection != null &&
+                   !string.IsNullOrWhiteSpace(selection.sceneName) &&
+                   HasValidTeam(selection.teamATanks) &&
+                   HasValidTeam(selection.teamBTanks);
+        }
+
+        private static bool HasValidTeam(string[] tanks)
+        {
+            return tanks != null &&
+                   tanks.Length >= 1 &&
+                   tanks.Length <= BattleScenario.TeamSize;
+        }
+    }
 }

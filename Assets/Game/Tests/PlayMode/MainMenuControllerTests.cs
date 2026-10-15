@@ -10,6 +10,26 @@ namespace LocalTanks.Tests
     public sealed class MainMenuControllerTests
     {
         private const string UxmlPath = "Assets/Game/UI/MainMenu.uxml";
+        private bool hadSavedSetup;
+        private string previousSavedSetup;
+
+        [SetUp]
+        public void PreserveSavedSetup()
+        {
+            hadSavedSetup = PlayerPrefs.HasKey(BattleSetupPreferencesStore.PreferencesKey);
+            previousSavedSetup = PlayerPrefs.GetString(BattleSetupPreferencesStore.PreferencesKey, string.Empty);
+            BattleSetupPreferencesStore.Clear();
+        }
+
+        [TearDown]
+        public void RestoreSavedSetup()
+        {
+            if (hadSavedSetup)
+                PlayerPrefs.SetString(BattleSetupPreferencesStore.PreferencesKey, previousSavedSetup);
+            else
+                PlayerPrefs.DeleteKey(BattleSetupPreferencesStore.PreferencesKey);
+            PlayerPrefs.Save();
+        }
 
         [UnityTest]
         public IEnumerator TeamEditors_ChangeCountsAndApplyOneTankToAWholeTeam()
@@ -116,6 +136,59 @@ namespace LocalTanks.Tests
                 Object.Destroy(panelSettings);
                 Object.Destroy(database);
                 Object.Destroy(tank);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator SavedMapTeamSizesAndVehicles_AreRestoredAndUpdated()
+        {
+            BattleSetupPreferencesStore.Save(
+                "Battle_Mines",
+                new[] { "second", "first", "second" },
+                new[] { "first", "second" });
+            PanelSettings panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            CombatDatabase database = ScriptableObject.CreateInstance<CombatDatabase>();
+            TankDefinition first = Tank("first", "Первый");
+            TankDefinition second = Tank("second", "Второй");
+            database.tanks = new[] { first, second };
+            GameObject host = new GameObject("SavedMainMenuTest");
+            UIDocument document = host.AddComponent<UIDocument>();
+            document.panelSettings = panelSettings;
+            document.visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(UxmlPath);
+            MainMenuController controller = host.AddComponent<MainMenuController>();
+            controller.Configure(database, new StyleSheet[0]);
+            try
+            {
+                yield return null;
+                yield return null;
+
+                DropdownField map = document.rootVisualElement.Q<DropdownField>("map-choice");
+                SliderInt teamACount = document.rootVisualElement.Q<SliderInt>("team-a-count");
+                SliderInt teamBCount = document.rootVisualElement.Q<SliderInt>("team-b-count");
+                DropdownField teamAWhole = document.rootVisualElement.Q<DropdownField>("team-a-whole");
+                Assert.That(map.value, Is.EqualTo("Рудники"));
+                Assert.That(map.parent.Q<Label>("lt-dropdown-readable-text").text, Is.EqualTo("Рудники"));
+                Assert.That(teamACount.value, Is.EqualTo(3));
+                Assert.That(teamBCount.value, Is.EqualTo(2));
+                Assert.That(controller.SelectedTeamATanks, Is.EqualTo(new[] { "second", "first", "second" }));
+                Assert.That(controller.SelectedTeamBTanks, Is.EqualTo(new[] { "first", "second" }));
+
+                map.value = "Речная переправа";
+                teamBCount.value = 1;
+                teamAWhole.value = teamAWhole.choices.Find(item => item.StartsWith("Первый"));
+
+                BattleLaunchSelection updated = BattleSetupPreferencesStore.Load();
+                Assert.That(updated.sceneName, Is.EqualTo("Battle_RiverCrossing"));
+                Assert.That(updated.teamATanks, Is.EqualTo(new[] { "first", "first", "first" }));
+                Assert.That(updated.teamBTanks, Is.EqualTo(new[] { "first" }));
+            }
+            finally
+            {
+                Object.Destroy(host);
+                Object.Destroy(panelSettings);
+                Object.Destroy(database);
+                Object.Destroy(first);
+                Object.Destroy(second);
             }
         }
 

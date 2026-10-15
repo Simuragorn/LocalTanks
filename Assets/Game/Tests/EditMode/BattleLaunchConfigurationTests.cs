@@ -64,6 +64,34 @@ namespace LocalTanks.Tests
             }
         }
 
+        [Test]
+        public void BattleSetupPreferences_RoundTripStableSceneAndTankIds()
+        {
+            bool hadPrevious = PlayerPrefs.HasKey(BattleSetupPreferencesStore.PreferencesKey);
+            string previous = PlayerPrefs.GetString(BattleSetupPreferencesStore.PreferencesKey, string.Empty);
+            try
+            {
+                BattleSetupPreferencesStore.Save(
+                    "Battle_Mines",
+                    new[] { "ms_1", "t1_cunningham" },
+                    new[] { "leichttraktor" });
+
+                BattleLaunchSelection loaded = BattleSetupPreferencesStore.Load();
+                Assert.That(loaded, Is.Not.Null);
+                Assert.That(loaded.sceneName, Is.EqualTo("Battle_Mines"));
+                Assert.That(loaded.teamATanks, Is.EqualTo(new[] { "ms_1", "t1_cunningham" }));
+                Assert.That(loaded.teamBTanks, Is.EqualTo(new[] { "leichttraktor" }));
+            }
+            finally
+            {
+                if (hadPrevious)
+                    PlayerPrefs.SetString(BattleSetupPreferencesStore.PreferencesKey, previous);
+                else
+                    PlayerPrefs.DeleteKey(BattleSetupPreferencesStore.PreferencesKey);
+                PlayerPrefs.Save();
+            }
+        }
+
         private static TankDefinition Tank(string id, TankNation nation)
         {
             TankDefinition tank = ScriptableObject.CreateInstance<TankDefinition>();
