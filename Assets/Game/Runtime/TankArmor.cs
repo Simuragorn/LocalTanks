@@ -25,6 +25,13 @@ namespace LocalTanks
         public int LastAppliedDamage { get; private set; }
         public TankDefinition Definition => definition;
 
+        /// <summary>
+        /// Detailed per-projectile logging is intentionally opt-in. A machine-gun exchange can resolve
+        /// hundreds of impacts, and Unity Console formatting plus stack traces caused a hitch on every
+        /// damage burst even though the combat calculation itself is small.
+        /// </summary>
+        public static bool DetailedImpactLoggingEnabled { get; set; }
+
         private void Awake()
         {
             if (health == null)
@@ -104,7 +111,7 @@ namespace LocalTanks
                     : Time.time,
                 attackerTeam));
 
-            if (logImpacts)
+            if (logImpacts && DetailedImpactLoggingEnabled)
             {
                 Color debugColor = result.Outcome == ImpactOutcome.Penetrated
                     ? Color.green

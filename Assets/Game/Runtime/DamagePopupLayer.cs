@@ -12,12 +12,14 @@ namespace LocalTanks
     /// </summary>
     public sealed class DamagePopupLayer : MonoBehaviour
     {
+        public const int PopupCapacity = 24;
         public const float PopupLifetimeSeconds = 1.25f;
         public const float PopupGrowthFraction = 0.35f;
         public const string AllyDamageClass = "damage-popup--ally";
         public const string EnemyDamageClass = "damage-popup--enemy";
 
         private readonly List<DamagePopup> popups = new List<DamagePopup>();
+        private readonly Stack<Label> idlePopupLabels = new Stack<Label>();
         private readonly HashSet<TankArmor> subscribedArmor = new HashSet<TankArmor>();
         private readonly Dictionary<TeamMember, HealthBarView> healthBars = new Dictionary<TeamMember, HealthBarView>();
         private readonly Dictionary<TeamMember, IndicatorView> indicators = new Dictionary<TeamMember, IndicatorView>();
@@ -147,8 +149,7 @@ namespace LocalTanks
                 float progress = Mathf.Clamp01((now - popup.StartedAt) / PopupLifetimeSeconds);
                 if (progress >= 1f)
                 {
-                    popup.Label.RemoveFromHierarchy();
-                    popups.RemoveAt(index);
+                    ReleasePopup(index);
                     continue;
                 }
 
@@ -331,10 +332,19 @@ namespace LocalTanks
             EnsureOverlay();
             Vector2 point = armor.LastImpactPoint;
             if (point == Vector2.zero && member != null) point = member.transform.position;
-            Label label = new Label(FormatDamage(observation.Damage)) { pickingMode = PickingMode.Ignore };
+            if (idlePopupLabels.Count == 0 && popups.Count > 0)
+            {
+                // The pool has a hard ceiling. Under simultaneous autocannon fire the oldest number is
+                // already fading, so recycle it instead of allocating another UI hierarchy.
+                ReleasePopup(0);
+            }
+
+            if (idlePopupLabels.Count == 0) return;
+            Label label = idlePopupLabels.Pop();
+            label.text = FormatDamage(observation.Damage);
+            label.style.display = DisplayStyle.Flex;
             label.AddToClassList("damage-popup");
             label.AddToClassList(DamageClass(observation.AttackerTeam, member.Team));
-            overlay.Add(label);
             popups.Add(new DamagePopup(point, Time.unscaledTime, label));
         }
 
@@ -382,6 +392,24 @@ namespace LocalTanks
             overlay = new VisualElement { name = "combat-screen-overlay", pickingMode = PickingMode.Ignore };
             overlay.AddToClassList("combat-screen-overlay");
             root.Add(overlay);
+            for (int index = 0; index < PopupCapacity; index++)
+            {
+                Label label = new Label { pickingMode = PickingMode.Ignore };
+                label.style.display = DisplayStyle.None;
+                overlay.Add(label);
+                idlePopupLabels.Push(label);
+            }
+        }
+
+        private void ReleasePopup(int index)
+        {
+            DamagePopup popup = popups[index];
+            popups.RemoveAt(index);
+            popup.Label.RemoveFromClassList("damage-popup");
+            popup.Label.RemoveFromClassList(AllyDamageClass);
+            popup.Label.RemoveFromClassList(EnemyDamageClass);
+            popup.Label.style.display = DisplayStyle.None;
+            idlePopupLabels.Push(popup.Label);
         }
 
         private void ClearViews()
@@ -391,6 +419,7 @@ namespace LocalTanks
                 member?.GetComponent<TankHealthBar>()?.SetExternalPresentation(false);
             }
             popups.Clear();
+            idlePopupLabels.Clear();
             healthBars.Clear();
             indicators.Clear();
             overlay?.RemoveFromHierarchy();

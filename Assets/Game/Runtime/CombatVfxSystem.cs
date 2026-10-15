@@ -24,6 +24,7 @@ namespace LocalTanks
     {
         private const string PoolContainerName = "CombatVfxPool";
         private const string MarkContainerName = "CombatVfxMarks";
+        private const int ImpactPrewarmCount = 8;
 
         private readonly List<Action> unsubscribers = new List<Action>();
         private readonly CombatVfxPool pool = new CombatVfxPool();
@@ -106,6 +107,14 @@ namespace LocalTanks
             catalog ??= CombatVfxCatalog.Load();
             pool.Configure(assetProvider, EnsurePoolContainer(), catalog.limits?.maxPooledInstances ?? 192,
                 catalog.limits?.qualityScale ?? 1f);
+            if (battleDirector != null)
+            {
+                // Automatic cannon bursts can need several copies before the first one has faded. Build
+                // that reserve while the battle is loading instead of on the frames that receive damage.
+                pool.Prewarm(CombatVfxEffects.ImpactSpark, ImpactPrewarmCount);
+                pool.Prewarm(CombatVfxEffects.ImpactDust, ImpactPrewarmCount);
+                pool.Prewarm(CombatVfxEffects.ImpactDebris, ImpactPrewarmCount);
+            }
             Subscribe();
 
             int errors = catalog.Validate().Length;

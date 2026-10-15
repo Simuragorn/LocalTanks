@@ -56,6 +56,15 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void ImpactDiagnostics_AreOptInAndDamagePopupsAreBoundedForAutomaticFire()
+        {
+            Assert.That(TankArmor.DetailedImpactLoggingEnabled, Is.False,
+                "Per-projectile Console logs must stay off during normal machine-gun battles.");
+            Assert.That(DamagePopupLayer.PopupCapacity, Is.InRange(8, 32),
+                "Damage numbers need a bounded reusable pool rather than one UI allocation per bullet.");
+        }
+
+        [Test]
         public void OffscreenIndicator_ClampsAllEightDirectionsToTheSafeArea()
         {
             Rect safeArea = new Rect(100f, 80f, 800f, 600f);

@@ -66,6 +66,27 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator Pool_PrewarmMovesBurstInstantiationBeforeTheFirstImpact()
+        {
+            pool.Prewarm(EffectId, 4);
+            Assert.That(pool.TotalInstances, Is.EqualTo(4));
+            Assert.That(pool.ActiveCount, Is.Zero);
+
+            pool.ResetStatistics();
+            for (int index = 0; index < 4; index++)
+            {
+                pool.Play(VfxEmission.At(EffectId, Vector3.one * index, Quaternion.identity).WithLifetime(1f));
+            }
+
+            Assert.That(pool.CreatedCount, Is.Zero,
+                "The first automatic-fire burst must only rent already prepared particle systems.");
+            Assert.That(pool.ReusedCount, Is.EqualTo(4));
+            Assert.That(pool.TotalInstances, Is.EqualTo(4));
+
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator Pool_StaysWithinItsBudget()
         {
             pool.Configure(provider, null, 2, 1f);

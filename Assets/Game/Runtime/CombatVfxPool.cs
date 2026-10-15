@@ -220,6 +220,45 @@ namespace LocalTanks
         }
 
         /// <summary>
+        /// Creates a small idle reserve before the battle starts. This moves the cost of particle-system
+        /// instantiation out of the first automatic-fire exchange without allowing the pool to exceed its
+        /// normal hard ceiling.
+        /// </summary>
+        public void Prewarm(string effectId, int desiredInstances)
+        {
+            if (string.IsNullOrWhiteSpace(effectId) || provider == null || desiredInstances <= 0)
+            {
+                return;
+            }
+
+            int existing = 0;
+            if (idle.TryGetValue(effectId, out Stack<GameObject> parked))
+            {
+                existing += parked.Count;
+            }
+            for (int index = 0; index < active.Count; index++)
+            {
+                if (active[index].EffectId == effectId && active[index].Instance != null)
+                {
+                    existing++;
+                }
+            }
+
+            int requested = Mathf.Max(0, desiredInstances - existing);
+            for (int index = 0; index < requested && totalInstances < capacity; index++)
+            {
+                GameObject instance = Create(effectId);
+                if (instance == null)
+                {
+                    MissingAssetCount++;
+                    break;
+                }
+
+                Park(new ActiveEffect(instance, effectId, 0f));
+            }
+        }
+
+        /// <summary>
         /// Plays one effect and returns the instance it used, or null when the effect has no prefab yet
         /// or the pool refused the request. A missing prefab is a normal state: the battle runs before
         /// the assets are generated and after a quality setting removed them, and neither may break it.

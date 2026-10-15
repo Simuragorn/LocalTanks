@@ -114,6 +114,9 @@ namespace LocalTanks
 
         private void Awake()
         {
+            // Impact clips and voices are prepared during scene loading rather than on the first burst of
+            // machine-gun damage, where object creation and Resources loads would become a visible hitch.
+            CombatAudioEmitter.PrepareForBattle(combatDatabase?.shells, transform);
             // The audio layer is attached here rather than in Start so the loading track covers the
             // moment between the scene waking up and the machines appearing. The map itself is analysed
             // in SpawnAll after its real colliders have rebuilt navigation.

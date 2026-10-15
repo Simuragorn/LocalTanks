@@ -52,6 +52,34 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator CombatAudioEmitter_AutocannonBurstUsesBoundedPreparedVoices()
+        {
+            AudioClip clip = AudioClip.Create("ImpactPoolTest", 2205, 1, 22050, false);
+            CombatAudioEmitter.ShutdownPool();
+            CombatAudioEmitter.SetClipProvider(new FakeClipProvider(clip));
+            try
+            {
+                CombatAudioEmitter.PrepareForBattle(null, null, 4);
+                for (int shot = 0; shot < 40; shot++)
+                {
+                    CombatAudioEmitter.PlayAtPoint("impact", new Vector3(shot, 0f, 0f), 0.3f);
+                }
+
+                Assert.That(CombatAudioEmitter.VoiceCount, Is.EqualTo(4),
+                    "A burst must reuse prepared voices instead of creating one AudioSource per hit.");
+                Assert.That(CombatAudioEmitter.PlayCount, Is.EqualTo(40));
+            }
+            finally
+            {
+                CombatAudioEmitter.ResetClipProvider();
+                CombatAudioEmitter.ShutdownPool();
+                Object.Destroy(clip);
+            }
+
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator AudioController_LoadsNoClipsInBatchmode()
         {
             if (!Application.isBatchMode)
@@ -99,6 +127,21 @@ namespace LocalTanks.Tests
             }
 
             yield return null;
+        }
+
+        private sealed class FakeClipProvider : ITankAudioClipProvider
+        {
+            private readonly AudioClip clip;
+
+            public FakeClipProvider(AudioClip clip)
+            {
+                this.clip = clip;
+            }
+
+            public AudioClip Load(string clipId)
+            {
+                return clip;
+            }
         }
     }
 }
