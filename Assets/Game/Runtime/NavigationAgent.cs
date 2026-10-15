@@ -107,6 +107,7 @@ namespace LocalTanks
         private int activeClearanceCells;
         private bool movingInReverse;
         private BattleDirector battleDirector;
+        private Rigidbody2D body;
         private Collider2D[] avoidanceColliders;
 
         public IReadOnlyList<Vector2> CurrentPath => path;
@@ -153,6 +154,16 @@ namespace LocalTanks
         public bool HasFacingDirection => hasFacingDirection;
         public Vector2 FacingDirection => facingDirection;
         public bool MovingInReverse => movingInReverse;
+        private Vector2 PhysicsPosition => body != null ? body.position : (Vector2)transform.position;
+        private float PhysicsRotation => body != null ? body.rotation : transform.eulerAngles.z;
+        private Vector2 PhysicsForward
+        {
+            get
+            {
+                float radians = PhysicsRotation * Mathf.Deg2Rad;
+                return new Vector2(-Mathf.Sin(radians), Mathf.Cos(radians));
+            }
+        }
 
         public void Configure(
             NavigationMap navigationMap,
@@ -170,9 +181,9 @@ namespace LocalTanks
             loopPatrol = loop;
             destinationReached = false;
             movementPaused = false;
-            progressSamplePosition = transform.position;
+            progressSamplePosition = PhysicsPosition;
             progressSampleTime = Now;
-            progressSampleAngle = transform.eulerAngles.z;
+            progressSampleAngle = PhysicsRotation;
             unstuckAttempt = 0;
             unstuckTime = 0f;
             replanAfterUnstuck = false;
@@ -252,6 +263,7 @@ namespace LocalTanks
 
         private void Awake()
         {
+            body = GetComponent<Rigidbody2D>();
             if (motor == null)
             {
                 motor = GetComponent<TankMotor>();
@@ -284,7 +296,7 @@ namespace LocalTanks
             {
                 if (hasFacingDirection)
                 {
-                    float facingAngle = Vector2.SignedAngle(transform.up, facingDirection);
+                    float facingAngle = Vector2.SignedAngle(PhysicsForward, facingDirection);
                     float facingTurn = Mathf.Abs(facingAngle) <= 2f
                         ? 0f
                         : TankMotionMath.PathFollowingInput(facingAngle).y;
@@ -314,7 +326,7 @@ namespace LocalTanks
                 return;
             }
 
-            Vector2 position = transform.position;
+            Vector2 position = PhysicsPosition;
             while (pathIndex < path.Count && Vector2.Distance(position, path[pathIndex]) <= WaypointTolerance)
             {
                 pathIndex++;
@@ -333,7 +345,7 @@ namespace LocalTanks
             }
 
             Vector2 desiredDirection = (path[pathIndex] - position).normalized;
-            Vector2 movementForward = movingInReverse ? -(Vector2)transform.up : (Vector2)transform.up;
+            Vector2 movementForward = movingInReverse ? -PhysicsForward : PhysicsForward;
             float angle = Vector2.SignedAngle(movementForward, desiredDirection);
             Vector2 pathInput = TankMotionMath.PathFollowingInput(angle);
             float drive = movingInReverse ? -pathInput.x : pathInput.x;
@@ -445,7 +457,7 @@ namespace LocalTanks
                 return false;
             }
 
-            path.AddRange(map.FindWorldPath(transform.position, destination, activeClearanceCells));
+            path.AddRange(map.FindWorldPath(PhysicsPosition, destination, activeClearanceCells));
             plannedMapVersion = map.Version;
             if (path.Count > 1)
             {
@@ -461,7 +473,7 @@ namespace LocalTanks
             Vector2 movementForward,
             bool reverse)
         {
-            Vector2 position = transform.position;
+            Vector2 position = PhysicsPosition;
             foreach (TeamMember member in TeamMember.ActiveMembers)
             {
                 NavigationAgent other = member != null ? member.GetComponent<NavigationAgent>() : null;
@@ -470,7 +482,7 @@ namespace LocalTanks
                     continue;
                 }
 
-                Vector2 offset = (Vector2)other.transform.position - position;
+                Vector2 offset = other.PhysicsPosition - position;
                 float distance = offset.magnitude;
                 if (distance <= 0.01f || Vector2.Dot(movementForward, offset.normalized) < 0.15f)
                 {
@@ -496,23 +508,29 @@ namespace LocalTanks
         /// </summary>
         private float ClearanceFrom(Vector2 worldPoint)
         {
-            Vector2 centre = transform.position;
+            Vector2 centre = PhysicsPosition;
             Vector2 delta = worldPoint - centre;
             float distance = delta.magnitude;
             if (distance <= 0.0001f) return 0f;
             Vector2 direction = delta / distance;
             float support = 0f;
             Collider2D[] colliders = avoidanceColliders ??= GetComponentsInChildren<Collider2D>(true);
+            Vector2 transformCorrection = centre - (Vector2)transform.position;
             foreach (Collider2D collider in colliders)
             {
                 if (collider == null || !collider.enabled) continue;
-                support = Mathf.Max(support, SupportDistance(collider, centre, direction));
+                support = Mathf.Max(support,
+                    SupportDistance(collider, centre, direction, transformCorrection));
             }
 
             return Mathf.Max(0f, distance - support);
         }
 
-        private static float SupportDistance(Collider2D collider, Vector2 centre, Vector2 direction)
+        private static float SupportDistance(
+            Collider2D collider,
+            Vector2 centre,
+            Vector2 direction,
+            Vector2 transformCorrection)
         {
             if (collider is PolygonCollider2D polygon)
             {
@@ -521,7 +539,8 @@ namespace LocalTanks
                 {
                     foreach (Vector2 point in polygon.GetPath(pathIndex))
                     {
-                        Vector2 worldPoint = polygon.transform.TransformPoint(point + polygon.offset);
+                        Vector2 worldPoint = (Vector2)polygon.transform.TransformPoint(point + polygon.offset) +
+                                             transformCorrection;
                         result = Mathf.Max(result, Vector2.Dot(worldPoint - centre, direction));
                     }
                 }
@@ -530,12 +549,13 @@ namespace LocalTanks
             }
 
             if (collider is BoxCollider2D box)
-                return RectangleSupport(box.transform, box.offset, box.size, centre, direction);
+                return RectangleSupport(box.transform, box.offset, box.size, centre, direction, transformCorrection);
             if (collider is CapsuleCollider2D capsule)
-                return RectangleSupport(capsule.transform, capsule.offset, capsule.size, centre, direction);
+                return RectangleSupport(capsule.transform, capsule.offset, capsule.size, centre, direction,
+                    transformCorrection);
             if (collider is CircleCollider2D circle)
             {
-                Vector2 worldCentre = circle.transform.TransformPoint(circle.offset);
+                Vector2 worldCentre = (Vector2)circle.transform.TransformPoint(circle.offset) + transformCorrection;
                 Vector3 scale = circle.transform.lossyScale;
                 float radius = circle.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y));
                 return Mathf.Max(0f, Vector2.Dot(worldCentre - centre, direction) + radius);
@@ -549,7 +569,8 @@ namespace LocalTanks
             Vector2 offset,
             Vector2 size,
             Vector2 centre,
-            Vector2 direction)
+            Vector2 direction,
+            Vector2 transformCorrection)
         {
             Vector2 half = size * 0.5f;
             float result = 0f;
@@ -557,7 +578,7 @@ namespace LocalTanks
             for (int y = -1; y <= 1; y += 2)
             {
                 Vector2 localPoint = offset + new Vector2(half.x * x, half.y * y);
-                Vector2 worldPoint = colliderTransform.TransformPoint(localPoint);
+                Vector2 worldPoint = (Vector2)colliderTransform.TransformPoint(localPoint) + transformCorrection;
                 result = Mathf.Max(result, Vector2.Dot(worldPoint - centre, direction));
             }
 
@@ -583,7 +604,7 @@ namespace LocalTanks
                     }
                     RebuildPath();
                     progressSamplePosition = position;
-                    progressSampleAngle = transform.eulerAngles.z;
+                    progressSampleAngle = PhysicsRotation;
                     progressSampleTime = Now;
                 }
                 return;
@@ -595,9 +616,9 @@ namespace LocalTanks
             }
 
             float progress = Vector2.Distance(progressSamplePosition, position);
-            float turnProgress = Mathf.Abs(Mathf.DeltaAngle(progressSampleAngle, transform.eulerAngles.z));
+            float turnProgress = Mathf.Abs(Mathf.DeltaAngle(progressSampleAngle, PhysicsRotation));
             progressSamplePosition = position;
-            progressSampleAngle = transform.eulerAngles.z;
+            progressSampleAngle = PhysicsRotation;
             progressSampleTime = Now;
             if (HasPath && progress < minimumProgressDistance && turnProgress < minimumProgressTurn)
             {
