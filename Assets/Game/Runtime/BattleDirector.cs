@@ -70,6 +70,7 @@ namespace LocalTanks
         public IReadOnlyList<CaptureBase> Bases => bases ?? Array.Empty<CaptureBase>();
         public int TeamAAlive { get; private set; }
         public int TeamBAlive { get; private set; }
+        public SceneNavigationBakeReport NavigationBakeReport { get; private set; }
 
         /// <summary>Match rules of the current scenario: battle length and friendly fire come from data.</summary>
         public MatchRules Rules => scenario != null && scenario.rules != null
@@ -259,6 +260,7 @@ namespace LocalTanks
             }
 
             ValidateConfiguration();
+            NavigationBakeReport = SceneNavigationBaker.Rebuild(navigationMap, gameObject.scene);
             spawned = true;
             shotRandomStream = new ShotRandomStream(LocalTanksOverrides.RequestedSeed(Rules.randomSeed));
             matchStartedAt = Time.timeAsDouble;
@@ -380,7 +382,18 @@ namespace LocalTanks
                 NavigationAgent navigation = tank.GetComponent<NavigationAgent>();
                 if (navigation == null) navigation = tank.AddComponent<NavigationAgent>();
                 navigation.Configure(navigationMap, motor, Array.Empty<Vector2>(), 0, false);
-                Vector2[] route = entry.routeCells.Select(navigationMap.CellToWorld).ToArray();
+                CaptureBase destinationBase = bases.FirstOrDefault(item =>
+                    item != null && item.Owner != TeamId.Neutral && item.Owner != entry.team);
+                Vector2 destination = destinationBase != null
+                    ? (Vector2)destinationBase.transform.position
+                    : entry.routeCells != null && entry.routeCells.Length > 0
+                        ? navigationMap.CellToWorld(entry.routeCells[entry.routeCells.Length - 1])
+                        : position;
+                Vector2[] route = SceneNavigationBaker.BuildConnectedRoute(
+                    navigationMap,
+                    entry.routeCells,
+                    position,
+                    destination);
                 CombatTankAI ai = tank.GetComponent<CombatTankAI>();
                 if (ai == null) ai = tank.AddComponent<CombatTankAI>();
                 ai.Configure(

@@ -46,6 +46,11 @@ namespace LocalTanks.Tests
                 "Collider content and navigation must read the same map asset.");
             Assert.That(map.Width, Is.EqualTo(builder.Map.navigationColumns));
             Assert.That(map.Height, Is.EqualTo(builder.Map.navigationRows));
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            Assert.That(director, Is.Not.Null);
+            Assert.That(director.NavigationBakeReport.ColliderCount, Is.GreaterThan(1000),
+                "Runtime navigation must inspect the actual arena colliders before tanks spawn.");
+            Assert.That(director.NavigationBakeReport.BlockedCellCount, Is.GreaterThan(1000));
             Assert.That(Object.FindObjectsByType<CaptureBase>(FindObjectsSortMode.None).Length,
                 Is.EqualTo(2), "The arena has two bases.");
         }

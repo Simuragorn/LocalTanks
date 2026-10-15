@@ -84,5 +84,11 @@ namespace LocalTanks
                 }
             }
         }
+
+        public void SetNavigationCells(NavigationMap navigationMap, Vector2Int[] cells)
+        {
+            map = navigationMap;
+            occupiedCells = cells ?? System.Array.Empty<Vector2Int>();
+        }
     }
 }

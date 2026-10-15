@@ -667,6 +667,8 @@ namespace LocalTanks.Tests
                 member.Definition != null && member.Definition.id == "tiger_ii"), Is.False);
             BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
             Assert.That(director, Is.Not.Null);
+            Assert.That(director.NavigationBakeReport.WasRebuilt, Is.True,
+                "River Crossing must derive obstacle occupancy from its loaded colliders.");
             Assert.That(director.TacticalMap, Is.Not.Null);
             Assert.That(director.TacticalMap.sceneId, Is.EqualTo("Battle_RiverCrossing"));
             Assert.That(director.TacticalMap.lanes.Select(lane => lane.id), Is.EqualTo(new[]

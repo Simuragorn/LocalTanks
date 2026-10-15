@@ -164,6 +164,54 @@ namespace LocalTanks
             Version++;
         }
 
+        /// <summary>
+        /// Replaces only obstacle-derived occupancy while preserving authored ground such as roads, mud
+        /// and water. This lets the loaded scene, rather than an import-time obstacle snapshot, decide
+        /// where tanks can drive.
+        /// </summary>
+        public void ReplaceSceneObstacleMask(IReadOnlyCollection<Vector2Int> obstacleCells)
+        {
+            EnsureModel();
+            int count = width * height;
+            for (int index = 0; index < count; index++)
+            {
+                TerrainKind kind = terrain[index];
+                if (kind == TerrainKind.Blocked || kind == TerrainKind.Obstacle)
+                {
+                    terrain[index] = TerrainKind.Grass;
+                    navigationCosts[index] = 1f;
+                    speedMultipliers[index] = 1f;
+                    accelerationMultipliers[index] = 1f;
+                    blocked[index] = false;
+                }
+            }
+
+            if (obstacleCells != null)
+            {
+                foreach (Vector2Int cell in obstacleCells)
+                {
+                    if (!Contains(cell))
+                    {
+                        continue;
+                    }
+
+                    int index = model.GetIndex(cell);
+                    if (terrain[index] == TerrainKind.ShallowWater)
+                    {
+                        continue;
+                    }
+
+                    terrain[index] = TerrainKind.Blocked;
+                    navigationCosts[index] = 10f;
+                    speedMultipliers[index] = 1f;
+                    accelerationMultipliers[index] = 1f;
+                    blocked[index] = true;
+                }
+            }
+
+            BuildModel();
+        }
+
         public List<Vector2Int> FindCellPath(
             Vector2Int start,
             Vector2Int destination,
