@@ -294,7 +294,7 @@ namespace LocalTanks.Tests
                 TeamMember player = BuildMember("PlayerTank", TeamId.TeamA, TankNation.Germany, spawned);
                 TeamMember enemy = BuildMember("EnemyTank", TeamId.TeamB, TankNation.USSR, spawned);
                 TeamMember ally = BuildMember("AllyTank", TeamId.TeamA, TankNation.USSR, spawned);
-                crew.Configure(player, BuildLibrary(clips), catalog, new[] { player, enemy, ally });
+                crew.Configure(player, BuildLibrary(clips), catalog);
 
                 Assert.That(crew.IsActive, Is.True);
                 Assert.That(crew.Language, Is.EqualTo("de"));
@@ -320,24 +320,19 @@ namespace LocalTanks.Tests
                 crew.ReportShotResult(allyArmor, ImpactOutcome.Penetrated, true);
                 Assert.That(crew.LastClipId, Is.EqualTo("crew_ally_destroyed_de_male"));
 
-                // The player's own kill: the victim reports itself first inside ResolveImpact, so the
-                // generic line has to yield to the player's own line for the same machine.
-                crew.MarkIncomingHit(enemyArmor);
+                // The player's own projectile reports the kill directly.
                 enemy.GetComponent<TankHealth>().ApplyDamage(100000);
-                Assert.That(crew.SuppressedDuplicates, Is.EqualTo(1));
                 crew.ReportShotResult(enemyArmor, ImpactOutcome.Penetrated, true);
                 Assert.That(crew.LastClipId, Is.EqualTo("crew_enemy_destroyed_de_male"));
 
-                // An enemy destroyed by somebody else still reaches the player's crew.
+                // A bot's kill is not an action by this crew and must stay silent.
                 TeamMember other = BuildMember("OtherEnemy", TeamId.TeamB, TankNation.USSR, spawned);
-                crew.Configure(player, BuildLibrary(clips), catalog, new[] { player, other });
+                crew.Configure(player, BuildLibrary(clips), catalog);
+                int beforeBotAction = crew.PlayCount;
+                string beforeBotClip = crew.LastClipId;
                 other.GetComponent<TankHealth>().ApplyDamage(100000);
-                Assert.That(crew.LastClipId, Is.EqualTo("crew_enemy_destroyed_by_ally_de_male"));
-
-                crew.ReportBaseCaptured(TeamId.TeamB, TeamId.TeamA);
-                Assert.That(crew.LastClipId, Is.EqualTo("base_captured_de_male"));
-                crew.ReportBaseCaptured(TeamId.TeamA, TeamId.TeamB);
-                Assert.That(crew.LastClipId, Is.EqualTo("crew_base_lost_de_male"));
+                Assert.That(crew.PlayCount, Is.EqualTo(beforeBotAction));
+                Assert.That(crew.LastClipId, Is.EqualTo(beforeBotClip));
 
                 player.GetComponent<TankHealth>().ApplyDamage(100000);
                 Assert.That(crew.LastClipId, Is.EqualTo("crew_vehicle_destroyed_de_male"));
@@ -390,7 +385,7 @@ namespace LocalTanks.Tests
                     }
                 };
 
-                crew.Configure(player, BuildLibrary(clips), french, new[] { player });
+                crew.Configure(player, BuildLibrary(clips), french);
                 Assert.That(crew.Language, Is.EqualTo("fr"));
                 Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.False,
                     "A language whose clips are missing must stay silent rather than block the battle.");
@@ -428,7 +423,7 @@ namespace LocalTanks.Tests
 
                 PlayerSettingsStore.CrewLanguage = CrewLanguageMode.Russian;
                 PlayerSettingsStore.CrewGender = CrewVoiceGender.Female;
-                crew.Configure(player, BuildLibrary(clips), catalog, new[] { player });
+                crew.Configure(player, BuildLibrary(clips), catalog);
                 Assert.That(crew.Language, Is.EqualTo("ru"));
                 Assert.That(crew.Voice, Is.EqualTo("female"));
                 Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.True,
@@ -465,7 +460,7 @@ namespace LocalTanks.Tests
                 TeamMember player = BuildMember("PlayerMachine", TeamId.TeamA, TankNation.Germany, spawned);
                 TeamMember bot = BuildMember("BotMachine", TeamId.TeamB, TankNation.USSR, spawned);
 
-                CrewVoiceController crew = CrewVoiceController.AttachTo(player, BuildLibrary(clips), catalog, new[] { player, bot });
+                CrewVoiceController crew = CrewVoiceController.AttachTo(player, BuildLibrary(clips), catalog);
 
                 // The component must live on the machine itself: a projectile finds its crew by walking the
                 // shooter, so a crew attached to the battle would never hear the player's own shell.
@@ -511,7 +506,7 @@ namespace LocalTanks.Tests
                 // An automatic gun lands several hits inside a second. The routing tests zero the pacing, so
                 // this one turns it on to prove the phrase is skipped rather than repeated.
                 CrewVoiceProfileCatalog pacing = BuildCatalog(repeatCooldown: 30f, speechCooldown: 0f);
-                crew.Configure(player, BuildLibrary(clips), pacing, new[] { player });
+                crew.Configure(player, BuildLibrary(clips), pacing);
 
                 Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.True);
                 Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.False,
@@ -522,7 +517,7 @@ namespace LocalTanks.Tests
 
                 // Talking over itself is the other half of the same problem.
                 CrewVoiceProfileCatalog speechPacing = BuildCatalog(repeatCooldown: 0f, speechCooldown: 30f);
-                crew.Configure(player, BuildLibrary(clips), speechPacing, new[] { player });
+                crew.Configure(player, BuildLibrary(clips), speechPacing);
                 Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.True);
                 Assert.That(crew.Play(CrewVoiceRole.NotPenetrated), Is.False);
                 Assert.That(crew.SpeechSuppressedCount, Is.EqualTo(1));

@@ -289,7 +289,8 @@ namespace LocalTanks
             else
             {
                 text.AppendLine($"Экипаж: {(crew.IsActive ? $"язык {crew.Language}, голос {crew.Voice}" : "нет машины игрока")}; " +
-                                $"реплик {crew.PlayCount}; подавлено дублей {crew.SuppressedDuplicates}");
+                                $"реплик {crew.PlayCount}; повторов пропущено {crew.RepeatSuppressedCount}; " +
+                                $"перекрытий пропущено {crew.SpeechSuppressedCount}");
                 text.AppendLine($"Последняя реплика: {Show(crew.LastClipId)} — {crew.LastRole}");
             }
 

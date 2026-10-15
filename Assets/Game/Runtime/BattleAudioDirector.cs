@@ -94,9 +94,7 @@ namespace LocalTanks
             Crew = CrewVoiceController.AttachTo(
                 director != null ? director.PlayerMember : null,
                 library,
-                null,
-                director != null ? director.SpawnedMembers : null,
-                director != null ? director.Bases : null);
+                null);
 
             Music?.BeginBattle(Time.time);
             Flow.StartAmbience();
@@ -199,9 +197,6 @@ namespace LocalTanks
             {
                 return;
             }
-
-            // A battle that spawns machines late still has to give their crew the new victims to report.
-            Crew?.Watch(member);
 
             WeaponController weapon = member.GetComponent<WeaponController>();
             if (weapon != null)

@@ -4,20 +4,17 @@ using UnityEngine;
 namespace LocalTanks
 {
     /// <summary>
-    /// Plays the crew voice of the player's own vehicle. It is deliberately attached to the battle rather
-    /// than to a tank, because the lines describe what the player's crew heard and saw: their own shot
-    /// results, their kills, their loss of a base and the loss of their machine.
+    /// Plays the crew voice of the player's own vehicle. It is deliberately attached to that vehicle:
+    /// the lines describe what the player's crew personally did, plus the destruction of their machine.
     /// </summary>
     /// <remarks>
     /// Only the player's crew speaks. Bots are thirteen other virtual players, and giving every one of
     /// them a radio would turn a battle into noise while telling the player nothing new; the same reason
     /// keeps bot quick commands in text form.
     ///
-    /// A kill needs two steps rather than one. `TankArmor.ResolveImpact` applies the damage and raises
-    /// `TankHealth.Destroyed` while it runs, so a machine destroyed by the player reports itself before
-    /// the projectile knows the outcome. The projectile therefore marks its victim before resolving and
-    /// reports the result afterwards, and the generic "an enemy was destroyed" line stays silent for a
-    /// victim the player is shooting at that very moment.
+    /// Enemy and allied bot events are intentionally not subscribed. A shell reports a result only when
+    /// it found this component on its shooter, which makes ownership structural rather than a team check
+    /// that can accidentally let another machine speak through the player's crew.
     /// </remarks>
     public sealed class CrewVoiceController : MonoBehaviour
     {
@@ -30,7 +27,6 @@ namespace LocalTanks
         private TeamMember playerMember;
         private TeamId playerTeam = TeamId.Neutral;
         private TankNation playerNation = TankNation.USSR;
-        private TeamMember markedVictim;
         private float lastLineAt = float.NegativeInfinity;
         private bool playerDestroyed;
 
@@ -43,9 +39,6 @@ namespace LocalTanks
         public string LastClipId { get; private set; } = string.Empty;
         public string LastRole { get; private set; } = "реплик ещё не было";
         public int PlayCount { get; private set; }
-
-        /// <summary>The player's own shell destroyed the machine the crew just shot at.</summary>
-        public int SuppressedDuplicates { get; private set; }
 
         /// <summary>The same phrase came up again inside its cooldown, as an automatic gun keeps hitting.</summary>
         public int RepeatSuppressedCount { get; private set; }
@@ -63,23 +56,7 @@ namespace LocalTanks
             WotAudioClipLibrary clipLibrary,
             CrewVoiceProfileCatalog crewCatalog = null)
         {
-            List<TeamMember> members = new List<TeamMember>();
-            List<CaptureBase> bases = new List<CaptureBase>();
-            if (battleDirector != null)
-            {
-                members.AddRange(battleDirector.SpawnedMembers);
-                foreach (CaptureBase captureBase in battleDirector.Bases)
-                {
-                    if (captureBase != null) bases.Add(captureBase);
-                }
-            }
-
-            Configure(battleDirector != null ? battleDirector.PlayerMember : null, clipLibrary, crewCatalog, members, bases);
-            if (battleDirector != null)
-            {
-                battleDirector.TankSpawned += OnTankSpawned;
-                unsubscribers.Add(() => battleDirector.TankSpawned -= OnTankSpawned);
-            }
+            Configure(battleDirector != null ? battleDirector.PlayerMember : null, clipLibrary, crewCatalog);
         }
 
         /// <summary>
@@ -90,9 +67,7 @@ namespace LocalTanks
         public static CrewVoiceController AttachTo(
             TeamMember player,
             WotAudioClipLibrary clipLibrary,
-            CrewVoiceProfileCatalog crewCatalog = null,
-            IEnumerable<TeamMember> members = null,
-            IEnumerable<CaptureBase> bases = null)
+            CrewVoiceProfileCatalog crewCatalog = null)
         {
             if (player == null)
             {
@@ -105,33 +80,23 @@ namespace LocalTanks
                 crew = player.gameObject.AddComponent<CrewVoiceController>();
             }
 
-            crew.Configure(player, clipLibrary, crewCatalog, members, bases);
+            crew.Configure(player, clipLibrary, crewCatalog);
             return crew;
         }
 
-        /// <summary>Starts listening to one more machine, for a battle that spawns machines late.</summary>
-        public void Watch(TeamMember member)
-        {
-            HookMember(member);
-        }
-
         /// <summary>
-        /// Wires the crew of one machine. The player's machine and the machines and bases that can produce
-        /// a line are passed in, so the controller is testable without a whole battle scene.
+        /// Wires the crew to the player's machine only, so the controller is testable without a whole battle.
         /// </summary>
         public void Configure(
             TeamMember player,
             WotAudioClipLibrary clipLibrary,
-            CrewVoiceProfileCatalog crewCatalog = null,
-            IEnumerable<TeamMember> members = null,
-            IEnumerable<CaptureBase> bases = null)
+            CrewVoiceProfileCatalog crewCatalog = null)
         {
             Unsubscribe();
             library = clipLibrary ?? WotAudioClipLibrary.Shared;
             catalog = crewCatalog ?? CrewVoiceProfileCatalog.Load();
             voiceSource ??= CreateSource();
             playerDestroyed = false;
-            markedVictim = null;
             lastPlayedAt.Clear();
             lastLineAt = float.NegativeInfinity;
             playerMember = player;
@@ -148,27 +113,9 @@ namespace LocalTanks
             playerNation = definition != null ? definition.nation : TankNation.USSR;
             RefreshVoiceSelection();
 
-            if (members != null)
-            {
-                foreach (TeamMember member in members)
-                {
-                    HookMember(member);
-                }
-            }
-
-            if (bases != null)
-            {
-                foreach (CaptureBase captureBase in bases)
-                {
-                    CaptureBase captured = captureBase;
-                    System.Action<CaptureBase, TeamId, TeamId> handler = OnBaseCaptured;
-                    captured.Captured += handler;
-                    unsubscribers.Add(() =>
-                    {
-                        if (captured != null) captured.Captured -= handler;
-                    });
-                }
-            }
+            // Only the player's health is observed. Bot deaths and base events describe actions performed
+            // elsewhere in the battle and therefore must never trigger this crew.
+            HookMember(playerMember);
         }
 
         public void PlayBattleStart()
@@ -176,28 +123,9 @@ namespace LocalTanks
             Play(CrewVoiceRole.BattleStart);
         }
 
-        /// <summary>
-        /// Marks the machine the player's shell is about to hit. Called before the impact is resolved so
-        /// the generic kill line can yield to the player's own line for the same victim.
-        /// </summary>
-        public void MarkIncomingHit(TankArmor victim)
-        {
-            if (victim == null)
-            {
-                return;
-            }
-
-            TeamMember member = victim.GetComponentInParent<TeamMember>();
-            if (member != null && member.Team != playerTeam)
-            {
-                markedVictim = member;
-            }
-        }
-
         /// <summary>Reports what the player's own shell did to the machine it hit.</summary>
         public void ReportShotResult(TankArmor victim, ImpactOutcome outcome, bool destroyed)
         {
-            markedVictim = null;
             if (!IsActive || playerDestroyed || victim == null)
             {
                 return;
@@ -232,26 +160,6 @@ namespace LocalTanks
                 default:
                     Play(CrewVoiceRole.Ricochet);
                     break;
-            }
-        }
-
-        /// <summary>Reports a base changing hands from the player's point of view.</summary>
-        public void ReportBaseCaptured(TeamId previousOwner, TeamId newOwner)
-        {
-            // A dead crew has nothing left to say, so losing a base after the player's machine is gone
-            // stays silent; the battle itself continues without them.
-            if (!IsActive || playerDestroyed)
-            {
-                return;
-            }
-
-            if (newOwner == playerTeam)
-            {
-                Play(CrewVoiceRole.BaseCaptured);
-            }
-            else if (previousOwner == playerTeam)
-            {
-                Play(CrewVoiceRole.BaseLost);
             }
         }
 
@@ -346,12 +254,6 @@ namespace LocalTanks
             unsubscribers.Clear();
         }
 
-        private void OnTankSpawned(TeamMember member)
-        {
-            HookMember(member);
-        }
-
-
         private void HookMember(TeamMember member)
         {
             if (member == null)
@@ -375,36 +277,13 @@ namespace LocalTanks
 
         private void OnMemberDestroyed(TeamMember member)
         {
-            if (!IsActive || member == null)
+            if (!IsActive || member == null || member != playerMember)
             {
                 return;
             }
 
-            if (member == playerMember)
-            {
-                playerDestroyed = true;
-                Play(CrewVoiceRole.VehicleDestroyed);
-                return;
-            }
-
-            if (playerDestroyed || member.Team == playerTeam)
-            {
-                return;
-            }
-
-            if (member == markedVictim)
-            {
-                // The player's own shell is resolving right now; its line is played by ReportShotResult.
-                SuppressedDuplicates++;
-                return;
-            }
-
-            Play(CrewVoiceRole.EnemyDestroyed);
-        }
-
-        private void OnBaseCaptured(CaptureBase captureBase, TeamId previousOwner, TeamId newOwner)
-        {
-            ReportBaseCaptured(previousOwner, newOwner);
+            playerDestroyed = true;
+            Play(CrewVoiceRole.VehicleDestroyed);
         }
 
         private AudioSource CreateSource()

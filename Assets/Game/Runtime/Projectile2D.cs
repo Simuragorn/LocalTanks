@@ -203,11 +203,6 @@ namespace LocalTanks
                     return;
                 }
 
-                // The crew is told about the victim before the impact is resolved: damage is applied inside
-                // ResolveImpact, so a machine this shell destroys reports its own destruction first and the
-                // generic "enemy destroyed" line has to yield to the player's own line for the same victim.
-                crewVoice?.MarkIncomingHit(armor);
-
                 ImpactResult result = armor.ResolveImpact(
                     direction,
                     hit.point,
