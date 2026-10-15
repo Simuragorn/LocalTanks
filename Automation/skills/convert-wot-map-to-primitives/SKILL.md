@@ -149,9 +149,12 @@ wall until someone classifies it instead of vanishing silently.
   the loaded scene's actual solid `Collider2D` geometry. Ignore triggers, vegetation, capture zones and
   dynamic bodies. The imported map supplies grid bounds and ground types, not the final position of walls;
   moving or deleting a rock in a generated scene must therefore need no manual navigation edit;
-- treat generated lane paths as tactical hints. At runtime retain a small set of anchors, move a blocked
-  anchor to nearby walkable ground, prove every leg with the current grid and let `NavigationAgent` build
-  the detailed A* path. Never serialize a second hand-maintained route for a moved obstacle;
+- after the physical bake, `RuntimeTacticalMapAnalyzer` must build its source from the current grid,
+  active concealment zones and the two scene bases, then run `TacticalMapAnalyzer` before tanks spawn.
+  A saved `TacticalMapDescriptorAsset` is an editor preview, never a battle prerequisite;
+- assign north, centre and south formations to the first, middle and last runtime lanes. Orient each lane
+  from the bot's own base, retain a small set of anchors, prove every leg with the current grid and let
+  `NavigationAgent` build the detailed A* path. Never require serialized `routeCells` for a bot;
 - drop route points whose navigation cell is closed and orient the lane by geometry
   from the team's own base; assuming the direction sends a team across the map from
   the enemy's side;
