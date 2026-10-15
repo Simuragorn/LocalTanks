@@ -13,6 +13,8 @@ namespace LocalTanks.Tests
         private float previousMaster;
         private float previousTank;
         private float previousEffects;
+        private CrewLanguageMode previousCrewLanguage;
+        private CrewVoiceGender previousCrewGender;
 
         [SetUp]
         public void CapturePreviousValues()
@@ -20,6 +22,8 @@ namespace LocalTanks.Tests
             previousMaster = PlayerSettingsStore.MasterVolume;
             previousTank = PlayerSettingsStore.TankVolume;
             previousEffects = PlayerSettingsStore.EffectsVolume;
+            previousCrewLanguage = PlayerSettingsStore.CrewLanguage;
+            previousCrewGender = PlayerSettingsStore.CrewGender;
         }
 
         [TearDown]
@@ -28,6 +32,8 @@ namespace LocalTanks.Tests
             PlayerSettingsStore.MasterVolume = previousMaster;
             PlayerSettingsStore.TankVolume = previousTank;
             PlayerSettingsStore.EffectsVolume = previousEffects;
+            PlayerSettingsStore.CrewLanguage = previousCrewLanguage;
+            PlayerSettingsStore.CrewGender = previousCrewGender;
         }
 
         [Test]
@@ -51,6 +57,20 @@ namespace LocalTanks.Tests
             // Reading through the store again is what a new run does.
             Assert.That(PlayerSettingsStore.MasterVolume, Is.EqualTo(0.25f).Within(0.0001f));
             Assert.That(PlayerSettingsStore.TankVolume, Is.EqualTo(0.5f).Within(0.0001f));
+        }
+
+        [Test]
+        public void CrewPreferences_AreStoredAndReadBack()
+        {
+            PlayerSettingsStore.CrewLanguage = CrewLanguageMode.Russian;
+            PlayerSettingsStore.CrewGender = CrewVoiceGender.Female;
+
+            Assert.That(PlayerPrefs.GetInt(PlayerSettingsStore.CrewLanguageModeKey, -1),
+                Is.EqualTo((int)CrewLanguageMode.Russian));
+            Assert.That(PlayerPrefs.GetInt(PlayerSettingsStore.CrewVoiceGenderKey, -1),
+                Is.EqualTo((int)CrewVoiceGender.Female));
+            Assert.That(PlayerSettingsStore.CrewLanguage, Is.EqualTo(CrewLanguageMode.Russian));
+            Assert.That(PlayerSettingsStore.CrewGender, Is.EqualTo(CrewVoiceGender.Female));
         }
 
         [Test]
@@ -141,6 +161,8 @@ namespace LocalTanks.Tests
             PlayerSettingsStore.EffectsVolume = 0.1f;
             PlayerSettingsStore.MusicVolume = 0.1f;
             PlayerSettingsStore.VoiceVolume = 0.1f;
+            PlayerSettingsStore.CrewLanguage = CrewLanguageMode.Russian;
+            PlayerSettingsStore.CrewGender = CrewVoiceGender.Female;
 
             PlayerSettingsStore.ResetToDefaults();
 
@@ -149,6 +171,8 @@ namespace LocalTanks.Tests
             Assert.That(PlayerSettingsStore.EffectsVolume, Is.EqualTo(PlayerSettingsStore.DefaultVolume).Within(0.0001f));
             Assert.That(PlayerSettingsStore.MusicVolume, Is.EqualTo(PlayerSettingsStore.DefaultVolume).Within(0.0001f));
             Assert.That(PlayerSettingsStore.VoiceVolume, Is.EqualTo(PlayerSettingsStore.DefaultVolume).Within(0.0001f));
+            Assert.That(PlayerSettingsStore.CrewLanguage, Is.EqualTo(CrewLanguageMode.National));
+            Assert.That(PlayerSettingsStore.CrewGender, Is.EqualTo(CrewVoiceGender.Male));
         }
     }
 }

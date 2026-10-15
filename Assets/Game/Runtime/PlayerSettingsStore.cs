@@ -2,6 +2,18 @@ using UnityEngine;
 
 namespace LocalTanks
 {
+    public enum CrewLanguageMode
+    {
+        National,
+        Russian
+    }
+
+    public enum CrewVoiceGender
+    {
+        Male,
+        Female
+    }
+
     /// <summary>
     /// Player-facing settings that survive a restart. Values are stored through <see cref="PlayerPrefs"/>,
     /// which is the standard place for user preferences and needs no file handling or write permissions.
@@ -21,6 +33,8 @@ namespace LocalTanks
         public const string EffectsVolumeKey = "localtanks.audio.effectsVolume";
         public const string MusicVolumeKey = "localtanks.audio.musicVolume";
         public const string VoiceVolumeKey = "localtanks.audio.voiceVolume";
+        public const string CrewLanguageModeKey = "localtanks.crew.languageMode";
+        public const string CrewVoiceGenderKey = "localtanks.crew.voiceGender";
 
         public const float DefaultVolume = 1f;
 
@@ -57,6 +71,18 @@ namespace LocalTanks
             set => Set(VoiceVolumeKey, value);
         }
 
+        public static CrewLanguageMode CrewLanguage
+        {
+            get => GetEnum(CrewLanguageModeKey, CrewLanguageMode.National);
+            set => SetInt(CrewLanguageModeKey, (int)value);
+        }
+
+        public static CrewVoiceGender CrewGender
+        {
+            get => GetEnum(CrewVoiceGenderKey, CrewVoiceGender.Male);
+            set => SetInt(CrewVoiceGenderKey, (int)value);
+        }
+
         /// <summary>Multiplier for engine, tracks and turret mechanism sources.</summary>
         public static float TankMultiplier => MasterVolume * TankVolume;
 
@@ -76,6 +102,8 @@ namespace LocalTanks
             EffectsVolume = DefaultVolume;
             MusicVolume = DefaultVolume;
             VoiceVolume = DefaultVolume;
+            CrewLanguage = CrewLanguageMode.National;
+            CrewGender = CrewVoiceGender.Male;
         }
 
         private static float Get(string key)
@@ -92,6 +120,24 @@ namespace LocalTanks
             }
 
             PlayerPrefs.SetFloat(key, clamped);
+            PlayerPrefs.Save();
+            Changed?.Invoke();
+        }
+
+        private static T GetEnum<T>(string key, T fallback) where T : struct, System.Enum
+        {
+            int raw = PlayerPrefs.GetInt(key, System.Convert.ToInt32(fallback));
+            return System.Enum.IsDefined(typeof(T), raw) ? (T)System.Enum.ToObject(typeof(T), raw) : fallback;
+        }
+
+        private static void SetInt(string key, int value)
+        {
+            if (PlayerPrefs.GetInt(key, int.MinValue) == value)
+            {
+                return;
+            }
+
+            PlayerPrefs.SetInt(key, value);
             PlayerPrefs.Save();
             Changed?.Invoke();
         }

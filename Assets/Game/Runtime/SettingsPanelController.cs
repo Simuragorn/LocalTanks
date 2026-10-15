@@ -18,6 +18,8 @@ namespace LocalTanks
 
         private UIDocument document;
         private VisualElement overlay;
+        private VisualElement settingsPanel;
+        private VisualElement graphicsPlaceholder;
         private Slider masterSlider;
         private Slider tankSlider;
         private Slider effectsSlider;
@@ -28,10 +30,16 @@ namespace LocalTanks
         private Label effectsValue;
         private Label musicValue;
         private Label voiceValue;
+        private DropdownField crewLanguage;
+        private DropdownField crewGender;
+        private Button graphicsButton;
+        private Button graphicsBackButton;
         private Button resetButton;
         private Button closeButton;
 
         public bool IsOpen => overlay != null && !overlay.ClassListContains("hidden");
+        public bool IsGraphicsPlaceholderOpen => graphicsPlaceholder != null &&
+                                                 !graphicsPlaceholder.ClassListContains("hidden");
 
         private void Awake()
         {
@@ -69,6 +77,12 @@ namespace LocalTanks
 
             if (IsOpen && keyboard.escapeKey.wasPressedThisFrame)
             {
+                if (graphicsPlaceholder != null && !graphicsPlaceholder.ClassListContains("hidden"))
+                {
+                    ShowGraphics(false);
+                    return;
+                }
+
                 SetOpen(false);
             }
         }
@@ -109,7 +123,16 @@ namespace LocalTanks
             ModalUiState.Set(this, open);
             if (open)
             {
+                ShowGraphics(false);
                 RefreshLabels();
+            }
+        }
+
+        public void OpenGraphicsPlaceholder()
+        {
+            if (IsOpen)
+            {
+                ShowGraphics(true);
             }
         }
 
@@ -124,6 +147,8 @@ namespace LocalTanks
             ApplyStyleSheet();
 
             overlay = source.rootVisualElement.Q<VisualElement>("settings-overlay");
+            settingsPanel = source.rootVisualElement.Q<VisualElement>("settings-panel");
+            graphicsPlaceholder = source.rootVisualElement.Q<VisualElement>("graphics-placeholder");
             masterSlider = source.rootVisualElement.Q<Slider>("slider-master");
             tankSlider = source.rootVisualElement.Q<Slider>("slider-tank");
             effectsSlider = source.rootVisualElement.Q<Slider>("slider-effects");
@@ -134,13 +159,17 @@ namespace LocalTanks
             effectsValue = source.rootVisualElement.Q<Label>("value-effects");
             musicValue = source.rootVisualElement.Q<Label>("value-music");
             voiceValue = source.rootVisualElement.Q<Label>("value-voice");
+            crewLanguage = source.rootVisualElement.Q<DropdownField>("crew-language");
+            crewGender = source.rootVisualElement.Q<DropdownField>("crew-gender");
+            graphicsButton = source.rootVisualElement.Q<Button>("button-graphics");
+            graphicsBackButton = source.rootVisualElement.Q<Button>("button-graphics-back");
             resetButton = source.rootVisualElement.Q<Button>("button-reset");
             closeButton = source.rootVisualElement.Q<Button>("button-close");
 
             if (overlay == null || masterSlider == null || tankSlider == null || effectsSlider == null ||
-                musicSlider == null || voiceSlider == null)
+                musicSlider == null || voiceSlider == null || crewLanguage == null || crewGender == null)
             {
-                Debug.LogError("Settings panel markup is incomplete; the overlay needs five named sliders.");
+                Debug.LogError("Settings panel markup is incomplete; audio and crew controls are required.");
                 return;
             }
 
@@ -149,11 +178,25 @@ namespace LocalTanks
             effectsSlider.value = PlayerSettingsStore.EffectsVolume * 100f;
             musicSlider.value = PlayerSettingsStore.MusicVolume * 100f;
             voiceSlider.value = PlayerSettingsStore.VoiceVolume * 100f;
+            crewLanguage.choices = new System.Collections.Generic.List<string> { "Национальная", "Русская" };
+            crewGender.choices = new System.Collections.Generic.List<string> { "Мужская", "Женская" };
+            RefreshCrewChoices();
             masterSlider.RegisterValueChangedCallback(OnMasterChanged);
             tankSlider.RegisterValueChangedCallback(OnTankChanged);
             effectsSlider.RegisterValueChangedCallback(OnEffectsChanged);
             musicSlider.RegisterValueChangedCallback(OnMusicChanged);
             voiceSlider.RegisterValueChangedCallback(OnVoiceChanged);
+            crewLanguage.RegisterValueChangedCallback(OnCrewLanguageChanged);
+            crewGender.RegisterValueChangedCallback(OnCrewGenderChanged);
+            if (graphicsButton != null)
+            {
+                graphicsButton.clicked += OnGraphicsClicked;
+            }
+
+            if (graphicsBackButton != null)
+            {
+                graphicsBackButton.clicked += OnGraphicsBackClicked;
+            }
             if (resetButton != null)
             {
                 resetButton.clicked += OnResetClicked;
@@ -165,6 +208,7 @@ namespace LocalTanks
             }
 
             overlay.EnableInClassList("hidden", !openOnStart);
+            ShowGraphics(false);
             RefreshLabels();
         }
 
@@ -194,6 +238,10 @@ namespace LocalTanks
             if (effectsSlider != null) effectsSlider.UnregisterValueChangedCallback(OnEffectsChanged);
             if (musicSlider != null) musicSlider.UnregisterValueChangedCallback(OnMusicChanged);
             if (voiceSlider != null) voiceSlider.UnregisterValueChangedCallback(OnVoiceChanged);
+            if (crewLanguage != null) crewLanguage.UnregisterValueChangedCallback(OnCrewLanguageChanged);
+            if (crewGender != null) crewGender.UnregisterValueChangedCallback(OnCrewGenderChanged);
+            if (graphicsButton != null) graphicsButton.clicked -= OnGraphicsClicked;
+            if (graphicsBackButton != null) graphicsBackButton.clicked -= OnGraphicsBackClicked;
             if (resetButton != null) resetButton.clicked -= OnResetClicked;
             if (closeButton != null) closeButton.clicked -= OnCloseClicked;
         }
@@ -228,6 +276,20 @@ namespace LocalTanks
             RefreshLabels();
         }
 
+        private void OnCrewLanguageChanged(ChangeEvent<string> change)
+        {
+            PlayerSettingsStore.CrewLanguage = change.newValue == "Русская"
+                ? CrewLanguageMode.Russian
+                : CrewLanguageMode.National;
+        }
+
+        private void OnCrewGenderChanged(ChangeEvent<string> change)
+        {
+            PlayerSettingsStore.CrewGender = change.newValue == "Женская"
+                ? CrewVoiceGender.Female
+                : CrewVoiceGender.Male;
+        }
+
         private void OnResetClicked()
         {
             PlayerSettingsStore.ResetToDefaults();
@@ -236,7 +298,18 @@ namespace LocalTanks
             if (effectsSlider != null) effectsSlider.value = PlayerSettingsStore.EffectsVolume * 100f;
             if (musicSlider != null) musicSlider.value = PlayerSettingsStore.MusicVolume * 100f;
             if (voiceSlider != null) voiceSlider.value = PlayerSettingsStore.VoiceVolume * 100f;
+            RefreshCrewChoices();
             RefreshLabels();
+        }
+
+        private void OnGraphicsClicked()
+        {
+            OpenGraphicsPlaceholder();
+        }
+
+        private void OnGraphicsBackClicked()
+        {
+            ShowGraphics(false);
         }
 
         private void OnCloseClicked()
@@ -251,6 +324,29 @@ namespace LocalTanks
             if (effectsValue != null) effectsValue.text = $"{Mathf.RoundToInt(PlayerSettingsStore.EffectsVolume * 100f)}%";
             if (musicValue != null) musicValue.text = $"{Mathf.RoundToInt(PlayerSettingsStore.MusicVolume * 100f)}%";
             if (voiceValue != null) voiceValue.text = $"{Mathf.RoundToInt(PlayerSettingsStore.VoiceVolume * 100f)}%";
+        }
+
+        private void RefreshCrewChoices()
+        {
+            if (crewLanguage != null)
+            {
+                crewLanguage.SetValueWithoutNotify(PlayerSettingsStore.CrewLanguage == CrewLanguageMode.Russian
+                    ? "Русская"
+                    : "Национальная");
+            }
+
+            if (crewGender != null)
+            {
+                crewGender.SetValueWithoutNotify(PlayerSettingsStore.CrewGender == CrewVoiceGender.Female
+                    ? "Женская"
+                    : "Мужская");
+            }
+        }
+
+        private void ShowGraphics(bool show)
+        {
+            settingsPanel?.EnableInClassList("hidden", show);
+            graphicsPlaceholder?.EnableInClassList("hidden", !show);
         }
     }
 }

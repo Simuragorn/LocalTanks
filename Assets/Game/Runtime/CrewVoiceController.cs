@@ -146,8 +146,7 @@ namespace LocalTanks
             playerTeam = playerMember.Team;
             TankDefinition definition = playerMember.Definition;
             playerNation = definition != null ? definition.nation : TankNation.USSR;
-            Language = catalog.LanguageFor(playerNation);
-            Voice = catalog.VoiceFor(playerNation);
+            RefreshVoiceSelection();
 
             if (members != null)
             {
@@ -264,7 +263,8 @@ namespace LocalTanks
                 return false;
             }
 
-            string clipId = catalog.ClipIdFor(role, playerNation);
+            RefreshVoiceSelection();
+            string clipId = catalog.ClipIdForLanguage(role, Language, Voice);
             if (string.IsNullOrWhiteSpace(clipId))
             {
                 LastRole = $"{role}: для роли нет шаблона клипа";
@@ -306,6 +306,21 @@ namespace LocalTanks
             lastLineAt = now;
             PlayCount++;
             return true;
+        }
+
+        private void RefreshVoiceSelection()
+        {
+            if (catalog == null)
+            {
+                Language = string.Empty;
+                Voice = string.Empty;
+                return;
+            }
+
+            Language = PlayerSettingsStore.CrewLanguage == CrewLanguageMode.Russian
+                ? "ru"
+                : catalog.LanguageFor(playerNation);
+            Voice = PlayerSettingsStore.CrewGender == CrewVoiceGender.Female ? "female" : "male";
         }
 
         public void StopAll()

@@ -52,6 +52,8 @@ namespace LocalTanks.Tests
         private float previousMaster;
         private float previousMusic;
         private float previousVoice;
+        private CrewLanguageMode previousCrewLanguage;
+        private CrewVoiceGender previousCrewGender;
 
         [SetUp]
         public void CaptureVolumes()
@@ -59,9 +61,13 @@ namespace LocalTanks.Tests
             previousMaster = PlayerSettingsStore.MasterVolume;
             previousMusic = PlayerSettingsStore.MusicVolume;
             previousVoice = PlayerSettingsStore.VoiceVolume;
+            previousCrewLanguage = PlayerSettingsStore.CrewLanguage;
+            previousCrewGender = PlayerSettingsStore.CrewGender;
             PlayerSettingsStore.MasterVolume = 1f;
             PlayerSettingsStore.MusicVolume = 1f;
             PlayerSettingsStore.VoiceVolume = 1f;
+            PlayerSettingsStore.CrewLanguage = CrewLanguageMode.National;
+            PlayerSettingsStore.CrewGender = CrewVoiceGender.Male;
         }
 
         [TearDown]
@@ -70,6 +76,8 @@ namespace LocalTanks.Tests
             PlayerSettingsStore.MasterVolume = previousMaster;
             PlayerSettingsStore.MusicVolume = previousMusic;
             PlayerSettingsStore.VoiceVolume = previousVoice;
+            PlayerSettingsStore.CrewLanguage = previousCrewLanguage;
+            PlayerSettingsStore.CrewGender = previousCrewGender;
         }
 
         [UnityTest]
@@ -392,7 +400,7 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
-        public IEnumerator CrewVoice_AsksForTheVoiceTheDataNames()
+        public IEnumerator CrewVoice_FollowsRussianFemalePlayerPreference()
         {
             GameObject host = new GameObject("CrewVoiceGenderHost");
             List<AudioClip> clips = new List<AudioClip>();
@@ -402,26 +410,11 @@ namespace LocalTanks.Tests
                 host.AddComponent<AudioListener>();
                 CrewVoiceController crew = host.AddComponent<CrewVoiceController>();
                 CrewVoiceProfileCatalog catalog = BuildCatalog();
-                TeamMember player = BuildMember("RussianTank", TeamId.TeamA, TankNation.USSR, spawned);
+                TeamMember player = BuildMember("GermanTank", TeamId.TeamA, TankNation.Germany, spawned);
 
-                // The sex of the crew is data like the language: the same role then names the female take
-                // of the line, which the pipeline extracted from the bank's other switch branch.
-                CrewVoiceProfileCatalog female = new CrewVoiceProfileCatalog
-                {
-                    defaultLanguage = catalog.defaultLanguage,
-                    defaultVoice = catalog.defaultVoice,
-                    volume = catalog.volume,
-                    languages = catalog.languages,
-                    roles = catalog.roles,
-                    nations = new[]
-                    {
-                        new CrewVoiceNationBinding { nation = "Germany", language = "de", voice = "male" },
-                        new CrewVoiceNationBinding { nation = "USSR", language = "ru", voice = "female" },
-                        new CrewVoiceNationBinding { nation = "USA", language = "en_us", voice = "male" }
-                    }
-                };
-
-                crew.Configure(player, BuildLibrary(clips), female, new[] { player });
+                PlayerSettingsStore.CrewLanguage = CrewLanguageMode.Russian;
+                PlayerSettingsStore.CrewGender = CrewVoiceGender.Female;
+                crew.Configure(player, BuildLibrary(clips), catalog, new[] { player });
                 Assert.That(crew.Language, Is.EqualTo("ru"));
                 Assert.That(crew.Voice, Is.EqualTo("female"));
                 Assert.That(crew.Play(CrewVoiceRole.Ricochet), Is.True,

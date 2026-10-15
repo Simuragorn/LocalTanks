@@ -18,12 +18,16 @@ namespace LocalTanks.Tests
 
         private float previousMaster;
         private float previousMusic;
+        private CrewLanguageMode previousCrewLanguage;
+        private CrewVoiceGender previousCrewGender;
 
         [SetUp]
         public void CapturePreviousValue()
         {
             previousMaster = PlayerSettingsStore.MasterVolume;
             previousMusic = PlayerSettingsStore.MusicVolume;
+            previousCrewLanguage = PlayerSettingsStore.CrewLanguage;
+            previousCrewGender = PlayerSettingsStore.CrewGender;
         }
 
         [TearDown]
@@ -31,6 +35,8 @@ namespace LocalTanks.Tests
         {
             PlayerSettingsStore.MasterVolume = previousMaster;
             PlayerSettingsStore.MusicVolume = previousMusic;
+            PlayerSettingsStore.CrewLanguage = previousCrewLanguage;
+            PlayerSettingsStore.CrewGender = previousCrewGender;
         }
 
         [UnityTest]
@@ -83,8 +89,21 @@ namespace LocalTanks.Tests
                 Slider voice = root.Q<Slider>("slider-voice");
                 Assert.That(voice, Is.Not.Null, "The voice slider is missing from the document.");
 
+                DropdownField language = root.Q<DropdownField>("crew-language");
+                DropdownField gender = root.Q<DropdownField>("crew-gender");
+                Assert.That(language, Is.Not.Null);
+                Assert.That(gender, Is.Not.Null);
+                language.value = "Русская";
+                gender.value = "Женская";
+                yield return null;
+                Assert.That(PlayerSettingsStore.CrewLanguage, Is.EqualTo(CrewLanguageMode.Russian));
+                Assert.That(PlayerSettingsStore.CrewGender, Is.EqualTo(CrewVoiceGender.Female));
+
                 controller.SetOpen(true);
                 Assert.That(controller.IsOpen, Is.True);
+                controller.OpenGraphicsPlaceholder();
+                Assert.That(controller.IsGraphicsPlaceholderOpen, Is.True,
+                    "The graphics button leads to a deliberately empty placeholder window.");
                 controller.SetOpen(false);
                 Assert.That(controller.IsOpen, Is.False,
                     "Closing the panel must hide the overlay.");

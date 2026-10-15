@@ -34,9 +34,27 @@
                 <ui:Label text="Техника — двигатель, гусеницы, башня. Эффекты — выстрелы, попадания, уничтожение. Музыка — музыка и атмосфера арены. Голос — реплики экипажа и сигналы боя."
                     class="settings-hint lt-caption" />
             </ui:VisualElement>
+            <ui:Label text="Озвучка экипажа" class="settings-section-title lt-label" />
+            <ui:VisualElement class="settings-row">
+                <ui:Label text="Язык" class="settings-label lt-label" />
+                <ui:DropdownField name="crew-language" class="settings-dropdown" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings-row">
+                <ui:Label text="Голос" class="settings-label lt-label" />
+                <ui:DropdownField name="crew-gender" class="settings-dropdown" />
+            </ui:VisualElement>
             <ui:VisualElement class="settings-button-row">
+                <ui:Button name="button-graphics" text="Графика" class="settings-button lt-button" />
                 <ui:Button name="button-reset" text="Вернуть по умолчанию" class="settings-button lt-button" />
                 <ui:Button name="button-close" text="Закрыть" class="settings-button lt-button lt-button--primary" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="graphics-placeholder" class="settings-panel graphics-placeholder lt-panel lt-panel--solid hidden">
+            <ui:Label text="Настройки графики" class="settings-title lt-title" />
+            <ui:Label text="Раздел подготовлен. Параметры графики будут добавлены позже."
+                class="graphics-placeholder-text lt-label" />
+            <ui:VisualElement class="settings-button-row">
+                <ui:Button name="button-graphics-back" text="Назад" class="settings-button lt-button lt-button--primary" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
