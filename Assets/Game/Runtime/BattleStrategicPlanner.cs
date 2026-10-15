@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LocalTanks
@@ -205,6 +206,9 @@ namespace LocalTanks
             if (!TeamBattlePlanSchema.TryParse(response.Content, out TeamBattlePlan candidate, out error))
                 return false;
             string[] errors = TeamBattlePlanValidator.Validate(candidate, BuildValidationContext(team));
+            errors = errors.Concat(StrategicLaneDistributionPolicy.Validate(
+                    candidate, descriptor, scenario, database, team))
+                .ToArray();
             if (errors.Length > 0)
             {
                 error = string.Join(" ", errors);
@@ -225,7 +229,7 @@ namespace LocalTanks
             }
             bots.Sort(StringComparer.Ordinal);
             List<string> lanes = new List<string>();
-            foreach (TacticalLaneDescriptor lane in descriptor.lanes ?? Array.Empty<TacticalLaneDescriptor>())
+            foreach (TacticalLaneDescriptor lane in RuntimeTacticalMapAnalyzer.SelectOperationalLanes(descriptor))
             {
                 if (lane != null) lanes.Add(lane.id);
             }

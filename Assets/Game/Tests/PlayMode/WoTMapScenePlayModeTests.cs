@@ -160,6 +160,37 @@ namespace LocalTanks.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator ConvertedArena_BotsAreEvenlySplitAcrossOperationalDirections()
+        {
+            if (!SceneExists) Assert.Ignore($"Scene '{SceneName}' is not in the build settings yet.");
+
+            SceneManager.LoadScene(SceneName);
+            yield return null;
+            yield return null;
+
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            Assert.That(director, Is.Not.Null);
+            string[] operational = RuntimeTacticalMapAnalyzer.SelectOperationalLanes(director.TacticalMap)
+                .Select(item => item.id)
+                .ToArray();
+            Assert.That(operational, Has.Length.EqualTo(3));
+
+            foreach (TeamId team in new[] { TeamId.TeamA, TeamId.TeamB })
+            {
+                BotStrategicBrain[] teamBots = director.StrategicCoordinator.Brains
+                    .Where(brain => brain.GetComponent<TeamMember>().Team == team)
+                    .ToArray();
+                int[] counts = operational.Select(laneId => teamBots.Count(brain =>
+                        brain.CurrentSnapshot?.plan?.assignedLaneId == laneId))
+                    .ToArray();
+                Assert.That(counts, Has.All.GreaterThan(0),
+                    $"{team} left an operational direction empty: {string.Join("/", counts)}.");
+                Assert.That(counts.Max() - counts.Min(), Is.LessThanOrEqualTo(1),
+                    $"{team} is concentrated on one route: {string.Join("/", counts)}.");
+            }
+        }
+
         /// <summary>
         /// A capture base marks ground a tank must be able to occupy. CaptureBase carries
         /// RequireComponent for its zone, and a required collider is created solid, which once made each

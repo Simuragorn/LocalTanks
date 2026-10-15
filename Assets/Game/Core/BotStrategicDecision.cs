@@ -320,4 +320,31 @@ namespace LocalTanks
             };
         }
     }
+
+    public static class BotStrategicDeploymentPolicy
+    {
+        public static string[] Validate(BotStrategicDecision decision, BotKnowledgeSnapshot snapshot)
+        {
+            if (decision == null || snapshot == null) return Array.Empty<string>();
+            bool hasContact = (snapshot.enemies ?? Array.Empty<BotEnemyKnowledge>())
+                .Any(item => item != null && item.isAlive && item.contactState != BotContactState.Unknown);
+            bool baseThreat = (snapshot.bases ?? Array.Empty<BotBaseKnowledge>()).Any(item =>
+                item != null && item.state == "Capturing" &&
+                !string.IsNullOrWhiteSpace(item.capturingTeamId) &&
+                !string.Equals(item.capturingTeamId, snapshot.teamId, StringComparison.Ordinal));
+            bool laneIntent = decision.intent == BotStrategicIntentType.AdvanceLane ||
+                              decision.intent == BotStrategicIntentType.ScoutLane;
+            string assignedLane = snapshot.plan?.assignedLaneId ?? string.Empty;
+            if (!hasContact && !baseThreat && laneIntent && !string.IsNullOrWhiteSpace(assignedLane) &&
+                !string.Equals(decision.laneId, assignedLane, StringComparison.Ordinal))
+            {
+                return new[]
+                {
+                    $"Bot '{snapshot.botId}' must keep deployment lane '{assignedLane}' until contact or a base threat."
+                };
+            }
+
+            return Array.Empty<string>();
+        }
+    }
 }

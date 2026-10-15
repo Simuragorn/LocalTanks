@@ -47,6 +47,7 @@ namespace LocalTanks
             public string teamId;
             public string mapSourceHash;
             public MapStrategicAnalysis mapAnalysis;
+            public string[] operationalLaneIds;
             public TeamMemberPromptPayload[] members;
             public TeamMemberPromptPayload humanPlayer;
             public OpponentPromptPayload[] opponents;
@@ -180,6 +181,9 @@ namespace LocalTanks
                 teamId = team.ToString(),
                 mapSourceHash = descriptor.sourceHash,
                 mapAnalysis = analysis,
+                operationalLaneIds = RuntimeTacticalMapAnalyzer.SelectOperationalLanes(descriptor)
+                    .Select(item => item.id)
+                    .ToArray(),
                 members = bots,
                 humanPlayer = human,
                 opponents = opponents
@@ -191,6 +195,8 @@ namespace LocalTanks
                     "Ты командир команды в одиночной танковой игре. Составь стартовый план только для перечисленных ботов своей команды. " +
                     "Используй исключительно существующие botId и laneId. Учитывай класс, текущую роль и числовой темперамент, " +
                     "публичный состав противника, но не назначай и не контролируй человека. Каждый бот должен встретиться ровно один раз. " +
+                    "Назначай только operationalLaneIds. Распредели подходящие по классу машины между ними максимально равномерно: " +
+                    "если все три направления доступны, разница в числе ботов на них не должна превышать одного. " +
                     "Выбери разные главное и вспомогательное направления, не раскрывай план противнику и не придумывай координаты. " +
                     "Если указан reserveBotId, этот бот обязан получить задачу Reserve. Ответ строго по JSON-схеме.",
                 userPrompt = "Данные команды и общий анализ карты:\n" + JsonUtility.ToJson(payload) +
@@ -240,10 +246,7 @@ namespace LocalTanks
         {
             if (descriptor == null) throw new ArgumentNullException(nameof(descriptor));
             if (scenario == null) throw new ArgumentNullException(nameof(scenario));
-            TacticalLaneDescriptor[] lanes = (descriptor.lanes ?? Array.Empty<TacticalLaneDescriptor>())
-                .Where(item => item != null)
-                .OrderBy(item => item.order)
-                .ToArray();
+            TacticalLaneDescriptor[] lanes = RuntimeTacticalMapAnalyzer.SelectOperationalLanes(descriptor);
             BattleScenarioEntry[] bots = (scenario.entries ?? Array.Empty<BattleScenarioEntry>())
                 .Where(item => item != null && item.team == team && !item.playerControlled)
                 .OrderBy(item => item.id, StringComparer.Ordinal)

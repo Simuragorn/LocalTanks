@@ -45,6 +45,7 @@ namespace LocalTanks
         private TeamId capturedBy = TeamId.Neutral;
         private ShotRandomStream shotRandomStream;
         private TacticalMapDescriptor runtimeTacticalMap;
+        private BattleScenario runtimeScenarioInstance;
 
         /// <summary>A scenario without rules — a laboratory that builds one in code — reads this one instead.</summary>
         private MatchRules fallbackRules;
@@ -147,6 +148,12 @@ namespace LocalTanks
                 {
                     captureBase.Captured -= NotifyBaseCaptured;
                 }
+            }
+
+            if (runtimeScenarioInstance != null)
+            {
+                Destroy(runtimeScenarioInstance);
+                runtimeScenarioInstance = null;
             }
         }
 
@@ -271,6 +278,12 @@ namespace LocalTanks
                 scenario.sceneId);
             runtimeTacticalMap = tacticalAnalysis.Descriptor;
             TacticalAnalysisReport = tacticalAnalysis.Report;
+            BattleScenario balancedScenario = StrategicLaneDistributionPolicy.CreateBalancedRuntimeScenario(
+                scenario,
+                runtimeTacticalMap,
+                combatDatabase);
+            if (!ReferenceEquals(balancedScenario, scenario)) runtimeScenarioInstance = balancedScenario;
+            scenario = balancedScenario;
             spawned = true;
             shotRandomStream = new ShotRandomStream(LocalTanksOverrides.RequestedSeed(Rules.randomSeed));
             matchStartedAt = Time.timeAsDouble;

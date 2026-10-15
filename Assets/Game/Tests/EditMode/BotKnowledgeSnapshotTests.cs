@@ -69,6 +69,27 @@ namespace LocalTanks.Tests
             Assert.That(schema, Does.Not.Contain("\"AngleArmor\""));
         }
 
+        [Test]
+        public void DeploymentPolicy_RejectsChangingLaneBeforeEnemyContact()
+        {
+            BotKnowledgeSnapshot snapshot = ValidSnapshot();
+            snapshot.enemies[0].contactState = BotContactState.Unknown;
+            snapshot.enemies[0].hasKnownPosition = false;
+            snapshot.enemies[0].positionIsCurrent = false;
+            snapshot.enemies[0].currentHitPoints = -1;
+            snapshot.knownTargetIds = new string[0];
+            BotStrategicDecision decision = BotStrategicFallback.Create(snapshot);
+            decision.laneId = "lane_north";
+
+            string[] errors = BotStrategicDeploymentPolicy.Validate(decision, snapshot);
+
+            Assert.That(errors, Has.Some.Contains("must keep deployment lane"));
+            snapshot.enemies[0].contactState = BotContactState.Visible;
+            snapshot.enemies[0].hasKnownPosition = true;
+            Assert.That(BotStrategicDeploymentPolicy.Validate(decision, snapshot), Is.Empty,
+                "A real contact should allow tactical redeployment.");
+        }
+
         private static BotKnowledgeSnapshot ValidSnapshot()
         {
             return new BotKnowledgeSnapshot

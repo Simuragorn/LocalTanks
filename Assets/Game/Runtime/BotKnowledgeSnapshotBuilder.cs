@@ -55,8 +55,7 @@ namespace LocalTanks
                     .Select(BuildBase)
                     .ToArray(),
                 plan = BuildPlan(teamPlan, assignment),
-                knownLaneIds = (director.TacticalMap?.lanes ?? Array.Empty<TacticalLaneDescriptor>())
-                    .Where(item => item != null)
+                knownLaneIds = RuntimeTacticalMapAnalyzer.SelectOperationalLanes(director.TacticalMap)
                     .Select(item => item.id)
                     .OrderBy(item => item, StringComparer.Ordinal)
                     .ToArray(),

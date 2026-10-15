@@ -213,6 +213,7 @@ namespace LocalTanks
                 allowChat = false,
                 maximumDesiredDistance = Mathf.Max(1f, snapshot.self.viewRange)
             });
+            errors = errors.Concat(BotStrategicDeploymentPolicy.Validate(candidate, snapshot)).ToArray();
             if (errors.Length > 0)
             {
                 error = string.Join(" ", errors);

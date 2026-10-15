@@ -129,6 +129,26 @@ namespace LocalTanks
             return ordered[index];
         }
 
+        /// <summary>
+        /// Returns the broad directions a battle roster can be assigned to. The analyzer may discover
+        /// several neighbouring crossings on a detailed map, but the combat layer intentionally groups
+        /// them into the familiar north/centre/south deployment lanes.
+        /// </summary>
+        public static TacticalLaneDescriptor[] SelectOperationalLanes(TacticalMapDescriptor descriptor)
+        {
+            return new[]
+                {
+                    SelectLane(descriptor, BattleLane.North),
+                    SelectLane(descriptor, BattleLane.Center),
+                    SelectLane(descriptor, BattleLane.South)
+                }
+                .Where(item => item != null)
+                .GroupBy(item => item.id, StringComparer.Ordinal)
+                .Select(group => group.First())
+                .OrderBy(item => item.order)
+                .ToArray();
+        }
+
         public static Vector2Int[] OrientFrom(TacticalLaneDescriptor lane, Vector2Int start)
         {
             if (lane?.pathCells == null || lane.pathCells.Length == 0)

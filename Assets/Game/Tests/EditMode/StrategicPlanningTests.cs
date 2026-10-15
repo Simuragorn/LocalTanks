@@ -32,6 +32,68 @@ namespace LocalTanks.Tests
             Assert.That(teamB.assignments.Select(item => item.botId),
                 Is.EquivalentTo(scenario.entries.Where(item => item.team == TeamId.TeamB && !item.playerControlled)
                     .Select(item => item.id)));
+            Assert.That(StrategicLaneDistributionPolicy.Validate(
+                teamA, descriptor, scenario, database, TeamId.TeamA), Is.Empty);
+            Assert.That(StrategicLaneDistributionPolicy.Validate(
+                teamB, descriptor, scenario, database, TeamId.TeamB), Is.Empty);
+            AssertBalanced(teamA, descriptor);
+            AssertBalanced(teamB, descriptor);
+        }
+
+        [Test]
+        public void TeamPlan_RejectsPuttingEveryCompatibleBotOnOneDirection()
+        {
+            LoadProjectData(out TacticalMapDescriptor descriptor, out BattleScenario scenario, out CombatDatabase database);
+            IReadOnlyDictionary<string, BotIdentity> identities = BuildIdentities(scenario, database);
+            TeamBattlePlan plan = StrategicTeamPlanFallback.Create(
+                descriptor, scenario, database, identities, TeamId.TeamB);
+            string oneLane = RuntimeTacticalMapAnalyzer.SelectOperationalLanes(descriptor)[0].id;
+            plan.primaryLaneId = oneLane;
+            foreach (TeamPlanAssignment assignment in plan.assignments) assignment.laneId = oneLane;
+
+            string[] errors = StrategicLaneDistributionPolicy.Validate(
+                plan, descriptor, scenario, database, TeamId.TeamB);
+
+            Assert.That(errors, Has.Some.Contains("concentrates bots"));
+        }
+
+        [Test]
+        public void RuntimeScenario_BalancesBotsSeparatelyFromThePlayer()
+        {
+            LoadProjectData(out TacticalMapDescriptor descriptor, out BattleScenario source, out CombatDatabase database);
+            BattleScenario authored = UnityEngine.ScriptableObject.CreateInstance<BattleScenario>();
+            authored.id = source.id;
+            authored.sceneId = source.sceneId;
+            authored.kind = source.kind;
+            authored.rules = source.rules;
+            authored.entries = source.entries.Select(item => new BattleScenarioEntry
+            {
+                id = item.id,
+                tankId = item.tankId,
+                team = item.team,
+                playerControlled = item.playerControlled,
+                baseId = item.baseId,
+                spawnSlot = item.spawnSlot,
+                lane = item.lane,
+                role = item.role
+            }).ToArray();
+            BattleScenarioEntry player = authored.entries.Single(item => item.playerControlled);
+            BattleScenarioEntry northBot = authored.entries.First(item =>
+                item.team == TeamId.TeamA && !item.playerControlled && item.lane == BattleLane.North);
+            player.lane = BattleLane.North;
+            northBot.lane = BattleLane.Center;
+
+            BattleScenario runtime = StrategicLaneDistributionPolicy.CreateBalancedRuntimeScenario(
+                authored, descriptor, database);
+            int[] counts = Enum.GetValues(typeof(BattleLane)).Cast<BattleLane>()
+                .Select(lane => runtime.entries.Count(item =>
+                    item.team == TeamId.TeamA && !item.playerControlled && item.lane == lane))
+                .ToArray();
+
+            Assert.That(counts, Is.EqualTo(new[] { 2, 2, 2 }));
+            Assert.That(runtime.entries.Single(item => item.playerControlled).lane, Is.EqualTo(BattleLane.North));
+            UnityEngine.Object.DestroyImmediate(runtime);
+            UnityEngine.Object.DestroyImmediate(authored);
         }
 
         [Test]
@@ -89,6 +151,8 @@ namespace LocalTanks.Tests
             Assert.That(planRequest.userPrompt, Does.Contain("humanPlayer"));
             Assert.That(planRequest.userPrompt, Does.Contain("opponents"));
             Assert.That(planRequest.userPrompt, Does.Contain("personality"));
+            Assert.That(planRequest.userPrompt, Does.Contain("operationalLaneIds"));
+            Assert.That(planRequest.systemPrompt, Does.Contain("максимально равномерно"));
             Assert.That(planRequest.jsonSchema, Does.Contain("\"Reserve\""));
         }
 
@@ -168,6 +232,19 @@ namespace LocalTanks.Tests
                     .Select(item => item.id)
                     .ToArray()
             };
+        }
+
+        private static void AssertBalanced(TeamBattlePlan plan, TacticalMapDescriptor descriptor)
+        {
+            string[] laneIds = RuntimeTacticalMapAnalyzer.SelectOperationalLanes(descriptor)
+                .Select(item => item.id)
+                .ToArray();
+            int[] counts = laneIds
+                .Select(laneId => plan.assignments.Count(item => item.laneId == laneId))
+                .ToArray();
+            Assert.That(counts, Has.All.GreaterThan(0));
+            Assert.That(counts.Max() - counts.Min(), Is.LessThanOrEqualTo(1),
+                $"Expected an even operational split, got {string.Join("/", counts)}.");
         }
     }
 }
