@@ -184,10 +184,76 @@ namespace LocalTanks.Tests
                 int[] counts = operational.Select(laneId => teamBots.Count(brain =>
                         brain.CurrentSnapshot?.plan?.assignedLaneId == laneId))
                     .ToArray();
+                foreach (BotStrategicBrain brain in teamBots.OrderBy(item => item.BotId, System.StringComparer.Ordinal))
+                {
+                    CombatTankAI ai = brain.TacticalAi;
+                    Debug.Log($"Lane route {team}/{brain.BotId}: {ai.Lane}; " +
+                              string.Join(" -> ", ai.RoutePoints.Select(point => point.ToString("F1"))));
+                    Assert.That(ai.RoutePoints.Length, Is.GreaterThanOrEqualTo(4),
+                        $"{brain.BotId} lost the mandatory bends of its {ai.Lane} route.");
+                }
                 Assert.That(counts, Has.All.GreaterThan(0),
                     $"{team} left an operational direction empty: {string.Join("/", counts)}.");
                 Assert.That(counts.Max() - counts.Min(), Is.LessThanOrEqualTo(1),
                     $"{team} is concentrated on one route: {string.Join("/", counts)}.");
+
+                Vector2[] laneCentres = System.Enum.GetValues(typeof(BattleLane)).Cast<BattleLane>()
+                    .Select(lane => teamBots.First(brain => brain.TacticalAi.Lane == lane).TacticalAi.RoutePoints)
+                    .Select(route => route[route.Length / 2])
+                    .ToArray();
+                for (int first = 0; first < laneCentres.Length; first++)
+                for (int second = first + 1; second < laneCentres.Length; second++)
+                {
+                    Assert.That(Vector2.Distance(laneCentres[first], laneCentres[second]),
+                        Is.GreaterThan(director.NavigationMap.CellSize * 2f),
+                        $"{team} routes {first} and {second} collapse onto the same physical corridor.");
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ConvertedArena_LaneGroupsPhysicallyDivergeDuringDeployment()
+        {
+            if (!SceneExists) Assert.Ignore($"Scene '{SceneName}' is not in the build settings yet.");
+
+            SceneManager.LoadScene(SceneName);
+            yield return null;
+            yield return null;
+
+            BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
+            Assert.That(director, Is.Not.Null);
+            float previousScale = Time.timeScale;
+            try
+            {
+                Time.timeScale = 5f;
+                while (director.SimulationTime < 40f) yield return null;
+            }
+            finally
+            {
+                Time.timeScale = previousScale;
+            }
+
+            foreach (TeamId team in new[] { TeamId.TeamA, TeamId.TeamB })
+            {
+                CombatTankAI[] bots = director.SpawnedMembers
+                    .Where(member => member != null && member.Team == team && !member.IsPlayerControlled)
+                    .Select(member => member.GetComponent<CombatTankAI>())
+                    .Where(ai => ai != null)
+                    .ToArray();
+                Vector2[] centres = System.Enum.GetValues(typeof(BattleLane)).Cast<BattleLane>()
+                    .Select(lane => bots.Where(ai => ai.Lane == lane)
+                        .Aggregate(Vector2.zero, (sum, ai) => sum + (Vector2)ai.transform.position) /
+                        bots.Count(ai => ai.Lane == lane))
+                    .ToArray();
+                Debug.Log($"Lane centres at 40 s for {team}: " +
+                          string.Join(" | ", centres.Select(point => point.ToString("F1"))));
+                for (int first = 0; first < centres.Length; first++)
+                for (int second = first + 1; second < centres.Length; second++)
+                {
+                    Assert.That(Vector2.Distance(centres[first], centres[second]),
+                        Is.GreaterThan(director.NavigationMap.CellSize * 2f),
+                        $"{team} lane groups {first} and {second} still form one convoy after 40 seconds.");
+                }
             }
         }
 

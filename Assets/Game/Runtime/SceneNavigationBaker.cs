@@ -91,13 +91,16 @@ namespace LocalTanks
             }
 
             AppendReachableLeg(map, connected, ref current, map.WorldToCell(destinationWorld));
-            List<Vector2Int> simplified = WeightedAStar.SimplifyCollinear(connected);
-            if (simplified.Count < 2)
+            if (connected.Count < 2)
             {
                 return Array.Empty<Vector2>();
             }
 
-            return simplified.Select(map.CellToWorld).ToArray();
+            // These are sparse strategic anchors, not adjacent A* cells. SimplifyCollinear compares only
+            // the sign of each delta, so applying it here removes real bends whenever several distant
+            // anchors happen to lie in the same broad quadrant. The NavigationAgent already simplifies
+            // the detailed A* path of every leg; all connected lane anchors must remain mandatory.
+            return connected.Select(map.CellToWorld).ToArray();
         }
 
         private static IEnumerable<Vector2Int> SelectLaneAnchors(IReadOnlyList<Vector2Int> laneHints)

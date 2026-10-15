@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -133,6 +134,46 @@ namespace LocalTanks.Tests
                     Assert.That(route[index].x, Is.GreaterThan(route[index - 1].x),
                         $"Route leg {index - 1}->{index} turns a departing tank back towards its own base.");
                 }
+            }
+            finally
+            {
+                Object.DestroyImmediate(map.gameObject);
+            }
+        }
+
+        [Test]
+        public void SparseLaneAnchors_ArePreservedWhenTheirDeltasShareADirection()
+        {
+            NavigationMap map = CreateMap(30, 30);
+            Vector2Int[] lane =
+            {
+                new Vector2Int(1, 1),
+                new Vector2Int(2, 4),
+                new Vector2Int(4, 8),
+                new Vector2Int(7, 9),
+                new Vector2Int(9, 12),
+                new Vector2Int(12, 15),
+                new Vector2Int(15, 18),
+                new Vector2Int(18, 21),
+                new Vector2Int(22, 24)
+            };
+
+            try
+            {
+                Vector2[] route = SceneNavigationBaker.BuildConnectedRoute(
+                    map,
+                    lane,
+                    map.CellToWorld(new Vector2Int(1, 1)),
+                    map.CellToWorld(new Vector2Int(27, 27)));
+
+                Assert.That(route.Select(map.WorldToCell), Is.EqualTo(new[]
+                {
+                    new Vector2Int(1, 1),
+                    lane[2],
+                    lane[4],
+                    lane[6],
+                    new Vector2Int(27, 27)
+                }), "Sparse tactical bends must not be treated as adjacent collinear A* cells.");
             }
             finally
             {
