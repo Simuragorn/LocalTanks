@@ -105,6 +105,7 @@ namespace LocalTanks
             team = newTeam;
             playerControlled = isPlayerControlled;
             ResolveReferences();
+            Members.Add(this);
             memberOrderDirty = true;
             MembershipChanged?.Invoke(this, true);
         }
