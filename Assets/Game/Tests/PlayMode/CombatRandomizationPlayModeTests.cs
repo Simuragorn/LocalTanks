@@ -12,6 +12,38 @@ namespace LocalTanks.Tests
     public sealed class CombatRandomizationPlayModeTests
     {
         [UnityTest]
+        public IEnumerator GunDispersionController_AppliesDistancePenaltyToShotDirection()
+        {
+            TankDefinition definition = ScriptableObject.CreateInstance<TankDefinition>();
+            definition.vehicleClass = VehicleClass.HeavyTank;
+            definition.minimumDispersionDegrees = 0f;
+            definition.maximumDispersionDegrees = 0f;
+            definition.shotDispersionDegrees = 0f;
+
+            GameObject root = new GameObject("DistanceDispersionTank");
+            Rigidbody2D body = root.AddComponent<Rigidbody2D>();
+            body.gravityScale = 0f;
+            TankMotor motor = root.AddComponent<TankMotor>();
+            motor.Configure(definition);
+            GameObject turretObject = new GameObject("Turret");
+            turretObject.transform.SetParent(root.transform, false);
+            TurretAiming turret = turretObject.AddComponent<TurretAiming>();
+            turret.Configure(definition);
+            turret.SetTarget(Vector2.up * VisionRangeTable.UnitsFor(VehicleClass.HeavyTank));
+            GunDispersionController dispersion = root.AddComponent<GunDispersionController>();
+            dispersion.Configure(definition, motor, turret);
+
+            Assert.That(dispersion.CurrentEffectiveDispersionDegrees, Is.EqualTo(1.2f).Within(0.0001f));
+            Vector2 shotDirection = dispersion.ApplyToDirection(Vector2.up);
+            float expectedOffset = GunDispersionMath.SampleOffsetDegrees(1.2f, 0);
+            Assert.That(Vector2.SignedAngle(Vector2.up, shotDirection), Is.EqualTo(expectedOffset).Within(0.0001f));
+
+            Object.Destroy(root);
+            Object.Destroy(definition);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator RepeatedShots_VaryButStayInsideAuthoredRangesAndKeepOneRollPerShot()
         {
             CombatRules rules = new CombatRules();

@@ -19,6 +19,10 @@ namespace LocalTanks
         private float shotBloomHoldRemaining;
 
         public float CurrentDispersionDegrees => currentDispersionDegrees;
+        public float CurrentAimDistanceUnits => turret != null && turret.HasTarget
+            ? Vector2.Distance(turret.transform.position, turret.TargetPosition)
+            : 0f;
+        public float CurrentEffectiveDispersionDegrees => EffectiveDispersionDegreesAtDistance(CurrentAimDistanceUnits);
         public float NormalizedDispersion => config == null || ShotMaximum <= config.minimumDispersionDegrees
             ? 0f
             : Mathf.InverseLerp(config.minimumDispersionDegrees, ShotMaximum, currentDispersionDegrees);
@@ -99,8 +103,14 @@ namespace LocalTanks
 
         public Vector2 ApplyToDirection(Vector2 direction)
         {
+            return ApplyToDirection(direction, CurrentAimDistanceUnits);
+        }
+
+        public Vector2 ApplyToDirection(Vector2 direction, float aimDistanceUnits)
+        {
             Vector2 normalized = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.up;
-            float offset = GunDispersionMath.SampleOffsetDegrees(currentDispersionDegrees, shotSequence++);
+            float effectiveDispersion = EffectiveDispersionDegreesAtDistance(aimDistanceUnits);
+            float offset = GunDispersionMath.SampleOffsetDegrees(effectiveDispersion, shotSequence++);
             currentDispersionDegrees = GunDispersionMath.AddShotPenalty(
                 currentDispersionDegrees,
                 config != null ? config.shotDispersionDegrees : 0f,
@@ -108,6 +118,16 @@ namespace LocalTanks
                 config != null ? ShotMaximum : currentDispersionDegrees);
             shotBloomHoldRemaining = ShotBloomHoldSeconds;
             return Quaternion.Euler(0f, 0f, offset) * normalized;
+        }
+
+        public float EffectiveDispersionDegreesAtDistance(float distanceUnits)
+        {
+            return config == null
+                ? Mathf.Max(0f, currentDispersionDegrees)
+                : DistanceDispersionTable.EffectiveDegrees(
+                    config.vehicleClass,
+                    distanceUnits,
+                    currentDispersionDegrees);
         }
 
         private void ResetState()

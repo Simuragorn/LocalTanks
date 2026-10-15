@@ -76,6 +76,20 @@ namespace LocalTanks.Editor
             }
 
             output.AppendLine();
+            output.AppendLine($"Дистанционный штраф начисляется плавно на каждые {F(DistanceDispersionTable.StepMetres)} м. Добавка равна текущему разбросу (не меньше опорных {F(DistanceDispersionTable.ReferenceDispersionDegrees)}°), умноженному на классовый коэффициент и число пройденных шагов.");
+            output.AppendLine();
+            output.AppendLine($"| Класс | Коэффициент на {F(DistanceDispersionTable.StepMetres)} м | Собственный обзор, м | Эффективный разброс у границы обзора при исходных {F(DistanceDispersionTable.ReferenceDispersionDegrees)}°, ° |");
+            output.AppendLine("|---|---:|---:|---:|");
+            foreach (VehicleClass vehicleClass in DistanceDispersionTable.Classes)
+            {
+                float effectiveAtViewLimit = DistanceDispersionTable.EffectiveDegrees(
+                    vehicleClass,
+                    VisionRangeTable.UnitsFor(vehicleClass),
+                    DistanceDispersionTable.ReferenceDispersionDegrees);
+                output.AppendLine($"| {vehicleClass} | {F(DistanceDispersionTable.MultiplierPerStep(vehicleClass))} | {F(VisionRangeTable.MetresFor(vehicleClass))} | {F(effectiveAtViewLimit)} |");
+            }
+
+            output.AppendLine();
             output.AppendLine("## Снаряды");
             output.AppendLine();
             output.AppendLine("| Техника | Снаряд | Скорость | Радиус | Дальность | Угол рикошета | Скорость после рикошета | Пробитие после рикошета | Рикошеты |");

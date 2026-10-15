@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Linq;
 using LocalTanks.Editor;
 using NUnit.Framework;
 using UnityEngine;
@@ -33,6 +35,91 @@ namespace LocalTanks.Tests
             Assert.That(oneHundredFiftyMetres, Is.EqualTo(threeMetres * 50f).Within(0.0001f),
                 "At a fixed angular dispersion the sight radius must grow linearly from 3 to 150 metres.");
             Assert.That(PlayerAimReticle.FormatDistance(GameScale.MetresToUnits(150f)), Is.EqualTo("150 м"));
+        }
+
+        [Test]
+        public void DistanceDispersionTable_CoversEveryClassInTheAuthoredOrder()
+        {
+            CollectionAssert.AreEquivalent(
+                Enum.GetValues(typeof(VehicleClass)).Cast<VehicleClass>(),
+                DistanceDispersionTable.Classes);
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    VehicleClass.Artillery,
+                    VehicleClass.TankDestroyer,
+                    VehicleClass.MediumTank,
+                    VehicleClass.LightTank,
+                    VehicleClass.HeavyTank
+                },
+                DistanceDispersionTable.Classes);
+
+            Assert.That(
+                DistanceDispersionTable.MultiplierPerStep(VehicleClass.Artillery),
+                Is.EqualTo(0f));
+            Assert.That(
+                DistanceDispersionTable.MultiplierPerStep(VehicleClass.TankDestroyer),
+                Is.LessThan(DistanceDispersionTable.MultiplierPerStep(VehicleClass.MediumTank)));
+            Assert.That(
+                DistanceDispersionTable.MultiplierPerStep(VehicleClass.MediumTank),
+                Is.LessThan(DistanceDispersionTable.MultiplierPerStep(VehicleClass.LightTank)));
+            Assert.That(
+                DistanceDispersionTable.MultiplierPerStep(VehicleClass.LightTank),
+                Is.LessThan(DistanceDispersionTable.MultiplierPerStep(VehicleClass.HeavyTank)));
+        }
+
+        [Test]
+        public void DistanceDispersion_AddsOneSmoothClassMultiplierEveryTwentyMetres()
+        {
+            const float baseDispersion = 0.5f;
+            float tenMetres = DistanceDispersionTable.EffectiveDegrees(
+                VehicleClass.LightTank,
+                GameScale.MetresToUnits(10f),
+                baseDispersion);
+            float twentyMetres = DistanceDispersionTable.EffectiveDegrees(
+                VehicleClass.LightTank,
+                GameScale.MetresToUnits(20f),
+                baseDispersion);
+            float fortyMetres = DistanceDispersionTable.EffectiveDegrees(
+                VehicleClass.LightTank,
+                GameScale.MetresToUnits(40f),
+                baseDispersion);
+
+            Assert.That(tenMetres, Is.EqualTo(0.55f).Within(0.0001f));
+            Assert.That(twentyMetres, Is.EqualTo(0.60f).Within(0.0001f));
+            Assert.That(fortyMetres, Is.EqualTo(0.70f).Within(0.0001f));
+        }
+
+        [Test]
+        public void DistanceDispersion_IsSevereAtViewLimitExceptForTankDestroyersAndArtillery()
+        {
+            const float representativeAimedDispersion = 0.5f;
+            float artillery = EffectiveAtViewLimit(VehicleClass.Artillery, representativeAimedDispersion);
+            float tankDestroyer = EffectiveAtViewLimit(VehicleClass.TankDestroyer, representativeAimedDispersion);
+            float medium = EffectiveAtViewLimit(VehicleClass.MediumTank, representativeAimedDispersion);
+            float light = EffectiveAtViewLimit(VehicleClass.LightTank, representativeAimedDispersion);
+            float heavy = EffectiveAtViewLimit(VehicleClass.HeavyTank, representativeAimedDispersion);
+
+            Assert.That(artillery, Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(tankDestroyer, Is.EqualTo(0.625f).Within(0.0001f));
+            Assert.That(medium, Is.EqualTo(1.1f).Within(0.0001f));
+            Assert.That(light, Is.EqualTo(1.5f).Within(0.0001f));
+            Assert.That(heavy, Is.EqualTo(1.7f).Within(0.0001f));
+
+            float zeroDegreeHeavy = DistanceDispersionTable.EffectiveDegrees(
+                VehicleClass.HeavyTank,
+                VisionRangeTable.UnitsFor(VehicleClass.HeavyTank),
+                0f);
+            Assert.That(zeroDegreeHeavy, Is.EqualTo(1.2f).Within(0.0001f),
+                "An authored zero-degree gun must not bypass the distance penalty.");
+        }
+
+        private static float EffectiveAtViewLimit(VehicleClass vehicleClass, float currentDispersion)
+        {
+            return DistanceDispersionTable.EffectiveDegrees(
+                vehicleClass,
+                VisionRangeTable.UnitsFor(vehicleClass),
+                currentDispersion);
         }
 
         [Test]

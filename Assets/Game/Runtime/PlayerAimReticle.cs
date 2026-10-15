@@ -117,7 +117,8 @@ namespace LocalTanks
             Vector2 gunPoint = turretPosition + (Vector2)turret.transform.up * aimDistance;
             Vector3 gunScreen3 = worldCamera.WorldToScreenPoint(gunPoint);
             Vector2 gunGui = new Vector2(gunScreen3.x, Screen.height - gunScreen3.y);
-            float radius = CalculateRadiusPixels(turretPosition, gunPoint, aimDistance, dispersion.CurrentDispersionDegrees);
+            float effectiveDispersion = dispersion.CurrentEffectiveDispersionDegrees;
+            float radius = CalculateRadiusPixels(turretPosition, gunPoint, aimDistance, effectiveDispersion);
             Color reloadColor = Color.Lerp(ReloadingColor, ReloadReadyColor, weapon.ReloadProgress);
             ShellDefinition shell = weapon.CurrentShell;
             ArmorAimSolution aimSolution = default;
