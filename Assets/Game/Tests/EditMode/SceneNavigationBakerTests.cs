@@ -102,6 +102,44 @@ namespace LocalTanks.Tests
             }
         }
 
+        [Test]
+        public void LaneEndpoints_DoNotPullSpreadSpawnBackThroughOwnBase()
+        {
+            NavigationMap map = CreateMap(20, 3);
+            Vector2Int[] lane =
+            {
+                new Vector2Int(1, 1),
+                new Vector2Int(3, 1),
+                new Vector2Int(5, 1),
+                new Vector2Int(7, 1),
+                new Vector2Int(9, 1),
+                new Vector2Int(11, 1),
+                new Vector2Int(13, 1),
+                new Vector2Int(15, 1),
+                new Vector2Int(17, 1)
+            };
+
+            try
+            {
+                Vector2[] route = SceneNavigationBaker.BuildConnectedRoute(
+                    map,
+                    lane,
+                    map.CellToWorld(new Vector2Int(3, 1)),
+                    map.CellToWorld(new Vector2Int(19, 1)));
+
+                Assert.That(route, Has.Length.GreaterThanOrEqualTo(2));
+                for (int index = 1; index < route.Length; index++)
+                {
+                    Assert.That(route[index].x, Is.GreaterThan(route[index - 1].x),
+                        $"Route leg {index - 1}->{index} turns a departing tank back towards its own base.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(map.gameObject);
+            }
+        }
+
         private static NavigationMap CreateMap(int width, int height)
         {
             int count = width * height;

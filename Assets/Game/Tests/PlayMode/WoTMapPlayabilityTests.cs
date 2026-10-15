@@ -72,6 +72,7 @@ namespace LocalTanks.Tests
                 .ToDictionary(member => member.name, _ => 0f);
             Dictionary<string, Vector2> lastSeen = bots
                 .ToDictionary(member => member.name, member => (Vector2)member.transform.position);
+            Dictionary<string, float> departureAtThirtySeconds = null;
             try
             {
                 Time.timeScale = TimeCompression;
@@ -96,6 +97,15 @@ namespace LocalTanks.Tests
                             closestEver = Mathf.Min(closestEver,
                                 Vector2.Distance(ally.transform.position, enemy.transform.position));
                         }
+                    }
+
+                    if (departureAtThirtySeconds == null && Time.time - startedAt >= 30f)
+                    {
+                        departureAtThirtySeconds = bots
+                            .Where(member => member != null && start.ContainsKey(member.name))
+                            .ToDictionary(
+                                member => member.name,
+                                member => Vector2.Distance(start[member.name], member.transform.position));
                     }
 
                     if (Time.time >= nextProbe)
@@ -264,6 +274,16 @@ namespace LocalTanks.Tests
 
             Assert.That(stuck, Is.Empty,
                 "Every tank must leave its spawn; these did not:\n- " + string.Join("\n- ", stuck));
+
+            List<string> slowDepartures = (departureAtThirtySeconds ?? new Dictionary<string, float>())
+                .Where(item => item.Value < 12f)
+                .Select(item => $"{item.Key} moved only {item.Value:0.#} units")
+                .ToList();
+            Assert.That(departureAtThirtySeconds, Is.Not.Null,
+                "The battle ended before the 30-second departure probe.");
+            Assert.That(slowDepartures, Is.Empty,
+                "Bots must fan out from their real spawn positions instead of queuing through the centre " +
+                "of their own base:\n- " + string.Join("\n- ", slowDepartures));
 
             // The battle must also progress, not just animate. Damage is the cheapest proof.
             int totalHealth = director.SpawnedMembers

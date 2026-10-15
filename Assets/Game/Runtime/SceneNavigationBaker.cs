@@ -102,14 +102,19 @@ namespace LocalTanks
 
         private static IEnumerable<Vector2Int> SelectLaneAnchors(IReadOnlyList<Vector2Int> laneHints)
         {
-            if (laneHints == null || laneHints.Count == 0)
+            if (laneHints == null || laneHints.Count <= 2)
             {
                 yield break;
             }
 
             if (laneHints.Count <= 6)
             {
-                for (int index = 0; index < laneHints.Count; index++)
+                // The lane path begins and ends at the two base cells. BuildConnectedRoute already owns
+                // the tank's actual spawn and the opposing base destination, so keeping those authored
+                // endpoints makes every member of a formation converge on the centre of its own base
+                // before departing. Use only interior guidance and let spread-out spawns fan directly into
+                // the lane.
+                for (int index = 1; index < laneHints.Count - 1; index++)
                 {
                     yield return laneHints[index];
                 }
@@ -118,7 +123,9 @@ namespace LocalTanks
             }
 
             int previous = -1;
-            float[] fractions = { 0f, 0.25f, 0.5f, 0.75f, 1f };
+            // Endpoints are supplied separately as the real spawn and requested destination. Only the
+            // interior quarters describe the tactical shape of the lane.
+            float[] fractions = { 0.25f, 0.5f, 0.75f };
             foreach (float fraction in fractions)
             {
                 int index = Mathf.RoundToInt((laneHints.Count - 1) * fraction);
