@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Unity.Profiling;
 using UnityEngine;
 
 namespace LocalTanks
@@ -29,6 +30,34 @@ namespace LocalTanks
         public int DamageTaken => Mathf.Max(0, StartingHealth - (TeamAHealth + TeamBHealth));
     }
 
+    /// <summary>Wall-clock frame performance reduced from the per-frame telemetry samples.</summary>
+    public struct BattlePerformanceSummary
+    {
+        public int Frames;
+        public float AverageFps;
+        public float AverageFrameMs;
+        public float MedianFrameMs;
+        public float P95FrameMs;
+        public float P99FrameMs;
+        public float MaximumFrameMs;
+        public float P95CpuFrameMs;
+        public float P95GpuFrameMs;
+        public int FramesOver33Ms;
+        public int FramesOver50Ms;
+        public int FramesOver100Ms;
+        public long TotalGcBytes;
+        public long PeakGcBytes;
+        public int GcAllocatingFrames;
+        public long PeakDrawCalls;
+        public long PeakSetPassCalls;
+        public long PeakTriangles;
+        public long PeakVertices;
+        public int PeakFixedStepsPerFrame;
+        public int PeakVisionQueriesPerFrame;
+        public int PeakVisionEvaluationsPerFrame;
+        public int TotalVisionEvaluations;
+    }
+
     /// <summary>
     /// Records a battle as a time series so its behaviour can be queried instead of watched.
     /// <para>
@@ -46,7 +75,7 @@ namespace LocalTanks
     [DisallowMultipleComponent]
     public sealed class BattleTelemetry : MonoBehaviour
     {
-        public const int SchemaVersion = 3;
+        public const int SchemaVersion = 4;
 
         /// <summary>Command line switch that starts recording. Consumed by the batch runners.</summary>
         public const string SwitchName = "-localtanksTelemetry";
@@ -64,6 +93,7 @@ namespace LocalTanks
         private static BattleTelemetry instance;
 
         private readonly List<TankSample> samples = new List<TankSample>();
+        private readonly List<FramePerformanceSample> frameSamples = new List<FramePerformanceSample>(4096);
         private readonly List<BattleEvent> events = new List<BattleEvent>();
         private readonly Dictionary<UnityEngine.EntityId, TankTelemetryTrack> tracks = new Dictionary<UnityEngine.EntityId, TankTelemetryTrack>();
         private readonly AiDecisionFingerprint decisionFingerprint = new AiDecisionFingerprint();
@@ -85,6 +115,15 @@ namespace LocalTanks
         private bool recording;
         private bool writeOnStop = true;
         private string outputPath;
+        private ProfilerRecorder gcAllocatedRecorder;
+        private ProfilerRecorder drawCallsRecorder;
+        private ProfilerRecorder setPassCallsRecorder;
+        private ProfilerRecorder trianglesRecorder;
+        private ProfilerRecorder verticesRecorder;
+        private readonly FrameTiming[] frameTimings = new FrameTiming[1];
+        private int fixedStepsSinceLastFrame;
+        private int previousVisionQueries;
+        private int previousVisionEvaluations;
 
         /// <summary>The active recorder, or null when this battle is not being recorded.</summary>
         public static BattleTelemetry Active => instance;
@@ -175,6 +214,7 @@ namespace LocalTanks
 
         public int SampleCount => samples.Count;
         public int EventCount => events.Count;
+        public int FrameSampleCount => frameSamples.Count;
         public string DecisionFingerprint => decisionFingerprint.Value;
         public int FingerprintedDecisionCount => decisionFingerprint.Count;
         public string MotorControlFingerprint => motorControlFingerprint.Value;
@@ -183,6 +223,50 @@ namespace LocalTanks
         public string DecisionTrace => string.Join("\n", events
             .Where(item => ContributesToDecisionFingerprint(item.kind))
             .Select(item => $"{item.kind}|{item.name}|{item.detail}"));
+
+        /// <summary>
+        /// Reduces wall-clock frame samples into stable percentiles. It is intentionally independent of
+        /// simulation time: a 100 ms hitch remains a 100 ms hitch when a diagnostic run accelerates time.
+        /// </summary>
+        public BattlePerformanceSummary Performance()
+        {
+            if (frameSamples.Count == 0) return default;
+
+            float[] frameTimes = frameSamples.Select(sample => sample.frameMs).OrderBy(value => value).ToArray();
+            float[] cpuTimes = frameSamples.Where(sample => sample.cpuFrameMs > 0f)
+                .Select(sample => sample.cpuFrameMs).OrderBy(value => value).ToArray();
+            float[] gpuTimes = frameSamples.Where(sample => sample.gpuFrameMs > 0f)
+                .Select(sample => sample.gpuFrameMs).OrderBy(value => value).ToArray();
+            double totalFrameMs = frameTimes.Sum(value => (double)value);
+            return new BattlePerformanceSummary
+            {
+                Frames = frameSamples.Count,
+                AverageFrameMs = Round((float)(totalFrameMs / frameTimes.Length)),
+                AverageFps = totalFrameMs > 0d
+                    ? Round((float)(frameTimes.Length * 1000d / totalFrameMs))
+                    : 0f,
+                MedianFrameMs = Round(Percentile(frameTimes, 0.50f)),
+                P95FrameMs = Round(Percentile(frameTimes, 0.95f)),
+                P99FrameMs = Round(Percentile(frameTimes, 0.99f)),
+                MaximumFrameMs = Round(frameTimes[frameTimes.Length - 1]),
+                P95CpuFrameMs = Round(Percentile(cpuTimes, 0.95f)),
+                P95GpuFrameMs = Round(Percentile(gpuTimes, 0.95f)),
+                FramesOver33Ms = frameSamples.Count(sample => sample.frameMs > 33.34f),
+                FramesOver50Ms = frameSamples.Count(sample => sample.frameMs > 50f),
+                FramesOver100Ms = frameSamples.Count(sample => sample.frameMs > 100f),
+                TotalGcBytes = frameSamples.Sum(sample => sample.gcBytes),
+                PeakGcBytes = frameSamples.Max(sample => sample.gcBytes),
+                GcAllocatingFrames = frameSamples.Count(sample => sample.gcBytes > 0L),
+                PeakDrawCalls = frameSamples.Max(sample => sample.drawCalls),
+                PeakSetPassCalls = frameSamples.Max(sample => sample.setPassCalls),
+                PeakTriangles = frameSamples.Max(sample => sample.triangles),
+                PeakVertices = frameSamples.Max(sample => sample.vertices),
+                PeakFixedStepsPerFrame = frameSamples.Max(sample => sample.fixedSteps),
+                PeakVisionQueriesPerFrame = frameSamples.Max(sample => sample.visionQueries),
+                PeakVisionEvaluationsPerFrame = frameSamples.Max(sample => sample.visionEvaluations),
+                TotalVisionEvaluations = frameSamples.Sum(sample => sample.visionEvaluations)
+            };
+        }
 
         /// <summary>
         /// Attaches a recorder to a director when the command line asked for one. Returns null otherwise,
@@ -221,6 +305,7 @@ namespace LocalTanks
             if (director == null) director = GetComponent<BattleDirector>();
             instance = this;
             samples.Clear();
+            frameSamples.Clear();
             events.Clear();
             tracks.Clear();
             decisionFingerprint.Reset();
@@ -228,6 +313,14 @@ namespace LocalTanks
             motorPhysicsFingerprint.Reset();
             startedAt = Time.time;
             nextSampleAt = 0f;
+            fixedStepsSinceLastFrame = 0;
+            previousVisionQueries = director != null && director.VisionSystem != null
+                ? director.VisionSystem.WorldVisibilityQueryCount
+                : 0;
+            previousVisionEvaluations = director != null && director.VisionSystem != null
+                ? director.VisionSystem.WorldVisibilityEvaluationCount
+                : 0;
+            StartPerformanceRecorders();
             recording = true;
             CollectTracks();
             startingHealth = 0;
@@ -243,6 +336,7 @@ namespace LocalTanks
             recording = false;
             if (instance == this) instance = null;
             string json = ToJson();
+            DisposePerformanceRecorders();
             if (writeOnStop) Write(json);
             return json;
         }
@@ -259,6 +353,7 @@ namespace LocalTanks
 
             float elapsed = Time.time - startedAt;
             elapsedAtLastSample = elapsed;
+            RecordFramePerformance(elapsed);
             if (elapsed >= nextSampleAt)
             {
                 nextSampleAt = elapsed + SampleIntervalSeconds;
@@ -266,9 +361,105 @@ namespace LocalTanks
             }
         }
 
+        private void FixedUpdate()
+        {
+            if (recording) fixedStepsSinceLastFrame++;
+        }
+
+        private void StartPerformanceRecorders()
+        {
+            DisposePerformanceRecorders();
+            gcAllocatedRecorder = ProfilerRecorder.StartNew(
+                ProfilerCategory.Memory,
+                "GC Allocated In Frame",
+                1);
+            drawCallsRecorder = ProfilerRecorder.StartNew(
+                ProfilerCategory.Render,
+                "Draw Calls Count",
+                1);
+            setPassCallsRecorder = ProfilerRecorder.StartNew(
+                ProfilerCategory.Render,
+                "SetPass Calls Count",
+                1);
+            trianglesRecorder = ProfilerRecorder.StartNew(
+                ProfilerCategory.Render,
+                "Triangles Count",
+                1);
+            verticesRecorder = ProfilerRecorder.StartNew(
+                ProfilerCategory.Render,
+                "Vertices Count",
+                1);
+            FrameTimingManager.CaptureFrameTimings();
+        }
+
+        private void RecordFramePerformance(float elapsed)
+        {
+            float frameMs = Mathf.Max(0f, Time.unscaledDeltaTime * 1000f);
+            if (frameMs <= 0f) return;
+
+            FrameTimingManager.CaptureFrameTimings();
+            uint timingCount = FrameTimingManager.GetLatestTimings(1, frameTimings);
+            float cpuFrameMs = timingCount > 0 ? (float)frameTimings[0].cpuFrameTime : 0f;
+            float gpuFrameMs = timingCount > 0 ? (float)frameTimings[0].gpuFrameTime : 0f;
+            TeamVisionSystem vision = director != null ? director.VisionSystem : null;
+            int currentVisionQueries = vision != null ? vision.WorldVisibilityQueryCount : previousVisionQueries;
+            int currentVisionEvaluations = vision != null
+                ? vision.WorldVisibilityEvaluationCount
+                : previousVisionEvaluations;
+            frameSamples.Add(new FramePerformanceSample
+            {
+                t = Round(elapsed),
+                frameMs = Round(frameMs),
+                cpuFrameMs = Round(cpuFrameMs),
+                gpuFrameMs = Round(gpuFrameMs),
+                gcBytes = RecorderValue(gcAllocatedRecorder),
+                drawCalls = RecorderValue(drawCallsRecorder),
+                setPassCalls = RecorderValue(setPassCallsRecorder),
+                triangles = RecorderValue(trianglesRecorder),
+                vertices = RecorderValue(verticesRecorder),
+                fixedSteps = fixedStepsSinceLastFrame,
+                visionQueries = Mathf.Max(0, currentVisionQueries - previousVisionQueries),
+                visionEvaluations = Mathf.Max(0, currentVisionEvaluations - previousVisionEvaluations)
+            });
+            fixedStepsSinceLastFrame = 0;
+            previousVisionQueries = currentVisionQueries;
+            previousVisionEvaluations = currentVisionEvaluations;
+        }
+
+        private void DisposePerformanceRecorders()
+        {
+            Dispose(ref gcAllocatedRecorder);
+            Dispose(ref drawCallsRecorder);
+            Dispose(ref setPassCallsRecorder);
+            Dispose(ref trianglesRecorder);
+            Dispose(ref verticesRecorder);
+        }
+
+        private static long RecorderValue(ProfilerRecorder recorder)
+        {
+            return recorder.Valid ? Math.Max(0L, recorder.LastValue) : 0L;
+        }
+
+        private static void Dispose(ref ProfilerRecorder recorder)
+        {
+            if (recorder.Valid) recorder.Dispose();
+            recorder = default;
+        }
+
+        private static float Percentile(float[] sortedValues, float percentile)
+        {
+            if (sortedValues == null || sortedValues.Length == 0) return 0f;
+            int index = Mathf.Clamp(
+                Mathf.CeilToInt(sortedValues.Length * Mathf.Clamp01(percentile)) - 1,
+                0,
+                sortedValues.Length - 1);
+            return sortedValues[index];
+        }
+
         private void OnDestroy()
         {
             if (recording) Stop();
+            else DisposePerformanceRecorders();
         }
 
         /// <summary>Registers every spawned member so events can be attributed by index, not by name.</summary>
@@ -538,10 +729,44 @@ namespace LocalTanks
             StringBuilder builder = new StringBuilder();
             builder.Append("{\"schemaVersion\":").Append(SchemaVersion).Append(',');
             builder.Append("\"summary\":").Append(SummaryJson()).Append(',');
+            builder.Append("\"performance\":").Append(PerformanceJson()).Append(',');
             builder.Append("\"tanks\":").Append(TracksJson()).Append(',');
             builder.Append("\"samples\":").Append(SamplesJson()).Append(',');
+            builder.Append("\"frames\":").Append(FrameSamplesJson()).Append(',');
             builder.Append("\"events\":").Append(EventsJson()).Append('}');
             return builder.ToString();
+        }
+
+        private string PerformanceJson()
+        {
+            BattlePerformanceSummary value = Performance();
+            return new StringBuilder()
+                .Append('{')
+                .Append($"\"frames\":{value.Frames},")
+                .Append($"\"averageFps\":{Number(value.AverageFps)},")
+                .Append($"\"averageFrameMs\":{Number(value.AverageFrameMs)},")
+                .Append($"\"medianFrameMs\":{Number(value.MedianFrameMs)},")
+                .Append($"\"p95FrameMs\":{Number(value.P95FrameMs)},")
+                .Append($"\"p99FrameMs\":{Number(value.P99FrameMs)},")
+                .Append($"\"maximumFrameMs\":{Number(value.MaximumFrameMs)},")
+                .Append($"\"p95CpuFrameMs\":{Number(value.P95CpuFrameMs)},")
+                .Append($"\"p95GpuFrameMs\":{Number(value.P95GpuFrameMs)},")
+                .Append($"\"framesOver33Ms\":{value.FramesOver33Ms},")
+                .Append($"\"framesOver50Ms\":{value.FramesOver50Ms},")
+                .Append($"\"framesOver100Ms\":{value.FramesOver100Ms},")
+                .Append($"\"totalGcBytes\":{value.TotalGcBytes},")
+                .Append($"\"peakGcBytes\":{value.PeakGcBytes},")
+                .Append($"\"gcAllocatingFrames\":{value.GcAllocatingFrames},")
+                .Append($"\"peakDrawCalls\":{value.PeakDrawCalls},")
+                .Append($"\"peakSetPassCalls\":{value.PeakSetPassCalls},")
+                .Append($"\"peakTriangles\":{value.PeakTriangles},")
+                .Append($"\"peakVertices\":{value.PeakVertices},")
+                .Append($"\"peakFixedStepsPerFrame\":{value.PeakFixedStepsPerFrame},")
+                .Append($"\"peakVisionQueriesPerFrame\":{value.PeakVisionQueriesPerFrame},")
+                .Append($"\"peakVisionEvaluationsPerFrame\":{value.PeakVisionEvaluationsPerFrame},")
+                .Append($"\"totalVisionEvaluations\":{value.TotalVisionEvaluations}")
+                .Append('}')
+                .ToString();
         }
 
         private string SummaryJson()
@@ -615,6 +840,19 @@ namespace LocalTanks
                 $"\"strategicIntent\":\"{Escape(sample.strategicIntent)}\"," +
                 $"\"threats\":{sample.threats},\"crossfire\":{(sample.crossfire ? "true" : "false")}," +
                 $"\"concealment\":{sample.concealment}}}")) + "]";
+        }
+
+        private string FrameSamplesJson()
+        {
+            return "[" + string.Join(",", frameSamples.Select(sample =>
+                $"{{\"t\":{Number(sample.t)},\"frameMs\":{Number(sample.frameMs)}," +
+                $"\"fps\":{Number(sample.frameMs > 0f ? 1000f / sample.frameMs : 0f)}," +
+                $"\"cpuFrameMs\":{Number(sample.cpuFrameMs)},\"gpuFrameMs\":{Number(sample.gpuFrameMs)}," +
+                $"\"gcBytes\":{sample.gcBytes},\"drawCalls\":{sample.drawCalls}," +
+                $"\"setPassCalls\":{sample.setPassCalls},\"triangles\":{sample.triangles}," +
+                $"\"vertices\":{sample.vertices},\"fixedSteps\":{sample.fixedSteps}," +
+                $"\"visionQueries\":{sample.visionQueries}," +
+                $"\"visionEvaluations\":{sample.visionEvaluations}}}")) + "]";
         }
 
         private string EventsJson()
@@ -718,6 +956,22 @@ namespace LocalTanks
             public int id;
             public string name;
             public string detail;
+        }
+
+        private struct FramePerformanceSample
+        {
+            public float t;
+            public float frameMs;
+            public float cpuFrameMs;
+            public float gpuFrameMs;
+            public long gcBytes;
+            public long drawCalls;
+            public long setPassCalls;
+            public long triangles;
+            public long vertices;
+            public int fixedSteps;
+            public int visionQueries;
+            public int visionEvaluations;
         }
     }
 }

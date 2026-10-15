@@ -650,6 +650,12 @@ function Invoke-UnityOperation {
         $arguments.Add($Seed)
     }
 
+    foreach ($extra in @($Entry.unityArguments)) {
+        if (-not [string]::IsNullOrWhiteSpace($extra)) {
+            $arguments.Add($extra)
+        }
+    }
+
     foreach ($extra in $UnityArgument) {
         $arguments.Add($extra)
     }

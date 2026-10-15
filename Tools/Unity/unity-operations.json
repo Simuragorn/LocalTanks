@@ -258,6 +258,21 @@
       ]
     },
     {
+      "name": "ProfileRiverCrossingBattle",
+      "kind": "Tests",
+      "testPlatform": "PlayMode",
+      "filter": "RiverCrossing_GraphicalPerformanceTelemetryStaysWithinFrameBudget",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Run a real-time 7x7 River Crossing battle with a graphics device and record per-frame FPS, latency, CPU/GPU timings, GC allocations and render counters.",
+      "unityArguments": [
+        "-enable-frame-timing-stats"
+      ],
+      "outputs": [
+        "TestResults/RiverCrossingPerformance.json"
+      ]
+    },
+    {
       "name": "CaptureSettingsPanel",
       "kind": "Tests",
       "testPlatform": "PlayMode",

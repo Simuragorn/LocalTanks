@@ -252,10 +252,15 @@ namespace LocalTanks.Tests
 
             telemetry.RecordFire(shooter, "test_shell", roll);
             telemetry.RecordShot(shooter, null, "Blocked", 0, "test_shell", roll, 0.31f);
+            yield return null;
+            yield return null;
             string json = telemetry.Stop();
 
             Assert.That(json, Does.Contain("sequence=12"));
-            Assert.That(json, Does.Contain("\"schemaVersion\":3"));
+            Assert.That(json, Does.Contain("\"schemaVersion\":4"));
+            Assert.That(json, Does.Contain("\"performance\":"));
+            Assert.That(json, Does.Contain("\"frames\":"));
+            Assert.That(telemetry.FrameSampleCount, Is.GreaterThan(0));
             Assert.That(json, Does.Match("\\\"decisionFingerprint\\\":\\\"[0-9a-f]{16}\\\""));
             Assert.That(telemetry.FingerprintedDecisionCount, Is.EqualTo(2));
             Assert.That(json, Does.Contain("\"randomSeed\":1701"));

@@ -49,6 +49,7 @@ namespace LocalTanks.Tests
             public int timeoutSeconds;
             public string description;
             public string[] outputs;
+            public string[] unityArguments;
         }
 
         private static string ProjectRoot
@@ -181,6 +182,20 @@ namespace LocalTanks.Tests
                     $"'{platform}Tests' must run headless: a suite proves what it proves from data, logs and " +
                     "telemetry, and a graphics device only makes it slower and puts a window in the way.");
             }
+        }
+
+        [Test]
+        public void RiverCrossingPerformanceRun_UsesGraphicsAndFrameTimingStats()
+        {
+            OperationEntry entry = LoadOperations()
+                .FirstOrDefault(item => item.name == "ProfileRiverCrossingBattle");
+
+            Assert.That(entry, Is.Not.Null);
+            Assert.That(entry.kind, Is.EqualTo("Tests"));
+            Assert.That(entry.testPlatform, Is.EqualTo("PlayMode"));
+            Assert.That(entry.requiresGraphics, Is.True);
+            Assert.That(entry.unityArguments, Does.Contain("-enable-frame-timing-stats"));
+            Assert.That(entry.outputs, Does.Contain("TestResults/RiverCrossingPerformance.json"));
         }
 
         [Test]

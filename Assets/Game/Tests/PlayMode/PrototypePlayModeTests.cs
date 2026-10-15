@@ -1,8 +1,10 @@
 using System.Collections;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using UnityEngine.Tilemaps;
 using UnityEngine.UIElements;
@@ -11,6 +13,70 @@ namespace LocalTanks.Tests
 {
     public sealed class PrototypePlayModeTests
     {
+        [UnityTest]
+        public IEnumerator RiverCrossing_GraphicalPerformanceTelemetryStaysWithinFrameBudget()
+        {
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
+                Assert.Ignore("Run the ProfileRiverCrossingBattle operation with a graphics device.");
+
+            string outputPath = Path.GetFullPath(Path.Combine(
+                Application.dataPath,
+                "..",
+                "TestResults",
+                "RiverCrossingPerformance.json"));
+            int previousTargetFrameRate = Application.targetFrameRate;
+            int previousVSyncCount = QualitySettings.vSyncCount;
+            float previousTimeScale = Time.timeScale;
+            BattleTelemetry telemetry = null;
+            try
+            {
+                Application.targetFrameRate = 60;
+                QualitySettings.vSyncCount = 0;
+                Time.timeScale = 1f;
+                SceneManager.LoadScene("Battle_RiverCrossing");
+
+                BattleDirector director = null;
+                for (int frame = 0; frame < 240; frame++)
+                {
+                    yield return null;
+                    director = Object.FindAnyObjectByType<BattleDirector>();
+                    if (director != null && director.SpawnedMembers.Count == BattleScenario.TeamSize * 2)
+                        break;
+                }
+
+                Assert.That(director, Is.Not.Null);
+                Assert.That(director.SpawnedMembers, Has.Count.EqualTo(BattleScenario.TeamSize * 2));
+                telemetry = BattleTelemetry.Attach(director, outputPath);
+
+                float finishAt = Time.realtimeSinceStartup + 30f;
+                while (Time.realtimeSinceStartup < finishAt) yield return null;
+
+                telemetry.Stop();
+                BattlePerformanceSummary performance = telemetry.Performance();
+                Debug.Log(
+                    $"RIVER_CROSSING_PERFORMANCE frames={performance.Frames} " +
+                    $"fps={performance.AverageFps:0.0} p95={performance.P95FrameMs:0.00}ms " +
+                    $"p99={performance.P99FrameMs:0.00}ms max={performance.MaximumFrameMs:0.00}ms " +
+                    $"cpu95={performance.P95CpuFrameMs:0.00}ms gpu95={performance.P95GpuFrameMs:0.00}ms " +
+                    $"slow50={performance.FramesOver50Ms} slow100={performance.FramesOver100Ms} " +
+                    $"gc={performance.TotalGcBytes} peakDraws={performance.PeakDrawCalls}");
+
+                Assert.That(File.Exists(outputPath), Is.True, "The performance run must leave readable evidence.");
+                Assert.That(performance.Frames, Is.GreaterThan(300));
+                Assert.That(performance.P95FrameMs, Is.LessThanOrEqualTo(33.34f),
+                    "At least 95% of battle frames must stay above 30 FPS on the reference machine.");
+                Assert.That(performance.FramesOver100Ms, Is.LessThanOrEqualTo(2),
+                    "A 30-second battle sample may not contain repeated visible 100 ms stalls.");
+            }
+            finally
+            {
+                if (telemetry != null && telemetry.IsRecording) telemetry.Stop();
+                Application.targetFrameRate = previousTargetFrameRate;
+                QualitySettings.vSyncCount = previousVSyncCount;
+                Time.timeScale = previousTimeScale;
+            }
+        }
+
         [UnityTest]
         public IEnumerator RiverCrossing_StartsFromRuntimeTacticalAnalysis()
         {
