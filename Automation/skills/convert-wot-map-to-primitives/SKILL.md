@@ -145,6 +145,13 @@ wall until someone classifies it instead of vanishing silently.
 
 ## Routes must be walkable and outrank the strategic layer
 
+- `SceneNavigationBaker` runs before tanks spawn and re-rasterizes the navigation obstacle mask from
+  the loaded scene's actual solid `Collider2D` geometry. Ignore triggers, vegetation, capture zones and
+  dynamic bodies. The imported map supplies grid bounds and ground types, not the final position of walls;
+  moving or deleting a rock in a generated scene must therefore need no manual navigation edit;
+- treat generated lane paths as tactical hints. At runtime retain a small set of anchors, move a blocked
+  anchor to nearby walkable ground, prove every leg with the current grid and let `NavigationAgent` build
+  the detailed A* path. Never serialize a second hand-maintained route for a moved obstacle;
 - drop route points whose navigation cell is closed and orient the lane by geometry
   from the team's own base; assuming the direction sends a team across the map from
   the enemy's side;
