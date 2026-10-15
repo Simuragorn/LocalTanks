@@ -1,5 +1,7 @@
 {
   "schemaVersion": 1,
+  "wreckFireSeconds": 30.0,
+  "cooledWreckSmokeMultiplier": 1.4,
   "weaponProfiles": [
     {
       "id": "autocannon",
@@ -136,7 +138,7 @@
       "displayName": "Тяжело повреждённая машина",
       "minHealthFraction": 0.25,
       "wreck": false,
-      "smokeRate": 5.0,
+      "smokeRate": 3.5,
       "smokeOpacity": 0.3,
       "smokeSizeFraction": 0.8,
       "smokeRise": 1.0,
@@ -147,7 +149,7 @@
       "displayName": "Критически повреждённая машина",
       "minHealthFraction": 0.0,
       "wreck": false,
-      "smokeRate": 11.0,
+      "smokeRate": 4.5,
       "smokeOpacity": 0.44,
       "smokeSizeFraction": 1.0,
       "smokeRise": 1.15,
@@ -158,8 +160,8 @@
       "displayName": "Остов",
       "minHealthFraction": 0.0,
       "wreck": true,
-      "smokeRate": 11.0,
-      "smokeOpacity": 0.5,
+      "smokeRate": 5.0,
+      "smokeOpacity": 0.42,
       "smokeSizeFraction": 1.2,
       "smokeRise": 1.25,
       "fire": true

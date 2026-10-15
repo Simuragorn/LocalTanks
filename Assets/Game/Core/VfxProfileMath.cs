@@ -121,5 +121,11 @@ namespace LocalTanks
             const float LargestScale = 2.2f;
             return Mathf.Clamp(Mathf.Max(0f, shellRadius) / ReferenceRadius, SmallestScale, LargestScale);
         }
+
+        /// <summary>Whether a destroyed machine is still inside its authored burning interval.</summary>
+        public static bool WreckFireActive(float elapsedSeconds, float fireSeconds)
+        {
+            return Mathf.Max(0f, elapsedSeconds) < Mathf.Max(0f, fireSeconds);
+        }
     }
 }

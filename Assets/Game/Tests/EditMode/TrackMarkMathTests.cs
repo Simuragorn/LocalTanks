@@ -156,6 +156,16 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void WreckFireActive_StopsExactlyAtTheConfiguredDuration()
+        {
+            Assert.That(VfxProfileMath.WreckFireActive(0f, 30f), Is.True);
+            Assert.That(VfxProfileMath.WreckFireActive(29.999f, 30f), Is.True);
+            Assert.That(VfxProfileMath.WreckFireActive(30f, 30f), Is.False);
+            Assert.That(VfxProfileMath.WreckFireActive(60f, 30f), Is.False);
+            Assert.That(VfxProfileMath.WreckFireActive(-1f, -1f), Is.False);
+        }
+
+        [Test]
         public void ScaleCount_NeverLosesAnEffectThatWasAskedFor()
         {
             Assert.That(VfxProfileMath.ScaleCount(0, 1f), Is.EqualTo(0));

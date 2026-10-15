@@ -234,6 +234,13 @@ namespace LocalTanks
         public const string RicochetedOutcomeId = "ricocheted";
 
         public int schemaVersion = 1;
+        [Min(0f)] public float wreckFireSeconds = 30f;
+
+        /// <summary>
+        /// A cooled wreck no longer burns, but its hot metal keeps producing denser smoke. The multiplier
+        /// reuses the one wreck profile instead of introducing a second manually synchronized copy.
+        /// </summary>
+        [Min(1f)] public float cooledWreckSmokeMultiplier = 1.75f;
         public WeaponVfxProfile[] weaponProfiles = Array.Empty<WeaponVfxProfile>();
         public MovementVfxProfile[] movementProfiles = Array.Empty<MovementVfxProfile>();
         public DamageVfxProfile[] damageProfiles = Array.Empty<DamageVfxProfile>();
@@ -404,6 +411,12 @@ namespace LocalTanks
             if (schemaVersion != 1)
             {
                 errors.Add($"Combat VFX catalog has unsupported schemaVersion {schemaVersion}.");
+            }
+
+            RequireNonNegative(wreckFireSeconds, nameof(wreckFireSeconds), errors);
+            if (cooledWreckSmokeMultiplier < 1f)
+            {
+                errors.Add($"{nameof(cooledWreckSmokeMultiplier)} must be at least 1, found {cooledWreckSmokeMultiplier}.");
             }
 
             HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);

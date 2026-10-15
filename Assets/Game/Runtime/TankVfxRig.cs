@@ -71,6 +71,7 @@ namespace LocalTanks
         private float halfTrackOffset = 0.18f;
         private bool built;
         private bool destroyed;
+        private float destroyedSeconds;
         private float appliedDustRate = -1f;
         private float appliedSprayRate = -1f;
         private float appliedExhaustRate = -1f;
@@ -79,6 +80,7 @@ namespace LocalTanks
         private bool wasMoving;
         private TerrainKind appliedSurface = TerrainKind.Blocked;
         private DamageVfxProfile appliedDamage;
+        private bool appliedWreckFireActive;
 
         public bool IsBuilt => built;
         public bool HasVisuals => built && (marks != null || leftDust != null || damageSmoke != null);
@@ -94,6 +96,8 @@ namespace LocalTanks
         public float BarrelSmokeSecondsLeft => barrelSmokeSecondsLeft;
         public TerrainKind CurrentSurface { get; private set; } = TerrainKind.Grass;
         public DamageVfxProfile CurrentDamageProfile => appliedDamage;
+        public float DestroyedSeconds => destroyedSeconds;
+        public bool IsWreckFireActive => destroyed && appliedWreckFireActive;
         public Vector2 HullSize => hullSize;
 
         /// <summary>Distance between the track centre lines used for prints and dust.</summary>
@@ -169,6 +173,7 @@ namespace LocalTanks
             float deltaTime = Time.deltaTime;
             if (destroyed)
             {
+                destroyedSeconds += Mathf.Max(0f, deltaTime);
                 SuppressMovement();
             }
             else if (!IsVisibleToPlayer())
@@ -580,16 +585,20 @@ namespace LocalTanks
                 ? VfxProfileMath.HealthFraction(health.CurrentHitPoints, health.MaximumHitPoints)
                 : 1f;
             DamageVfxProfile profile = catalog.ResolveDamage(fraction, isDestroyed);
-            if (ReferenceEquals(profile, appliedDamage))
+            bool wreckFireActive = isDestroyed && profile != null && profile.fire &&
+                                   VfxProfileMath.WreckFireActive(destroyedSeconds, catalog.wreckFireSeconds);
+            if (ReferenceEquals(profile, appliedDamage) && wreckFireActive == appliedWreckFireActive)
             {
                 return;
             }
 
             appliedDamage = profile;
-            ApplyDamageProfile(profile);
+            appliedWreckFireActive = wreckFireActive;
+            ApplyDamageProfile(profile, wreckFireActive,
+                isDestroyed && !wreckFireActive ? catalog.cooledWreckSmokeMultiplier : 1f);
         }
 
-        private void ApplyDamageProfile(DamageVfxProfile profile)
+        private void ApplyDamageProfile(DamageVfxProfile profile, bool fireActive, float smokeMultiplier)
         {
             if (profile == null)
             {
@@ -609,13 +618,13 @@ namespace LocalTanks
                 }
 
                 ApplyVelocityScale(damageSmoke, profile.smokeRise);
-                SetEmission(damageSmoke, profile.smokeRate);
+                SetEmission(damageSmoke, profile.smokeRate * Mathf.Max(1f, smokeMultiplier));
             }
 
             // Burning is decided by the band, and only the wreck band burns: a machine on its last legs
             // smokes, and fire is what tells the player that this machine is finished. The layered rates
             // belong to the generated prefab, so the rig only opens and closes the fire.
-            SetEmissionEnabled(damageFire, profile.fire);
+            SetEmissionEnabled(damageFire, fireActive);
         }
 
         private void Subscribe()
@@ -707,6 +716,8 @@ namespace LocalTanks
         private void OnDestroyed(TankHealth source)
         {
             destroyed = true;
+            destroyedSeconds = 0f;
+            appliedDamage = null;
             SuppressMovement();
             CombatVfxSystem system = CombatVfxSystem.Current;
             if (system == null)
