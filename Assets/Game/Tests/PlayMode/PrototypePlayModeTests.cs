@@ -14,6 +14,7 @@ namespace LocalTanks.Tests
     public sealed class PrototypePlayModeTests
     {
         [UnityTest]
+        [Explicit("Use the ProfileRiverCrossingBattle operation; the Unity Test Framework distorts per-frame GC measurements.")]
         public IEnumerator RiverCrossing_GraphicalPerformanceTelemetryStaysWithinFrameBudget()
         {
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
@@ -46,10 +47,13 @@ namespace LocalTanks.Tests
 
                 Assert.That(director, Is.Not.Null);
                 Assert.That(director.SpawnedMembers, Has.Count.EqualTo(BattleScenario.TeamSize * 2));
+                yield return new WaitForSecondsRealtime(2f);
                 telemetry = BattleTelemetry.Attach(director, outputPath);
 
-                float finishAt = Time.realtimeSinceStartup + 30f;
-                while (Time.realtimeSinceStartup < finishAt) yield return null;
+                // Yielding null here would return control to the Unity Test Framework on every rendered
+                // frame. In the editor that runner itself allocates enough memory to create periodic GC
+                // stalls, so a single realtime wait keeps the measuring apparatus out of the measurement.
+                yield return new WaitForSecondsRealtime(30f);
 
                 telemetry.Stop();
                 BattlePerformanceSummary performance = telemetry.Performance();
@@ -774,6 +778,12 @@ namespace LocalTanks.Tests
             Assert.That(director.DiagnosticsOverlay, Is.Not.Null);
             Assert.That(director.DiagnosticsOverlay.HelpVisible, Is.False);
             Assert.That(director.DiagnosticsOverlay.MapAnalysisVisible, Is.False);
+            Assert.That(director.DiagnosticsOverlay.PerformanceVisible, Is.False);
+            director.DiagnosticsOverlay.TogglePerformance();
+            Assert.That(director.DiagnosticsOverlay.PerformanceVisible, Is.True);
+            Assert.That(BattleDiagnosticsOverlay.AnyModalVisible, Is.False,
+                "The small performance counter must not block battle input.");
+            director.DiagnosticsOverlay.TogglePerformance();
             director.DiagnosticsOverlay.ToggleHelp();
             Assert.That(director.DiagnosticsOverlay.HelpVisible, Is.True);
             Assert.That(BattleDiagnosticsOverlay.AnyModalVisible, Is.True);

@@ -612,7 +612,11 @@ function Invoke-UnityOperation {
     } else {
         $arguments.Add('-executeMethod')
         $arguments.Add($ResolvedExecuteMethod)
-        $arguments.Add('-quit')
+        # Most editor methods finish synchronously and let Unity quit immediately. Long-running methods
+        # explicitly marked asynchronous own their EditorApplication lifecycle and call Exit themselves.
+        if (-not $Entry.asynchronous) {
+            $arguments.Add('-quit')
+        }
     }
 
     if ($Telemetry) {

@@ -160,6 +160,7 @@ namespace LocalTanks
 
         private void Update()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.TankVfx);
             if (config == null || motor == null)
             {
                 return;

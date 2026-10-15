@@ -220,6 +220,7 @@ namespace LocalTanks
 
         private void FixedUpdate()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.TrackAnimation);
             Vector2 position = CurrentPosition();
             float rotation = CurrentRotation();
             Vector2 delta = position - previousPosition;

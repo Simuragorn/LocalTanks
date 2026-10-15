@@ -83,6 +83,7 @@ namespace LocalTanks
 
         private void Update()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.Capture);
             Tick(Time.deltaTime);
         }
 

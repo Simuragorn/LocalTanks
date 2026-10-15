@@ -45,6 +45,7 @@ namespace LocalTanks.Tests
             public string kind;
             public string testPlatform;
             public string executeMethod;
+            public bool asynchronous;
             public bool requiresGraphics;
             public int timeoutSeconds;
             public string description;
@@ -191,10 +192,14 @@ namespace LocalTanks.Tests
                 .FirstOrDefault(item => item.name == "ProfileRiverCrossingBattle");
 
             Assert.That(entry, Is.Not.Null);
-            Assert.That(entry.kind, Is.EqualTo("Tests"));
-            Assert.That(entry.testPlatform, Is.EqualTo("PlayMode"));
+            Assert.That(entry.kind, Is.EqualTo("ExecuteMethod"));
+            Assert.That(entry.executeMethod,
+                Is.EqualTo("LocalTanks.Editor.LocalTanksPerformanceEditorRunner.RunFromCommandLine"));
+            Assert.That(entry.asynchronous, Is.True);
             Assert.That(entry.requiresGraphics, Is.True);
             Assert.That(entry.unityArguments, Does.Contain("-enable-frame-timing-stats"));
+            Assert.That(entry.unityArguments, Does.Contain("-localtanksPerformance"));
+            Assert.That(entry.unityArguments, Does.Contain("-localtanksPerformanceAudio"));
             Assert.That(entry.outputs, Does.Contain("TestResults/RiverCrossingPerformance.json"));
         }
 

@@ -46,6 +46,7 @@ namespace LocalTanks
             new GameCommandInfo("ai_debug", "F4", "Открыть инспектор ИИ", GameCommandGroup.Development),
             new GameCommandInfo("time_scale", "F5", "Переключить скорость времени ×1 / ×3", GameCommandGroup.Development),
             new GameCommandInfo("map_analysis", "F6", "Показать оценку карты и планы команд", GameCommandGroup.Development),
+            new GameCommandInfo("performance", "F8", "Показать FPS и задержки кадров", GameCommandGroup.Development),
             new GameCommandInfo("duel_pause", "Space", "Пауза в AI Duel Lab", GameCommandGroup.Development),
             new GameCommandInfo("duel_restart", "Ctrl+R", "Перезапустить текущую дуэль AI Duel Lab", GameCommandGroup.Development),
             new GameCommandInfo("duel_cases", "B / N", "Предыдущий или следующий сценарий AI Duel Lab", GameCommandGroup.Development)

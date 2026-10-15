@@ -16,6 +16,7 @@ namespace LocalTanks.Tests
                 !string.IsNullOrWhiteSpace(item.binding) && !string.IsNullOrWhiteSpace(item.description)));
             Assert.That(commands.Single(item => item.id == "help").binding, Is.EqualTo("F1"));
             Assert.That(commands.Single(item => item.id == "map_analysis").binding, Is.EqualTo("F6"));
+            Assert.That(commands.Single(item => item.id == "performance").binding, Is.EqualTo("F8"));
             Assert.That(commands.Single(item => item.id == "bot_selection").binding, Does.Contain("Tab"));
             Assert.That(commands.Single(item => item.id == "reload").binding, Is.EqualTo("R"));
             Assert.That(commands.Single(item => item.id == "aim_mode").binding, Is.EqualTo("Shift"));

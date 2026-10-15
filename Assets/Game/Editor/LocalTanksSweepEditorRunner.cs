@@ -164,4 +164,22 @@ namespace LocalTanks.Editor
             }
         }
     }
+
+    /// <summary>Enters play mode; the command-line runtime bootstrap owns the timed run and process exit.</summary>
+    public static class LocalTanksPerformanceEditorRunner
+    {
+        public static void RunFromCommandLine()
+        {
+            Debug.Log("Entering play mode for the River Crossing frame performance run.");
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
+            EditorApplication.EnterPlaymode();
+        }
+
+        private static void OnPlayModeChanged(PlayModeStateChange state)
+        {
+            if (state != PlayModeStateChange.EnteredPlayMode) return;
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+            BattlePerformanceCommandLineRunner.Create();
+        }
+    }
 }

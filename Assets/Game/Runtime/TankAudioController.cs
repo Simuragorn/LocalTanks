@@ -20,7 +20,7 @@ namespace LocalTanks
             // are usually absent and any audio that did play would be a surprise for whoever runs the
             // tests. Loading nothing keeps the simulation identical and the run silent. The library
             // applies the same rule, and this early return keeps the guarantee visible here as well.
-            if (Application.isBatchMode)
+            if (AudioRuntimePolicy.IsSuppressed)
             {
                 return null;
             }
@@ -98,6 +98,7 @@ namespace LocalTanks
 
         private void Update()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.Audio);
             TankAudioProfile profile = config != null ? config.audio : null;
             if (profile == null || motor == null || (health != null && health.IsDestroyed))
             {

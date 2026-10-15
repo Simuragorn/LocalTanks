@@ -287,6 +287,7 @@ namespace LocalTanks
 
         private void FixedUpdate()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.Navigation);
             if (map == null || motor == null)
             {
                 return;

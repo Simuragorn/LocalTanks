@@ -279,6 +279,7 @@ namespace LocalTanks
 
         private void Update()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.CombatVfx);
             pool.Tick(Time.deltaTime);
         }
 
@@ -361,6 +362,10 @@ namespace LocalTanks
         private GameObject CreateRootContainer(string containerName)
         {
             GameObject container = new GameObject(containerName);
+            // Thousands of pooled particles and tread prints make the Editor redraw a huge Hierarchy on
+            // every change. Hiding only their generated root keeps the battle view identical while
+            // removing that Editor-only UI cost; diagnostics still find inactive children by type.
+            container.hideFlags = HideFlags.HideInHierarchy;
             container.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             container.transform.localScale = Vector3.one;
             if (gameObject.scene.IsValid())

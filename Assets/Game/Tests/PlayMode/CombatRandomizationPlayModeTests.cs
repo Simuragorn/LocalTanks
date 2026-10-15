@@ -244,6 +244,9 @@ namespace LocalTanks.Tests
             string path = Path.Combine(Path.GetTempPath(), "LocalTanks_P5_" + Guid.NewGuid().ToString("N") + ".json");
             GameObject directorObject = new GameObject("TelemetryDirector");
             BattleDirector director = directorObject.AddComponent<BattleDirector>();
+            // This is a recorder fixture, not a battle scene. Keep Start from validating/spawning a
+            // scenario while the test yields frames for the telemetry sampler.
+            director.enabled = false;
             GameObject shooterObject = new GameObject("TelemetryShooter");
             TeamMember shooter = shooterObject.AddComponent<TeamMember>();
             shooter.Configure(TeamId.TeamA, true);

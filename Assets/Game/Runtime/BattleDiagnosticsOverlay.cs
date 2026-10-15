@@ -11,6 +11,17 @@ namespace LocalTanks
         [SerializeField] private BattleDirector director;
         [SerializeField] private bool helpVisible;
         [SerializeField] private bool mapAnalysisVisible;
+        [SerializeField] private bool performanceVisible;
+
+        private const int PerformanceHistorySize = 120;
+        private readonly float[] performanceHistory = new float[PerformanceHistorySize];
+        private readonly float[] performanceScratch = new float[PerformanceHistorySize];
+        private int performanceHistoryCount;
+        private int performanceHistoryCursor;
+        private float performanceRefreshLeft;
+        private float displayedFps;
+        private float displayedP95Ms;
+        private float displayedMaximumMs;
 
         private Vector2 helpScroll;
         private Vector2 mapScroll;
@@ -27,6 +38,7 @@ namespace LocalTanks
         public static bool AnyModalVisible => ModalUiState.AnyOpen;
         public bool HelpVisible => helpVisible;
         public bool MapAnalysisVisible => mapAnalysisVisible;
+        public bool PerformanceVisible => performanceVisible;
 
         public void Configure(BattleDirector battleDirector)
         {
@@ -45,6 +57,11 @@ namespace LocalTanks
             mapAnalysisVisible = !mapAnalysisVisible;
             if (mapAnalysisVisible) helpVisible = false;
             RefreshModalState();
+        }
+
+        public void TogglePerformance()
+        {
+            performanceVisible = !performanceVisible;
         }
 
         public void CloseTopWindow()
@@ -66,6 +83,7 @@ namespace LocalTanks
 
         private void Update()
         {
+            RecordFramePerformance();
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
@@ -77,6 +95,10 @@ namespace LocalTanks
             {
                 ToggleMapAnalysis();
             }
+            else if (keyboard.f8Key.wasPressedThisFrame)
+            {
+                TogglePerformance();
+            }
             else if (keyboard.escapeKey.wasPressedThisFrame && (helpVisible || mapAnalysisVisible))
             {
                 CloseTopWindow();
@@ -86,6 +108,7 @@ namespace LocalTanks
         private void OnGUI()
         {
             EnsureStyles();
+            if (performanceVisible) DrawPerformance();
             if (!helpVisible && !mapAnalysisVisible) return;
 
             GUI.depth = -100;
@@ -95,6 +118,45 @@ namespace LocalTanks
             GUI.color = previousColor;
             if (helpVisible) DrawHelp();
             else if (mapAnalysisVisible) DrawMapAnalysis();
+        }
+
+        private void RecordFramePerformance()
+        {
+            float milliseconds = Mathf.Max(0f, Time.unscaledDeltaTime * 1000f);
+            if (milliseconds <= 0f) return;
+
+            performanceHistory[performanceHistoryCursor] = milliseconds;
+            performanceHistoryCursor = (performanceHistoryCursor + 1) % PerformanceHistorySize;
+            performanceHistoryCount = Mathf.Min(PerformanceHistorySize, performanceHistoryCount + 1);
+            performanceRefreshLeft -= Time.unscaledDeltaTime;
+            if (!performanceVisible || performanceRefreshLeft > 0f) return;
+
+            performanceRefreshLeft = 0.25f;
+            Array.Copy(performanceHistory, performanceScratch, performanceHistoryCount);
+            Array.Sort(performanceScratch, 0, performanceHistoryCount);
+            float total = 0f;
+            for (int index = 0; index < performanceHistoryCount; index++)
+            {
+                total += performanceScratch[index];
+            }
+            float averageMs = total / Mathf.Max(1, performanceHistoryCount);
+            displayedFps = averageMs > 0f ? 1000f / averageMs : 0f;
+            int p95Index = Mathf.Clamp(Mathf.CeilToInt(performanceHistoryCount * 0.95f) - 1,
+                0, performanceHistoryCount - 1);
+            displayedP95Ms = performanceScratch[p95Index];
+            displayedMaximumMs = performanceScratch[performanceHistoryCount - 1];
+        }
+
+        private void DrawPerformance()
+        {
+            Rect panel = new Rect(12f, 12f, 245f, 82f);
+            LocalTanksGuiTheme.DrawPanel(panel);
+            string quality = displayedP95Ms <= 16.8f ? "стабильно" :
+                displayedP95Ms <= 33.34f ? "заметные задержки" : "сильные задержки";
+            GUI.Label(new Rect(panel.x + 12f, panel.y + 8f, panel.width - 24f, 22f),
+                $"FPS {displayedFps:0.0}  ·  {quality}", sectionStyle);
+            GUI.Label(new Rect(panel.x + 12f, panel.y + 34f, panel.width - 24f, 38f),
+                $"Кадр p95: {displayedP95Ms:0.00} мс\nХудший из 120: {displayedMaximumMs:0.00} мс", bodyStyle);
         }
 
         private void DrawHelp()

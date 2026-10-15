@@ -32,7 +32,7 @@ namespace LocalTanks
             Transform parent,
             int voiceLimit = DefaultVoiceLimit)
         {
-            if (Application.isBatchMode && clipProvider is ResourcesTankAudioClipProvider)
+            if (AudioRuntimePolicy.IsSuppressed && clipProvider is ResourcesTankAudioClipProvider)
             {
                 return;
             }
@@ -66,7 +66,7 @@ namespace LocalTanks
             }
 
             // Automated suites run in batchmode; they must not create audio objects or play clips.
-            if (Application.isBatchMode && clipProvider is ResourcesTankAudioClipProvider)
+            if (AudioRuntimePolicy.IsSuppressed && clipProvider is ResourcesTankAudioClipProvider)
             {
                 return;
             }

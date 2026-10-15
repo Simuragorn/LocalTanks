@@ -106,7 +106,8 @@ namespace LocalTanks
     {
         public GameObject LoadPrefab(string effectId)
         {
-            if (Application.isBatchMode || string.IsNullOrWhiteSpace(effectId))
+            if ((Application.isBatchMode && !BattlePerformanceCommandLineRunner.IsRequested) ||
+                string.IsNullOrWhiteSpace(effectId))
             {
                 return null;
             }
@@ -116,7 +117,9 @@ namespace LocalTanks
 
         public Sprite LoadMarkSprite(string variant)
         {
-            return Application.isBatchMode ? null : Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath(variant));
+            return Application.isBatchMode && !BattlePerformanceCommandLineRunner.IsRequested
+                ? null
+                : Resources.Load<Sprite>(CombatVfxEffects.MarkSpritePath(variant));
         }
     }
 

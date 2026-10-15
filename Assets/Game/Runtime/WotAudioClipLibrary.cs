@@ -35,6 +35,7 @@ namespace LocalTanks
     /// </remarks>
     public sealed class WotAudioClipLibrary : ITankAudioClipProvider
     {
+        public const string PerformanceAudioSwitch = "-localtanksPerformanceAudio";
         public const string ClipResourceRoot = "WoTAudio";
         public const string ManifestResourceName = "WoTAudio/audio_manifest";
 
@@ -104,7 +105,7 @@ namespace LocalTanks
         {
             // Batchmode suites must stay silent: the extracted WoT clips are usually absent on a build
             // machine and a test run that suddenly plays music would be a surprise for whoever runs it.
-            bool silent = Application.isBatchMode;
+            bool silent = AudioRuntimePolicy.IsSuppressed;
             string manifestJson = silent ? null : LoadManifestText();
             return new WotAudioClipLibrary(
                 manifestJson,
@@ -206,5 +207,14 @@ namespace LocalTanks
                 warn(message);
             }
         }
+    }
+
+    /// <summary>One batch-mode audio rule shared by runtime providers and the performance diagnostic.</summary>
+    public static class AudioRuntimePolicy
+    {
+        public static bool IsSuppressed => Application.isBatchMode &&
+                                           !Array.Exists(
+                                               Environment.GetCommandLineArgs(),
+                                               argument => argument == WotAudioClipLibrary.PerformanceAudioSwitch);
     }
 }

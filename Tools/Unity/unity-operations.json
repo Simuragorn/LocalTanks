@@ -259,14 +259,16 @@
     },
     {
       "name": "ProfileRiverCrossingBattle",
-      "kind": "Tests",
-      "testPlatform": "PlayMode",
-      "filter": "RiverCrossing_GraphicalPerformanceTelemetryStaysWithinFrameBudget",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.LocalTanksPerformanceEditorRunner.RunFromCommandLine",
+      "asynchronous": true,
       "requiresGraphics": true,
       "timeoutSeconds": 1800,
       "description": "Run a real-time 7x7 River Crossing battle with a graphics device and record per-frame FPS, latency, CPU/GPU timings, GC allocations and render counters.",
       "unityArguments": [
-        "-enable-frame-timing-stats"
+        "-enable-frame-timing-stats",
+        "-localtanksPerformance",
+        "-localtanksPerformanceAudio"
       ],
       "outputs": [
         "TestResults/RiverCrossingPerformance.json"

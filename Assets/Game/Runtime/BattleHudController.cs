@@ -136,6 +136,7 @@ namespace LocalTanks
 
         private void Update()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.Hud);
             // The battle clock reads the director, so it updates on its own cadence and never on the capture
             // cadence: a timer that ticks ten times a second is noise, and a result must appear at once.
             if (Time.unscaledTime >= nextClockRefreshTime)

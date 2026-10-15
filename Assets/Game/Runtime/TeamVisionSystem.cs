@@ -92,6 +92,7 @@ namespace LocalTanks
 
         private void FixedUpdate()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.Vision);
             if (rules == null)
             {
                 return;

@@ -6,9 +6,89 @@ using System.Linq;
 using System.Text;
 using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace LocalTanks
 {
+    internal enum BattlePerformanceSubsystem
+    {
+        CombatAi,
+        Navigation,
+        Motor,
+        Vision,
+        TankVfx,
+        TrackAnimation,
+        Audio,
+        Hud,
+        CombatVfx,
+        Capture,
+        Count
+    }
+
+    /// <summary>
+    /// Allocation-free diagnostic scopes used only while battle telemetry is recording. They attribute
+    /// long frames and managed allocations to broad gameplay systems without enabling Unity Deep Profile.
+    /// </summary>
+    internal static class BattlePerformanceProbe
+    {
+        private static readonly long[] ElapsedTicks = new long[(int)BattlePerformanceSubsystem.Count];
+        private static readonly long[] AllocatedBytes = new long[(int)BattlePerformanceSubsystem.Count];
+        private static bool enabled;
+
+        internal static Scope Measure(BattlePerformanceSubsystem subsystem) => new Scope(enabled, subsystem);
+
+        internal static void Start()
+        {
+            Array.Clear(ElapsedTicks, 0, ElapsedTicks.Length);
+            Array.Clear(AllocatedBytes, 0, AllocatedBytes.Length);
+            enabled = true;
+        }
+
+        internal static void Stop()
+        {
+            enabled = false;
+            Array.Clear(ElapsedTicks, 0, ElapsedTicks.Length);
+            Array.Clear(AllocatedBytes, 0, AllocatedBytes.Length);
+        }
+
+        internal static void Consume(
+            BattlePerformanceSubsystem subsystem,
+            out float elapsedMs,
+            out long allocatedBytes)
+        {
+            int index = (int)subsystem;
+            elapsedMs = (float)(ElapsedTicks[index] * 1000d / System.Diagnostics.Stopwatch.Frequency);
+            allocatedBytes = AllocatedBytes[index];
+            ElapsedTicks[index] = 0L;
+            AllocatedBytes[index] = 0L;
+        }
+
+        internal readonly struct Scope : IDisposable
+        {
+            private readonly bool active;
+            private readonly int subsystem;
+            private readonly long startedAt;
+            private readonly long allocatedAtStart;
+
+            internal Scope(bool active, BattlePerformanceSubsystem subsystem)
+            {
+                this.active = active;
+                this.subsystem = (int)subsystem;
+                startedAt = active ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
+                allocatedAtStart = active ? GC.GetAllocatedBytesForCurrentThread() : 0L;
+            }
+
+            public void Dispose()
+            {
+                if (!active) return;
+                ElapsedTicks[subsystem] += System.Diagnostics.Stopwatch.GetTimestamp() - startedAt;
+                AllocatedBytes[subsystem] += Math.Max(
+                    0L,
+                    GC.GetAllocatedBytesForCurrentThread() - allocatedAtStart);
+            }
+        }
+    }
+
     /// <summary>
     /// End state of a recorded battle, for callers that compare runs rather than read a file.
     /// </summary>
@@ -56,6 +136,12 @@ namespace LocalTanks
         public int PeakVisionQueriesPerFrame;
         public int PeakVisionEvaluationsPerFrame;
         public int TotalVisionEvaluations;
+        public int TrackMarkEmitters;
+        public int TrackMarkCapacity;
+        public int TrackMarkRenderers;
+        public int LiveTrackMarks;
+        public int EmittedTrackMarks;
+        public int SkippedTrackMarks;
     }
 
     /// <summary>
@@ -238,6 +324,8 @@ namespace LocalTanks
             float[] gpuTimes = frameSamples.Where(sample => sample.gpuFrameMs > 0f)
                 .Select(sample => sample.gpuFrameMs).OrderBy(value => value).ToArray();
             double totalFrameMs = frameTimes.Sum(value => (double)value);
+            TankTrackMarkEmitter[] markEmitters = FindObjectsByType<TankTrackMarkEmitter>(
+                FindObjectsInactive.Include);
             return new BattlePerformanceSummary
             {
                 Frames = frameSamples.Count,
@@ -264,7 +352,13 @@ namespace LocalTanks
                 PeakFixedStepsPerFrame = frameSamples.Max(sample => sample.fixedSteps),
                 PeakVisionQueriesPerFrame = frameSamples.Max(sample => sample.visionQueries),
                 PeakVisionEvaluationsPerFrame = frameSamples.Max(sample => sample.visionEvaluations),
-                TotalVisionEvaluations = frameSamples.Sum(sample => sample.visionEvaluations)
+                TotalVisionEvaluations = frameSamples.Sum(sample => sample.visionEvaluations),
+                TrackMarkEmitters = markEmitters.Length,
+                TrackMarkCapacity = markEmitters.Sum(emitter => emitter.Capacity),
+                TrackMarkRenderers = markEmitters.Sum(emitter => emitter.RendererCount),
+                LiveTrackMarks = markEmitters.Sum(emitter => emitter.LiveCount),
+                EmittedTrackMarks = markEmitters.Sum(emitter => emitter.EmittedCount),
+                SkippedTrackMarks = markEmitters.Sum(emitter => emitter.SkippedCount)
             };
         }
 
@@ -321,6 +415,7 @@ namespace LocalTanks
                 ? director.VisionSystem.WorldVisibilityEvaluationCount
                 : 0;
             StartPerformanceRecorders();
+            BattlePerformanceProbe.Start();
             recording = true;
             CollectTracks();
             startingHealth = 0;
@@ -330,10 +425,45 @@ namespace LocalTanks
             }
         }
 
+        /// <summary>
+        /// Starts a fresh measurement window without recreating the profiler recorders. Recorder startup
+        /// is expensive in the Editor and would otherwise appear as a multi-second gameplay hitch in the
+        /// first sample of a performance run.
+        /// </summary>
+        public void ResetMeasurementWindow()
+        {
+            if (!recording || director == null) return;
+
+            samples.Clear();
+            frameSamples.Clear();
+            events.Clear();
+            tracks.Clear();
+            decisionFingerprint.Reset();
+            motorControlFingerprint.Reset();
+            motorPhysicsFingerprint.Reset();
+            CollectTracks();
+            startingHealth = director.SpawnedMembers
+                .Where(member => member != null && member.Health != null)
+                .Sum(member => member.Health.CurrentHitPoints);
+            startedAt = Time.time;
+            elapsedAtLastSample = 0f;
+            nextSampleAt = SampleIntervalSeconds;
+            fixedStepsSinceLastFrame = 0;
+            previousVisionQueries = director.VisionSystem != null
+                ? director.VisionSystem.WorldVisibilityQueryCount
+                : 0;
+            previousVisionEvaluations = director.VisionSystem != null
+                ? director.VisionSystem.WorldVisibilityEvaluationCount
+                : 0;
+            BattlePerformanceProbe.Start();
+            SampleTanks(0f);
+        }
+
         /// <summary>Stops recording and returns the recording as JSON text.</summary>
         public string Stop()
         {
             recording = false;
+            BattlePerformanceProbe.Stop();
             if (instance == this) instance = null;
             string json = ToJson();
             DisposePerformanceRecorders();
@@ -406,6 +536,16 @@ namespace LocalTanks
             int currentVisionEvaluations = vision != null
                 ? vision.WorldVisibilityEvaluationCount
                 : previousVisionEvaluations;
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.CombatAi, out float aiMs, out long aiGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.Navigation, out float navigationMs, out long navigationGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.Motor, out float motorMs, out long motorGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.Vision, out float visionMs, out long visionGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.TankVfx, out float tankVfxMs, out long tankVfxGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.TrackAnimation, out float tracksMs, out long tracksGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.Audio, out float audioMs, out long audioGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.Hud, out float hudMs, out long hudGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.CombatVfx, out float combatVfxMs, out long combatVfxGcBytes);
+            BattlePerformanceProbe.Consume(BattlePerformanceSubsystem.Capture, out float captureMs, out long captureGcBytes);
             frameSamples.Add(new FramePerformanceSample
             {
                 t = Round(elapsed),
@@ -419,7 +559,17 @@ namespace LocalTanks
                 vertices = RecorderValue(verticesRecorder),
                 fixedSteps = fixedStepsSinceLastFrame,
                 visionQueries = Mathf.Max(0, currentVisionQueries - previousVisionQueries),
-                visionEvaluations = Mathf.Max(0, currentVisionEvaluations - previousVisionEvaluations)
+                visionEvaluations = Mathf.Max(0, currentVisionEvaluations - previousVisionEvaluations),
+                aiMs = Round(aiMs), aiGcBytes = aiGcBytes,
+                navigationMs = Round(navigationMs), navigationGcBytes = navigationGcBytes,
+                motorMs = Round(motorMs), motorGcBytes = motorGcBytes,
+                visionMs = Round(visionMs), visionGcBytes = visionGcBytes,
+                tankVfxMs = Round(tankVfxMs), tankVfxGcBytes = tankVfxGcBytes,
+                tracksMs = Round(tracksMs), tracksGcBytes = tracksGcBytes,
+                audioMs = Round(audioMs), audioGcBytes = audioGcBytes,
+                hudMs = Round(hudMs), hudGcBytes = hudGcBytes,
+                combatVfxMs = Round(combatVfxMs), combatVfxGcBytes = combatVfxGcBytes,
+                captureMs = Round(captureMs), captureGcBytes = captureGcBytes
             });
             fixedStepsSinceLastFrame = 0;
             previousVisionQueries = currentVisionQueries;
@@ -764,7 +914,13 @@ namespace LocalTanks
                 .Append($"\"peakFixedStepsPerFrame\":{value.PeakFixedStepsPerFrame},")
                 .Append($"\"peakVisionQueriesPerFrame\":{value.PeakVisionQueriesPerFrame},")
                 .Append($"\"peakVisionEvaluationsPerFrame\":{value.PeakVisionEvaluationsPerFrame},")
-                .Append($"\"totalVisionEvaluations\":{value.TotalVisionEvaluations}")
+                .Append($"\"totalVisionEvaluations\":{value.TotalVisionEvaluations},")
+                .Append($"\"trackMarkEmitters\":{value.TrackMarkEmitters},")
+                .Append($"\"trackMarkCapacity\":{value.TrackMarkCapacity},")
+                .Append($"\"trackMarkRenderers\":{value.TrackMarkRenderers},")
+                .Append($"\"liveTrackMarks\":{value.LiveTrackMarks},")
+                .Append($"\"emittedTrackMarks\":{value.EmittedTrackMarks},")
+                .Append($"\"skippedTrackMarks\":{value.SkippedTrackMarks}")
                 .Append('}')
                 .ToString();
         }
@@ -852,7 +1008,17 @@ namespace LocalTanks
                 $"\"setPassCalls\":{sample.setPassCalls},\"triangles\":{sample.triangles}," +
                 $"\"vertices\":{sample.vertices},\"fixedSteps\":{sample.fixedSteps}," +
                 $"\"visionQueries\":{sample.visionQueries}," +
-                $"\"visionEvaluations\":{sample.visionEvaluations}}}")) + "]";
+                $"\"visionEvaluations\":{sample.visionEvaluations}," +
+                $"\"aiMs\":{Number(sample.aiMs)},\"aiGcBytes\":{sample.aiGcBytes}," +
+                $"\"navigationMs\":{Number(sample.navigationMs)},\"navigationGcBytes\":{sample.navigationGcBytes}," +
+                $"\"motorMs\":{Number(sample.motorMs)},\"motorGcBytes\":{sample.motorGcBytes}," +
+                $"\"visionMs\":{Number(sample.visionMs)},\"visionGcBytes\":{sample.visionGcBytes}," +
+                $"\"tankVfxMs\":{Number(sample.tankVfxMs)},\"tankVfxGcBytes\":{sample.tankVfxGcBytes}," +
+                $"\"tracksMs\":{Number(sample.tracksMs)},\"tracksGcBytes\":{sample.tracksGcBytes}," +
+                $"\"audioMs\":{Number(sample.audioMs)},\"audioGcBytes\":{sample.audioGcBytes}," +
+                $"\"hudMs\":{Number(sample.hudMs)},\"hudGcBytes\":{sample.hudGcBytes}," +
+                $"\"combatVfxMs\":{Number(sample.combatVfxMs)},\"combatVfxGcBytes\":{sample.combatVfxGcBytes}," +
+                $"\"captureMs\":{Number(sample.captureMs)},\"captureGcBytes\":{sample.captureGcBytes}}}")) + "]";
         }
 
         private string EventsJson()
@@ -972,6 +1138,220 @@ namespace LocalTanks
             public int fixedSteps;
             public int visionQueries;
             public int visionEvaluations;
+            public float aiMs;
+            public long aiGcBytes;
+            public float navigationMs;
+            public long navigationGcBytes;
+            public float motorMs;
+            public long motorGcBytes;
+            public float visionMs;
+            public long visionGcBytes;
+            public float tankVfxMs;
+            public long tankVfxGcBytes;
+            public float tracksMs;
+            public long tracksGcBytes;
+            public float audioMs;
+            public long audioGcBytes;
+            public float hudMs;
+            public long hudGcBytes;
+            public float combatVfxMs;
+            public long combatVfxGcBytes;
+            public float captureMs;
+            public long captureGcBytes;
+        }
+    }
+
+    /// <summary>
+    /// Runs the graphical performance gate in the normal player loop. It exists only when the
+    /// dedicated command-line switch is present, keeping Unity Test Framework allocations out of the trace.
+    /// </summary>
+    public sealed class BattlePerformanceCommandLineRunner : MonoBehaviour
+    {
+        private const string SwitchName = "-localtanksPerformance";
+        private const float WarmupSeconds = 2f;
+        private const float ProfilerWarmupSeconds = 1f;
+        private const float MeasurementSeconds = 30f;
+        private BattleTelemetry telemetry;
+        private BattleDirector director;
+        private int previousTargetFrameRate;
+        private int previousVSyncCount;
+        private float previousTimeScale;
+        private int phase;
+        private int lastSpawnCount = -1;
+        private long phaseEndsAt;
+        private Camera battleCamera;
+        private RenderTexture renderTarget;
+
+        public static bool IsRequested => Environment.GetCommandLineArgs().Contains(SwitchName);
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void Bootstrap()
+        {
+            if (!IsRequested) return;
+            Create();
+        }
+
+        public static void Create()
+        {
+            if (FindAnyObjectByType<BattlePerformanceCommandLineRunner>() != null) return;
+            GameObject host = new GameObject("BattlePerformanceCommandLineRunner");
+            DontDestroyOnLoad(host);
+            host.AddComponent<BattlePerformanceCommandLineRunner>();
+            Debug.Log("River Crossing performance runner created.");
+        }
+
+        private void Start()
+        {
+            Debug.Log("River Crossing performance runner started.");
+            previousTargetFrameRate = Application.targetFrameRate;
+            previousVSyncCount = QualitySettings.vSyncCount;
+            previousTimeScale = Time.timeScale;
+            Application.targetFrameRate = 60;
+            QualitySettings.vSyncCount = 0;
+            Time.timeScale = 1f;
+
+            // Always reload the arena. An ExecuteMethod starts from whichever scene happened to be open
+            // in the Editor; reusing an already-running battle would measure stale wrecks and registries.
+            SceneManager.LoadScene("Battle_RiverCrossing", LoadSceneMode.Single);
+            phase = 0;
+            phaseEndsAt = Deadline(30f);
+        }
+
+        private void Update()
+        {
+            RenderBattleFrame();
+            if (phase == 0)
+            {
+                director = FindAnyObjectByType<BattleDirector>();
+                int spawnCount = director != null ? director.SpawnedMembers.Count : -1;
+                if (spawnCount != lastSpawnCount)
+                {
+                    lastSpawnCount = spawnCount;
+                    Debug.Log($"River Crossing performance runner sees {spawnCount} spawned member(s).");
+                }
+                if (director != null && spawnCount == BattleScenario.TeamSize * 2)
+                {
+                    Debug.Log($"River Crossing performance scene ready: {SceneManager.GetActiveScene().name}.");
+                    PrepareRenderer();
+                    phase = 1;
+                    phaseEndsAt = Deadline(WarmupSeconds);
+                }
+                else if (Expired())
+                {
+                    Debug.LogError("River Crossing did not spawn a complete 7x7 battle within 30 seconds.");
+                    Exit(2);
+                }
+                return;
+            }
+
+            if (phase == 1)
+            {
+                if (!Expired()) return;
+                string outputPath = Path.GetFullPath(Path.Combine(
+                    Application.dataPath,
+                    "..",
+                    "TestResults",
+                    "RiverCrossingPerformance.json"));
+                telemetry = BattleTelemetry.Attach(director, outputPath);
+                phase = 2;
+                phaseEndsAt = Deadline(ProfilerWarmupSeconds);
+                return;
+            }
+
+            if (phase == 2)
+            {
+                if (!Expired()) return;
+                telemetry.ResetMeasurementWindow();
+                phase = 3;
+                phaseEndsAt = Deadline(MeasurementSeconds);
+                return;
+            }
+
+            if (phase != 3 || !Expired()) return;
+            telemetry.Stop();
+            BattlePerformanceSummary performance = telemetry.Performance();
+            Debug.Log(
+                $"RIVER_CROSSING_PERFORMANCE frames={performance.Frames} " +
+                $"fps={performance.AverageFps:0.0} p95={performance.P95FrameMs:0.00}ms " +
+                $"p99={performance.P99FrameMs:0.00}ms max={performance.MaximumFrameMs:0.00}ms " +
+                $"cpu95={performance.P95CpuFrameMs:0.00}ms gpu95={performance.P95GpuFrameMs:0.00}ms " +
+                $"slow50={performance.FramesOver50Ms} slow100={performance.FramesOver100Ms} " +
+                $"gc={performance.TotalGcBytes} peakDraws={performance.PeakDrawCalls} " +
+                $"marks={performance.LiveTrackMarks}/{performance.TrackMarkRenderers}/" +
+                $"{performance.TrackMarkCapacity} emitted={performance.EmittedTrackMarks} " +
+                $"skipped={performance.SkippedTrackMarks} tanks={director.SpawnedMembers.Count}");
+
+            bool passed = performance.Frames > 300 &&
+                          performance.P95FrameMs <= 33.34f &&
+                          performance.FramesOver100Ms <= 2;
+            phase = 4;
+            Exit(passed ? 0 : 1);
+        }
+
+        private void PrepareRenderer()
+        {
+            battleCamera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
+            if (battleCamera == null)
+            {
+                Debug.LogWarning("River Crossing performance runner found no camera to render.");
+                return;
+            }
+
+            renderTarget = new RenderTexture(1280, 720, 24, RenderTextureFormat.ARGB32)
+            {
+                name = "RiverCrossingPerformanceTarget"
+            };
+            renderTarget.Create();
+            battleCamera.targetTexture = renderTarget;
+        }
+
+        private void RenderBattleFrame()
+        {
+            if (battleCamera == null || renderTarget == null || phase == 0) return;
+            battleCamera.Render();
+        }
+
+        private static long Deadline(float seconds) => System.Diagnostics.Stopwatch.GetTimestamp() +
+                                                       (long)(seconds * System.Diagnostics.Stopwatch.Frequency);
+
+        private bool Expired() => System.Diagnostics.Stopwatch.GetTimestamp() >= phaseEndsAt;
+
+        private void OnDestroy()
+        {
+            if (telemetry != null && telemetry.IsRecording) telemetry.Stop();
+            ReleaseRenderer();
+            RestoreTiming();
+        }
+
+        private void Exit(int exitCode)
+        {
+            ReleaseRenderer();
+            RestoreTiming();
+            Application.Quit(exitCode);
+            Type editorApplication = Type.GetType("UnityEditor.EditorApplication,UnityEditor");
+            editorApplication?.GetMethod("Exit", new[] { typeof(int) })?.Invoke(null, new object[] { exitCode });
+        }
+
+        private void RestoreTiming()
+        {
+            Application.targetFrameRate = previousTargetFrameRate;
+            QualitySettings.vSyncCount = previousVSyncCount;
+            Time.timeScale = previousTimeScale;
+        }
+
+        private void ReleaseRenderer()
+        {
+            if (battleCamera != null && battleCamera.targetTexture == renderTarget)
+            {
+                battleCamera.targetTexture = null;
+            }
+            if (renderTarget != null)
+            {
+                renderTarget.Release();
+                Destroy(renderTarget);
+            }
+            renderTarget = null;
+            battleCamera = null;
         }
     }
 }

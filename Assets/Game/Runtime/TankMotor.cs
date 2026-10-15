@@ -64,6 +64,7 @@ namespace LocalTanks
 
         private void FixedUpdate()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.Motor);
             TeamMember member = GetComponent<TeamMember>();
             if (member == null)
             {

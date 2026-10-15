@@ -362,6 +362,7 @@ namespace LocalTanks
 
         private void FixedUpdate()
         {
+            using var performanceScope = BattlePerformanceProbe.Measure(BattlePerformanceSubsystem.CombatAi);
             double fixedTime = Time.fixedTimeAsDouble;
             if (fixedTime.Equals(lastCoordinatedFixedTime)) return;
             lastCoordinatedFixedTime = fixedTime;
