@@ -425,12 +425,19 @@ namespace LocalTanks.Tests
         public void AimMode_ShiftsViewAlongGunWithoutChangingZoomContract()
         {
             Vector2 tank = new Vector2(4f, -2f);
-            Vector2 normal = CameraFollow2D.CalculateViewCenter(tank, Vector2.up, 8f, false);
-            Vector2 aimed = CameraFollow2D.CalculateViewCenter(tank, Vector2.up, 8f, true);
+            const float zoom = 8f;
+            const float aspect = 16f / 9f;
+            Vector2 normal = CameraFollow2D.CalculateViewCenter(tank, Vector2.up, zoom, aspect, false);
+            Vector2 aimedUp = CameraFollow2D.CalculateViewCenter(tank, Vector2.up, zoom, aspect, true);
+            Vector2 aimedRight = CameraFollow2D.CalculateViewCenter(tank, Vector2.right, zoom, aspect, true);
 
             Assert.That(normal, Is.EqualTo(tank));
-            Assert.That(aimed.x, Is.EqualTo(tank.x).Within(0.0001f));
-            Assert.That(aimed.y, Is.EqualTo(tank.y + 8f * CameraFollow2D.AimOffsetZoomShare).Within(0.0001f));
+            Assert.That(aimedUp.x, Is.EqualTo(tank.x).Within(0.0001f));
+            Assert.That(aimedUp.y,
+                Is.EqualTo(tank.y + zoom * CameraFollow2D.AimOffsetViewportShare).Within(0.0001f));
+            Assert.That(aimedRight.x,
+                Is.EqualTo(tank.x + zoom * aspect * CameraFollow2D.AimOffsetViewportShare).Within(0.0001f));
+            Assert.That(aimedRight.y, Is.EqualTo(tank.y).Within(0.0001f));
             Assert.That(CameraFollow2D.MaximumZoomFor(VehicleClass.HeavyTank, 8),
                 Is.GreaterThan(CameraFollow2D.MaximumZoomFor(VehicleClass.LightTank, 1)));
         }

@@ -334,14 +334,27 @@ namespace LocalTanks.Tests
             yield return null;
 
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
-            Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CloseInspectionZoom));
+            Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CombatMinimumZoom));
+            Assert.That(follow.CloseInspectionZoomEnabled, Is.False);
             follow.SetZoom(100f, true);
             Assert.That(follow.TargetZoom, Is.EqualTo(follow.MaximumZoom));
             Assert.That(follow.CurrentZoom, Is.EqualTo(follow.MaximumZoom));
 
-            follow.SetZoom(-100f, true);
+            follow.SetZoom(-100f);
             Assert.That(follow.TargetZoom, Is.EqualTo(follow.MinimumZoom));
-            Assert.That(follow.CurrentZoom, Is.EqualTo(follow.MinimumZoom));
+            Assert.That(follow.CurrentZoom, Is.EqualTo(follow.MaximumZoom),
+                "Normal wheel zoom must keep the existing smooth transition.");
+            yield return null;
+            Assert.That(follow.CurrentZoom, Is.LessThan(follow.MaximumZoom).And.GreaterThan(follow.MinimumZoom));
+
+            follow.SetCloseInspectionZoomEnabled(true);
+            Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CloseInspectionZoom));
+            follow.SetZoom(-100f, true);
+            Assert.That(follow.CurrentZoom, Is.EqualTo(CameraFollow2D.CloseInspectionZoom));
+
+            follow.SetCloseInspectionZoomEnabled(false, true);
+            Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CombatMinimumZoom));
+            Assert.That(follow.CurrentZoom, Is.EqualTo(CameraFollow2D.CombatMinimumZoom));
         }
 
         [UnityTest]
@@ -359,6 +372,14 @@ namespace LocalTanks.Tests
             Assert.That(follow.IsAimMode, Is.True);
             Assert.That(Vector2.Distance(follow.transform.position, follow.Target.position), Is.GreaterThan(1.5f));
             Assert.That(follow.CurrentZoom, Is.EqualTo(zoom).Within(0.001f));
+            Vector3 targetViewport = Camera.main.WorldToViewportPoint(follow.Target.position);
+            float nearestEdge = Mathf.Min(
+                targetViewport.x,
+                targetViewport.y,
+                1f - targetViewport.x,
+                1f - targetViewport.y);
+            Assert.That(nearestEdge, Is.InRange(0f, 0.2f),
+                "Aim mode should keep the tank near the rear screen edge and reserve most of the view for aiming.");
 
             follow.SetAimMode(false);
             yield return new WaitForSeconds(0.65f);
@@ -784,10 +805,10 @@ namespace LocalTanks.Tests
 
             CameraFollow2D follow = Camera.main.GetComponent<CameraFollow2D>();
             Assert.That(follow.Target, Is.EqualTo(playerMember.transform));
-            Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CloseInspectionZoom));
+            Assert.That(follow.MinimumZoom, Is.EqualTo(CameraFollow2D.CombatMinimumZoom));
             TankDefinition playerDefinition = playerMember.GetComponent<TankHealth>().Definition;
-            Assert.That(follow.MaximumZoom,
-                Is.EqualTo(VisionRangeTable.UnitsFor(playerDefinition.vehicleClass, playerDefinition.tier)));
+            Assert.That(follow.MaximumZoom, Is.EqualTo(playerDefinition.viewRange),
+                "With the tank centred in normal mode, the vertical screen edge must equal its view range.");
         }
 
         [UnityTest]

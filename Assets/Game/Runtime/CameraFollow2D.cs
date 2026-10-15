@@ -6,15 +6,18 @@ namespace LocalTanks
     [RequireComponent(typeof(Camera))]
     public sealed class CameraFollow2D : MonoBehaviour
     {
+        public const float CombatMinimumZoom = 2.5f;
         public const float CloseInspectionZoom = 0.75f;
-        public const float AimOffsetZoomShare = 0.62f;
+        public const float AimOffsetViewportShare = 0.82f;
 
         [SerializeField] private Transform target;
         [SerializeField, Min(0f)] private float smoothTime = 0.15f;
-        [SerializeField, Min(0.1f)] private float minimumZoom = CloseInspectionZoom;
+        [SerializeField, Min(0.1f)] private float minimumZoom = CombatMinimumZoom;
         [SerializeField, Min(0.1f)] private float maximumZoom = 12f;
         [SerializeField, Min(0.1f)] private float zoomStep = 1f;
         [SerializeField, Min(0.1f)] private float zoomSpeed = 10f;
+        [SerializeField, Tooltip("Developer-only: allow the point-blank inspection zoom used to check tank art and effects.")]
+        private bool allowCloseInspectionZoom;
 
         private Camera cameraComponent;
         private TurretAiming targetTurret;
@@ -25,11 +28,14 @@ namespace LocalTanks
         public Transform Target => target;
         public float CurrentZoom => cameraComponent != null ? cameraComponent.orthographicSize : 0f;
         public float TargetZoom => targetZoom;
-        // Older generated scenes serialize larger minima. Keeping the inspection limit here makes the
-        // close view available immediately on every map and also survives future scene regeneration.
-        public float MinimumZoom => Mathf.Min(minimumZoom, CloseInspectionZoom);
+        // Older generated scenes serialize larger minima. The runtime cap keeps one consistent combat
+        // close-up on every map without editing generated Unity scenes by hand.
+        public float MinimumZoom => Mathf.Min(
+            minimumZoom,
+            allowCloseInspectionZoom ? CloseInspectionZoom : CombatMinimumZoom);
         public float MaximumZoom => maximumZoom;
         public bool IsAimMode => aimMode;
+        public bool CloseInspectionZoomEnabled => allowCloseInspectionZoom;
 
         private void Awake()
         {
@@ -69,6 +75,12 @@ namespace LocalTanks
             {
                 cameraComponent.orthographicSize = targetZoom;
             }
+        }
+
+        public void SetCloseInspectionZoomEnabled(bool enabled, bool immediate = false)
+        {
+            allowCloseInspectionZoom = enabled;
+            SetZoom(targetZoom > 0f ? targetZoom : MinimumZoom, immediate);
         }
 
         private void Update()
@@ -117,7 +129,8 @@ namespace LocalTanks
             }
 
             Vector2 gunDirection = targetTurret != null ? targetTurret.transform.up : target.up;
-            Vector2 centre = CalculateViewCenter(target.position, gunDirection, CurrentZoom, aimMode);
+            float aspect = cameraComponent != null ? cameraComponent.aspect : 1f;
+            Vector2 centre = CalculateViewCenter(target.position, gunDirection, CurrentZoom, aspect, aimMode);
             Vector3 desired = new Vector3(centre.x, centre.y, transform.position.z);
             transform.position = Vector3.SmoothDamp(
                 transform.position,
@@ -135,6 +148,7 @@ namespace LocalTanks
             Vector2 tankPosition,
             Vector2 gunDirection,
             float orthographicSize,
+            float cameraAspect,
             bool aiming)
         {
             if (!aiming || gunDirection.sqrMagnitude <= 0.0001f)
@@ -142,16 +156,33 @@ namespace LocalTanks
                 return tankPosition;
             }
 
-            return tankPosition + gunDirection.normalized * Mathf.Max(0f, orthographicSize) * AimOffsetZoomShare;
+            Vector2 direction = gunDirection.normalized;
+            float halfHeight = Mathf.Max(0f, orthographicSize);
+            if (halfHeight <= 0.0001f)
+            {
+                return tankPosition;
+            }
+
+            float halfWidth = halfHeight * Mathf.Max(0.01f, cameraAspect);
+            float edgeScale = Mathf.Sqrt(
+                direction.x * direction.x / Mathf.Max(0.0001f, halfWidth * halfWidth) +
+                direction.y * direction.y / Mathf.Max(0.0001f, halfHeight * halfHeight));
+            float distanceToEdge = edgeScale > 0.0001f ? 1f / edgeScale : 0f;
+            return tankPosition + direction * distanceToEdge * AimOffsetViewportShare;
         }
 
         public static float MaximumZoomFor(Transform tank)
         {
             TankHealth health = tank != null ? tank.GetComponent<TankHealth>() : null;
             TankDefinition definition = health != null ? health.Definition : null;
-            return definition != null
-                ? MaximumZoomFor(definition.vehicleClass, definition.tier)
-                : 12f;
+            if (definition == null)
+            {
+                return 12f;
+            }
+
+            return definition.viewRange > 0f
+                ? definition.viewRange
+                : MaximumZoomFor(definition.vehicleClass, definition.tier);
         }
 
         public static float MaximumZoomFor(VehicleClass vehicleClass, int tier)
