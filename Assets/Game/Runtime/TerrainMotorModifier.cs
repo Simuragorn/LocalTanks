@@ -2,11 +2,13 @@ using UnityEngine;
 
 namespace LocalTanks
 {
-    [RequireComponent(typeof(TankMotor))]
+    [RequireComponent(typeof(TankMotor), typeof(Rigidbody2D))]
+    [DefaultExecutionOrder(-10)]
     public sealed class TerrainMotorModifier : MonoBehaviour
     {
         [SerializeField] private NavigationMap map;
         [SerializeField] private TankMotor motor;
+        private Rigidbody2D body;
 
         public TerrainKind CurrentTerrain { get; private set; }
 
@@ -19,6 +21,7 @@ namespace LocalTanks
 
         private void Awake()
         {
+            body = GetComponent<Rigidbody2D>();
             if (motor == null)
             {
                 motor = GetComponent<TankMotor>();
@@ -37,7 +40,7 @@ namespace LocalTanks
                 return;
             }
 
-            Vector2Int cell = map.WorldToCell(transform.position);
+            Vector2Int cell = map.WorldToCell(body != null ? body.position : (Vector2)transform.position);
             CurrentTerrain = map.GetTerrain(cell);
             motor.SetTerrainModifiers(
                 map.GetSpeedMultiplier(cell),
