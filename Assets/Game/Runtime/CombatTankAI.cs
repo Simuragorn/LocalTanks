@@ -910,7 +910,7 @@ namespace LocalTanks
             float bestScore = float.NegativeInfinity;
             float currentScore = float.NegativeInfinity;
             bool currentVisible = IsTargetVisible(target);
-            foreach (TeamMember candidate in TeamMember.ActiveMembers.ToArray())
+            foreach (TeamMember candidate in TeamMember.ActiveMembers)
             {
                 if (candidate == null || candidate.Team == member.Team || candidate.Team == TeamId.Neutral ||
                     !IsTargetVisible(candidate))
@@ -967,9 +967,9 @@ namespace LocalTanks
                 return FireBlockReason.OutOfRange;
             }
 
-            // Refresh the assessment for every visible target in range. Keeping an assessment
-            // produced while a blocking ally was still alive would report that dead tank as a
-            // living ally in diagnostics and leave currentLineOfFire paired with a stale reason.
+            // Keep the tactical ordering stable: a concrete blocker outranks aiming and reload state.
+            // The query itself is allocation-free, so preserving this diagnostic and firing behaviour no
+            // longer creates a stream of garbage during an exchange.
             currentLineOfFire = EvaluateLineOfFireAssessment(candidate);
             if (!currentLineOfFire.IsClear) return currentLineOfFire.Reason;
             if (navigation != null && navigation.MovementPaused && navigation.HasFacingDirection &&
@@ -1219,7 +1219,7 @@ namespace LocalTanks
             List<Vector2> visibleDirections = new List<Vector2>();
             if (member != null && visionSystem != null)
             {
-                foreach (TeamMember candidate in TeamMember.ActiveMembers.ToArray())
+                foreach (TeamMember candidate in TeamMember.ActiveMembers)
                 {
                     if (candidate == null || candidate.Team == member.Team || candidate.Team == TeamId.Neutral ||
                         !IsTargetVisible(candidate))

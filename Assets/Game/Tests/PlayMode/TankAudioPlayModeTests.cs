@@ -32,6 +32,10 @@ namespace LocalTanks.Tests
             WeaponController weapon = root.AddComponent<WeaponController>();
             weapon.Configure(definition, projectile, muzzle.transform);
 
+            Assert.That(weapon.CreatedProjectileCount, Is.EqualTo(3),
+                "The whole automatic-fire magazine should be prepared before the first shot.");
+            Assert.That(weapon.IdleProjectileCount, Is.EqualTo(3));
+
             Assert.That(weapon.TryFire(), Is.True);
             Assert.That(weapon.RoundsRemaining, Is.EqualTo(2));
             Assert.That(weapon.TryFire(), Is.False);
@@ -44,6 +48,9 @@ namespace LocalTanks.Tests
             yield return new WaitForSeconds(0.06f);
             Assert.That(weapon.IsReady, Is.True);
             Assert.That(weapon.RoundsRemaining, Is.EqualTo(3));
+            Assert.That(weapon.CreatedProjectileCount, Is.EqualTo(3),
+                "Completing a burst must reuse the prepared projectiles instead of instantiating more.");
+            Assert.That(weapon.IdleProjectileCount, Is.EqualTo(3));
 
             Object.Destroy(root);
             Object.Destroy(projectileObject);

@@ -105,6 +105,19 @@ namespace LocalTanks
             new Vector2Int(-1, 1), new Vector2Int(-1, -1)
         };
 
+        // Path searches run only on Unity's gameplay thread. Reusing this workspace is important on the
+        // 200x200 Mines grid: allocating and clearing three full-grid arrays for every cover candidate
+        // turned one tactical reaction into tens of megabytes of short-lived garbage.
+        private static float[] distances = Array.Empty<float>();
+        private static int[] previous = Array.Empty<int>();
+        private static int[] touchedGeneration = Array.Empty<int>();
+        private static int[] closedGeneration = Array.Empty<int>();
+        private static readonly MinHeap Open = new MinHeap();
+        private static int currentGeneration;
+
+        public static int WorkspaceCapacity => distances.Length;
+        public static int WorkspaceResizeCount { get; private set; }
+
         public static List<Vector2Int> FindPath(
             NavigationGridModel grid,
             Vector2Int start,
@@ -124,25 +137,19 @@ namespace LocalTanks
             }
 
             int cellCount = grid.Width * grid.Height;
-            float[] distances = new float[cellCount];
-            int[] previous = new int[cellCount];
-            bool[] closed = new bool[cellCount];
-            for (int index = 0; index < cellCount; index++)
-            {
-                distances[index] = float.PositiveInfinity;
-                previous[index] = -1;
-            }
+            BeginSearch(cellCount);
 
             int startIndex = grid.GetIndex(start);
             int destinationIndex = grid.GetIndex(destination);
             distances[startIndex] = 0f;
-            MinHeap open = new MinHeap();
-            open.Push(startIndex, Heuristic(start, destination) * Mathf.Max(1f, heuristicWeight));
+            previous[startIndex] = -1;
+            touchedGeneration[startIndex] = currentGeneration;
+            Open.Push(startIndex, Heuristic(start, destination) * Mathf.Max(1f, heuristicWeight));
 
-            while (open.Count > 0)
+            while (Open.Count > 0)
             {
-                int currentIndex = open.Pop();
-                if (closed[currentIndex])
+                int currentIndex = Open.Pop();
+                if (closedGeneration[currentIndex] == currentGeneration)
                 {
                     continue;
                 }
@@ -152,7 +159,7 @@ namespace LocalTanks
                     return Reconstruct(grid, previous, destinationIndex);
                 }
 
-                closed[currentIndex] = true;
+                closedGeneration[currentIndex] = currentGeneration;
                 Vector2Int current = grid.GetCell(currentIndex);
                 foreach (Vector2Int direction in Directions)
                 {
@@ -164,26 +171,56 @@ namespace LocalTanks
                     }
 
                     int nextIndex = grid.GetIndex(next);
-                    if (closed[nextIndex])
+                    if (closedGeneration[nextIndex] == currentGeneration)
                     {
                         continue;
                     }
 
                     float stepLength = direction.x != 0 && direction.y != 0 ? 1.41421356f : 1f;
                     float candidate = distances[currentIndex] + grid.GetCost(next) * stepLength;
-                    if (candidate >= distances[nextIndex])
+                    float knownDistance = touchedGeneration[nextIndex] == currentGeneration
+                        ? distances[nextIndex]
+                        : float.PositiveInfinity;
+                    if (candidate >= knownDistance)
                     {
                         continue;
                     }
 
                     distances[nextIndex] = candidate;
                     previous[nextIndex] = currentIndex;
+                    touchedGeneration[nextIndex] = currentGeneration;
                     float priority = candidate + Heuristic(next, destination) * Mathf.Max(1f, heuristicWeight);
-                    open.Push(nextIndex, priority);
+                    Open.Push(nextIndex, priority);
                 }
             }
 
             return new List<Vector2Int>();
+        }
+
+        private static void BeginSearch(int cellCount)
+        {
+            if (distances.Length < cellCount)
+            {
+                distances = new float[cellCount];
+                previous = new int[cellCount];
+                touchedGeneration = new int[cellCount];
+                closedGeneration = new int[cellCount];
+                WorkspaceResizeCount++;
+            }
+
+            if (currentGeneration == int.MaxValue)
+            {
+                Array.Clear(touchedGeneration, 0, touchedGeneration.Length);
+                Array.Clear(closedGeneration, 0, closedGeneration.Length);
+                currentGeneration = 1;
+            }
+            else
+            {
+                currentGeneration++;
+                if (currentGeneration == 0) currentGeneration = 1;
+            }
+
+            Open.Clear();
         }
 
         /// <summary>
@@ -256,6 +293,11 @@ namespace LocalTanks
         {
             private readonly List<Entry> entries = new List<Entry>();
             public int Count => entries.Count;
+
+            public void Clear()
+            {
+                entries.Clear();
+            }
 
             public void Push(int cellIndex, float priority)
             {

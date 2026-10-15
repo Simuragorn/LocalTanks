@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace LocalTanks
@@ -29,12 +30,27 @@ namespace LocalTanks
         private CombatRules combatRules;
         private bool initialized;
         private readonly ProjectileTravelBudget travelBudget = new ProjectileTravelBudget();
+        private readonly List<RaycastHit2D> collisionHits = new List<RaycastHit2D>(12);
+        private readonly Comparison<RaycastHit2D> hitComparison = PhysicsQueryOrder.CompareHits;
+        private ContactFilter2D collisionFilter;
+        private Action<Projectile2D> returnToPool;
 
         public Vector2 Direction => direction;
         public float Speed => speed;
         public float Penetration => penetration;
         public int RemainingRicochets => remainingRicochets;
         public ShotRandomization Randomization => randomization;
+
+        private void Awake()
+        {
+            collisionFilter = new ContactFilter2D().NoFilter();
+            collisionFilter.SetLayerMask(collisionMask);
+        }
+
+        public void SetPoolReturn(Action<Projectile2D> release)
+        {
+            returnToPool = release;
+        }
 
         public void Initialize(
             Vector2 travelDirection,
@@ -145,15 +161,17 @@ namespace LocalTanks
             RefreshIgnoredCollider();
 
             float stepDistance = travelBudget.Consume(speed * Time.fixedDeltaTime, Time.fixedDeltaTime);
-            RaycastHit2D[] hits = Physics2D.CircleCastAll(
+            collisionHits.Clear();
+            Physics2D.CircleCast(
                 transform.position,
                 radius,
                 direction,
-                stepDistance,
-                collisionMask);
-            Array.Sort(hits, PhysicsQueryOrder.CompareHits);
+                collisionFilter,
+                collisionHits,
+                stepDistance);
+            collisionHits.Sort(hitComparison);
 
-            foreach (RaycastHit2D hit in hits)
+            foreach (RaycastHit2D hit in collisionHits)
             {
                 if (hit.collider == null ||
                     hit.collider.isTrigger ||
@@ -181,7 +199,7 @@ namespace LocalTanks
                     // The map answers with dust, chips or a splash. The projectile does not know which
                     // surface it landed on; the effect layer resolves that from the battle's map.
                     CombatVfxEmitter.ShellImpact(hit.point, hit.normal, radius);
-                    Destroy(gameObject);
+                    Despawn();
                     return;
                 }
 
@@ -223,7 +241,7 @@ namespace LocalTanks
 
                 if (result.Outcome != ImpactOutcome.Ricocheted)
                 {
-                    Destroy(gameObject);
+                    Despawn();
                     return;
                 }
 
@@ -240,6 +258,20 @@ namespace LocalTanks
 
             transform.position += (Vector3)(direction * stepDistance);
             if (travelBudget.IsExpired)
+            {
+                Despawn();
+            }
+        }
+
+        private void Despawn()
+        {
+            initialized = false;
+            temporarilyIgnoredCollider = null;
+            if (returnToPool != null)
+            {
+                returnToPool(this);
+            }
+            else
             {
                 Destroy(gameObject);
             }

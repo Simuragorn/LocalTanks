@@ -60,6 +60,10 @@ namespace LocalTanks
 
     public static class CombatLineOfFire
     {
+        private static readonly List<RaycastHit2D> Hits = new List<RaycastHit2D>(128);
+        private static readonly Comparison<RaycastHit2D> HitComparison = PhysicsQueryOrder.CompareHits;
+        private static ContactFilter2D hitFilter = new ContactFilter2D().NoFilter();
+
         public static bool IsProtectiveCover(LineOfFireBlockType blockType)
         {
             return blockType == LineOfFireBlockType.Wreck ||
@@ -81,9 +85,10 @@ namespace LocalTanks
                 return LineOfFireAssessment.Clear(destination, distance);
             }
 
-            RaycastHit2D[] hits = Physics2D.RaycastAll(origin, delta / distance, distance + 0.2f);
-            Array.Sort(hits, PhysicsQueryOrder.CompareHits);
-            foreach (RaycastHit2D hit in hits)
+            Hits.Clear();
+            Physics2D.Raycast(origin, delta / distance, hitFilter, Hits, distance + 0.2f);
+            Hits.Sort(HitComparison);
+            foreach (RaycastHit2D hit in Hits)
             {
                 if (hit.collider == null || hit.collider.isTrigger ||
                     hit.collider.GetComponentInParent<FirePassThroughObstacle>() != null ||

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace LocalTanks
@@ -15,6 +16,9 @@ namespace LocalTanks
         private readonly ReloadTimer reloadTimer = new ReloadTimer();
         private readonly ReloadTimer shotIntervalTimer = new ReloadTimer();
         private Transform projectileOwnerRoot;
+        private Transform projectilePoolRoot;
+        private readonly Queue<Projectile2D> idleProjectiles = new Queue<Projectile2D>();
+        private readonly List<Projectile2D> allProjectiles = new List<Projectile2D>();
         private int roundsRemaining;
         private ShotRandomStream shotRandomStream;
 
@@ -59,6 +63,8 @@ namespace LocalTanks
         public float EffectiveShotIntervalSeconds => config != null && config.weapon != null
             ? config.weapon.shotIntervalSeconds
             : 0f;
+        public int CreatedProjectileCount => allProjectiles.Count;
+        public int IdleProjectileCount => idleProjectiles.Count;
 
         public void Configure(
             TankDefinition newConfig,
@@ -74,6 +80,7 @@ namespace LocalTanks
             reloadTimer.Reset();
             shotIntervalTimer.Reset();
             ResolveProjectileOwner();
+            EnsureProjectileReserve();
             StateChanged?.Invoke(this);
         }
 
@@ -82,6 +89,7 @@ namespace LocalTanks
             if (dispersion == null) dispersion = GetComponent<GunDispersionController>();
             if (roundsRemaining <= 0) roundsRemaining = MagazineSize;
             ResolveProjectileOwner();
+            EnsureProjectileReserve();
         }
 
         public void SetReloadOverride(float seconds)
@@ -143,7 +151,12 @@ namespace LocalTanks
             ShotRandomStream randomStream = shotRandomStream ??=
                 new ShotRandomStream(LocalTanksOverrides.RequestedSeed(MatchRules?.randomSeed ?? 1701));
             ShotRandomization randomization = randomStream.Next(CombatRules);
-            Projectile2D projectile = Instantiate(projectilePrefab, muzzle.position, muzzle.rotation);
+            Projectile2D projectile = RentProjectile();
+            if (projectile == null)
+            {
+                return false;
+            }
+            projectile.transform.SetPositionAndRotation(muzzle.position, muzzle.rotation);
             projectile.transform.up = shotDirection;
             projectile.Initialize(
                 shotDirection,
@@ -174,6 +187,70 @@ namespace LocalTanks
         {
             TankHealth ownerHealth = GetComponentInParent<TankHealth>();
             projectileOwnerRoot = ownerHealth != null ? ownerHealth.transform : transform;
+        }
+
+        private void EnsureProjectileReserve()
+        {
+            if (projectilePrefab == null) return;
+            int reserve = Mathf.Clamp(MagazineSize, 1, 16);
+            while (allProjectiles.Count < reserve)
+            {
+                CreatePooledProjectile();
+            }
+        }
+
+        private Projectile2D RentProjectile()
+        {
+            EnsureProjectileReserve();
+            if (idleProjectiles.Count == 0)
+            {
+                CreatePooledProjectile();
+            }
+            Projectile2D projectile = idleProjectiles.Count > 0 ? idleProjectiles.Dequeue() : null;
+            if (projectile == null) return null;
+            projectile.gameObject.SetActive(true);
+            return projectile;
+        }
+
+        private Projectile2D CreatePooledProjectile()
+        {
+            if (projectilePrefab == null) return null;
+            EnsureProjectilePoolRoot();
+            Projectile2D projectile = Instantiate(projectilePrefab, projectilePoolRoot);
+            projectile.name = $"Projectile_{allProjectiles.Count:00}";
+            projectile.SetPoolReturn(ReturnProjectile);
+            projectile.gameObject.SetActive(false);
+            allProjectiles.Add(projectile);
+            idleProjectiles.Enqueue(projectile);
+            return projectile;
+        }
+
+        private void ReturnProjectile(Projectile2D projectile)
+        {
+            if (projectile == null || idleProjectiles.Contains(projectile)) return;
+            projectile.gameObject.SetActive(false);
+            projectile.transform.SetParent(projectilePoolRoot, false);
+            idleProjectiles.Enqueue(projectile);
+        }
+
+        private void EnsureProjectilePoolRoot()
+        {
+            if (projectilePoolRoot != null) return;
+            GameObject root = new GameObject($"{name}_ProjectilePool");
+            BattleDirector director = GetComponentInParent<BattleDirector>();
+            if (director != null)
+            {
+                root.transform.SetParent(director.transform, false);
+            }
+            projectilePoolRoot = root.transform;
+        }
+
+        private void OnDestroy()
+        {
+            if (projectilePoolRoot != null)
+            {
+                Destroy(projectilePoolRoot.gameObject);
+            }
         }
     }
 }

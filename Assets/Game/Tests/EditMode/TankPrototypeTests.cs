@@ -670,6 +670,26 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void WeightedAStar_ReusesItsFullGridWorkspaceAcrossTacticalReplans()
+        {
+            NavigationGridModel grid = new NavigationGridModel(200, 200);
+            WeightedAStar.FindPath(grid, Vector2Int.zero, new Vector2Int(15, 15));
+            int resizeCountAfterWarmup = WeightedAStar.WorkspaceResizeCount;
+            int capacityAfterWarmup = WeightedAStar.WorkspaceCapacity;
+
+            for (int index = 0; index < 12; index++)
+            {
+                Assert.That(WeightedAStar.FindPath(
+                    grid,
+                    new Vector2Int(index, 0),
+                    new Vector2Int(15, 15)), Is.Not.Empty);
+            }
+
+            Assert.That(WeightedAStar.WorkspaceResizeCount, Is.EqualTo(resizeCountAfterWarmup));
+            Assert.That(WeightedAStar.WorkspaceCapacity, Is.EqualTo(capacityAfterWarmup));
+        }
+
+        [Test]
         public void WeightedAStar_PrefersLongerRoadOverExpensiveMud()
         {
             NavigationGridModel grid = new NavigationGridModel(5, 3);
