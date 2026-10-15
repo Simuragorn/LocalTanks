@@ -448,6 +448,9 @@ namespace LocalTanks
 
     public static class TacticalCoverPlanner
     {
+        public const int ShelterPathCandidateBudget = 8;
+        public const int PeekPathCandidateBudget = 6;
+
         public static bool TryFind(
             NavigationMap map,
             Vector2 origin,
@@ -522,6 +525,7 @@ namespace LocalTanks
             bool bestHasFiringPosition = false;
             Vector2 bestInitialPathDirection = Vector2.zero;
             int evaluated = 0;
+            List<CoverCandidate> pathCandidates = new List<CoverCandidate>();
 
             for (int y = originCell.y - radius; y <= originCell.y + radius; y++)
             {
@@ -535,39 +539,48 @@ namespace LocalTanks
                     evaluated++;
                     if (!isProtected(candidate) || isAvailable != null && !isAvailable(candidate)) continue;
 
-                    List<Vector2> path = map.FindWorldPath(origin, candidate, clearanceCells);
-                    if (path == null || path.Count < 2) continue;
-                    float pathLength = CalculatePathLength(path);
-                    float detour = Mathf.Max(0f, pathLength - directDistance);
-                    bool hasFiringPosition = TryFindFiringPoint(
-                        map,
-                        candidate,
-                        clearanceCells,
-                        maximumPeekDistance,
-                        isAvailable,
-                        canFireFrom,
-                        out Vector2Int firingCell,
-                        out Vector2 firingPosition,
-                        out float firingPathLength);
-                    if (canFireFrom != null && !hasFiringPosition) continue;
-                    float pathAdjustment = pathScoreAdjustment != null
-                        ? Mathf.Max(0f, pathScoreAdjustment(path))
-                        : 0f;
-                    float score = pathLength * 1.4f + detour + firingPathLength * 0.75f + pathAdjustment;
-                    if (!found || score < bestScore - 0.001f ||
-                        Mathf.Approximately(score, bestScore) && IsEarlier(cell, bestCell))
-                    {
-                        found = true;
-                        bestScore = score;
-                        bestCell = cell;
-                        bestPosition = candidate;
-                        bestPathLength = pathLength;
-                        bestFiringCell = firingCell;
-                        bestFiringPosition = firingPosition;
-                        bestFiringPathLength = firingPathLength;
-                        bestHasFiringPosition = hasFiringPosition;
-                        bestInitialPathDirection = FirstPathDirection(path);
-                    }
+                    pathCandidates.Add(new CoverCandidate(cell, candidate, directDistance));
+                }
+            }
+
+            pathCandidates.Sort(CompareCoverCandidates);
+            int pathChecks = Mathf.Min(ShelterPathCandidateBudget, pathCandidates.Count);
+            for (int index = 0; index < pathChecks; index++)
+            {
+                CoverCandidate candidate = pathCandidates[index];
+
+                List<Vector2> path = map.FindWorldPath(origin, candidate.Position, clearanceCells);
+                if (path == null || path.Count < 2) continue;
+                float pathLength = CalculatePathLength(path);
+                float detour = Mathf.Max(0f, pathLength - candidate.DirectDistance);
+                bool hasFiringPosition = TryFindFiringPoint(
+                    map,
+                    candidate.Position,
+                    clearanceCells,
+                    maximumPeekDistance,
+                    isAvailable,
+                    canFireFrom,
+                    out Vector2Int firingCell,
+                    out Vector2 firingPosition,
+                    out float firingPathLength);
+                if (canFireFrom != null && !hasFiringPosition) continue;
+                float pathAdjustment = pathScoreAdjustment != null
+                    ? Mathf.Max(0f, pathScoreAdjustment(path))
+                    : 0f;
+                float score = pathLength * 1.4f + detour + firingPathLength * 0.75f + pathAdjustment;
+                if (!found || score < bestScore - 0.001f ||
+                    Mathf.Approximately(score, bestScore) && IsEarlier(candidate.Cell, bestCell))
+                {
+                    found = true;
+                    bestScore = score;
+                    bestCell = candidate.Cell;
+                    bestPosition = candidate.Position;
+                    bestPathLength = pathLength;
+                    bestFiringCell = firingCell;
+                    bestFiringPosition = firingPosition;
+                    bestFiringPathLength = firingPathLength;
+                    bestHasFiringPosition = hasFiringPosition;
+                    bestInitialPathDirection = FirstPathDirection(path);
                 }
             }
 
@@ -639,6 +652,7 @@ namespace LocalTanks
             Vector2Int shelterCell = map.WorldToCell(shelter);
             bool found = false;
             float bestScore = float.PositiveInfinity;
+            List<PeekCandidate> pathCandidates = new List<PeekCandidate>();
             for (int y = shelterCell.y - radius; y <= shelterCell.y + radius; y++)
             {
                 for (int x = shelterCell.x - radius; x <= shelterCell.x + radius; x++)
@@ -655,19 +669,28 @@ namespace LocalTanks
                         continue;
                     }
 
-                    List<Vector2> path = map.FindWorldPath(shelter, candidate, clearanceCells);
-                    if (path == null || path.Count < 2) continue;
-                    float pathLength = CalculatePathLength(path);
-                    float score = pathLength + Mathf.Max(0f, pathLength - directDistance) * 2f;
-                    if (!found || score < bestScore - 0.001f ||
-                        Mathf.Approximately(score, bestScore) && IsEarlier(cell, firingCell))
-                    {
-                        found = true;
-                        bestScore = score;
-                        firingCell = cell;
-                        firingPosition = candidate;
-                        firingPathLength = pathLength;
-                    }
+                    pathCandidates.Add(new PeekCandidate(cell, candidate, directDistance));
+                }
+            }
+
+            pathCandidates.Sort(ComparePeekCandidates);
+            int pathChecks = Mathf.Min(PeekPathCandidateBudget, pathCandidates.Count);
+            for (int index = 0; index < pathChecks; index++)
+            {
+                PeekCandidate candidate = pathCandidates[index];
+
+                List<Vector2> path = map.FindWorldPath(shelter, candidate.Position, clearanceCells);
+                if (path == null || path.Count < 2) continue;
+                float pathLength = CalculatePathLength(path);
+                float score = pathLength + Mathf.Max(0f, pathLength - candidate.DirectDistance) * 2f;
+                if (!found || score < bestScore - 0.001f ||
+                    Mathf.Approximately(score, bestScore) && IsEarlier(candidate.Cell, firingCell))
+                {
+                    found = true;
+                    bestScore = score;
+                    firingCell = candidate.Cell;
+                    firingPosition = candidate.Position;
+                    firingPathLength = pathLength;
                 }
             }
 
@@ -701,6 +724,48 @@ namespace LocalTanks
         private static bool IsEarlier(Vector2Int candidate, Vector2Int current)
         {
             return candidate.y < current.y || candidate.y == current.y && candidate.x < current.x;
+        }
+
+        private static int CompareCoverCandidates(CoverCandidate left, CoverCandidate right)
+        {
+            int byDistance = left.DirectDistance.CompareTo(right.DirectDistance);
+            if (byDistance != 0) return byDistance;
+            return IsEarlier(left.Cell, right.Cell) ? -1 : left.Cell == right.Cell ? 0 : 1;
+        }
+
+        private static int ComparePeekCandidates(PeekCandidate left, PeekCandidate right)
+        {
+            int byDistance = left.DirectDistance.CompareTo(right.DirectDistance);
+            if (byDistance != 0) return byDistance;
+            return IsEarlier(left.Cell, right.Cell) ? -1 : left.Cell == right.Cell ? 0 : 1;
+        }
+
+        private readonly struct CoverCandidate
+        {
+            public CoverCandidate(Vector2Int cell, Vector2 position, float directDistance)
+            {
+                Cell = cell;
+                Position = position;
+                DirectDistance = directDistance;
+            }
+
+            public Vector2Int Cell { get; }
+            public Vector2 Position { get; }
+            public float DirectDistance { get; }
+        }
+
+        private readonly struct PeekCandidate
+        {
+            public PeekCandidate(Vector2Int cell, Vector2 position, float directDistance)
+            {
+                Cell = cell;
+                Position = position;
+                DirectDistance = directDistance;
+            }
+
+            public Vector2Int Cell { get; }
+            public Vector2 Position { get; }
+            public float DirectDistance { get; }
         }
     }
 

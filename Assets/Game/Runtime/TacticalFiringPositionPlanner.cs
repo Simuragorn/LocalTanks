@@ -182,6 +182,7 @@ namespace LocalTanks
     public static class TacticalFiringPositionPlanner
     {
         public const float DefaultSearchDistance = 9f;
+        public const int PathCandidateBudget = 8;
 
         public static bool TryFind(
             NavigationMap map,
@@ -239,6 +240,7 @@ namespace LocalTanks
             float bestPathLength = 0f;
             float bestTargetDistance = 0f;
             Vector2 bestInitialPathDirection = Vector2.zero;
+            List<FiringCandidate> pathCandidates = new List<FiringCandidate>();
 
             for (int y = originCell.y - searchCells; y <= originCell.y + searchCells; y++)
             {
@@ -270,30 +272,46 @@ namespace LocalTanks
                         continue;
                     }
 
-                    List<Vector2> path = map.FindWorldPath(origin, candidate, clearanceCells);
-                    if (path == null || path.Count < 2)
-                    {
-                        continue;
-                    }
-
-                    float pathLength = CalculatePathLength(path);
                     float distanceError = Mathf.Abs(targetDistance - Mathf.Max(map.CellSize, preferredDistance));
-                    float detour = Mathf.Max(0f, pathLength - movementDistance);
-                    float pathAdjustment = pathScoreAdjustment != null
-                        ? Mathf.Max(0f, pathScoreAdjustment(path))
-                        : 0f;
-                    float score = pathLength * 1.6f + distanceError * 0.7f + detour * 0.9f + pathAdjustment;
-                    if (!found || score < bestScore - 0.001f ||
-                        Mathf.Approximately(score, bestScore) && IsEarlier(cell, bestCell))
-                    {
-                        found = true;
-                        bestScore = score;
-                        bestCell = cell;
-                        bestPosition = candidate;
-                        bestPathLength = pathLength;
-                        bestTargetDistance = targetDistance;
-                        bestInitialPathDirection = FirstPathDirection(path);
-                    }
+                    pathCandidates.Add(new FiringCandidate(
+                        cell,
+                        candidate,
+                        movementDistance,
+                        targetDistance,
+                        movementDistance * 1.6f + distanceError * 0.7f));
+                }
+            }
+
+            pathCandidates.Sort(CompareCandidates);
+            int pathChecks = Mathf.Min(PathCandidateBudget, pathCandidates.Count);
+            for (int index = 0; index < pathChecks; index++)
+            {
+                FiringCandidate candidate = pathCandidates[index];
+
+                List<Vector2> path = map.FindWorldPath(origin, candidate.Position, clearanceCells);
+                if (path == null || path.Count < 2)
+                {
+                    continue;
+                }
+
+                float pathLength = CalculatePathLength(path);
+                float distanceError = Mathf.Abs(
+                    candidate.TargetDistance - Mathf.Max(map.CellSize, preferredDistance));
+                float detour = Mathf.Max(0f, pathLength - candidate.MovementDistance);
+                float pathAdjustment = pathScoreAdjustment != null
+                    ? Mathf.Max(0f, pathScoreAdjustment(path))
+                    : 0f;
+                float score = pathLength * 1.6f + distanceError * 0.7f + detour * 0.9f + pathAdjustment;
+                if (!found || score < bestScore - 0.001f ||
+                    Mathf.Approximately(score, bestScore) && IsEarlier(candidate.Cell, bestCell))
+                {
+                    found = true;
+                    bestScore = score;
+                    bestCell = candidate.Cell;
+                    bestPosition = candidate.Position;
+                    bestPathLength = pathLength;
+                    bestTargetDistance = candidate.TargetDistance;
+                    bestInitialPathDirection = FirstPathDirection(path);
                 }
             }
 
@@ -373,6 +391,37 @@ namespace LocalTanks
         private static bool IsEarlier(Vector2Int candidate, Vector2Int current)
         {
             return candidate.y < current.y || candidate.y == current.y && candidate.x < current.x;
+        }
+
+        private static int CompareCandidates(FiringCandidate left, FiringCandidate right)
+        {
+            int byScore = left.ApproximateScore.CompareTo(right.ApproximateScore);
+            if (byScore != 0) return byScore;
+            if (left.Cell.y != right.Cell.y) return left.Cell.y.CompareTo(right.Cell.y);
+            return left.Cell.x.CompareTo(right.Cell.x);
+        }
+
+        private readonly struct FiringCandidate
+        {
+            public FiringCandidate(
+                Vector2Int cell,
+                Vector2 position,
+                float movementDistance,
+                float targetDistance,
+                float approximateScore)
+            {
+                Cell = cell;
+                Position = position;
+                MovementDistance = movementDistance;
+                TargetDistance = targetDistance;
+                ApproximateScore = approximateScore;
+            }
+
+            public Vector2Int Cell { get; }
+            public Vector2 Position { get; }
+            public float MovementDistance { get; }
+            public float TargetDistance { get; }
+            public float ApproximateScore { get; }
         }
     }
 }

@@ -24,7 +24,10 @@ namespace LocalTanks
     {
         private const string PoolContainerName = "CombatVfxPool";
         private const string MarkContainerName = "CombatVfxMarks";
-        private const int ImpactPrewarmCount = 8;
+        // Seven automatic cannons can overlap four smoke lifetimes each before the first effect returns.
+        // Preparing that real 7x7 burst during loading is cheaper than growing the pool during contact.
+        private const int SalvoPrewarmCount = 32;
+        private const int DestructionPrewarmCount = 8;
 
         private readonly List<Action> unsubscribers = new List<Action>();
         private readonly CombatVfxPool pool = new CombatVfxPool();
@@ -111,9 +114,15 @@ namespace LocalTanks
             {
                 // Automatic cannon bursts can need several copies before the first one has faded. Build
                 // that reserve while the battle is loading instead of on the frames that receive damage.
-                pool.Prewarm(CombatVfxEffects.ImpactSpark, ImpactPrewarmCount);
-                pool.Prewarm(CombatVfxEffects.ImpactDust, ImpactPrewarmCount);
-                pool.Prewarm(CombatVfxEffects.ImpactDebris, ImpactPrewarmCount);
+                pool.Prewarm(CombatVfxEffects.ImpactSpark, SalvoPrewarmCount);
+                pool.Prewarm(CombatVfxEffects.ImpactDust, SalvoPrewarmCount);
+                pool.Prewarm(CombatVfxEffects.ImpactDebris, SalvoPrewarmCount);
+                // Spotting often makes several bots fire within the same few physics ticks. The muzzle
+                // flash and smoke used to instantiate their particle hierarchies on those first shots,
+                // which looked like a detection hitch even while the FPS counter stayed near 60.
+                pool.Prewarm(CombatVfxEffects.MuzzleFlash, SalvoPrewarmCount);
+                pool.Prewarm(CombatVfxEffects.MuzzleSmoke, SalvoPrewarmCount);
+                pool.Prewarm(CombatVfxEffects.DestructionBurst, DestructionPrewarmCount);
             }
             Subscribe();
 

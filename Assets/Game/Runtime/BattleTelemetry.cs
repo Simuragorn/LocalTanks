@@ -136,6 +136,10 @@ namespace LocalTanks
         public int PeakVisionQueriesPerFrame;
         public int PeakVisionEvaluationsPerFrame;
         public int TotalVisionEvaluations;
+        public float MaximumAiMs;
+        public int FramesAiOver16Ms;
+        public int CombatVfxCreatedDuringMeasurement;
+        public int CombatVfxReusedDuringMeasurement;
         public int TrackMarkEmitters;
         public int TrackMarkCapacity;
         public int TrackMarkRenderers;
@@ -269,13 +273,14 @@ namespace LocalTanks
             float closest = float.MaxValue;
             if (battle != null)
             {
-                foreach (TeamMember member in battle.SpawnedMembers)
+                TeamMember[] members = SnapshotBattleMembers();
+                foreach (TeamMember member in members)
                 {
                     if (member == null) continue;
                     int hp = member.Health != null ? member.Health.CurrentHitPoints : 0;
                     if (member.Team == TeamId.TeamA) { healthA += hp; if (member.IsAlive) aliveA++; }
                     else { healthB += hp; if (member.IsAlive) aliveB++; }
-                    foreach (TeamMember other in battle.SpawnedMembers)
+                    foreach (TeamMember other in members)
                     {
                         if (other == null || other.Team == member.Team) continue;
                         closest = Mathf.Min(closest,
@@ -326,6 +331,9 @@ namespace LocalTanks
             double totalFrameMs = frameTimes.Sum(value => (double)value);
             TankTrackMarkEmitter[] markEmitters = FindObjectsByType<TankTrackMarkEmitter>(
                 FindObjectsInactive.Include);
+            CombatVfxPool combatVfxPool = director != null && director.VfxSystem != null
+                ? director.VfxSystem.Pool
+                : null;
             return new BattlePerformanceSummary
             {
                 Frames = frameSamples.Count,
@@ -353,6 +361,10 @@ namespace LocalTanks
                 PeakVisionQueriesPerFrame = frameSamples.Max(sample => sample.visionQueries),
                 PeakVisionEvaluationsPerFrame = frameSamples.Max(sample => sample.visionEvaluations),
                 TotalVisionEvaluations = frameSamples.Sum(sample => sample.visionEvaluations),
+                MaximumAiMs = Round(frameSamples.Max(sample => sample.aiMs)),
+                FramesAiOver16Ms = frameSamples.Count(sample => sample.aiMs > 16f),
+                CombatVfxCreatedDuringMeasurement = combatVfxPool?.CreatedCount ?? 0,
+                CombatVfxReusedDuringMeasurement = combatVfxPool?.ReusedCount ?? 0,
                 TrackMarkEmitters = markEmitters.Length,
                 TrackMarkCapacity = markEmitters.Sum(emitter => emitter.Capacity),
                 TrackMarkRenderers = markEmitters.Sum(emitter => emitter.RendererCount),
@@ -419,7 +431,7 @@ namespace LocalTanks
             recording = true;
             CollectTracks();
             startingHealth = 0;
-            foreach (TeamMember member in director.SpawnedMembers)
+            foreach (TeamMember member in SnapshotBattleMembers())
             {
                 if (member != null && member.Health != null) startingHealth += member.Health.MaximumHitPoints;
             }
@@ -442,7 +454,7 @@ namespace LocalTanks
             motorControlFingerprint.Reset();
             motorPhysicsFingerprint.Reset();
             CollectTracks();
-            startingHealth = director.SpawnedMembers
+            startingHealth = SnapshotBattleMembers()
                 .Where(member => member != null && member.Health != null)
                 .Sum(member => member.Health.CurrentHitPoints);
             startedAt = Time.time;
@@ -456,6 +468,7 @@ namespace LocalTanks
                 ? director.VisionSystem.WorldVisibilityEvaluationCount
                 : 0;
             BattlePerformanceProbe.Start();
+            director.VfxSystem?.ResetStatistics();
             SampleTanks(0f);
         }
 
@@ -615,7 +628,7 @@ namespace LocalTanks
         /// <summary>Registers every spawned member so events can be attributed by index, not by name.</summary>
         private void CollectTracks()
         {
-            foreach (TeamMember member in director.SpawnedMembers)
+            foreach (TeamMember member in SnapshotBattleMembers())
             {
                 if (member == null) continue;
                 Register(member);
@@ -647,7 +660,7 @@ namespace LocalTanks
 
         private void SampleTanks(float elapsed)
         {
-            foreach (TeamMember member in director.SpawnedMembers)
+            foreach (TeamMember member in SnapshotBattleMembers())
             {
                 if (member == null) continue;
                 TankTelemetryTrack track = Register(member);
@@ -700,6 +713,24 @@ namespace LocalTanks
 
                 RecordChanges(track, ai, health, elapsed, position);
             }
+        }
+
+        private TeamMember[] SnapshotBattleMembers()
+        {
+            if (director == null) return Array.Empty<TeamMember>();
+
+            TeamMember[] registered = director.SpawnedMembers
+                .Where(member => member != null)
+                .ToArray();
+            if (registered.Length > 0) return registered;
+
+            // A graphical diagnostic can cross an Editor assembly reload after the scene has spawned.
+            // Unity restores the scene objects, but not BattleDirector's runtime-only List. The canonical
+            // TeamMember registry is rebuilt by OnEnable, so it is the reliable fallback for telemetry.
+            Scene battleScene = director.gameObject.scene;
+            return TeamMember.ActiveMembers
+                .Where(member => member != null && member.gameObject.scene == battleScene)
+                .ToArray();
         }
 
         /// <summary>
@@ -915,6 +946,10 @@ namespace LocalTanks
                 .Append($"\"peakVisionQueriesPerFrame\":{value.PeakVisionQueriesPerFrame},")
                 .Append($"\"peakVisionEvaluationsPerFrame\":{value.PeakVisionEvaluationsPerFrame},")
                 .Append($"\"totalVisionEvaluations\":{value.TotalVisionEvaluations},")
+                .Append($"\"maximumAiMs\":{Number(value.MaximumAiMs)},")
+                .Append($"\"framesAiOver16Ms\":{value.FramesAiOver16Ms},")
+                .Append($"\"combatVfxCreatedDuringMeasurement\":{value.CombatVfxCreatedDuringMeasurement},")
+                .Append($"\"combatVfxReusedDuringMeasurement\":{value.CombatVfxReusedDuringMeasurement},")
                 .Append($"\"trackMarkEmitters\":{value.TrackMarkEmitters},")
                 .Append($"\"trackMarkCapacity\":{value.TrackMarkCapacity},")
                 .Append($"\"trackMarkRenderers\":{value.TrackMarkRenderers},")
@@ -934,13 +969,14 @@ namespace LocalTanks
             int aliveA = 0;
             int aliveB = 0;
             float closest = float.MaxValue;
-            foreach (TeamMember member in battle != null ? battle.SpawnedMembers : new List<TeamMember>())
+            TeamMember[] members = battle != null ? SnapshotBattleMembers() : Array.Empty<TeamMember>();
+            foreach (TeamMember member in members)
             {
                 if (member == null) continue;
                 int hp = member.Health != null ? member.Health.CurrentHitPoints : 0;
                 if (member.Team == TeamId.TeamA) { healthA += hp; if (member.IsAlive) aliveA++; }
                 else { healthB += hp; if (member.IsAlive) aliveB++; }
-                foreach (TeamMember other in battle.SpawnedMembers)
+                foreach (TeamMember other in members)
                 {
                     if (other == null || other.Team == member.Team) continue;
                     closest = Mathf.Min(closest,
@@ -1181,6 +1217,9 @@ namespace LocalTanks
         private long phaseEndsAt;
         private Camera battleCamera;
         private RenderTexture renderTarget;
+        private bool performanceSceneLoaded;
+        [SerializeField, HideInInspector] private bool startedOnce;
+        [NonSerialized] private bool reloadQueued;
 
         public static bool IsRequested => Environment.GetCommandLineArgs().Contains(SwitchName);
 
@@ -1200,9 +1239,21 @@ namespace LocalTanks
             Debug.Log("River Crossing performance runner created.");
         }
 
+        private void OnEnable()
+        {
+            // A command-line Editor may finish importing and reload scripts just after it first enters
+            // Play Mode. Scene objects survive that reload, but runtime-only registries and VFX pools do
+            // not. Queue a clean scene load so the measured battle is never that half-restored state.
+            if (startedOnce)
+            {
+                reloadQueued = true;
+            }
+        }
+
         private void Start()
         {
             Debug.Log("River Crossing performance runner started.");
+            startedOnce = true;
             previousTargetFrameRate = Application.targetFrameRate;
             previousVSyncCount = QualitySettings.vSyncCount;
             previousTimeScale = Time.timeScale;
@@ -1210,19 +1261,35 @@ namespace LocalTanks
             QualitySettings.vSyncCount = 0;
             Time.timeScale = 1f;
 
-            // Always reload the arena. An ExecuteMethod starts from whichever scene happened to be open
-            // in the Editor; reusing an already-running battle would measure stale wrecks and registries.
-            SceneManager.LoadScene("Battle_RiverCrossing", LoadSceneMode.Single);
-            phase = 0;
-            phaseEndsAt = Deadline(30f);
+            BeginPerformanceSceneLoad();
         }
 
         private void Update()
         {
+            if (reloadQueued)
+            {
+                reloadQueued = false;
+                Debug.Log("River Crossing performance runner restarting after an Editor script reload.");
+                BeginPerformanceSceneLoad();
+                return;
+            }
+
             RenderBattleFrame();
+            if (phase < 0)
+            {
+                if (Expired())
+                {
+                    Debug.LogError("River Crossing performance scene did not finish loading within 30 seconds.");
+                    Exit(2);
+                }
+                return;
+            }
+
             if (phase == 0)
             {
-                director = FindAnyObjectByType<BattleDirector>();
+                Scene activeScene = SceneManager.GetActiveScene();
+                director = FindObjectsByType<BattleDirector>(FindObjectsSortMode.None)
+                    .FirstOrDefault(item => item != null && item.gameObject.scene == activeScene);
                 int spawnCount = director != null ? director.SpawnedMembers.Count : -1;
                 if (spawnCount != lastSpawnCount)
                 {
@@ -1276,14 +1343,18 @@ namespace LocalTanks
                 $"p99={performance.P99FrameMs:0.00}ms max={performance.MaximumFrameMs:0.00}ms " +
                 $"cpu95={performance.P95CpuFrameMs:0.00}ms gpu95={performance.P95GpuFrameMs:0.00}ms " +
                 $"slow50={performance.FramesOver50Ms} slow100={performance.FramesOver100Ms} " +
+                $"aiMax={performance.MaximumAiMs:0.00}ms aiSlow={performance.FramesAiOver16Ms} " +
+                $"vfxCreated={performance.CombatVfxCreatedDuringMeasurement} " +
                 $"gc={performance.TotalGcBytes} peakDraws={performance.PeakDrawCalls} " +
                 $"marks={performance.LiveTrackMarks}/{performance.TrackMarkRenderers}/" +
                 $"{performance.TrackMarkCapacity} emitted={performance.EmittedTrackMarks} " +
-                $"skipped={performance.SkippedTrackMarks} tanks={director.SpawnedMembers.Count}");
+                $"skipped={performance.SkippedTrackMarks} tanks=" +
+                $"{FindObjectsByType<TeamMember>(FindObjectsSortMode.None).Count(member => member != null && member.gameObject.scene == director.gameObject.scene)}");
 
             bool passed = performance.Frames > 300 &&
                           performance.P95FrameMs <= 33.34f &&
-                          performance.FramesOver100Ms <= 2;
+                          performance.FramesOver50Ms == 0 &&
+                          performance.MaximumAiMs <= 25f;
             phase = 4;
             Exit(passed ? 0 : 1);
         }
@@ -1318,6 +1389,7 @@ namespace LocalTanks
 
         private void OnDestroy()
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             if (telemetry != null && telemetry.IsRecording) telemetry.Stop();
             ReleaseRenderer();
             RestoreTiming();
@@ -1325,11 +1397,39 @@ namespace LocalTanks
 
         private void Exit(int exitCode)
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             ReleaseRenderer();
             RestoreTiming();
             Application.Quit(exitCode);
             Type editorApplication = Type.GetType("UnityEditor.EditorApplication,UnityEditor");
             editorApplication?.GetMethod("Exit", new[] { typeof(int) })?.Invoke(null, new object[] { exitCode });
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (performanceSceneLoaded || scene.name != "Battle_RiverCrossing") return;
+            performanceSceneLoaded = true;
+            phase = 0;
+            phaseEndsAt = Deadline(30f);
+            Debug.Log("River Crossing performance scene load completed.");
+        }
+
+        private void BeginPerformanceSceneLoad()
+        {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            if (telemetry != null && telemetry.IsRecording) telemetry.Stop();
+            telemetry = null;
+            director = null;
+            performanceSceneLoaded = false;
+            lastSpawnCount = -1;
+            ReleaseRenderer();
+            phase = -1;
+            phaseEndsAt = Deadline(30f);
+
+            // Always reload the arena. An ExecuteMethod starts from whichever scene happened to be open
+            // in the Editor; reusing an already-running battle would measure stale wrecks and registries.
+            SceneManager.LoadScene("Battle_RiverCrossing", LoadSceneMode.Single);
         }
 
         private void RestoreTiming()

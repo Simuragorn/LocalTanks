@@ -87,6 +87,36 @@ namespace LocalTanks.Tests
         }
 
         [UnityTest]
+        public IEnumerator BattleSystem_PrewarmsFirstMuzzleSalvo()
+        {
+            GameObject battleObject = new GameObject("MuzzlePrewarmBattle");
+            spawned.Add(battleObject);
+            BattleDirector director = battleObject.AddComponent<BattleDirector>();
+            director.enabled = false;
+            CombatVfxSystem system = CombatVfxSystem.Attach(director, provider);
+            Assert.That(system, Is.Not.Null);
+
+            system.Pool.ResetStatistics();
+            for (int index = 0; index < 8; index++)
+            {
+                system.Play(VfxEmission.At(
+                    CombatVfxEffects.MuzzleFlash,
+                    Vector3.right * index,
+                    Quaternion.identity).WithLifetime(1f));
+                system.Play(VfxEmission.At(
+                    CombatVfxEffects.MuzzleSmoke,
+                    Vector3.left * index,
+                    Quaternion.identity).WithLifetime(1f));
+            }
+
+            Assert.That(system.Pool.CreatedCount, Is.Zero,
+                "The first spotted-team salvo must rent muzzle effects prepared during loading.");
+            Assert.That(system.Pool.ReusedCount, Is.EqualTo(16));
+
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator Pool_StaysWithinItsBudget()
         {
             pool.Configure(provider, null, 2, 1f);
