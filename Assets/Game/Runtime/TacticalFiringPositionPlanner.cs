@@ -82,7 +82,7 @@ namespace LocalTanks
             }
 
             RaycastHit2D[] hits = Physics2D.RaycastAll(origin, delta / distance, distance + 0.2f);
-            Array.Sort(hits, (left, right) => left.distance.CompareTo(right.distance));
+            Array.Sort(hits, PhysicsQueryOrder.CompareHits);
             foreach (RaycastHit2D hit in hits)
             {
                 if (hit.collider == null || hit.collider.isTrigger ||

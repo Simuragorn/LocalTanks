@@ -180,11 +180,14 @@ namespace LocalTanks.Tests
             float previousCaptureDeltaTime = Time.captureDeltaTime;
             Time.captureDeltaTime = 1f / 60f;
             SceneManager.LoadScene("Battle_AiSquadLab");
+            Dictionary<string, (string Fingerprint, int Count)> firstPass =
+                new Dictionary<string, (string Fingerprint, int Count)>();
 
             try
             {
-                for (int caseIndex = 0; caseIndex < expectedCases.Length; caseIndex++)
+                for (int runIndex = 0; runIndex < expectedCases.Length * 2; runIndex++)
                 {
+                    int caseIndex = runIndex % expectedCases.Length;
                     AiSquadLabController lab = null;
                     for (int frame = 0; frame < 120; frame++)
                     {
@@ -204,6 +207,7 @@ namespace LocalTanks.Tests
                     Assert.That(Object.FindObjectsByType<CombatTankAI>(), Has.Length.EqualTo(6));
                     Assert.That(director.StrategicPlanner, Is.Null);
                     Assert.That(director.StrategicCoordinator, Is.Null);
+                    BattleTelemetry telemetry = BattleTelemetry.Attach(director, writeOutput: false);
 
                     Time.timeScale = 10f;
                     while (!lab.IsComplete) yield return null;
@@ -214,12 +218,21 @@ namespace LocalTanks.Tests
                     Assert.That(lab.Auditor.SampleCount, Is.GreaterThanOrEqualTo(minimumSamples));
                     foreach (string botId in expectedBots) Assert.That(report, Does.Contain(botId));
                     Debug.Log($"AI_SQUAD_DIAGNOSTIC case={lab.ActiveCase.id} seed={lab.ActiveCase.seed}\n" +
-                              report + "\n" + lab.Auditor.BuildTransitionReport());
+                              report + "\n" + lab.Auditor.BuildTransitionReport() +
+                              $"\nfingerprint={telemetry.DecisionFingerprint} decisions={telemetry.FingerprintedDecisionCount}");
 
-                    if (caseIndex + 1 < expectedCases.Length)
-                        lab.ReloadCase(caseIndex + 1);
+                    var signature = (telemetry.DecisionFingerprint, telemetry.FingerprintedDecisionCount);
+                    if (runIndex < expectedCases.Length)
+                    {
+                        firstPass.Add(lab.ActiveCase.id, signature);
+                    }
                     else
-                        lab.ReloadCase(0);
+                    {
+                        Assert.That(signature, Is.EqualTo(firstPass[lab.ActiveCase.id]),
+                            $"Same-seed decision trace diverged for {lab.ActiveCase.id}.");
+                    }
+
+                    lab.ReloadCase((caseIndex + 1) % expectedCases.Length);
                 }
             }
             finally

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LocalTanks
@@ -15,6 +16,8 @@ namespace LocalTanks
     public sealed class TeamMember : MonoBehaviour
     {
         private static readonly HashSet<TeamMember> Members = new HashSet<TeamMember>();
+        private static TeamMember[] orderedMembers = Array.Empty<TeamMember>();
+        private static bool memberOrderDirty = true;
 
         [SerializeField] private TeamId team = TeamId.Neutral;
         [SerializeField] private bool playerControlled;
@@ -25,7 +28,25 @@ namespace LocalTanks
         [SerializeField] private Transform visionDirection;
 
         public static event Action<TeamMember, bool> MembershipChanged;
-        public static IReadOnlyCollection<TeamMember> ActiveMembers => Members;
+        /// <summary>
+        /// Active machines in a stable gameplay order. A HashSet is still used for membership, but its
+        /// iteration order depends on transient Unity instance ids and changed between identical scene
+        /// reloads. Target selection and vision must never inherit that process-specific order.
+        /// </summary>
+        public static IReadOnlyList<TeamMember> ActiveMembers
+        {
+            get
+            {
+                if (!memberOrderDirty) return orderedMembers;
+                orderedMembers = Members
+                    .Where(item => item != null)
+                    .OrderBy(item => item.Team)
+                    .ThenBy(StableOrderKey, StringComparer.Ordinal)
+                    .ToArray();
+                memberOrderDirty = false;
+                return orderedMembers;
+            }
+        }
 
         public TeamId Team => team;
         public bool IsPlayerControlled => playerControlled;
@@ -60,6 +81,7 @@ namespace LocalTanks
 
             if (Members.Add(this))
             {
+                memberOrderDirty = true;
                 MembershipChanged?.Invoke(this, true);
             }
         }
@@ -73,6 +95,7 @@ namespace LocalTanks
 
             if (Members.Remove(this))
             {
+                memberOrderDirty = true;
                 MembershipChanged?.Invoke(this, false);
             }
         }
@@ -82,7 +105,17 @@ namespace LocalTanks
             team = newTeam;
             playerControlled = isPlayerControlled;
             ResolveReferences();
+            memberOrderDirty = true;
             MembershipChanged?.Invoke(this, true);
+        }
+
+        internal static string StableOrderKey(TeamMember item)
+        {
+            if (item == null) return string.Empty;
+            BotIdentity identity = item.GetComponent<BotIdentityComponent>()?.Identity;
+            return identity != null && !string.IsNullOrWhiteSpace(identity.entityId)
+                ? identity.entityId
+                : item.gameObject.name;
         }
 
         public void RecordFiring(float time)

@@ -80,6 +80,7 @@ namespace LocalTanks
         private float elapsedAtLastSample;
         private int startingHealth;
         private bool recording;
+        private bool writeOnStop = true;
         private string outputPath;
 
         /// <summary>The active recorder, or null when this battle is not being recorded.</summary>
@@ -185,7 +186,10 @@ namespace LocalTanks
         }
 
         /// <summary>Attaches a recorder to a director and begins recording immediately.</summary>
-        public static BattleTelemetry Attach(BattleDirector battleDirector, string path = null)
+        public static BattleTelemetry Attach(
+            BattleDirector battleDirector,
+            string path = null,
+            bool writeOutput = true)
         {
             if (battleDirector == null) return null;
             BattleTelemetry telemetry = battleDirector.gameObject.GetComponent<BattleTelemetry>();
@@ -196,6 +200,7 @@ namespace LocalTanks
 
             telemetry.director = battleDirector;
             telemetry.outputPath = path;
+            telemetry.writeOnStop = writeOutput;
             telemetry.Begin();
             return telemetry;
         }
@@ -227,7 +232,7 @@ namespace LocalTanks
             recording = false;
             if (instance == this) instance = null;
             string json = ToJson();
-            Write(json);
+            if (writeOnStop) Write(json);
             return json;
         }
 

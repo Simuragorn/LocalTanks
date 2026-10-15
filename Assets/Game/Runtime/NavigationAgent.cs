@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace LocalTanks
@@ -469,7 +470,9 @@ namespace LocalTanks
                     clearances[other] = clearance;
             }
 
-            foreach (KeyValuePair<NavigationAgent, float> entry in clearances)
+            foreach (KeyValuePair<NavigationAgent, float> entry in clearances
+                         .OrderBy(item => item.Key != null ? item.Key.gameObject.name : string.Empty,
+                             System.StringComparer.Ordinal))
             {
                 NavigationAgent other = entry.Key;
                 Vector2 offset = (Vector2)other.transform.position - (Vector2)transform.position;

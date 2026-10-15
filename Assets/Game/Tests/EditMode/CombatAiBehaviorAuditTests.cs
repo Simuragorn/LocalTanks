@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -6,6 +7,31 @@ namespace LocalTanks.Tests
 {
     public sealed class CombatAiBehaviorAuditTests
     {
+        [Test]
+        public void ActiveTeamMembers_AreOrderedByStableIdentityInsteadOfUnityInstanceId()
+        {
+            GameObject later = new GameObject("zeta-member");
+            GameObject earlier = new GameObject("alpha-member");
+            try
+            {
+                TeamMember laterMember = later.AddComponent<TeamMember>();
+                TeamMember earlierMember = earlier.AddComponent<TeamMember>();
+                laterMember.Configure(TeamId.TeamA, false);
+                earlierMember.Configure(TeamId.TeamA, false);
+
+                List<TeamMember> created = TeamMember.ActiveMembers
+                    .Where(item => item == earlierMember || item == laterMember)
+                    .ToList();
+
+                Assert.That(created, Is.EqualTo(new[] { earlierMember, laterMember }));
+            }
+            finally
+            {
+                Object.DestroyImmediate(later);
+                Object.DestroyImmediate(earlier);
+            }
+        }
+
         [Test]
         public void DecisionFingerprint_IsStableForTheSameOrderedTrace()
         {

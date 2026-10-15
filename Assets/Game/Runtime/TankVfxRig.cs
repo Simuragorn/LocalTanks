@@ -665,8 +665,8 @@ namespace LocalTanks
             Quaternion rotation = CombatVfxSystem.PlaneRotation(muzzle.up);
             // No two shots are identical: the flash is rotated a little and its size varies, which is what
             // keeps a burst of fire from looking like one stamped sprite repeated.
-            float spread = Random.Range(-16f, 16f);
-            float variation = Random.Range(0.85f, 1.2f);
+            float spread = VisualVariation(-16f, 16f, 1);
+            float variation = VisualVariation(0.85f, 1.2f, 2);
             rotation *= Quaternion.Euler(0f, 0f, spread);
             system.Play(VfxEmission.At(
                 CombatVfxEffects.MuzzleFlash,
@@ -679,7 +679,7 @@ namespace LocalTanks
                         CombatVfxEffects.MuzzleSmoke,
                         muzzle.position,
                         rotation,
-                        profile.smokeScale * Random.Range(0.9f, 1.1f))
+                        profile.smokeScale * VisualVariation(0.9f, 1.1f, 3))
                     .WithCount(profile.smokeBurst));
             }
 
@@ -690,6 +690,15 @@ namespace LocalTanks
             }
 
             MuzzleFlashCount++;
+        }
+
+        private float VisualVariation(float minimum, float maximum, int salt)
+        {
+            int seed = BotPersonalityGenerator.StableSeed(
+                gameObject.name + ":muzzle:" + MuzzleFlashCount + ":" + salt);
+            uint bits = unchecked((uint)seed);
+            float unit = (bits & 0x00ffffffu) / 16777215f;
+            return Mathf.Lerp(minimum, maximum, unit);
         }
 
         /// <summary>Rate of the barrel plume while it is open.</summary>

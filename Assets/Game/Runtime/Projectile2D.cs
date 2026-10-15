@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace LocalTanks
@@ -150,6 +151,7 @@ namespace LocalTanks
                 direction,
                 stepDistance,
                 collisionMask);
+            Array.Sort(hits, PhysicsQueryOrder.CompareHits);
 
             foreach (RaycastHit2D hit in hits)
             {
