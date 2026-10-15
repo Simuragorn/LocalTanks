@@ -13,7 +13,7 @@
             <ui:DropdownField name="map-choice" class="map-choice" />
         </ui:VisualElement>
         <ui:VisualElement class="teams-row">
-            <ui:VisualElement class="team-panel lt-panel lt-panel--solid">
+            <ui:VisualElement class="team-panel team-a-panel lt-panel lt-panel--solid">
                 <ui:Label text="СВОЯ КОМАНДА" class="team-title ally-text" />
                 <ui:SliderInt name="team-a-count" label="Количество машин" low-value="1" high-value="7" value="7" show-input-field="true" class="team-count" />
                 <ui:DropdownField name="team-a-whole" label="Вся команда" class="team-whole" />
@@ -28,6 +28,6 @@
         </ui:VisualElement>
         <ui:Label name="launch-validation" class="launch-validation hidden" />
         <ui:Button name="button-play" text="В БОЙ" class="play-button lt-button lt-button--primary" />
+        <ui:Instance template="SettingsOverlay" name="settings-instance" class="settings-instance" />
     </ui:VisualElement>
-    <ui:Instance template="SettingsOverlay" />
 </ui:UXML>

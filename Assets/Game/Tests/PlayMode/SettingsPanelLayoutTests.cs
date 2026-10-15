@@ -137,7 +137,8 @@ namespace LocalTanks.Tests
                 Label label = root.Q<Label>(className: "settings-label");
                 Label hint = root.Q<Label>(className: "settings-hint");
                 VisualElement row = root.Query<VisualElement>(className: "settings-row").First();
-                VisualElement dragger = root.Query<VisualElement>(className: "unity-base-slider__dragger").First();
+                VisualElement dragger = root.Q<Slider>("slider-master")
+                    ?.Q<VisualElement>(className: "unity-base-slider__dragger");
 
                 // A battlefield is a busy background: the panel has to be opaque enough to read on, and
                 // the text has to be bright rather than the mid grey that disappeared into the ground.
@@ -182,9 +183,9 @@ namespace LocalTanks.Tests
 
             Assert.That(overlay, Is.Not.Null);
             Assert.That(settingsPanel, Is.Not.Null);
-            if (rows.Count != 5)
+            if (rows.Count != 7)
             {
-                failures.Add($"{where}: expected five slider rows, found {rows.Count}");
+                failures.Add($"{where}: expected five audio and two crew rows, found {rows.Count}");
                 return failures;
             }
 

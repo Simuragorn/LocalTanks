@@ -35,7 +35,9 @@ namespace LocalTanks.Editor
         public const string PlayerAiTestLab = "Battle_PlayerAiTestLab";
 
         /// <summary>The maps the project currently builds. River Crossing is a temporary test map (ADR-064).</summary>
-        public static readonly string[] KnownMapScenes = { RiverCrossing, Mines };
+        public static readonly string[] KnownMapScenes = BattleMapCatalog.Playable
+            .Select(option => option.SceneName)
+            .ToArray();
 
         /// <summary>Everything that is not a playable map: the ranges and the three laboratories.</summary>
         public static readonly string[] LabScenes =

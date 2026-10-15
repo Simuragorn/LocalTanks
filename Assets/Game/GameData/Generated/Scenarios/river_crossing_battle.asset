@@ -15,6 +15,7 @@ MonoBehaviour:
   id: river_crossing_battle
   sceneId: Battle_RiverCrossing
   kind: 0
+  allowsCustomRoster: 0
   rules:
     randomSeed: 1701
     combat:

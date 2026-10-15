@@ -73,7 +73,11 @@ namespace LocalTanks.Tests
 
         private static string[] SliderNames(VisualElement root)
         {
-            return root.Query<Slider>().ToList().Select(slider => slider.name).OrderBy(name => name).ToArray();
+            return root.Query<Slider>().ToList()
+                .Select(slider => slider.name)
+                .Where(name => !string.IsNullOrEmpty(name) && name.StartsWith("slider-"))
+                .OrderBy(name => name)
+                .ToArray();
         }
 
         private static void AssertControls(VisualElement root, string path)

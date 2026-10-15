@@ -101,7 +101,12 @@
 
 .settings-dropdown {
     flex-grow: 1;
-    height: 28px;
+    height: 32px;
+}
+
+.settings-dropdown .unity-base-field__input {
+    min-height: 30px;
+    -unity-text-align: middle-left;
 }
 
 .settings-hint-row {

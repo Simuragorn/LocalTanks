@@ -245,6 +245,18 @@
       "description": "Report the imported format and pixels of every generated effect texture. It reads pixel data on the CPU, so it never needs a graphics device."
     },
     {
+      "name": "CaptureMainMenu",
+      "kind": "Tests",
+      "testPlatform": "PlayMode",
+      "filter": "MainMenuPreviewTests",
+      "requiresGraphics": true,
+      "timeoutSeconds": 1800,
+      "description": "Render the configurable battle launch menu for visual verification.",
+      "outputs": [
+        "Docs/Media/MainMenu.png"
+      ]
+    },
+    {
       "name": "CaptureSettingsPanel",
       "kind": "Tests",
       "testPlatform": "PlayMode",

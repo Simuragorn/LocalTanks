@@ -15,6 +15,7 @@ MonoBehaviour:
   id: ai_squad_lab_battle
   sceneId: Battle_RiverCrossing
   kind: 2
+  allowsCustomRoster: 0
   rules:
     randomSeed: 2711
     combat:
