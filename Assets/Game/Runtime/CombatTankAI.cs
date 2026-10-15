@@ -28,6 +28,7 @@ namespace LocalTanks
         /// which shows up as cover/combat task thrashing in the behavior audit.
         /// </summary>
         private const float ProactiveCoverCommitmentSeconds = 2.5f;
+        private static double lastCoordinatedFixedTime = double.NegativeInfinity;
 
         [SerializeField] private TeamMember member;
         [SerializeField] private TeamVisionSystem visionSystem;
@@ -348,6 +349,23 @@ namespace LocalTanks
         }
 
         private void FixedUpdate()
+        {
+            double fixedTime = Time.fixedTimeAsDouble;
+            if (fixedTime.Equals(lastCoordinatedFixedTime)) return;
+            lastCoordinatedFixedTime = fixedTime;
+
+            // Unity guarantees class-level execution order, but not the order of six instances of this
+            // class. Reservation winners, event order and target reactions therefore used to depend on
+            // transient instance ids. TeamMember exposes the canonical battle order, so one callback owns
+            // the whole tactical tick and subsequent instance callbacks for this physics step are no-ops.
+            foreach (TeamMember activeMember in TeamMember.ActiveMembers)
+            {
+                CombatTankAI ai = activeMember != null ? activeMember.GetComponent<CombatTankAI>() : null;
+                if (ai != null && ai.isActiveAndEnabled) ai.TickBot();
+            }
+        }
+
+        private void TickBot()
         {
             if (health == null || health.IsDestroyed)
             {
