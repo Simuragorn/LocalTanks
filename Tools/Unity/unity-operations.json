@@ -64,6 +64,17 @@
       ]
     },
     {
+      "name": "BuildMainMenu",
+      "kind": "ExecuteMethod",
+      "executeMethod": "LocalTanks.Editor.MainMenuSceneBuilder.Build",
+      "requiresGraphics": false,
+      "timeoutSeconds": 900,
+      "description": "Build the player-facing main menu and put it first in the scene list.",
+      "outputs": [
+        "Assets/Game/Scenes/Flow/MainMenu.unity"
+      ]
+    },
+    {
       "name": "BuildRiverCrossingMap",
       "kind": "ExecuteMethod",
       "executeMethod": "LocalTanks.Editor.RiverCrossingSetup.Build",

@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Template name="SettingsOverlay" src="project://database/Assets/Game/UI/SettingsOverlay.uxml" />
+    <ui:VisualElement name="main-menu" class="main-menu">
+        <ui:VisualElement class="menu-header">
+            <ui:VisualElement>
+                <ui:Label text="LOCAL TANKS" class="menu-title" />
+                <ui:Label text="Настройка боя" class="menu-subtitle lt-label" />
+            </ui:VisualElement>
+            <ui:Button name="button-settings" text="Настройки" class="menu-settings lt-button" />
+        </ui:VisualElement>
+        <ui:VisualElement class="map-panel lt-panel lt-panel--solid">
+            <ui:Label text="Карта" class="menu-section-title lt-title" />
+            <ui:DropdownField name="map-choice" class="map-choice" />
+        </ui:VisualElement>
+        <ui:VisualElement class="teams-row">
+            <ui:VisualElement class="team-panel lt-panel lt-panel--solid">
+                <ui:Label text="СВОЯ КОМАНДА" class="team-title ally-text" />
+                <ui:SliderInt name="team-a-count" label="Количество машин" low-value="1" high-value="7" value="7" show-input-field="true" class="team-count" />
+                <ui:DropdownField name="team-a-whole" label="Вся команда" class="team-whole" />
+                <ui:ScrollView name="team-a-rows" class="team-rows" />
+            </ui:VisualElement>
+            <ui:VisualElement class="team-panel lt-panel lt-panel--solid">
+                <ui:Label text="КОМАНДА ПРОТИВНИКА" class="team-title enemy-text" />
+                <ui:SliderInt name="team-b-count" label="Количество машин" low-value="1" high-value="7" value="7" show-input-field="true" class="team-count" />
+                <ui:DropdownField name="team-b-whole" label="Вся команда" class="team-whole" />
+                <ui:ScrollView name="team-b-rows" class="team-rows" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:Label name="launch-validation" class="launch-validation hidden" />
+        <ui:Button name="button-play" text="В БОЙ" class="play-button lt-button lt-button--primary" />
+    </ui:VisualElement>
+    <ui:Instance template="SettingsOverlay" />
+</ui:UXML>

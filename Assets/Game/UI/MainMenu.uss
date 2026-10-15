@@ -1,0 +1,30 @@
+.main-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    padding: 42px 72px 34px 72px;
+    background-color: rgb(15, 18, 16);
+    color: rgb(226, 229, 220);
+}
+
+.menu-header { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.menu-title { font-size: 42px; -unity-font-style: bold; color: rgb(224, 183, 78); }
+.menu-subtitle { font-size: 18px; }
+.menu-settings { width: 150px; height: 38px; }
+.map-panel { flex-direction: row; align-items: center; padding: 14px 18px; margin-bottom: 16px; }
+.menu-section-title { width: 110px; }
+.map-choice { flex-grow: 1; height: 32px; }
+.teams-row { flex-direction: row; flex-grow: 1; }
+.team-panel { width: 49%; padding: 18px; }
+.team-panel:first-child { margin-right: 2%; }
+.team-title { font-size: 19px; -unity-font-style: bold; margin-bottom: 12px; }
+.team-count, .team-whole { margin-bottom: 10px; }
+.team-rows { flex-grow: 1; }
+.team-slot { flex-direction: row; align-items: center; min-height: 34px; margin-bottom: 5px; }
+.team-slot-label { width: 82px; }
+.team-slot-dropdown { flex-grow: 1; height: 30px; }
+.play-button { width: 240px; height: 46px; align-self: center; margin-top: 16px; font-size: 18px; }
+.launch-validation { color: rgb(239, 121, 98); -unity-text-align: middle-center; margin-top: 8px; }
+.hidden { display: none; }

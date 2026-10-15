@@ -269,6 +269,16 @@ namespace LocalTanks
                 return;
             }
 
+            BattleScenario launchScenario = BattleLaunchConfiguration.CreateRuntimeScenario(
+                scenario,
+                gameObject.scene.name,
+                combatDatabase);
+            if (!ReferenceEquals(launchScenario, scenario))
+            {
+                runtimeScenarioInstance = launchScenario;
+                scenario = launchScenario;
+            }
+
             ValidateConfiguration();
             NavigationBakeReport = SceneNavigationBaker.Rebuild(navigationMap, gameObject.scene);
             RuntimeTacticalAnalysisResult tacticalAnalysis = RuntimeTacticalMapAnalyzer.Analyze(
@@ -282,7 +292,11 @@ namespace LocalTanks
                 scenario,
                 runtimeTacticalMap,
                 combatDatabase);
-            if (!ReferenceEquals(balancedScenario, scenario)) runtimeScenarioInstance = balancedScenario;
+            if (!ReferenceEquals(balancedScenario, scenario))
+            {
+                if (runtimeScenarioInstance != null) Destroy(runtimeScenarioInstance);
+                runtimeScenarioInstance = balancedScenario;
+            }
             scenario = balancedScenario;
             spawned = true;
             shotRandomStream = new ShotRandomStream(LocalTanksOverrides.RequestedSeed(Rules.randomSeed));

@@ -48,6 +48,7 @@ namespace LocalTanks
         public string id;
         public string sceneId;
         public BattleScenarioKind kind;
+        public bool allowsCustomRoster;
 
         /// <summary>
         /// Match rules: the battle length, what the time limit means and whether friendly fire is allowed.
@@ -85,7 +86,7 @@ namespace LocalTanks
             }
             int teamACount = roster.Count(item => item != null && item.team == TeamId.TeamA);
             int teamBCount = roster.Count(item => item != null && item.team == TeamId.TeamB);
-            if (kind == BattleScenarioKind.PlayerAiTestLab)
+            if (allowsCustomRoster || kind == BattleScenarioKind.PlayerAiTestLab)
             {
                 if (teamACount < 1 || teamACount > TeamSize)
                     errors.Add($"Player AI Test Lab needs 1-{TeamSize} Team A entries.");
@@ -144,10 +145,10 @@ namespace LocalTanks
                     .Select(definition => definition.nation)
                     .Distinct()
                     .ToArray();
-                if (nations.Length > 1)
+                if (!allowsCustomRoster && nations.Length > 1)
                     errors.Add($"{team} must contain tanks from exactly one nation.");
 
-                if (kind != BattleScenarioKind.StandardBattle)
+                if (kind != BattleScenarioKind.StandardBattle || allowsCustomRoster)
                 {
                     continue;
                 }

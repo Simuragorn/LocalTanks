@@ -50,6 +50,13 @@ namespace LocalTanks.Tests
                 Assert.That(BattleSceneLayout.IsMap(lab), Is.False);
                 Assert.That(BattleSceneLayout.Path(lab), Does.StartWith(BattleSceneLayout.LabsFolder + "/"));
             }
+
+            foreach (string flow in BattleSceneLayout.FlowScenes)
+            {
+                Assert.That(BattleSceneLayout.IsFlow(flow), Is.True);
+                Assert.That(BattleSceneLayout.IsMap(flow), Is.False);
+                Assert.That(BattleSceneLayout.Path(flow), Does.StartWith(BattleSceneLayout.FlowFolder + "/"));
+            }
         }
 
         [Test]

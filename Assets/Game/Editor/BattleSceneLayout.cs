@@ -23,7 +23,9 @@ namespace LocalTanks.Editor
         public const string ScenesRoot = "Assets/Game/Scenes";
         public const string MapsFolder = ScenesRoot + "/Maps";
         public const string LabsFolder = ScenesRoot + "/Labs";
+        public const string FlowFolder = ScenesRoot + "/Flow";
 
+        public const string MainMenu = "MainMenu";
         public const string RiverCrossing = "Battle_RiverCrossing";
         public const string Mines = "Battle_Mines";
         public const string TestRange = "Battle_TestRange";
@@ -39,6 +41,8 @@ namespace LocalTanks.Editor
         public static readonly string[] LabScenes =
             { TestRange, NavigationRange, AiDuelLab, AiSquadLab, PlayerAiTestLab };
 
+        public static readonly string[] FlowScenes = { MainMenu };
+
         public const string TemplateScenePath = "Assets/Settings/Scenes/URP2DSceneTemplate.unity";
 
         /// <summary>The build settings file, read as text by the validation below.</summary>
@@ -49,15 +53,19 @@ namespace LocalTanks.Editor
         private const string ProjectSettingsPath = "ProjectSettings/ProjectSettings.asset";
         private const string TemplateDefaultSceneProperty = "templateDefaultScene";
 
-        public static IEnumerable<string> KnownScenes => KnownMapScenes.Concat(LabScenes);
+        public static IEnumerable<string> KnownScenes => KnownMapScenes.Concat(LabScenes).Concat(FlowScenes);
 
         /// <summary>
         /// A scene is a map unless it is declared a laboratory, so a new arena lands in Maps without a
         /// second list to update here.
         /// </summary>
-        public static bool IsMap(string sceneName) => !LabScenes.Contains(sceneName);
+        public static bool IsMap(string sceneName) => !LabScenes.Contains(sceneName) && !FlowScenes.Contains(sceneName);
 
-        public static string Folder(string sceneName) => IsMap(sceneName) ? MapsFolder : LabsFolder;
+        public static bool IsFlow(string sceneName) => FlowScenes.Contains(sceneName);
+
+        public static string Folder(string sceneName) => IsFlow(sceneName)
+            ? FlowFolder
+            : IsMap(sceneName) ? MapsFolder : LabsFolder;
 
         public static string Path(string sceneName) => $"{Folder(sceneName)}/{sceneName}.unity";
 
@@ -121,6 +129,7 @@ namespace LocalTanks.Editor
             EnsureFolder(ScenesRoot);
             EnsureFolder(MapsFolder);
             EnsureFolder(LabsFolder);
+            EnsureFolder(FlowFolder);
 
             foreach (string sceneName in KnownScenes)
             {

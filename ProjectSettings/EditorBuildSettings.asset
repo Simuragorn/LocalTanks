@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Game/Scenes/Flow/MainMenu.unity
+    guid: 6182bf7dda48dc643a98b389306a551c
+  - enabled: 1
     path: Assets/Game/Scenes/Labs/Battle_TestRange.unity
     guid: 02a9c92e76789484d9b9f97c71084e95
   - enabled: 1
