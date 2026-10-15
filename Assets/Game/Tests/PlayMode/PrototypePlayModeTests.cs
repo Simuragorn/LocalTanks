@@ -210,6 +210,7 @@ namespace LocalTanks.Tests
                     Assert.That(director.StrategicCoordinator, Is.Null);
                     BattleTelemetry telemetry = BattleTelemetry.Attach(director, writeOutput: false);
 
+                    lab.SetPaused(false);
                     Time.timeScale = 10f;
                     while (!lab.IsComplete) yield return null;
                     Time.timeScale = 1f;

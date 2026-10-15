@@ -175,11 +175,11 @@ namespace LocalTanks
             startedAt = Time.time;
             nextSampleAt = 0f;
             ready = true;
-            paused = false;
+            paused = true;
             complete = false;
             finalReport = string.Empty;
             startupPaused = false;
-            Time.timeScale = 1f;
+            Time.timeScale = 0f;
         }
 
         private static int NormalizeIndex(int index, int count)
