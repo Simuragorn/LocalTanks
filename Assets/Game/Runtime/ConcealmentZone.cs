@@ -141,6 +141,7 @@ namespace LocalTanks
         private static ConcealmentFadeScheduler instance;
 
         private readonly List<ConcealmentZone> zones = new List<ConcealmentZone>(512);
+        private readonly HashSet<ConcealmentZone> registeredZones = new HashSet<ConcealmentZone>();
         private readonly List<ConcealmentZone> fadingZones = new List<ConcealmentZone>(32);
         private TeamMember player;
         private int nextZoneIndex;
@@ -160,7 +161,7 @@ namespace LocalTanks
             }
 
             EnsureInstance();
-            if (!instance.zones.Contains(zone))
+            if (instance.registeredZones.Add(zone))
             {
                 instance.zones.Add(zone);
             }
@@ -174,6 +175,7 @@ namespace LocalTanks
             }
 
             instance.zones.Remove(zone);
+            instance.registeredZones.Remove(zone);
             instance.fadingZones.Remove(zone);
             zone.ClearQueuedFlag();
             instance.nextZoneIndex = Mathf.Min(instance.nextZoneIndex, instance.zones.Count);

@@ -292,6 +292,7 @@ namespace LocalTanks
             {
                 id = tracks.Count,
                 name = member.name,
+                stableOrderKey = TeamMember.StableOrderKey(member),
                 team = member.Team.ToString(),
                 definition = member.Definition != null ? member.Definition.id : string.Empty,
                 isPlayer = member.IsPlayerControlled,
@@ -460,7 +461,7 @@ namespace LocalTanks
             if (!recording || member == null || body == null) return;
             TankTelemetryTrack track = Register(member);
             track.motorSteps++;
-            string actor = TeamMember.StableOrderKey(member);
+            string actor = track.stableOrderKey;
             motorControlFingerprint.AppendMotorControl(
                 actor,
                 track.motorSteps,
@@ -660,6 +661,7 @@ namespace LocalTanks
         {
             public int id;
             public string name;
+            public string stableOrderKey;
             public string team;
             public string definition;
             public bool isPlayer;
