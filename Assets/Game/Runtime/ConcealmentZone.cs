@@ -177,6 +177,12 @@ namespace LocalTanks
             instance.fadingZones.Remove(zone);
             zone.ClearQueuedFlag();
             instance.nextZoneIndex = Mathf.Min(instance.nextZoneIndex, instance.zones.Count);
+            if (instance.zones.Count == 0)
+            {
+                ConcealmentFadeScheduler unused = instance;
+                instance = null;
+                Destroy(unused.gameObject);
+            }
         }
 
         internal static void QueueFade(ConcealmentZone zone)
@@ -201,7 +207,6 @@ namespace LocalTanks
             }
 
             GameObject root = new GameObject("Concealment Fade Scheduler");
-            DontDestroyOnLoad(root);
             instance = root.AddComponent<ConcealmentFadeScheduler>();
         }
 
