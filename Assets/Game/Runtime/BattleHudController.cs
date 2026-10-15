@@ -122,6 +122,12 @@ namespace LocalTanks
             combatOverlay = GetComponent<DamagePopupLayer>();
             if (combatOverlay == null) combatOverlay = gameObject.AddComponent<DamagePopupLayer>();
             combatOverlay.Configure(roster, Camera.main, root);
+            BattleChatController chat = GetComponent<BattleChatController>();
+            if (chat == null) chat = gameObject.AddComponent<BattleChatController>();
+            chat.Configure(root);
+            BattleResultPanelController resultPanel = GetComponent<BattleResultPanelController>();
+            if (resultPanel == null) resultPanel = gameObject.AddComponent<BattleResultPanelController>();
+            resultPanel.Configure(director, roster, root);
             Rebuild();
             RefreshCaptureStatus();
             RefreshClock();

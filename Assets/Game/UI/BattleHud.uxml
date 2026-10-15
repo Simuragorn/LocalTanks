@@ -29,6 +29,28 @@
             <ui:Label name="weapon-reload" text="Перезарядка  0.0 с" class="weapon-reload" />
         </ui:VisualElement>
 
+        <ui:VisualElement name="battle-chat" class="battle-chat lt-panel lt-panel--quiet">
+            <ui:ScrollView name="chat-history" class="chat-history" />
+            <ui:VisualElement name="chat-compose" class="chat-compose hidden">
+                <ui:Button name="chat-team" text="КОМАНДЕ" class="chat-channel selected" />
+                <ui:Button name="chat-all" text="ВСЕМ" class="chat-channel" />
+                <ui:TextField name="chat-input" class="chat-input" />
+                <ui:Button name="chat-send" text="Отправить" class="chat-send lt-button" />
+            </ui:VisualElement>
+            <ui:Label name="chat-hint" text="Enter — чат · Tab — команда/всем" class="chat-hint" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="result-overlay" class="result-overlay hidden">
+            <ui:VisualElement class="result-panel lt-panel lt-panel--solid">
+                <ui:Label name="result-title" text="ПОБЕДА" class="result-title" />
+                <ui:Label name="result-reason" text="" class="result-reason lt-label" />
+                <ui:VisualElement class="result-buttons">
+                    <ui:Button name="result-repeat" text="Повторить бой" class="result-button lt-button lt-button--primary" />
+                    <ui:Button name="result-menu" text="В главное меню" class="result-button lt-button" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
         <!-- The settings overlay is a template so its markup has one definition shared with the test
              range. It belongs to this document so it draws above the roster panels; a second
              UIDocument would get its own panel and the order between panels would decide layering.

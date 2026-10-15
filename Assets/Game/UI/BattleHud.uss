@@ -195,6 +195,45 @@
     color: rgb(239, 190, 91);
 }
 
+.battle-chat {
+    position: absolute;
+    left: 18px;
+    bottom: 22px;
+    width: 510px;
+    min-height: 34px;
+    padding: 8px 10px;
+}
+
+.chat-history { max-height: 126px; }
+.chat-line { color: rgb(224, 224, 214); font-size: 13px; margin-bottom: 3px; white-space: normal; }
+.chat-line.team { color: rgb(136, 185, 139); }
+.chat-compose { flex-direction: row; align-items: center; margin-top: 5px; }
+.chat-compose.hidden { display: none; }
+.chat-channel { width: 78px; height: 29px; margin-right: 4px; font-size: 10px; }
+.chat-channel.selected { background-color: rgb(91, 118, 91); color: white; }
+.chat-input { flex-grow: 1; height: 30px; }
+.chat-send { width: 92px; height: 30px; margin-left: 5px; }
+.chat-hint { color: rgba(205, 205, 195, 0.68); font-size: 11px; }
+
+.result-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(7, 8, 7, 0.62);
+}
+.result-overlay.hidden { display: none; }
+.result-panel { width: 520px; padding: 28px; align-items: center; }
+.result-title { font-size: 34px; -unity-font-style: bold; color: rgb(224, 183, 78); }
+.result-title.defeat { color: rgb(190, 92, 82); }
+.result-title.draw { color: rgb(196, 196, 186); }
+.result-reason { margin-top: 10px; margin-bottom: 22px; font-size: 16px; -unity-text-align: middle-center; }
+.result-buttons { flex-direction: row; }
+.result-button { width: 190px; height: 38px; margin-left: 5px; margin-right: 5px; }
+
 .combat-screen-overlay {
     position: absolute;
     left: 0;
