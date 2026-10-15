@@ -181,14 +181,18 @@ namespace LocalTanks.Tests
             float previousCaptureDeltaTime = Time.captureDeltaTime;
             Time.captureDeltaTime = 1f / 60f;
             SceneManager.LoadScene("Battle_AiSquadLab");
-            Dictionary<string, (string Fingerprint, int Count)> firstPass =
-                new Dictionary<string, (string Fingerprint, int Count)>();
+            Dictionary<string, (string Fingerprint, int Count)> expectedSignatures =
+                new Dictionary<string, (string Fingerprint, int Count)>
+                {
+                    ["group_seed_2711"] = ("61052e2f801eced2", 118),
+                    ["group_seed_2712"] = ("c23e1413f4e2ae30", 123),
+                    ["group_seed_2713"] = ("ca46e4d1afdb080d", 141)
+                };
 
             try
             {
-                for (int runIndex = 0; runIndex < expectedCases.Length * 2; runIndex++)
+                for (int caseIndex = 0; caseIndex < expectedCases.Length; caseIndex++)
                 {
-                    int caseIndex = runIndex % expectedCases.Length;
                     AiSquadLabController lab = null;
                     for (int frame = 0; frame < 120; frame++)
                     {
@@ -221,21 +225,13 @@ namespace LocalTanks.Tests
                     foreach (string botId in expectedBots) Assert.That(report, Does.Contain(botId));
                     Debug.Log($"AI_SQUAD_DIAGNOSTIC case={lab.ActiveCase.id} seed={lab.ActiveCase.seed}\n" +
                               report + "\n" + lab.Auditor.BuildTransitionReport() +
-                              $"\nfingerprint={telemetry.DecisionFingerprint} decisions={telemetry.FingerprintedDecisionCount}" +
-                              $"\n{telemetry.DecisionTrace}");
+                              $"\nfingerprint={telemetry.DecisionFingerprint} decisions={telemetry.FingerprintedDecisionCount}");
 
                     var signature = (telemetry.DecisionFingerprint, telemetry.FingerprintedDecisionCount);
-                    if (runIndex < expectedCases.Length)
-                    {
-                        firstPass.Add(lab.ActiveCase.id, signature);
-                    }
-                    else
-                    {
-                        Assert.That(signature, Is.EqualTo(firstPass[lab.ActiveCase.id]),
-                            $"Same-seed decision trace diverged for {lab.ActiveCase.id}.");
-                    }
+                    Assert.That(signature, Is.EqualTo(expectedSignatures[lab.ActiveCase.id]),
+                        $"Decision baseline diverged for {lab.ActiveCase.id}.\n{telemetry.DecisionTrace}");
 
-                    lab.ReloadCase((caseIndex + 1) % expectedCases.Length);
+                    if (caseIndex + 1 < expectedCases.Length) lab.ReloadCase(caseIndex + 1);
                 }
             }
             finally
