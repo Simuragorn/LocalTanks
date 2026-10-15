@@ -51,6 +51,11 @@ namespace LocalTanks
         {
             VisualElement root = document != null ? document.rootVisualElement : null;
             if (root == null) return;
+            // The settings template container fills the screen even while its child overlay is hidden.
+            // Ignoring the container itself lets controls below it receive pointer events; visible modal
+            // children remain pickable and continue to own input while the settings panel is open.
+            VisualElement settingsInstance = root.Q<VisualElement>("settings-instance");
+            if (settingsInstance != null) settingsInstance.pickingMode = PickingMode.Ignore;
             foreach (StyleSheet sheet in styleSheets ?? Array.Empty<StyleSheet>())
             {
                 if (sheet != null && !root.styleSheets.Contains(sheet)) root.styleSheets.Add(sheet);
@@ -72,6 +77,7 @@ namespace LocalTanks
             mapChoice = root.Q<DropdownField>("map-choice");
             mapChoice.choices = BattleMapCatalog.Playable.Select(item => item.DisplayName).ToList();
             mapChoice.SetValueWithoutNotify(mapChoice.choices.FirstOrDefault() ?? string.Empty);
+            UiDropdownPresenter.Apply(mapChoice);
             teamA = new TeamEditor(root, "team-a", tankLabels, tankIdsByLabel, true);
             teamB = new TeamEditor(root, "team-b", tankLabels, tankIdsByLabel, false);
             playButton = root.Q<Button>("button-play");
@@ -158,6 +164,7 @@ namespace LocalTanks
                 {
                     wholeTeam.choices = new[] { "Выбрать для всей команды" }.Concat(tankLabels).ToList();
                     wholeTeam.SetValueWithoutNotify(wholeTeam.choices[0]);
+                    UiDropdownPresenter.Apply(wholeTeam);
                     wholeTeam.RegisterValueChangedCallback(change => ApplyToWholeTeam(change.newValue));
                 }
 
@@ -182,10 +189,12 @@ namespace LocalTanks
                     label.AddToClassList("team-slot-label");
                     DropdownField dropdown = new DropdownField { choices = new List<string>(tankLabels) };
                     dropdown.AddToClassList("team-slot-dropdown");
+                    dropdown.AddToClassList("lt-dropdown");
                     string selected = index < previous.Length ? previous[index] : tankLabels.FirstOrDefault();
                     dropdown.SetValueWithoutNotify(selected ?? string.Empty);
                     row.Add(label);
                     row.Add(dropdown);
+                    UiDropdownPresenter.Apply(dropdown);
                     rows.Add(row);
                     slots.Add(dropdown);
                 }

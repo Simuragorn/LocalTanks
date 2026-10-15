@@ -181,6 +181,8 @@ namespace LocalTanks
             crewLanguage.choices = new System.Collections.Generic.List<string> { "Национальная", "Русская" };
             crewGender.choices = new System.Collections.Generic.List<string> { "Мужская", "Женская" };
             RefreshCrewChoices();
+            UiDropdownPresenter.Apply(crewLanguage);
+            UiDropdownPresenter.Apply(crewGender);
             masterSlider.RegisterValueChangedCallback(OnMasterChanged);
             tankSlider.RegisterValueChangedCallback(OnTankChanged);
             effectsSlider.RegisterValueChangedCallback(OnEffectsChanged);

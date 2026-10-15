@@ -23,7 +23,7 @@
 ## Что работает сейчас
 
 - Unity 6000.6.4f1, 2D URP, Windows; сцены разделены на `Assets/Game/Scenes/Maps` и `Assets/Game/Scenes/Labs`.
-- `MainMenu` находится в `Assets/Game/Scenes/Flow`, первым загружается из build settings и позволяет независимо выбрать карту, 1–7 машин каждой стороны, одну машину для всей команды либо технику каждой позиции. Выбор применяется временной копией боевого сценария и не меняет AI-лаборатории.
+- `MainMenu` находится в `Assets/Game/Scenes/Flow`, первым загружается из build settings и становится стартовой сценой Play Mode, если другая не выбрана явно. Меню читаемо и помещается при 1920×1080 и 1280×720; карта, кнопки, независимые составы 1–7 машин, массовый и индивидуальный выбор техники получают события указателя. Выбор применяется временной копией боевого сценария и не меняет AI-лаборатории.
 - Базовый бой 7×7 на «Переправе»: национальные составы, движение, башня, стрельба, сведение, броня, рикошет, здоровье, уничтожение, обзор, маскировка, базы и правила завершения матча.
 - Игровые определения являются JSON-источником истины; ScriptableObject, префабы, сцены и `TANK_BALANCE.md` создаются инструментами Unity.
 - В базе четыре машины: MS-1, Leichttraktor и T1 Cunningham доступны в лабораториях; Tiger II сохранён, но `availableInGame: false` и в игре не показывается.
@@ -71,6 +71,7 @@
 - После расширения колеи: Edit Mode `CombatVfxProfileTests` **15/15**, Play Mode `CombatVfx*` **15/15**, `VisionPlayModeTests` **14/14**.
 - Анимация гусениц: все четыре layout используют `source: trackMeshes`, `visibilityMethod: firstSurfaceRaycast`, `occlusionAware: true` и проверенную геометрию; `TankTrackLayoutTests` **5/5**, `TankTrackAnimatorPlayModeTests` **4/4**, `TankTreadMotionPlayModeTests` **1/1**; `BuildCombatAssets` и графическое превью четырёх машин успешно выполнены в изолированной копии, кадры просмотрены.
 - Единый UI: `UiStyleContractTests` **3/3**, headless `SettingsPanel*` **10/10**, headless `CombatHud*` **2/2**, графические `CaptureSettingsPanel` **1/1** и `CaptureBattleHudProof` **1/1**; кадры настроек на двух размерах и HUD поверх карты просмотрены.
+- Главное меню: стартовая сцена **1/1**, интерактивность и составы Play Mode **2/2**, реестр операций **6/6**, графический `CaptureMainMenu` **1/1**; кадры 1920×1080 и 1280×720 просмотрены.
 - Ввод и старые окна: `UiInteractionContractTests` **5/5**, `UiStyleContractTests` **3/3**, `SettingsPanel*` **10/10**; целевые Play Mode проверки управления временем **2/2**, камеры **1/1**, селектора техники **1/1**, AI Duel/Squad **3/3** и «Переправы» **1/1**.
 - Стартовая навигация: `NavigationDebugOverlayTests` **5/5**, целевые Play Mode проверки трёх сцен **3/3**.
 - P5: `CombatRandomizationTests` Edit Mode **10/10**, `CombatRandomizationPlayModeTests` **4/4**, `BattleScenarioTests` **21/21**, `TankPrototypeTests` **49/49**, `CombatHudPlayModeTests` **2/2**, `MatchOutcomePlayModeTests` **4/4**. Отдельный AI Duel Lab с `-Seed 4127` прошёл **1/1**; его телеметрия сохранила seed, глобальный номер выстрела и оба множителя от события выстрела до попадания.

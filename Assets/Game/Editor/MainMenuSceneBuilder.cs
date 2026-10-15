@@ -67,6 +67,7 @@ namespace LocalTanks.Editor
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, scenePath);
                 PutFirstInBuildSettings(scenePath);
+                DefaultPlayModeScene.EnsureMainMenuWhenUnset();
                 AssetDatabase.SaveAssets();
                 Debug.Log($"Local Tanks main menu built: {scenePath}");
             }

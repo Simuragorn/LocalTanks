@@ -1,4 +1,5 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="SettingsOverlay.uss" />
     <!-- Canonical settings markup. Battle scenes include it as a template inside the battle HUD so it
          shares that document and draws above the roster; the test range, which has no HUD, uses this
          document directly. Keeping one definition avoids two copies drifting apart. -->
@@ -37,11 +38,11 @@
             <ui:Label text="Озвучка экипажа" class="settings-section-title lt-label" />
             <ui:VisualElement class="settings-row">
                 <ui:Label text="Язык" class="settings-label lt-label" />
-                <ui:DropdownField name="crew-language" class="settings-dropdown" />
+                <ui:DropdownField name="crew-language" class="settings-dropdown lt-dropdown" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-row">
                 <ui:Label text="Голос" class="settings-label lt-label" />
-                <ui:DropdownField name="crew-gender" class="settings-dropdown" />
+                <ui:DropdownField name="crew-gender" class="settings-dropdown lt-dropdown" />
             </ui:VisualElement>
             <ui:VisualElement class="settings-button-row">
                 <ui:Button name="button-graphics" text="Графика" class="settings-button lt-button" />

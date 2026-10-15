@@ -12,6 +12,7 @@ namespace LocalTanks.Tests
     public sealed class MainMenuPreviewTests
     {
         private const string OutputPath = "Docs/Media/MainMenu.png";
+        private const string ShortOutputPath = "TestResults/MainMenu_1280x720.png";
 
         [UnityTest]
         public IEnumerator CaptureMainMenu()
@@ -19,11 +20,17 @@ namespace LocalTanks.Tests
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
                 Assert.Ignore("Run the CaptureMainMenu operation with a graphics device.");
 
-            RenderTexture target = new RenderTexture(1920, 1080, 0, RenderTextureFormat.ARGB32);
-            PanelSettings settings = ScriptableObject.CreateInstance<PanelSettings>();
+            yield return CaptureAt(1920, 1080, OutputPath);
+            yield return CaptureAt(1280, 720, ShortOutputPath);
+        }
+
+        private static IEnumerator CaptureAt(int width, int height, string outputPath)
+        {
+            RenderTexture target = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
+            PanelSettings settings = Object.Instantiate(
+                AssetDatabase.LoadAssetAtPath<PanelSettings>(
+                    "Assets/Game/Generated/UI/MainMenuPanelSettings.asset"));
             settings.targetTexture = target;
-            settings.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            settings.referenceResolution = new Vector2Int(1920, 1080);
             GameObject host = new GameObject("MainMenuPreview");
             UIDocument document = host.AddComponent<UIDocument>();
             document.panelSettings = settings;
@@ -42,14 +49,14 @@ namespace LocalTanks.Tests
                 yield return null;
                 yield return null;
                 yield return null;
-                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(OutputPath))!);
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
                 RenderTexture previous = RenderTexture.active;
                 RenderTexture.active = target;
                 Texture2D image = new Texture2D(target.width, target.height, TextureFormat.RGBA32, false);
                 image.ReadPixels(new Rect(0f, 0f, target.width, target.height), 0, 0);
                 image.Apply();
                 byte[] png = image.EncodeToPNG();
-                File.WriteAllBytes(Path.GetFullPath(OutputPath), png);
+                File.WriteAllBytes(Path.GetFullPath(outputPath), png);
                 Assert.That(png.Length, Is.GreaterThan(1000));
                 Object.DestroyImmediate(image);
                 RenderTexture.active = previous;

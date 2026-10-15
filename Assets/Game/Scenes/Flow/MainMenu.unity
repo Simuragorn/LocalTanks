@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &1916303419
+--- !u!1 &1159177170
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,10 +127,10 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1916303423}
-  - component: {fileID: 1916303422}
-  - component: {fileID: 1916303421}
-  - component: {fileID: 1916303420}
+  - component: {fileID: 1159177174}
+  - component: {fileID: 1159177173}
+  - component: {fileID: 1159177172}
+  - component: {fileID: 1159177171}
   m_Layer: 0
   m_Name: MainMenuUI
   m_TagString: Untagged
@@ -138,13 +138,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1916303420
+--- !u!114 &1159177171
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1916303419}
+  m_GameObject: {fileID: 1159177170}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: edc9d4cfd07e8c245a6f28e5141eefae, type: 3}
@@ -152,13 +152,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.SettingsPanelController
   openOnStart: 0
   styleSheet: {fileID: 7433441132597879392, guid: 3cb41428b407a3f4796736f0c0900066, type: 3}
---- !u!114 &1916303421
+--- !u!114 &1159177172
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1916303419}
+  m_GameObject: {fileID: 1159177170}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2f8115eb80152e840bf7039df569cc8d, type: 3}
@@ -169,13 +169,13 @@ MonoBehaviour:
   - {fileID: 7433441132597879392, guid: 040deea32a6596045a36bcd1a643e39e, type: 3}
   - {fileID: 7433441132597879392, guid: c7637db82815fa54890a38942a4c9bda, type: 3}
   - {fileID: 7433441132597879392, guid: 3cb41428b407a3f4796736f0c0900066, type: 3}
---- !u!114 &1916303422
+--- !u!114 &1159177173
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1916303419}
+  m_GameObject: {fileID: 1159177170}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
@@ -192,13 +192,13 @@ MonoBehaviour:
   m_PivotReferenceSize: 0
   m_Pivot: 0
   m_WorldSpaceCollider: {fileID: 0}
---- !u!4 &1916303423
+--- !u!4 &1159177174
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1916303419}
+  m_GameObject: {fileID: 1159177170}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -211,4 +211,4 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1916303423}
+  - {fileID: 1159177174}

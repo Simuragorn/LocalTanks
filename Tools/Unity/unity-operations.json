@@ -253,7 +253,8 @@
       "timeoutSeconds": 1800,
       "description": "Render the configurable battle launch menu for visual verification.",
       "outputs": [
-        "Docs/Media/MainMenu.png"
+        "Docs/Media/MainMenu.png",
+        "TestResults/MainMenu_1280x720.png"
       ]
     },
     {

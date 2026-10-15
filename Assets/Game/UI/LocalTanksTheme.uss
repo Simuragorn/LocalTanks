@@ -104,3 +104,115 @@
 .lt-button--primary:hover {
     background-color: rgb(79, 94, 81);
 }
+
+/* Unity's runtime DropdownField keeps its editor-like light painting even after the resolved colour is
+   overridden. The shell below owns only the presentation; an invisible native field still owns input,
+   focus and the popup, so selection logic is not duplicated. */
+.lt-dropdown-readable-text {
+    flex-grow: 1;
+    height: 100%;
+    padding-left: 12px;
+    color: rgb(230, 233, 225);
+    background-color: rgb(36, 42, 37);
+    font-size: 13px;
+    -unity-text-align: middle-left;
+}
+
+.lt-dropdown-readable-arrow {
+    width: 24px;
+    height: 100%;
+    color: rgb(190, 198, 187);
+    background-color: rgb(36, 42, 37);
+    font-size: 11px;
+    -unity-text-align: middle-center;
+}
+
+.lt-dropdown-shell {
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    height: 34px;
+    min-height: 34px;
+    padding-left: 0;
+    color: rgb(230, 233, 225);
+    background-color: rgb(36, 42, 37);
+    border-width: 1px;
+    border-color: rgba(211, 216, 205, 0.34);
+    border-radius: 2px;
+}
+
+.lt-dropdown-shell:hover {
+    background-color: rgb(49, 57, 50);
+    border-color: rgba(222, 226, 216, 0.54);
+}
+
+.lt-dropdown-shell:hover .lt-dropdown-readable-text,
+.lt-dropdown-shell:hover .lt-dropdown-readable-arrow {
+    background-color: rgb(49, 57, 50);
+}
+
+.lt-dropdown-shell:active .lt-dropdown-readable-text,
+.lt-dropdown-shell:active .lt-dropdown-readable-arrow {
+    background-color: rgb(30, 36, 31);
+}
+
+.lt-dropdown-shell--focus {
+    border-color: rgb(151, 171, 145);
+}
+
+.lt-dropdown-native-hitbox {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+}
+
+.unity-base-dropdown__container-inner {
+    color: rgb(230, 233, 225);
+    background-color: rgb(29, 34, 30);
+    border-color: rgba(211, 216, 205, 0.42);
+}
+
+.lt-slider > .unity-base-field__label {
+    color: rgb(226, 229, 221);
+    font-size: 13px;
+}
+
+.lt-slider .unity-base-slider__track {
+    background-color: rgb(25, 30, 26);
+    border-width: 1px;
+    border-color: rgba(205, 210, 200, 0.30);
+}
+
+.lt-slider .unity-base-slider__input {
+    background-color: rgb(104, 128, 103);
+}
+
+.lt-slider .unity-base-slider__dragger {
+    width: 12px;
+    background-color: rgb(224, 228, 218);
+    border-width: 1px;
+    border-color: rgb(20, 24, 20);
+}
+
+.lt-slider .unity-base-text-field__input,
+.lt-slider .unity-text-field__input {
+    color: rgb(230, 233, 225);
+    background-color: rgb(36, 42, 37);
+    border-width: 1px;
+    border-color: rgba(211, 216, 205, 0.34);
+    -unity-text-align: middle-center;
+}
+
+Scroller #unity-tracker {
+    background-color: rgb(20, 24, 21);
+}
+
+Scroller #unity-dragger {
+    background-color: rgb(75, 87, 76);
+}
