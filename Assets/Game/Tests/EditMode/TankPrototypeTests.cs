@@ -447,8 +447,8 @@ namespace LocalTanks.Tests
             Assert.That(aimedRight.x,
                 Is.EqualTo(tank.x + zoom * aspect * CameraFollow2D.AimOffsetViewportShare).Within(0.0001f));
             Assert.That(aimedRight.y, Is.EqualTo(tank.y).Within(0.0001f));
-            Assert.That(CameraFollow2D.MaximumZoomFor(VehicleClass.HeavyTank, 8),
-                Is.GreaterThan(CameraFollow2D.MaximumZoomFor(VehicleClass.LightTank, 1)));
+            Assert.That(CameraFollow2D.MaximumZoomFor(VehicleClass.LightTank),
+                Is.GreaterThan(CameraFollow2D.MaximumZoomFor(VehicleClass.HeavyTank)));
         }
 
         [Test]

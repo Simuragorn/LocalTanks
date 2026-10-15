@@ -1,23 +1,18 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace LocalTanks
 {
     /// <summary>
-    /// View range by vehicle class and tier, written in World of Tanks metres (ADR-064).
+    /// View range by vehicle class, written in metres (ADR-064).
     ///
-    /// The class decides the range and the tier adds to it: light tanks see furthest, artillery least. The
-    /// table is authored in metres and converted with <see cref="GameScale"/>, so the distance a player is
-    /// shown and the distance the game uses cannot drift apart. A tank does not carry its own view range on
-    /// purpose: the hand-written value per machine is what made every vehicle see roughly the same distance,
-    /// with the class affecting only the view angle.
+    /// Five deliberately separated bands fit the top-down game: light tanks scout, medium tanks can find
+    /// their own fights, and heavy tanks, tank destroyers and artillery increasingly rely on team contacts.
+    /// Tier does not alter the range. The table is converted with <see cref="GameScale"/>, so the distance a
+    /// player is shown and the distance the game uses cannot drift apart.
     /// </summary>
     public static class VisionRangeTable
     {
-        public const int MinimumTier = 1;
-        public const int MaximumTier = 10;
-
         /// <summary>
         /// Share of the view range at which a target is detected regardless of its concealment. Preserved
         /// from the authored data, where the guaranteed range was 5.408 units against a 33.8 unit view range,
@@ -25,11 +20,11 @@ namespace LocalTanks
         /// </summary>
         public const float GuaranteedDetectionShare = 0.16f;
 
-        private static readonly float[] LightTankMetres = { 240f, 255f, 270f, 290f, 305f, 320f, 335f, 350f, 365f, 380f };
-        private static readonly float[] MediumTankMetres = { 220f, 235f, 250f, 265f, 280f, 295f, 310f, 325f, 340f, 360f };
-        private static readonly float[] HeavyTankMetres = { 200f, 215f, 230f, 250f, 265f, 280f, 295f, 310f, 330f, 350f };
-        private static readonly float[] TankDestroyerMetres = { 190f, 205f, 220f, 235f, 250f, 265f, 280f, 295f, 310f, 330f };
-        private static readonly float[] ArtilleryMetres = { 170f, 180f, 190f, 200f, 215f, 230f, 245f, 260f, 275f, 290f };
+        public const float LightTankMetres = 200f;
+        public const float MediumTankMetres = 160f;
+        public const float HeavyTankMetres = 120f;
+        public const float TankDestroyerMetres = 100f;
+        public const float ArtilleryMetres = 60f;
 
         /// <summary>Every class the table covers. Used by the test that forbids a hole in it.</summary>
         public static IEnumerable<VehicleClass> Classes
@@ -44,35 +39,8 @@ namespace LocalTanks
             }
         }
 
-        /// <summary>View range of a class at a tier, in client metres.</summary>
-        public static float MetresFor(VehicleClass vehicleClass, int tier)
-        {
-            if (tier < MinimumTier || tier > MaximumTier)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(tier), tier, $"Tier must be between {MinimumTier} and {MaximumTier}.");
-            }
-
-            float[] row = RowFor(vehicleClass);
-            return row[tier - MinimumTier];
-        }
-
-        /// <summary>
-        /// View range in game units, rounded to two decimals the way the data pipeline rounds the values it
-        /// writes, so a regenerated file and a computed value agree exactly.
-        /// </summary>
-        public static float UnitsFor(VehicleClass vehicleClass, int tier)
-        {
-            return Mathf.Round(GameScale.MetresToUnits(MetresFor(vehicleClass, tier)) * 100f) / 100f;
-        }
-
-        /// <summary>Distance at which concealment stops mattering, in game units.</summary>
-        public static float GuaranteedDetectionUnits(float viewRange)
-        {
-            return Mathf.Round(viewRange * GuaranteedDetectionShare * 100f) / 100f;
-        }
-
-        private static float[] RowFor(VehicleClass vehicleClass)
+        /// <summary>View range of a class in game metres. Tier deliberately does not participate.</summary>
+        public static float MetresFor(VehicleClass vehicleClass)
         {
             switch (vehicleClass)
             {
@@ -87,9 +55,25 @@ namespace LocalTanks
                 case VehicleClass.Artillery:
                     return ArtilleryMetres;
                 default:
-                    throw new ArgumentOutOfRangeException(
+                    throw new System.ArgumentOutOfRangeException(
                         nameof(vehicleClass), vehicleClass, "The view range table does not cover this class.");
             }
         }
+
+        /// <summary>
+        /// View range in game units, rounded to two decimals the way the data pipeline rounds the values it
+        /// writes, so a regenerated file and a computed value agree exactly.
+        /// </summary>
+        public static float UnitsFor(VehicleClass vehicleClass)
+        {
+            return Mathf.Round(GameScale.MetresToUnits(MetresFor(vehicleClass)) * 100f) / 100f;
+        }
+
+        /// <summary>Distance at which concealment stops mattering, in game units.</summary>
+        public static float GuaranteedDetectionUnits(float viewRange)
+        {
+            return Mathf.Round(viewRange * GuaranteedDetectionShare * 100f) / 100f;
+        }
+
     }
 }

@@ -182,12 +182,12 @@ namespace LocalTanks
 
             return definition.viewRange > 0f
                 ? definition.viewRange
-                : MaximumZoomFor(definition.vehicleClass, definition.tier);
+                : MaximumZoomFor(definition.vehicleClass);
         }
 
-        public static float MaximumZoomFor(VehicleClass vehicleClass, int tier)
+        public static float MaximumZoomFor(VehicleClass vehicleClass)
         {
-            return VisionRangeTable.UnitsFor(vehicleClass, tier);
+            return VisionRangeTable.UnitsFor(vehicleClass);
         }
 
         private void InitializeCamera()

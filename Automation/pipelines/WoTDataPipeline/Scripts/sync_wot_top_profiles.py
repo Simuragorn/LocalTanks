@@ -356,7 +356,7 @@ def extract_profile(archive: zipfile.ZipFile, entry: dict, conversion: dict) -> 
                 "shotDispersionDegrees": round_value(shot_penalty),
             },
             # View range and the guaranteed detection radius are deliberately absent: they are derived from
-            # the vehicle class and tier by the game (ADR-064, VisionRangeTable), so the file must not carry a
+            # the vehicle class by the game (ADR-064, VisionRangeTable), so the file must not carry a
             # second copy of them. The importer rejects the fields by name if they come back.
             "vision": {
                 "stationaryConcealment": round_value(still_camo),
@@ -463,8 +463,8 @@ def markdown(version: str, profiles: list[dict], conversion: dict) -> str:
         "## Преобразования LocalTanks",
         "",
         f"- скорость машины: WoT км/ч ÷ {conversion['kilometresPerHourPerUnitySpeed']:g};",
-        "- обзор и радиус гарантированного обнаружения не переносятся: их выводит игра из класса и уровня"
-        " техники (ADR-064, VisionRangeTable), а сырой circularVisionRadius остаётся в снимке справкой;",
+        "- обзор и радиус гарантированного обнаружения не переносятся: их выводит игра только из класса"
+        " техники (ADR-064, VisionRangeTable), а уровень не влияет; сырой circularVisionRadius остаётся в снимке справкой;",
         f"- визуальная скорость снаряда: WoT м/с ÷ {conversion['projectileSpeedDivisor']:g};",
         "- HP, броня, урон, начальное пробитие, перезарядка, сведение и скорости поворота переносятся напрямую;",
         "- масса — сумма выбранных модулей клиента; ускорение выводится из мощности на тонну, торможение — из brakeForce и массы;",

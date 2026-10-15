@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using LocalTanks.Editor;
 using NUnit.Framework;
@@ -8,14 +7,14 @@ using UnityEditor;
 namespace LocalTanks.Tests
 {
     /// <summary>
-    /// View range is derived from the vehicle class and tier (ADR-064). These checks hold the three halves of
+    /// View range is derived from the vehicle class alone (ADR-064). These checks hold the three halves of
     /// that rule together: the table itself is complete and ordered, a tank file may not carry a range, and the
     /// generated asset the game actually reads carries exactly what the table says.
     /// </summary>
     public sealed class VisionRangeTableTests
     {
         [Test]
-        public void TheTable_CoversEveryClassAndTier()
+        public void TheTable_CoversEveryClass()
         {
             foreach (VehicleClass vehicleClass in Enum.GetValues(typeof(VehicleClass)))
             {
@@ -26,69 +25,33 @@ namespace LocalTanks.Tests
             }
 
             foreach (VehicleClass vehicleClass in VisionRangeTable.Classes)
-            {
-                for (int tier = VisionRangeTable.MinimumTier; tier <= VisionRangeTable.MaximumTier; tier++)
-                {
-                    Assert.That(
-                        VisionRangeTable.MetresFor(vehicleClass, tier),
-                        Is.GreaterThan(0f),
-                        $"{vehicleClass} at tier {tier} has no positive range.");
-                }
-            }
-
-            Assert.That(
-                () => VisionRangeTable.MetresFor(VehicleClass.LightTank, VisionRangeTable.MaximumTier + 1),
-                Throws.TypeOf<ArgumentOutOfRangeException>());
+                Assert.That(VisionRangeTable.MetresFor(vehicleClass), Is.GreaterThan(0f));
         }
 
         [Test]
-        public void TheTable_GrowsWithTierAndKeepsTheClassOrder()
+        public void TheTable_UsesTheFiveAuthoredClassBands()
         {
-            foreach (VehicleClass vehicleClass in VisionRangeTable.Classes)
-            {
-                for (int tier = VisionRangeTable.MinimumTier; tier < VisionRangeTable.MaximumTier; tier++)
-                {
-                    Assert.That(
-                        VisionRangeTable.MetresFor(vehicleClass, tier + 1),
-                        Is.GreaterThan(VisionRangeTable.MetresFor(vehicleClass, tier)),
-                        $"{vehicleClass} must see further at tier {tier + 1} than at tier {tier}.");
-                }
-            }
-
-            // Light tanks see furthest and artillery least at every tier: the hierarchy World of Tanks keeps and
-            // the reason the table exists at all.
-            for (int tier = VisionRangeTable.MinimumTier; tier <= VisionRangeTable.MaximumTier; tier++)
-            {
-                Assert.That(
-                    VisionRangeTable.MetresFor(VehicleClass.LightTank, tier),
-                    Is.GreaterThanOrEqualTo(VisionRangeTable.MetresFor(VehicleClass.MediumTank, tier)));
-                Assert.That(
-                    VisionRangeTable.MetresFor(VehicleClass.MediumTank, tier),
-                    Is.GreaterThanOrEqualTo(VisionRangeTable.MetresFor(VehicleClass.HeavyTank, tier)));
-                Assert.That(
-                    VisionRangeTable.MetresFor(VehicleClass.HeavyTank, tier),
-                    Is.GreaterThanOrEqualTo(VisionRangeTable.MetresFor(VehicleClass.TankDestroyer, tier)));
-                Assert.That(
-                    VisionRangeTable.MetresFor(VehicleClass.TankDestroyer, tier),
-                    Is.GreaterThanOrEqualTo(VisionRangeTable.MetresFor(VehicleClass.Artillery, tier)));
-            }
+            Assert.That(VisionRangeTable.MetresFor(VehicleClass.LightTank), Is.EqualTo(200f));
+            Assert.That(VisionRangeTable.MetresFor(VehicleClass.MediumTank), Is.EqualTo(160f));
+            Assert.That(VisionRangeTable.MetresFor(VehicleClass.HeavyTank), Is.EqualTo(120f));
+            Assert.That(VisionRangeTable.MetresFor(VehicleClass.TankDestroyer), Is.EqualTo(100f));
+            Assert.That(VisionRangeTable.MetresFor(VehicleClass.Artillery), Is.EqualTo(60f));
         }
 
         [Test]
         public void TheDocumentedMachines_GetTheDocumentedRange()
         {
-            // Docs/SPRINT_009.md, стадия 0: a light tank at tier I sees 240 m, the heavy at tier VIII 310 m.
-            Assert.That(VisionRangeTable.UnitsFor(VehicleClass.LightTank, 1), Is.EqualTo(62.58f));
-            Assert.That(VisionRangeTable.UnitsFor(VehicleClass.HeavyTank, 8), Is.EqualTo(80.83f));
+            Assert.That(VisionRangeTable.UnitsFor(VehicleClass.LightTank), Is.EqualTo(52.15f));
+            Assert.That(VisionRangeTable.UnitsFor(VehicleClass.HeavyTank), Is.EqualTo(31.29f));
 
-            // The conversion is the point: the revealed distance in metres equals the client's metres, so a
+            // The conversion is the point: the revealed distance in metres equals the authored game metres, so a
             // distance shown to the player cannot disagree with the map.
             Assert.That(
-                VisionRangeTable.UnitsFor(VehicleClass.LightTank, 1) * GameScale.MetresPerUnit,
-                Is.EqualTo(240f).Within(0.05f));
+                VisionRangeTable.UnitsFor(VehicleClass.LightTank) * GameScale.MetresPerUnit,
+                Is.EqualTo(200f).Within(0.05f));
             Assert.That(
-                VisionRangeTable.GuaranteedDetectionUnits(VisionRangeTable.UnitsFor(VehicleClass.LightTank, 1)),
-                Is.EqualTo(10.01f));
+                VisionRangeTable.GuaranteedDetectionUnits(VisionRangeTable.UnitsFor(VehicleClass.LightTank)),
+                Is.EqualTo(8.34f));
         }
 
         [Test]
@@ -113,11 +76,11 @@ namespace LocalTanks.Tests
 
             foreach (TankDefinition tank in database.tanks)
             {
-                float expected = VisionRangeTable.UnitsFor(tank.vehicleClass, tank.tier);
+                float expected = VisionRangeTable.UnitsFor(tank.vehicleClass);
                 Assert.That(
                     tank.viewRange,
                     Is.EqualTo(expected).Within(0.001f),
-                    $"'{tank.id}' must read its view range from the class and tier table.");
+                    $"'{tank.id}' must read its view range from the class table.");
                 Assert.That(
                     tank.guaranteedDetectionRange,
                     Is.EqualTo(VisionRangeTable.GuaranteedDetectionUnits(expected)).Within(0.001f),

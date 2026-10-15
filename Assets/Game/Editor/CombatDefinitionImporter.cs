@@ -537,7 +537,7 @@ namespace LocalTanks.Editor
         }
 
         /// <summary>
-        /// View range and guaranteed detection are derived, not authored: the vehicle class and tier decide the
+        /// View range and guaranteed detection are derived, not authored: the vehicle class decides the
         /// range and the guarantee is a fixed share of it (ADR-064). Computing them here means the validator,
         /// the generated asset and every consumer read one value that comes from one place — the table — and a
         /// hand-written range cannot creep back into the data.
@@ -558,7 +558,7 @@ namespace LocalTanks.Editor
                     continue;
                 }
 
-                tank.vision.viewRange = VisionRangeTable.UnitsFor(vehicleClass, tank.tier);
+                tank.vision.viewRange = VisionRangeTable.UnitsFor(vehicleClass);
                 tank.vision.guaranteedDetectionRange =
                     VisionRangeTable.GuaranteedDetectionUnits(tank.vision.viewRange);
             }
@@ -589,7 +589,7 @@ namespace LocalTanks.Editor
                     if (json.Contains($"\"{field}\""))
                     {
                         throw new InvalidDataException(
-                            $"'{file}' declares '{field}', which is derived from the vehicle class and tier. " +
+                            $"'{file}' declares '{field}', which is derived from the vehicle class. " +
                             "Remove the field: its value comes from VisionRangeTable (see Docs/SPRINT_009.md, стадия 0).");
                     }
                 }
