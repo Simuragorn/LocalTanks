@@ -16,6 +16,7 @@ namespace LocalTanks
         [Min(0.01f)] public float penetrationRandomMaximum = 1.25f;
         [Min(0.01f)] public float damageRandomMinimum = 0.75f;
         [Min(0.01f)] public float damageRandomMaximum = 1.25f;
+        public RammingRules ramming = new RammingRules();
 
         public string[] Validate(string owner)
         {
@@ -24,6 +25,10 @@ namespace LocalTanks
                 errors.Add($"{owner} minimum armor cosine must be in 0.0001..1, found {minimumArmorCosine}.");
             ValidateRange(penetrationRandomMinimum, penetrationRandomMaximum, owner + " penetration", errors);
             ValidateRange(damageRandomMinimum, damageRandomMaximum, owner + " damage", errors);
+            if (ramming == null)
+                errors.Add($"{owner} ramming rules are missing.");
+            else
+                errors.AddRange(ramming.Validate(owner + " ramming"));
             return errors.ToArray();
         }
 
@@ -31,6 +36,35 @@ namespace LocalTanks
         {
             if (minimum <= 0f || maximum <= 0f || maximum <= minimum)
                 errors.Add($"{owner} random range must be positive and increasing, found {minimum}..{maximum}.");
+        }
+    }
+
+    /// <summary>
+    /// Ramming balance lives beside shell balance because both are ways to remove hit points. The defaults
+    /// are deliberately expressed in physical inputs: impact speed in metres per second, vehicle mass in
+    /// tonnes and collision energy in kilojoules. One authored profile therefore works at every map scale.
+    /// </summary>
+    [Serializable]
+    public sealed class RammingRules
+    {
+        public bool enabled = true;
+        [Min(0f)] public float minimumImpactSpeedMps = 1.5f;
+        [Min(0.0001f)] public float hitPointsPerKilojoule = 1f;
+        [Min(0.01f)] public float armorProtectionReferenceMm = 50f;
+        [Min(0f)] public float repeatContactCooldownSeconds = 0.35f;
+
+        public string[] Validate(string owner)
+        {
+            List<string> errors = new List<string>();
+            if (minimumImpactSpeedMps < 0f)
+                errors.Add($"{owner} minimum impact speed must not be negative, found {minimumImpactSpeedMps}.");
+            if (hitPointsPerKilojoule <= 0f)
+                errors.Add($"{owner} damage scale must be positive, found {hitPointsPerKilojoule}.");
+            if (armorProtectionReferenceMm <= 0f)
+                errors.Add($"{owner} armor reference must be positive, found {armorProtectionReferenceMm}.");
+            if (repeatContactCooldownSeconds < 0f)
+                errors.Add($"{owner} repeat-contact cooldown must not be negative, found {repeatContactCooldownSeconds}.");
+            return errors.ToArray();
         }
     }
 

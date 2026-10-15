@@ -385,6 +385,9 @@ namespace LocalTanks
             TeamMember member = tank.GetComponent<TeamMember>();
             if (member == null) member = tank.AddComponent<TeamMember>();
             member.Configure(entry.team, entry.playerControlled);
+            TankRammingDamage ramming = tank.GetComponent<TankRammingDamage>();
+            if (ramming == null) ramming = tank.AddComponent<TankRammingDamage>();
+            ramming.Configure(Rules.combat);
             WeaponController weapon = tank.GetComponent<WeaponController>();
             if (weapon != null)
             {

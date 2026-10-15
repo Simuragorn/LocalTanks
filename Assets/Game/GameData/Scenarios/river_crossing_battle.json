@@ -10,7 +10,14 @@
       "penetrationRandomMinimum": 0.75,
       "penetrationRandomMaximum": 1.25,
       "damageRandomMinimum": 0.75,
-      "damageRandomMaximum": 1.25
+      "damageRandomMaximum": 1.25,
+      "ramming": {
+        "enabled": true,
+        "minimumImpactSpeedMps": 1.5,
+        "hitPointsPerKilojoule": 1.0,
+        "armorProtectionReferenceMm": 50.0,
+        "repeatContactCooldownSeconds": 0.35
+      }
     },
     "timeLimitSeconds": 900,
     "timeLimitIsDraw": true,

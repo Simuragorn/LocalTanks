@@ -108,12 +108,17 @@ namespace LocalTanks.Tests
             Assert.That(source.rules.timeLimitSeconds, Is.EqualTo(900f));
             Assert.That(source.rules.timeLimitIsDraw, Is.True);
             Assert.That(source.rules.friendlyFire, Is.True);
+            Assert.That(source.rules.combat.ramming, Is.Not.Null);
+            Assert.That(source.rules.combat.ramming.enabled, Is.True);
+            Assert.That(source.rules.combat.ramming.minimumImpactSpeedMps, Is.EqualTo(1.5f));
 
             BattleScenario asset = AssetDatabase.LoadAssetAtPath<BattleScenario>(BattleScenarioImporter.AssetPath);
             Assert.That(asset, Is.Not.Null, "The generated scenario asset is missing.");
             Assert.That(asset.rules, Is.Not.Null);
             Assert.That(asset.rules.timeLimitSeconds, Is.EqualTo(source.rules.timeLimitSeconds));
             Assert.That(asset.rules.friendlyFire, Is.EqualTo(source.rules.friendlyFire));
+            Assert.That(asset.rules.combat.ramming.minimumImpactSpeedMps,
+                Is.EqualTo(source.rules.combat.ramming.minimumImpactSpeedMps));
         }
 
         [Test]

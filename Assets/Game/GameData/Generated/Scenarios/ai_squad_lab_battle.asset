@@ -24,6 +24,12 @@ MonoBehaviour:
       penetrationRandomMaximum: 1.25
       damageRandomMinimum: 0.75
       damageRandomMaximum: 1.25
+      ramming:
+        enabled: 1
+        minimumImpactSpeedMps: 1.5
+        hitPointsPerKilojoule: 1
+        armorProtectionReferenceMm: 50
+        repeatContactCooldownSeconds: 0.35
     timeLimitSeconds: 900
     timeLimitIsDraw: 1
     friendlyFire: 1
