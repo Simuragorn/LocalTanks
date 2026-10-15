@@ -140,6 +140,18 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void PlayerAimDeadZone_CoversTheVehicleFootprintAndClearance()
+        {
+            Bounds hull = new Bounds(new Vector3(0.5f, 0f, 0f), new Vector3(2f, 1f, 0f));
+            float clearance = GameScale.MetresToUnits(PlayerTankInput.AimDeadZoneMetres);
+            float radius = PlayerTankInput.AimDeadZoneForBounds(Vector2.zero, hull, clearance);
+
+            float farthestHullCorner = new Vector2(1.5f, 0.5f).magnitude;
+            Assert.That(radius, Is.EqualTo(farthestHullCorner + clearance).Within(0.0001f));
+            Assert.That(radius, Is.GreaterThan(farthestHullCorner));
+        }
+
+        [Test]
         public void EverySampledShot_IntersectsInsideTheDisplayedDispersionDisk()
         {
             const float distance = 70f;

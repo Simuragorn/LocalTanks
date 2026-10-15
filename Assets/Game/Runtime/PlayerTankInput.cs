@@ -12,6 +12,12 @@ namespace LocalTanks
         [SerializeField] private WeaponController weapon;
         [SerializeField] private Camera worldCamera;
         private Vector2 lastStableAimDirection = Vector2.up;
+        private float aimDeadZoneUnits;
+
+        private void Awake()
+        {
+            RefreshAimDeadZone();
+        }
 
         public void Configure(TankMotor newMotor, TurretAiming newTurret, WeaponController newWeapon)
         {
@@ -19,6 +25,7 @@ namespace LocalTanks
             turret = newTurret;
             weapon = newWeapon;
             lastStableAimDirection = turret != null ? (Vector2)turret.transform.up : Vector2.up;
+            RefreshAimDeadZone();
         }
 
         private void Update()
@@ -67,7 +74,9 @@ namespace LocalTanks
                 Vector3 world = cameraToUse.ScreenToWorldPoint(screen);
                 Vector2 origin = turret.transform.position;
                 Vector2 requested = world;
-                float deadZoneUnits = GameScale.MetresToUnits(AimDeadZoneMetres);
+                float deadZoneUnits = aimDeadZoneUnits > 0f
+                    ? aimDeadZoneUnits
+                    : GameScale.MetresToUnits(AimDeadZoneMetres);
                 Vector2 delta = requested - origin;
                 if (delta.sqrMagnitude >= deadZoneUnits * deadZoneUnits)
                 {
@@ -114,6 +123,53 @@ namespace LocalTanks
                 ? fallbackDirection.normalized
                 : Vector2.up;
             return origin + direction * safeDistance;
+        }
+
+        /// <summary>
+        /// Covers the whole machine plus a small clearance around it. A fixed two-metre circle was smaller
+        /// than a tank hull, so the shifted sniper camera could feed its own movement back into turret aim
+        /// while the cursor was still visibly over the player's machine.
+        /// </summary>
+        public static float AimDeadZoneForBounds(
+            Vector2 turretOrigin,
+            Bounds vehicleBounds,
+            float clearanceUnits)
+        {
+            Vector2 centerOffset = (Vector2)vehicleBounds.center - turretOrigin;
+            Vector2 farthestOffset = new Vector2(
+                Mathf.Abs(centerOffset.x) + vehicleBounds.extents.x,
+                Mathf.Abs(centerOffset.y) + vehicleBounds.extents.y);
+            return Mathf.Max(0f, clearanceUnits) + farthestOffset.magnitude;
+        }
+
+        private void RefreshAimDeadZone()
+        {
+            float clearance = GameScale.MetresToUnits(AimDeadZoneMetres);
+            Vector2 origin = turret != null ? turret.transform.position : transform.position;
+            Collider2D[] colliders = GetComponentsInChildren<Collider2D>(true);
+            bool found = false;
+            Bounds combined = default;
+            foreach (Collider2D collider in colliders)
+            {
+                if (collider == null || collider.isTrigger)
+                {
+                    continue;
+                }
+
+                if (!found)
+                {
+                    combined = collider.bounds;
+                    found = true;
+                }
+                else
+                {
+                    combined.Encapsulate(collider.bounds);
+                }
+            }
+
+            aimDeadZoneUnits = found
+                ? AimDeadZoneForBounds(origin, combined, clearance)
+                : clearance;
         }
     }
 }
