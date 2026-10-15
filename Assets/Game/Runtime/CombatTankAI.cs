@@ -129,8 +129,10 @@ namespace LocalTanks
         private float nextCloseCombatTime;
         private Vector2 closeCombatDestination;
         private BattleDirector battleDirector;
+        private Rigidbody2D body;
 
         private float Now => battleDirector != null ? (float)battleDirector.SimulationTime : Time.time;
+        private Vector2 PhysicsPosition => body != null ? body.position : (Vector2)transform.position;
 
         public CombatAiState State { get; private set; } = CombatAiState.Deploy;
         public FireBlockReason CurrentFireBlockReason { get; private set; } = FireBlockReason.NoVisibleTarget;
@@ -1984,7 +1986,7 @@ namespace LocalTanks
 
             if (routeIndex >= routePoints.Length - 1 &&
                 (completedFinalRoutePoint ||
-                 Vector2.Distance(transform.position, routePoints[routeIndex]) < RoutePointTolerance))
+                 Vector2.Distance(PhysicsPosition, routePoints[routeIndex]) < RoutePointTolerance))
             {
                 routeComplete = true;
                 State = CombatAiState.Advance;
@@ -2036,7 +2038,7 @@ namespace LocalTanks
         private void SkipReachedRoutePoints()
         {
             while (routeIndex < routePoints.Length - 1 &&
-                   Vector2.Distance(transform.position, routePoints[routeIndex]) < RoutePointTolerance)
+                   Vector2.Distance(PhysicsPosition, routePoints[routeIndex]) < RoutePointTolerance)
             {
                 routeIndex++;
             }
@@ -2085,6 +2087,7 @@ namespace LocalTanks
         private void ResolveReferences()
         {
             if (member == null) member = GetComponent<TeamMember>();
+            if (body == null) body = GetComponent<Rigidbody2D>();
             if (navigation == null) navigation = GetComponent<NavigationAgent>();
             if (motor == null) motor = GetComponent<TankMotor>();
             if (turret == null) turret = GetComponentInChildren<TurretAiming>(true);
