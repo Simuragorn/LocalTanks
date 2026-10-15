@@ -151,7 +151,7 @@ wall until someone classifies it instead of vanishing silently.
   moving or deleting a rock in a generated scene must therefore need no manual navigation edit;
 - after the physical bake, `RuntimeTacticalMapAnalyzer` must build its source from the current grid,
   active concealment zones and the two scene bases, then run `TacticalMapAnalyzer` before tanks spawn.
-  A saved `TacticalMapDescriptorAsset` is an editor preview, never a battle prerequisite;
+  Never generate or serialize a second tactical descriptor: the runtime result is the source of truth;
 - assign north, centre and south formations to the first, middle and last runtime lanes. Orient each lane
   from the bot's own base, retain a small set of anchors, prove every leg with the current grid and let
   `NavigationAgent` build the detailed A* path. Never require serialized `routeCells` for a bot;
@@ -199,8 +199,7 @@ The whole arena is reproducible from the client, and the steps depend on each ot
 2. `Automation/pipelines/WoTEnvironmentPipeline` extracts the art: objects, plus the materials and the
    surface image the ground needs;
 3. `BuildGround` creates the macro/atlas/selector manifest for the arena floor;
-4. `ImportWotMap`, then `BuildWotMapTacticalAnalysis`, then `BuildWotMapScene` through
-   the launcher, which is the only entry point for Unity;
+4. `ImportWotMap`, then `BuildWotMapScene` through the launcher, which is the only entry point for Unity;
 5. `CaptureWotMapPreview` plus `CaptureWotGroundDetailPreview` to see the result, and the
    PlayMode arena checks to prove it.
 

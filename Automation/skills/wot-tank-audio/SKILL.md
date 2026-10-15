@@ -118,7 +118,7 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
 
    ```json
    {
-     "mapId": "10_hills_tactical",
+     "mapId": "Battle_Mines",
      "displayName": "Рудники",
      "music": { "loading": "mines_music_loading", "relaxed": "...", "intensive": "...", "victory": "...", "draw": "...", "defeat": "..." },
      "ambienceClipId": "mines_ambient_wind_summer",
@@ -131,7 +131,7 @@ Run from the project root `C:\UnityProjects\LocalTanks`.
    }
    ```
 
-   `mapId` must be the ID the tactical descriptor reports — `10_hills_tactical`, not `10_hills`. Then run `Local Tanks > Data/Validate Battle Audio Profiles`: it fails with the list of known arena IDs and the undeclared clip ID when either is wrong, and the same check runs automatically when the file changes. No scene has to be edited: `BattleAudioDirector` attaches itself to the battle director and picks the profile for the loaded map.
+   `mapId` must be the battle scene name reported by the runtime tactical descriptor — `Battle_Mines`, not the source ID `10_hills`. Then run `Local Tanks > Data/Validate Battle Audio Profiles`: it derives known arena IDs from `Assets/Game/Scenes/Maps`, fails with the valid list and the undeclared clip ID when either is wrong, and runs automatically when the file changes. No scene has to be edited: `BattleAudioDirector` attaches itself to the battle director and picks the profile for the loaded map.
 
 6. **Add a language or a voice to the crew voice.** Crew lines live in localized banks (`audioww/<nation>/voiceover.bnk`), so the same role is a different recording per language, and every bank branches each line on the gender switch, so it is also a different recording per voice. The data decides which suffixes a machine asks for: `Assets/Game/Resources/CrewVoiceProfiles.json` schema 2 maps a nation to a `language` and a `voice`, and a role to a clip ID pattern with `{lang}` and `{voice}`.
 

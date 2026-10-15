@@ -220,7 +220,7 @@
 | Список операций реестра | `pwsh Tools/Unity/Invoke-UnityBackground.ps1 -ListOperations` |
 | Валидация данных | `pwsh Tools/Unity/Invoke-UnityBackground.ps1 -Operation ValidateCombatDefinitions -Run` |
 | Пересборка данных и префабов | `-Operation ReimportCombatDefinitions` / `BuildCombatAssets` |
-| Пересборка арены (только при варианте 2 из §3) | `-Operation ImportWotMap`, затем `BuildWotMapScene`, `BuildWotMapTacticalAnalysis`, `RebuildTacticalMapAnalysis` |
+| Пересборка арены (только при варианте 2 из §3) | `-Operation ImportWotMap`, затем `BuildWotMapScene`; тактика строится из сцены при старте боя |
 | Производные документы | `-Operation UpdateTankBalanceDocument`; снимок топовых конфигураций — `Automation/pipelines/WoTDataPipeline/Scripts/Sync-WoTTopProfiles.ps1 -Apply` |
 | Полный Edit Mode | `pwsh Tools/Invoke-LocalTanksTests.ps1 -Platform EditMode -Xml TestResults/<тема>_edit.xml -Log TestResults/<тема>_edit.log -Run` |
 | Полный Play Mode | то же с `-Platform PlayMode` |
@@ -244,7 +244,7 @@
 | `Docs/TEST_PLAN.md` | новые автоматические и ручные проверки спринта | P1–P8 |
 | `PROJECT_PLAN.md` | §13 (этап закрыт), §16 (пути сцен), §22 (открытые решения) | P0, P1, P9 |
 | `Docs/BACKLOG.md` | закрытые пункты удаляются, незакрытые остаются | конец спринта |
-| `Docs/TANK_BALANCE.md`, `Docs/WOT_TOP_CONFIG_SNAPSHOT.md`, `Docs/MAP_TACTICS.md` | только генераторами и конвейером, вручную не правятся | P1, P6 |
+| `Docs/TANK_BALANCE.md`, `Docs/WOT_TOP_CONFIG_SNAPSHOT.md` | только генераторами и конвейером, вручную не правятся | P1, P6 |
 
 Этот документ ведётся по ходу исполнения: у каждого пакета появляется фактический статус, найденные отклонения и причина, по которой он изменился. План, который не обновляется, перестаёт быть источником истины и начинает врать.
 
