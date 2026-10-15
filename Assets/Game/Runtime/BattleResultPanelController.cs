@@ -1,9 +1,17 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 
 namespace LocalTanks
 {
+    public enum BattleResultCommand
+    {
+        None,
+        Repeat,
+        MainMenu
+    }
+
     public sealed class BattleResultPanelController : MonoBehaviour
     {
         private BattleDirector director;
@@ -16,6 +24,38 @@ namespace LocalTanks
 
         public bool IsVisible => overlay != null && !overlay.ClassListContains("hidden");
         public string Title => title?.text ?? string.Empty;
+
+        private void Update()
+        {
+            if (!IsVisible)
+            {
+                return;
+            }
+
+            Keyboard keyboard = Keyboard.current;
+            if (keyboard == null)
+            {
+                return;
+            }
+
+            BattleResultCommand command = ResolveShortcut(
+                keyboard.enterKey.wasPressedThisFrame || keyboard.numpadEnterKey.wasPressedThisFrame,
+                keyboard.escapeKey.wasPressedThisFrame);
+            if (command == BattleResultCommand.MainMenu)
+            {
+                MainMenu();
+            }
+            else if (command == BattleResultCommand.Repeat)
+            {
+                Repeat();
+            }
+        }
+
+        public static BattleResultCommand ResolveShortcut(bool enterPressed, bool escapePressed)
+        {
+            if (escapePressed) return BattleResultCommand.MainMenu;
+            return enterPressed ? BattleResultCommand.Repeat : BattleResultCommand.None;
+        }
 
         public void Configure(BattleDirector battleDirector, BattleRoster battleRoster, VisualElement root)
         {
@@ -46,7 +86,9 @@ namespace LocalTanks
             title.EnableInClassList("draw", draw);
             reason.text = result.Describe(playerTeam);
             overlay.RemoveFromClassList("hidden");
+            overlay.BringToFront();
             ModalUiState.Set(this, true);
+            overlay.schedule.Execute(() => repeatButton?.Focus());
         }
 
         private void OnMatchEnded(MatchResult result)

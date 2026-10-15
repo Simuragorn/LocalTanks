@@ -96,6 +96,14 @@ namespace LocalTanks
             }
 
             VisualElement root = document.rootVisualElement;
+            // The settings template container fills the screen so its absolutely positioned overlay has
+            // a useful layout box. The container itself must not win pointer picking while the settings
+            // overlay is hidden; its visible children remain pickable when the panel is opened.
+            VisualElement settingsContainer = root.Q<VisualElement>("settings-instance");
+            if (settingsContainer != null)
+            {
+                settingsContainer.pickingMode = PickingMode.Ignore;
+            }
             if (styleSheets != null)
             {
                 foreach (StyleSheet sheet in styleSheets)

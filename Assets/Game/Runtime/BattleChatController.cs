@@ -46,6 +46,7 @@ namespace LocalTanks
         {
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
+            if (!IsComposing && ModalUiState.AnyOpen) return;
             if (!IsComposing && keyboard.enterKey.wasPressedThisFrame)
             {
                 SetComposing(true);

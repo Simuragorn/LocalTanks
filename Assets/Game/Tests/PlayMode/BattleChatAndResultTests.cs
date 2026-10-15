@@ -48,6 +48,31 @@ namespace LocalTanks.Tests
             Assert.That(result.Title, Is.EqualTo("НИЧЬЯ"));
         }
 
+        [Test]
+        public void ResultPanelMapsEnterAndEscapeToVisibleActions()
+        {
+            Assert.That(BattleResultPanelController.ResolveShortcut(true, false),
+                Is.EqualTo(BattleResultCommand.Repeat));
+            Assert.That(BattleResultPanelController.ResolveShortcut(false, true),
+                Is.EqualTo(BattleResultCommand.MainMenu));
+            Assert.That(BattleResultPanelController.ResolveShortcut(false, false),
+                Is.EqualTo(BattleResultCommand.None));
+        }
+
+        [UnityTest]
+        public IEnumerator HiddenSettingsContainerDoesNotCoverBattleButtons()
+        {
+            using PanelFixture panel = CreatePanel();
+            panel.Host.AddComponent<BattleHudController>();
+            yield return null;
+            yield return null;
+
+            VisualElement settingsContainer = panel.Document.rootVisualElement.Q<VisualElement>("settings-instance");
+            Assert.That(settingsContainer, Is.Not.Null);
+            Assert.That(settingsContainer.pickingMode, Is.EqualTo(PickingMode.Ignore),
+                "The full-screen settings template must not intercept clicks while its overlay is hidden.");
+        }
+
         private static PanelFixture CreatePanel()
         {
             PanelSettings settings = ScriptableObject.CreateInstance<PanelSettings>();
