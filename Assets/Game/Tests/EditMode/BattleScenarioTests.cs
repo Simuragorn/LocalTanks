@@ -41,27 +41,6 @@ namespace LocalTanks.Tests
         }
 
         [Test]
-        public void ScenarioValidator_DoesNotRequirePrecomputedMapRoutes()
-        {
-            BattleScenario imported = BattleScenarioImporter.Reimport();
-            BattleScenario scenario = Object.Instantiate(imported);
-            CombatDatabase database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(
-                CombatDefinitionImporter.DatabasePath);
-            foreach (BattleScenarioEntry entry in scenario.entries.Where(item => !item.playerControlled))
-                entry.routeCells = null;
-
-            try
-            {
-                Assert.That(scenario.Validate(database), Is.Empty,
-                    "Runtime map analysis, not scenario data, owns bot routes.");
-            }
-            finally
-            {
-                Object.DestroyImmediate(scenario);
-            }
-        }
-
-        [Test]
         public void AiDuelLabScenarioAndCases_AreValidAndContainOnlyTwoBots()
         {
             BattleScenario scenario = BattleScenarioImporter.ReimportDuelLab();
@@ -122,8 +101,7 @@ namespace LocalTanks.Tests
                 baseId = index < BattleScenario.TeamSize ? "A" : "B",
                 spawnSlot = index == 1 ? 0 : index % BattleScenario.SpawnSlotCount,
                 lane = (BattleLane)(index % 3),
-                role = CombatAiRole.Support,
-                routeCells = new[] { Vector2Int.zero, Vector2Int.one }
+                role = CombatAiRole.Support
             }).ToArray();
 
             string[] errors = scenario.Validate(database);
@@ -165,8 +143,7 @@ namespace LocalTanks.Tests
                 spawnSlot = index % BattleScenario.TeamSize,
                 lane = index % BattleScenario.TeamSize < 2 ? BattleLane.North :
                     index % BattleScenario.TeamSize < 5 ? BattleLane.Center : BattleLane.South,
-                role = CombatAiRole.Support,
-                routeCells = new[] { Vector2Int.zero, Vector2Int.one }
+                role = CombatAiRole.Support
             }).ToArray();
 
             string[] errors = scenario.Validate(database);
@@ -205,7 +182,6 @@ namespace LocalTanks.Tests
                     tankId = item.id,
                     prefab = prefabs[index]
                 }).ToArray(),
-                null,
                 null);
             BattleScenario template = CreateFullTemplate();
             PlayerAiTestLabSettings settings = new PlayerAiTestLabSettings
@@ -262,7 +238,7 @@ namespace LocalTanks.Tests
             {
                 new TankPrefabBinding { tankId = playerTank.id, prefab = playerPrefab },
                 new TankPrefabBinding { tankId = germanTierOne.id, prefab = germanPrefab }
-            }, null, null);
+            }, null);
             BattleScenario template = CreateFullTemplate();
             PlayerAiTestLabSettings settings = new PlayerAiTestLabSettings
             {
@@ -463,8 +439,7 @@ namespace LocalTanks.Tests
                     baseId = teamA ? "A" : "B",
                     spawnSlot = new[] { 7, 5, 9, 3, 11, 1, 13 }[teamIndex],
                     lane = teamIndex < 2 ? BattleLane.North : teamIndex < 5 ? BattleLane.Center : BattleLane.South,
-                    role = CombatAiRole.Support,
-                    routeCells = new[] { new Vector2Int(teamIndex, 0), new Vector2Int(teamIndex, 1) }
+                    role = CombatAiRole.Support
                 };
             }).ToArray();
             return scenario;

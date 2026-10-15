@@ -4809,6 +4809,7 @@ MonoBehaviour:
   maximumZoom: 22
   zoomStep: 1.5
   zoomSpeed: 10
+  allowCloseInspectionZoom: 0
 --- !u!114 &553629862
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -66010,7 +66011,6 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.BattleDirector
   scenario: {fileID: 11400000, guid: 73d42f8c5c4d241498e04ea955d20b32, type: 2}
-  tacticalMap: {fileID: 11400000, guid: fc92cd10b8f53fc4c88a5959e9c07d07, type: 2}
   combatDatabase: {fileID: 11400000, guid: ddef9735e1a3b7c4a9c9845fe40213c8, type: 2}
   navigationMap: {fileID: 1814681876}
   visionSystem: {fileID: 2049659226}

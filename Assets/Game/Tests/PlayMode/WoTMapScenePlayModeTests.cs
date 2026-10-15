@@ -55,7 +55,9 @@ namespace LocalTanks.Tests
                 "Bots must discover tactical lanes from the freshly baked runtime grid.");
             Assert.That(director.PreBattleAnalysisMilliseconds, Is.LessThan(1000),
                 "Runtime analysis should finish during ordinary scene loading without a countdown.");
-            Assert.That(director.TacticalMap.mapId, Is.EqualTo("Battle_Mines_runtime"));
+            Assert.That(director.TacticalMap.mapId, Is.EqualTo("Battle_Mines"));
+            Assert.That(director.AudioDirector.HasProfile, Is.True,
+                "The scene ID used by runtime analysis must resolve the Mines audio profile.");
             Assert.That(Object.FindObjectsByType<CaptureBase>(FindObjectsSortMode.None).Length,
                 Is.EqualTo(2), "The arena has two bases.");
         }

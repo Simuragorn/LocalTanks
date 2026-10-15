@@ -12,7 +12,7 @@ namespace LocalTanks.Tests
     /// </summary>
     public sealed class BattleAudioProfileTests
     {
-        private const string MinesArenaId = "10_hills_tactical";
+        private const string MinesArenaId = "Battle_Mines";
 
         [Test]
         public void CommittedProfiles_AreValid()
@@ -218,7 +218,7 @@ namespace LocalTanks.Tests
             string[] arenas = BattleAudioProfileValidator.KnownArenaIds();
 
             Assert.That(arenas, Does.Contain(MinesArenaId),
-                "The arena list comes from the tactical sources and must include the arena the profile keys on.");
+                "The arena list comes from battle map scenes and must include the arena the profile keys on.");
         }
 
         [Test]
@@ -272,7 +272,7 @@ namespace LocalTanks.Tests
             BattleAudioProfileCatalog catalog = BattleAudioProfileValidator.LoadSource();
 
             Assert.That(catalog.Find("10_hills"), Is.Null,
-                "The descriptor reports the tactical source ID, not the raw map name.");
+                "The descriptor reports the battle scene ID, not the source map name.");
             Assert.That(catalog.Find(MinesArenaId), Is.Not.Null);
             Assert.That(catalog.Find(string.Empty), Is.Null);
         }

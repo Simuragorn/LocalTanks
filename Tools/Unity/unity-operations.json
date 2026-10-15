@@ -86,17 +86,6 @@
       ]
     },
     {
-      "name": "BuildWotMapTacticalAnalysis",
-      "kind": "ExecuteMethod",
-      "executeMethod": "LocalTanks.Editor.WoTMapTacticalDescriptorBuilder.BuildDefault",
-      "requiresGraphics": false,
-      "timeoutSeconds": 1800,
-      "description": "Rebuild the tactical descriptor of the Mines arena.",
-      "outputs": [
-        "Assets/Game/GameData/Generated/Tactical"
-      ]
-    },
-    {
       "name": "ImportWotMap",
       "kind": "ExecuteMethod",
       "executeMethod": "LocalTanks.Editor.WoTMapImporter.ImportDefaultMap",
@@ -186,18 +175,6 @@
       ]
     },
     {
-      "name": "RebuildTacticalMapAnalysis",
-      "kind": "ExecuteMethod",
-      "executeMethod": "LocalTanks.Editor.TacticalMapDescriptorImporter.Reimport",
-      "requiresGraphics": false,
-      "timeoutSeconds": 1800,
-      "description": "Rebuild the tactical map analysis from the arena primitives, and the document that describes it.",
-      "outputs": [
-        "Assets/Game/GameData/Generated/Tactical",
-        "Docs/MAP_TACTICS.md"
-      ]
-    },
-    {
       "name": "UpdateTankBalanceDocument",
       "kind": "ExecuteMethod",
       "executeMethod": "LocalTanks.Editor.TankBalanceDocumentGenerator.WriteCurrent",
@@ -223,14 +200,6 @@
       "requiresGraphics": false,
       "timeoutSeconds": 900,
       "description": "Validate the battle scenario against the definitions."
-    },
-    {
-      "name": "ValidateTacticalMapAnalysis",
-      "kind": "ExecuteMethod",
-      "executeMethod": "LocalTanks.Editor.TacticalMapDescriptorImporter.ValidateMenu",
-      "requiresGraphics": false,
-      "timeoutSeconds": 900,
-      "description": "Validate the tactical map analysis against its source."
     },
     {
       "name": "ValidateCombatVfxProfiles",

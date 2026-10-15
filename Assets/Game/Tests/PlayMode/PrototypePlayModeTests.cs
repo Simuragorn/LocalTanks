@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -13,41 +12,18 @@ namespace LocalTanks.Tests
     public sealed class PrototypePlayModeTests
     {
         [UnityTest]
-        public IEnumerator RiverCrossing_StartsWithoutBakedTacticalAssetOrRoutes()
+        public IEnumerator RiverCrossing_StartsFromRuntimeTacticalAnalysis()
         {
-            BattleScenario runtimeScenario = null;
-            void RemoveBakedMapKnowledge(Scene scene, LoadSceneMode mode)
-            {
-                if (scene.name != "Battle_RiverCrossing") return;
-                BattleDirector loadingDirector = Object.FindAnyObjectByType<BattleDirector>();
-                Assert.That(loadingDirector, Is.Not.Null);
-                typeof(BattleDirector).GetField("tacticalMap", BindingFlags.Instance | BindingFlags.NonPublic)
-                    ?.SetValue(loadingDirector, null);
-                runtimeScenario = Object.Instantiate(loadingDirector.Scenario);
-                foreach (BattleScenarioEntry entry in runtimeScenario.entries.Where(item => !item.playerControlled))
-                    entry.routeCells = null;
-                loadingDirector.OverrideScenario(runtimeScenario);
-            }
-
-            SceneManager.sceneLoaded += RemoveBakedMapKnowledge;
-            try
-            {
-                SceneManager.LoadScene("Battle_RiverCrossing");
-            }
-            finally
-            {
-                SceneManager.sceneLoaded -= RemoveBakedMapKnowledge;
-            }
+            SceneManager.LoadScene("Battle_RiverCrossing");
 
             yield return null;
             BattleDirector director = Object.FindAnyObjectByType<BattleDirector>();
             Assert.That(director.SpawnedMembers, Has.Count.EqualTo(BattleScenario.TeamSize * 2));
             Assert.That(director.TacticalAnalysisReport.WasAnalyzed, Is.True);
-            Assert.That(director.TacticalMap.mapId, Is.EqualTo("Battle_RiverCrossing_runtime"));
+            Assert.That(director.TacticalMap.mapId, Is.EqualTo("Battle_RiverCrossing"));
             Assert.That(Object.FindObjectsByType<CombatTankAI>(), Has.Length.EqualTo(BattleScenario.TeamSize * 2 - 1));
             Assert.That(Object.FindObjectsByType<NavigationAgent>(),
                 Has.All.Matches<NavigationAgent>(agent => agent.HasPath || agent.DestinationReached));
-            Object.Destroy(runtimeScenario);
         }
 
         [UnityTest]
@@ -713,7 +689,7 @@ namespace LocalTanks.Tests
             Assert.That(director.PreBattleAnalysisMilliseconds, Is.LessThan(1000));
             Assert.That(director.TacticalMap, Is.Not.Null);
             Assert.That(director.TacticalMap.sceneId, Is.EqualTo("Battle_RiverCrossing"));
-            Assert.That(director.TacticalMap.mapId, Is.EqualTo("Battle_RiverCrossing_runtime"));
+            Assert.That(director.TacticalMap.mapId, Is.EqualTo("Battle_RiverCrossing"));
             Assert.That(director.TacticalMap.lanes.Select(lane => lane.id), Is.EqualTo(new[]
             {
                 "lane_north", "lane_center", "lane_south"

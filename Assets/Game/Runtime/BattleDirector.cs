@@ -22,7 +22,6 @@ namespace LocalTanks
     public sealed class BattleDirector : MonoBehaviour
     {
         [SerializeField] private BattleScenario scenario;
-        [SerializeField] private TacticalMapDescriptorAsset tacticalMap;
         [SerializeField] private CombatDatabase combatDatabase;
         [SerializeField] private NavigationMap navigationMap;
         [SerializeField] private TeamVisionSystem visionSystem;
@@ -58,8 +57,7 @@ namespace LocalTanks
 
         public IReadOnlyList<TeamMember> SpawnedMembers => spawnedMembers;
         public TeamMember PlayerMember { get; private set; }
-        public TacticalMapDescriptor TacticalMap => runtimeTacticalMap ??
-            (tacticalMap != null ? tacticalMap.descriptor : null);
+        public TacticalMapDescriptor TacticalMap => runtimeTacticalMap;
         public BattleStrategicPlanner StrategicPlanner { get; private set; }
         public BotStrategicCoordinator StrategicCoordinator { get; private set; }
         public BattleDiagnosticsOverlay DiagnosticsOverlay { get; private set; }
@@ -242,11 +240,9 @@ namespace LocalTanks
             CameraFollow2D follow,
             CaptureBase[] captureBases,
             TankPrefabBinding[] prefabBindings,
-            VehicleClassIconBinding[] iconBindings,
-            TacticalMapDescriptorAsset tacticalMapDescriptor)
+            VehicleClassIconBinding[] iconBindings)
         {
             scenario = battleScenario;
-            tacticalMap = tacticalMapDescriptor;
             combatDatabase = database;
             navigationMap = map;
             visionSystem = teamVision;
@@ -398,9 +394,7 @@ namespace LocalTanks
                     bases.FirstOrDefault(item => item != null && item.BaseId != entry.baseId);
                 Vector2 destination = destinationBase != null
                     ? (Vector2)destinationBase.transform.position
-                    : entry.routeCells != null && entry.routeCells.Length > 0
-                        ? navigationMap.CellToWorld(entry.routeCells[entry.routeCells.Length - 1])
-                        : position;
+                    : position;
                 TacticalLaneDescriptor tacticalLane = RuntimeTacticalMapAnalyzer.SelectLane(TacticalMap, entry.lane);
                 Vector2Int[] laneHints = RuntimeTacticalMapAnalyzer.OrientFrom(
                     tacticalLane,

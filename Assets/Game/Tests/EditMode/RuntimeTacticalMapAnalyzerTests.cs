@@ -39,7 +39,7 @@ namespace LocalTanks.Tests
                 Assert.That(result.Report.WasAnalyzed, Is.True);
                 Assert.That(result.Report.CellCount, Is.EqualTo(63));
                 Assert.That(result.Report.ConcealmentZoneCount, Is.EqualTo(1));
-                Assert.That(result.Descriptor.mapId, Is.EqualTo("unknown_test_map_runtime"));
+                Assert.That(result.Descriptor.mapId, Is.EqualTo("unknown_test_map"));
                 Assert.That(result.Descriptor.baseA, Is.EqualTo(new Vector2Int(1, 3)));
                 Assert.That(result.Descriptor.baseB, Is.EqualTo(new Vector2Int(7, 3)));
                 Assert.That(result.Descriptor.lanes, Has.Length.EqualTo(3));

@@ -178,8 +178,7 @@ namespace LocalTanks
                 baseId = template.baseId,
                 spawnSlot = template.spawnSlot,
                 lane = template.lane,
-                role = template.role,
-                routeCells = template.routeCells != null ? template.routeCells.ToArray() : Array.Empty<Vector2Int>()
+                role = template.role
             };
         }
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using LocalTanks.Editor;
 using NUnit.Framework;
@@ -116,9 +117,9 @@ namespace LocalTanks.Tests
             out BattleScenario scenario,
             out CombatDatabase database)
         {
-            TacticalMapDescriptorAsset mapAsset = AssetDatabase.LoadAssetAtPath<TacticalMapDescriptorAsset>(
-                TacticalMapDescriptorImporter.AssetPath);
-            descriptor = mapAsset.descriptor;
+            const string sourcePath = "Assets/Game/GameData/Maps/river_crossing.json";
+            TacticalMapSource source = TacticalMapSource.Parse(File.ReadAllText(Path.GetFullPath(sourcePath)));
+            descriptor = TacticalMapAnalyzer.Analyze(source);
             scenario = AssetDatabase.LoadAssetAtPath<BattleScenario>(BattleScenarioImporter.AssetPath);
             database = AssetDatabase.LoadAssetAtPath<CombatDatabase>(CombatDefinitionImporter.DatabasePath);
             Assert.That(descriptor, Is.Not.Null);

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LocalTanks;
@@ -8,21 +7,6 @@ using UnityEngine;
 
 namespace LocalTanks.Editor
 {
-    [Serializable]
-    public sealed class ScenarioPointJson
-    {
-        public int x;
-        public int y;
-    }
-
-    [Serializable]
-    public sealed class ScenarioRouteJson
-    {
-        public string team;
-        public string lane;
-        public ScenarioPointJson[] points;
-    }
-
     [Serializable]
     public sealed class ScenarioEntryJson
     {
@@ -54,7 +38,6 @@ namespace LocalTanks.Editor
         public string sceneId;
         public string kind;
         public ScenarioRulesJson rules;
-        public ScenarioRouteJson[] routes;
         public ScenarioEntryJson[] entries;
     }
 
@@ -103,13 +86,12 @@ namespace LocalTanks.Editor
                 AssetDatabase.CreateAsset(asset, assetPath);
             }
 
-            Dictionary<string, Vector2Int[]> routes = BuildRoutes(source.routes);
             asset.id = source.id;
             asset.sceneId = source.sceneId;
             asset.kind = ParseKind(source.kind, source.id);
             asset.rules = ConvertRules(source.rules);
             asset.entries = (source.entries ?? Array.Empty<ScenarioEntryJson>())
-                .Select(item => ConvertEntry(item, routes))
+                .Select(ConvertEntry)
                 .ToArray();
             string[] errors = asset.Validate(database);
             if (errors.Length > 0)
@@ -175,9 +157,7 @@ namespace LocalTanks.Editor
             };
         }
 
-        private static BattleScenarioEntry ConvertEntry(
-            ScenarioEntryJson source,
-            IReadOnlyDictionary<string, Vector2Int[]> routes)
+        private static BattleScenarioEntry ConvertEntry(ScenarioEntryJson source)
         {
             if (!Enum.TryParse(source.team, false, out TeamId team))
                 throw new InvalidDataException($"Scenario entry '{source.id}' has unknown team '{source.team}'.");
@@ -185,9 +165,6 @@ namespace LocalTanks.Editor
                 throw new InvalidDataException($"Scenario entry '{source.id}' has unknown lane '{source.lane}'.");
             if (!Enum.TryParse(source.role, false, out CombatAiRole role))
                 throw new InvalidDataException($"Scenario entry '{source.id}' has unknown role '{source.role}'.");
-            string routeKey = RouteKey(team, lane);
-            if (!routes.TryGetValue(routeKey, out Vector2Int[] route))
-                throw new InvalidDataException($"Scenario entry '{source.id}' has no route '{routeKey}'.");
             return new BattleScenarioEntry
             {
                 id = source.id,
@@ -197,33 +174,8 @@ namespace LocalTanks.Editor
                 baseId = source.baseId,
                 spawnSlot = source.spawnSlot,
                 lane = lane,
-                role = role,
-                routeCells = route.ToArray()
+                role = role
             };
-        }
-
-        private static Dictionary<string, Vector2Int[]> BuildRoutes(ScenarioRouteJson[] sourceRoutes)
-        {
-            Dictionary<string, Vector2Int[]> routes = new Dictionary<string, Vector2Int[]>(StringComparer.Ordinal);
-            foreach (ScenarioRouteJson source in sourceRoutes ?? Array.Empty<ScenarioRouteJson>())
-            {
-                if (!Enum.TryParse(source.team, false, out TeamId team) || team == TeamId.Neutral)
-                    throw new InvalidDataException($"Scenario route has unknown team '{source.team}'.");
-                if (!Enum.TryParse(source.lane, false, out BattleLane lane))
-                    throw new InvalidDataException($"Scenario route has unknown lane '{source.lane}'.");
-                Vector2Int[] points = (source.points ?? Array.Empty<ScenarioPointJson>())
-                    .Select(point => new Vector2Int(point.x, point.y))
-                    .ToArray();
-                if (points.Length < 2 || !routes.TryAdd(RouteKey(team, lane), points))
-                    throw new InvalidDataException($"Scenario route '{team}:{lane}' is missing, short or duplicated.");
-            }
-
-            return routes;
-        }
-
-        private static string RouteKey(TeamId team, BattleLane lane)
-        {
-            return $"{team}:{lane}";
         }
 
         private static void EnsureFolder(string assetPath)

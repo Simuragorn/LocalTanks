@@ -35,10 +35,6 @@ MonoBehaviour:
     spawnSlot: 7
     lane: 1
     role: 0
-    routeCells:
-    - {x: 17, y: 22}
-    - {x: 25, y: 22}
-    - {x: 31, y: 22}
   - id: duel_b_leichttraktor
     tankId: leichttraktor
     team: 2
@@ -47,7 +43,3 @@ MonoBehaviour:
     spawnSlot: 7
     lane: 1
     role: 0
-    routeCells:
-    - {x: 54, y: 22}
-    - {x: 46, y: 22}
-    - {x: 40, y: 22}

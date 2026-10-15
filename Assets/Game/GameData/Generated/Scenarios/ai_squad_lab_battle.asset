@@ -35,12 +35,6 @@ MonoBehaviour:
     spawnSlot: 10
     lane: 0
     role: 2
-    routeCells:
-    - {x: 17, y: 28}
-    - {x: 18, y: 31}
-    - {x: 36, y: 35}
-    - {x: 50, y: 33}
-    - {x: 60, y: 25}
   - id: squad_a_center
     tankId: ms_1
     team: 1
@@ -49,12 +43,6 @@ MonoBehaviour:
     spawnSlot: 7
     lane: 1
     role: 0
-    routeCells:
-    - {x: 17, y: 22}
-    - {x: 23, y: 22}
-    - {x: 36, y: 22}
-    - {x: 49, y: 22}
-    - {x: 60, y: 22}
   - id: squad_a_south
     tankId: ms_1
     team: 1
@@ -63,12 +51,6 @@ MonoBehaviour:
     spawnSlot: 1
     lane: 2
     role: 1
-    routeCells:
-    - {x: 17, y: 16}
-    - {x: 17, y: 14}
-    - {x: 36, y: 9}
-    - {x: 49, y: 10}
-    - {x: 60, y: 19}
   - id: squad_b_north
     tankId: leichttraktor
     team: 2
@@ -77,12 +59,6 @@ MonoBehaviour:
     spawnSlot: 10
     lane: 0
     role: 2
-    routeCells:
-    - {x: 54, y: 28}
-    - {x: 53, y: 31}
-    - {x: 35, y: 35}
-    - {x: 21, y: 33}
-    - {x: 11, y: 25}
   - id: squad_b_center
     tankId: leichttraktor
     team: 2
@@ -91,12 +67,6 @@ MonoBehaviour:
     spawnSlot: 7
     lane: 1
     role: 0
-    routeCells:
-    - {x: 54, y: 22}
-    - {x: 48, y: 22}
-    - {x: 35, y: 22}
-    - {x: 22, y: 22}
-    - {x: 11, y: 22}
   - id: squad_b_south
     tankId: leichttraktor
     team: 2
@@ -105,9 +75,3 @@ MonoBehaviour:
     spawnSlot: 1
     lane: 2
     role: 1
-    routeCells:
-    - {x: 54, y: 16}
-    - {x: 54, y: 14}
-    - {x: 35, y: 9}
-    - {x: 22, y: 10}
-    - {x: 11, y: 19}

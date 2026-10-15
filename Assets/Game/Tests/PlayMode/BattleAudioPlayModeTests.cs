@@ -572,7 +572,7 @@ namespace LocalTanks.Tests
         {
             return new BattleAudioProfile
             {
-                mapId = "10_hills_tactical",
+                mapId = "Battle_Mines",
                 displayName = "Рудники",
                 music = new BattleMusicClipIds
                 {

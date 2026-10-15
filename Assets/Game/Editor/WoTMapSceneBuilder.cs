@@ -913,10 +913,6 @@ namespace LocalTanks.Editor
                 throw new InvalidOperationException("Combat database was not generated.");
             }
 
-            // Each arena needs its own analysis: the shared descriptor describes another map, and the
-            // director rejects a mismatch rather than letting the AI reason about the wrong battlefield.
-            TacticalMapDescriptorAsset tacticalMap = WoTMapTacticalDescriptorBuilder.Build(asset.mapId);
-
             VehicleClassIconBinding[] icons = Enum.GetValues(typeof(VehicleClass))
                 .Cast<VehicleClass>()
                 .Select(vehicleClass => new VehicleClassIconBinding
@@ -942,8 +938,7 @@ namespace LocalTanks.Editor
                 camera,
                 bases,
                 prefabs,
-                icons,
-                tacticalMap);
+                icons);
         }
 
         /// <summary>Binds every playable tank, exactly as the other arena scenes do.</summary>

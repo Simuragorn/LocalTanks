@@ -44,8 +44,7 @@ namespace LocalTanks
 
     /// <summary>
     /// Builds the complete tactical input from the navigation grid and scene objects that exist at battle
-    /// start. Saved tactical assets may still be useful as editor previews, but bots never need them to
-    /// understand a loaded arena.
+    /// start. The resulting descriptor is the only tactical map bots use in a battle.
     /// </summary>
     public static class RuntimeTacticalMapAnalyzer
     {
@@ -90,7 +89,7 @@ namespace LocalTanks
             TacticalMapSource source = new TacticalMapSource
             {
                 schemaVersion = 1,
-                id = $"{resolvedSceneId}_runtime",
+                id = resolvedSceneId,
                 sceneId = resolvedSceneId,
                 displayName = scene.name,
                 width = map.Width,

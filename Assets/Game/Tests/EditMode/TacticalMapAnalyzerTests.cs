@@ -1,15 +1,15 @@
 using System;
 using System.IO;
 using System.Linq;
-using LocalTanks.Editor;
 using NUnit.Framework;
-using UnityEditor;
 using UnityEngine;
 
 namespace LocalTanks.Tests
 {
     public sealed class TacticalMapAnalyzerTests
     {
+        private const string RiverCrossingSourcePath = "Assets/Game/GameData/Maps/river_crossing.json";
+
         [Test]
         public void RiverCrossing_FindsThreeOrderedStrategicLanes()
         {
@@ -69,7 +69,7 @@ namespace LocalTanks.Tests
         [Test]
         public void Analysis_IsDeterministic()
         {
-            TacticalMapSource source = TacticalMapDescriptorImporter.LoadSource();
+            TacticalMapSource source = LoadRiverCrossingSource();
             string first = JsonUtility.ToJson(TacticalMapAnalyzer.Analyze(source));
             string second = JsonUtility.ToJson(TacticalMapAnalyzer.Analyze(source));
 
@@ -79,7 +79,7 @@ namespace LocalTanks.Tests
         [Test]
         public void SourceHash_ChangesWhenTacticalGeometryChanges()
         {
-            TacticalMapSource original = TacticalMapDescriptorImporter.LoadSource();
+            TacticalMapSource original = LoadRiverCrossingSource();
             TacticalMapSource changed = TacticalMapSource.Parse(JsonUtility.ToJson(original));
             string row = changed.rows.First(value => value.Contains('.'));
             int rowIndex = Array.IndexOf(changed.rows, row);
@@ -92,23 +92,14 @@ namespace LocalTanks.Tests
                 Is.Not.EqualTo(TacticalMapAnalyzer.ComputeSourceHash(original)));
         }
 
-        [Test]
-        public void GeneratedAssetAndDocument_MatchCurrentMapAnalysis()
-        {
-            TacticalMapDescriptor expected = AnalyzeRiverCrossing();
-            TacticalMapDescriptorAsset asset = AssetDatabase.LoadAssetAtPath<TacticalMapDescriptorAsset>(
-                TacticalMapDescriptorImporter.AssetPath);
-
-            Assert.That(asset, Is.Not.Null, "Rebuild the tactical map analysis asset.");
-            Assert.That(asset.Validate(), Is.Empty);
-            Assert.That(asset.descriptor.sourceHash, Is.EqualTo(expected.sourceHash));
-            Assert.That(File.ReadAllText(Path.GetFullPath(TacticalMapDescriptorImporter.DocumentPath)),
-                Is.EqualTo(TacticalMapDescriptorImporter.BuildDocument(expected)));
-        }
-
         private static TacticalMapDescriptor AnalyzeRiverCrossing()
         {
-            return TacticalMapAnalyzer.Analyze(TacticalMapDescriptorImporter.LoadSource());
+            return TacticalMapAnalyzer.Analyze(LoadRiverCrossingSource());
+        }
+
+        private static TacticalMapSource LoadRiverCrossingSource()
+        {
+            return TacticalMapSource.Parse(File.ReadAllText(Path.GetFullPath(RiverCrossingSourcePath)));
         }
 
         private static void AssertScore(float value, string laneId)

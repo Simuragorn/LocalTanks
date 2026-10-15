@@ -8,6 +8,13 @@ using UnityEngine;
 namespace LocalTanks.Editor
 {
     [Serializable]
+    internal sealed class AiDuelPointJson
+    {
+        public int x;
+        public int y;
+    }
+
+    [Serializable]
     internal sealed class AiDuelLabCaseJson
     {
         public string id;
@@ -15,12 +22,12 @@ namespace LocalTanks.Editor
         public string description;
         public int seed;
         public float durationSeconds;
-        public ScenarioPointJson teamAStart;
+        public AiDuelPointJson teamAStart;
         public float teamAHeading;
-        public ScenarioPointJson[] teamARoute;
-        public ScenarioPointJson teamBStart;
+        public AiDuelPointJson[] teamARoute;
+        public AiDuelPointJson teamBStart;
         public float teamBHeading;
-        public ScenarioPointJson[] teamBRoute;
+        public AiDuelPointJson[] teamBRoute;
     }
 
     [Serializable]
@@ -72,14 +79,14 @@ namespace LocalTanks.Editor
                 durationSeconds = source.durationSeconds,
                 teamAStart = Convert(source.teamAStart),
                 teamAHeading = source.teamAHeading,
-                teamARoute = (source.teamARoute ?? Array.Empty<ScenarioPointJson>()).Select(Convert).ToArray(),
+                teamARoute = (source.teamARoute ?? Array.Empty<AiDuelPointJson>()).Select(Convert).ToArray(),
                 teamBStart = Convert(source.teamBStart),
                 teamBHeading = source.teamBHeading,
-                teamBRoute = (source.teamBRoute ?? Array.Empty<ScenarioPointJson>()).Select(Convert).ToArray()
+                teamBRoute = (source.teamBRoute ?? Array.Empty<AiDuelPointJson>()).Select(Convert).ToArray()
             };
         }
 
-        private static Vector2Int Convert(ScenarioPointJson point)
+        private static Vector2Int Convert(AiDuelPointJson point)
         {
             return point != null ? new Vector2Int(point.x, point.y) : default;
         }

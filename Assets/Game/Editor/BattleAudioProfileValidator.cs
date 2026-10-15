@@ -13,8 +13,8 @@ namespace LocalTanks.Editor
     /// </summary>
     /// <remarks>
     /// The profiles name clips that only exist after the local WoT pipeline ran, and they key themselves
-    /// by the map ID the tactical descriptor reports. Both are easy to get subtly wrong — `10_hills`
-    /// instead of `10_hills_tactical`, or a clip ID that was never declared — so the checks run over the
+    /// by the battle scene ID the runtime tactical descriptor reports. Both are easy to get subtly wrong —
+    /// a source map name instead of `Battle_Mines`, or a clip ID that was never declared — so the checks run over the
     /// committed catalog itself and fail loudly with the list of IDs that would have been correct.
     /// </remarks>
     public static class BattleAudioProfileValidator
@@ -22,7 +22,7 @@ namespace LocalTanks.Editor
         public const string SourcePath = BattleAudioProfileCatalog.SourcePath;
         public const string CrewVoiceSourcePath = CrewVoiceProfileCatalog.SourcePath;
         public const string ClipCatalogPath = "Automation/pipelines/WoTAudioPipeline/audio_clips.json";
-        public const string TacticalSourceFolder = "Assets/Game/GameData/Maps";
+        public const string MapSceneFolder = "Assets/Game/Scenes/Maps";
 
         [MenuItem("Local Tanks/Data/Validate Battle Audio Profiles")]
         public static void ValidateMenu()
@@ -153,17 +153,17 @@ namespace LocalTanks.Editor
             return DeclaredClipEntries().Where(entry => !string.IsNullOrWhiteSpace(entry)).ToArray();
         }
 
-        /// <summary>The arena IDs the tactical sources use, which is what a profile must be keyed by.</summary>
+        /// <summary>The arena IDs available to runtime analysis, which are the map scene names.</summary>
         public static string[] KnownArenaIds()
         {
-            string folder = Path.GetFullPath(TacticalSourceFolder);
+            string folder = Path.GetFullPath(MapSceneFolder);
             if (!Directory.Exists(folder))
             {
                 return Array.Empty<string>();
             }
 
-            return Directory.GetFiles(folder, "*_tactical.json")
-                .Select(path => TacticalMapSource.Parse(File.ReadAllText(path)).id)
+            return Directory.GetFiles(folder, "Battle_*.unity")
+                .Select(Path.GetFileNameWithoutExtension)
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .OrderBy(id => id, StringComparer.Ordinal)
                 .ToArray();

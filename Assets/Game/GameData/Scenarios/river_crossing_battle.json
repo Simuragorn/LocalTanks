@@ -16,14 +16,6 @@
     "timeLimitIsDraw": true,
     "friendlyFire": true
   },
-  "routes": [
-    { "team": "TeamA", "lane": "North", "points": [{"x":17,"y":28},{"x":18,"y":31},{"x":36,"y":35},{"x":50,"y":33},{"x":60,"y":25}] },
-    { "team": "TeamA", "lane": "Center", "points": [{"x":17,"y":22},{"x":23,"y":22},{"x":36,"y":22},{"x":49,"y":22},{"x":60,"y":22}] },
-    { "team": "TeamA", "lane": "South", "points": [{"x":17,"y":16},{"x":17,"y":14},{"x":36,"y":9},{"x":49,"y":10},{"x":60,"y":19}] },
-    { "team": "TeamB", "lane": "North", "points": [{"x":54,"y":28},{"x":53,"y":31},{"x":35,"y":35},{"x":21,"y":33},{"x":11,"y":25}] },
-    { "team": "TeamB", "lane": "Center", "points": [{"x":54,"y":22},{"x":48,"y":22},{"x":35,"y":22},{"x":22,"y":22},{"x":11,"y":22}] },
-    { "team": "TeamB", "lane": "South", "points": [{"x":54,"y":16},{"x":54,"y":14},{"x":35,"y":9},{"x":22,"y":10},{"x":11,"y":19}] }
-  ],
   "entries": [
     {"id":"a_south_ms1_1","tankId":"ms_1","team":"TeamA","playerControlled":false,"baseId":"A","spawnSlot":0,"lane":"South","role":"Flank"},
     {"id":"a_south_ms1_2","tankId":"ms_1","team":"TeamA","playerControlled":false,"baseId":"A","spawnSlot":1,"lane":"South","role":"Flank"},

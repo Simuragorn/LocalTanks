@@ -6045,6 +6045,7 @@ MonoBehaviour:
   maximumZoom: 22
   zoomStep: 1.5
   zoomSpeed: 10
+  allowCloseInspectionZoom: 0
 --- !u!114 &652491063
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6074,7 +6075,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.NavigationDebugOverlay
   map: {fileID: 1715695857}
-  visible: 1
+  startVisible: 0
 --- !u!81 &652491065
 AudioListener:
   m_ObjectHideFlags: 0
@@ -7510,7 +7511,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b90f48a612ca1594a92c2aef47852281, type: 3}
   m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.DeveloperTimeScaleController
-  acceleratedScale: 3
+  sliderScale: 1
 --- !u!114 &743063726
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -53343,7 +53344,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: LocalTanks.Runtime::LocalTanks.BattleDirector
   scenario: {fileID: 11400000, guid: 8d3a504eb66b2da4b8d17a15a1c36c96, type: 2}
-  tacticalMap: {fileID: 11400000, guid: fc92cd10b8f53fc4c88a5959e9c07d07, type: 2}
   combatDatabase: {fileID: 11400000, guid: ddef9735e1a3b7c4a9c9845fe40213c8, type: 2}
   navigationMap: {fileID: 1715695857}
   visionSystem: {fileID: 743063723}

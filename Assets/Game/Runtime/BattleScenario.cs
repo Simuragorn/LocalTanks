@@ -38,7 +38,6 @@ namespace LocalTanks
         [Range(0, BattleScenario.SpawnSlotCount - 1)] public int spawnSlot;
         public BattleLane lane;
         public CombatAiRole role;
-        public Vector2Int[] routeCells;
     }
 
     public sealed class BattleScenario : ScriptableObject

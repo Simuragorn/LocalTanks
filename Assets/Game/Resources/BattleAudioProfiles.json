@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "profiles": [
     {
-      "mapId": "10_hills_tactical",
+      "mapId": "Battle_Mines",
       "displayName": "Рудники",
       "music": {
         "loading": "mines_music_loading",
