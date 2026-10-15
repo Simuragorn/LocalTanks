@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace LocalTanks
@@ -108,6 +107,7 @@ namespace LocalTanks
         private int activeClearanceCells;
         private bool movingInReverse;
         private BattleDirector battleDirector;
+        private Collider2D[] avoidanceColliders;
 
         public IReadOnlyList<Vector2> CurrentPath => path;
         public bool HasPath => pathIndex < path.Count;
@@ -256,6 +256,8 @@ namespace LocalTanks
             {
                 motor = GetComponent<TankMotor>();
             }
+
+            avoidanceColliders = GetComponentsInChildren<Collider2D>(true);
 
             // A tank that appears after the battle started, or in a scene with no director, still honours
             // command line overrides. Without this a swept value would apply to some machines and not
@@ -459,34 +461,24 @@ namespace LocalTanks
             Vector2 movementForward,
             bool reverse)
         {
-            Collider2D[] nearby = Physics2D.OverlapCircleAll(transform.position, avoidanceRadius);
-            Dictionary<NavigationAgent, float> clearances = new Dictionary<NavigationAgent, float>();
-            foreach (Collider2D collider in nearby)
+            Vector2 position = transform.position;
+            foreach (TeamMember member in TeamMember.ActiveMembers)
             {
-                NavigationAgent other = collider.GetComponentInParent<NavigationAgent>();
-                if (other == null || other == this)
+                NavigationAgent other = member != null ? member.GetComponent<NavigationAgent>() : null;
+                if (other == null || other == this || !other.isActiveAndEnabled)
                 {
                     continue;
                 }
 
-                float clearance = Vector2.Distance(transform.position, collider.ClosestPoint(transform.position));
-                if (!clearances.TryGetValue(other, out float previous) || clearance < previous)
-                    clearances[other] = clearance;
-            }
-
-            foreach (KeyValuePair<NavigationAgent, float> entry in clearances
-                         .OrderBy(item => item.Key != null ? item.Key.gameObject.name : string.Empty,
-                             System.StringComparer.Ordinal))
-            {
-                NavigationAgent other = entry.Key;
-                Vector2 offset = (Vector2)other.transform.position - (Vector2)transform.position;
+                Vector2 offset = (Vector2)other.transform.position - position;
                 float distance = offset.magnitude;
                 if (distance <= 0.01f || Vector2.Dot(movementForward, offset.normalized) < 0.15f)
                 {
                     continue;
                 }
 
-                float clearance = entry.Value;
+                float clearance = other.ClearanceFrom(position);
+                if (clearance > avoidanceRadius) continue;
                 drive *= NavigationAvoidanceMath.DriveFactor(clearance, avoidanceRadius);
                 float side = Vector3.Cross(movementForward, offset.normalized).z;
                 float avoidanceTurn = NavigationAvoidanceMath.TurnStrength(clearance, avoidanceRadius);
@@ -494,6 +486,82 @@ namespace LocalTanks
                 turn += (side >= 0f ? avoidanceTurn : -avoidanceTurn) * steeringSign;
                 turn = Mathf.Clamp(turn, -1f, 1f);
             }
+        }
+
+        /// <summary>
+        /// Radial distance from a world point to the outer envelope of this tank's authored colliders.
+        /// This deliberately uses collider geometry rather than Collider2D.ClosestPoint: the latter asks
+        /// Box2D and returned slightly different values between clean processes before the first physics
+        /// step, which made identical seeded bots issue different steering commands immediately.
+        /// </summary>
+        private float ClearanceFrom(Vector2 worldPoint)
+        {
+            Vector2 centre = transform.position;
+            Vector2 delta = worldPoint - centre;
+            float distance = delta.magnitude;
+            if (distance <= 0.0001f) return 0f;
+            Vector2 direction = delta / distance;
+            float support = 0f;
+            Collider2D[] colliders = avoidanceColliders ??= GetComponentsInChildren<Collider2D>(true);
+            foreach (Collider2D collider in colliders)
+            {
+                if (collider == null || !collider.enabled) continue;
+                support = Mathf.Max(support, SupportDistance(collider, centre, direction));
+            }
+
+            return Mathf.Max(0f, distance - support);
+        }
+
+        private static float SupportDistance(Collider2D collider, Vector2 centre, Vector2 direction)
+        {
+            if (collider is PolygonCollider2D polygon)
+            {
+                float result = 0f;
+                for (int pathIndex = 0; pathIndex < polygon.pathCount; pathIndex++)
+                {
+                    foreach (Vector2 point in polygon.GetPath(pathIndex))
+                    {
+                        Vector2 worldPoint = polygon.transform.TransformPoint(point + polygon.offset);
+                        result = Mathf.Max(result, Vector2.Dot(worldPoint - centre, direction));
+                    }
+                }
+
+                return result;
+            }
+
+            if (collider is BoxCollider2D box)
+                return RectangleSupport(box.transform, box.offset, box.size, centre, direction);
+            if (collider is CapsuleCollider2D capsule)
+                return RectangleSupport(capsule.transform, capsule.offset, capsule.size, centre, direction);
+            if (collider is CircleCollider2D circle)
+            {
+                Vector2 worldCentre = circle.transform.TransformPoint(circle.offset);
+                Vector3 scale = circle.transform.lossyScale;
+                float radius = circle.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.y));
+                return Mathf.Max(0f, Vector2.Dot(worldCentre - centre, direction) + radius);
+            }
+
+            return 0f;
+        }
+
+        private static float RectangleSupport(
+            Transform colliderTransform,
+            Vector2 offset,
+            Vector2 size,
+            Vector2 centre,
+            Vector2 direction)
+        {
+            Vector2 half = size * 0.5f;
+            float result = 0f;
+            for (int x = -1; x <= 1; x += 2)
+            for (int y = -1; y <= 1; y += 2)
+            {
+                Vector2 localPoint = offset + new Vector2(half.x * x, half.y * y);
+                Vector2 worldPoint = colliderTransform.TransformPoint(localPoint);
+                result = Mathf.Max(result, Vector2.Dot(worldPoint - centre, direction));
+            }
+
+            return result;
         }
 
         private void ApplyUnstuck(ref float drive, ref float turn, Vector2 position, bool reverse)
