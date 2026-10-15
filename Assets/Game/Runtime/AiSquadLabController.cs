@@ -29,6 +29,7 @@ namespace LocalTanks
         private float nextSampleAt;
         private bool ready;
         private bool paused;
+        private bool startupPaused;
         private bool complete;
         private bool hasPreviousRandomState;
         private UnityEngine.Random.State previousRandomState;
@@ -58,6 +59,11 @@ namespace LocalTanks
 
         private void Awake()
         {
+            // Scene loading and Start coroutine scheduling can otherwise give the freshly spawned bots one
+            // or two unobserved simulation steps. The number of warm-up steps depends on import/frame timing
+            // and made the same seed start from a different pose after a reload.
+            Time.timeScale = 0f;
+            startupPaused = true;
             previousRandomState = UnityEngine.Random.state;
             hasPreviousRandomState = true;
             FindAnyObjectByType<BattleVisibilitySettings>()?.Configure(showHiddenTanksForTesting);
@@ -113,7 +119,7 @@ namespace LocalTanks
             auditSession?.Dispose();
             auditSession = null;
             if (hasPreviousRandomState) UnityEngine.Random.state = previousRandomState;
-            if (paused) Time.timeScale = 1f;
+            if (startupPaused || paused) Time.timeScale = 1f;
         }
 
         public void ReloadCase(int index)
@@ -172,6 +178,8 @@ namespace LocalTanks
             paused = false;
             complete = false;
             finalReport = string.Empty;
+            startupPaused = false;
+            Time.timeScale = 1f;
         }
 
         private static int NormalizeIndex(int index, int count)
