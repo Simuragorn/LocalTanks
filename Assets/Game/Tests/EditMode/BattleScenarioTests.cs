@@ -369,6 +369,21 @@ namespace LocalTanks.Tests
         }
 
         [Test]
+        public void CombatAiPolicy_FiresMagazineWeaponsAsABurstBeforeReturningToCover()
+        {
+            Assert.That(CombatAiPolicy.ShouldReturnToCoverAfterShot(false, 0), Is.True,
+                "A cannon leaves after its single shot.");
+            Assert.That(CombatAiPolicy.ShouldReturnToCoverAfterShot(true, 4), Is.False,
+                "A magazine weapon must stay for the rest of its burst.");
+            Assert.That(CombatAiPolicy.ShouldReturnToCoverAfterShot(true, 0), Is.True,
+                "The completed magazine ends the burst.");
+            Assert.That(CombatAiPolicy.BurstCanWaitThrough(FireBlockReason.Reloading), Is.True,
+                "The short interval between rounds must not interrupt a burst.");
+            Assert.That(CombatAiPolicy.BurstCanWaitThrough(FireBlockReason.AllyInLine), Is.False,
+                "A lost firing lane ends the burst instead of spraying through an ally.");
+        }
+
+        [Test]
         public void CombatAiPolicy_BreaksCloseOrbitWhenTurretCannotTrackTarget()
         {
             Assert.That(CombatAiPolicy.ShouldBreakCloseOrbit(2.5f, 3f, 16f, 5f, 20f), Is.True);

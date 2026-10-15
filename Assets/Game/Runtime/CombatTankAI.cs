@@ -119,6 +119,7 @@ namespace LocalTanks
         private bool returnForwardFallbackUsed;
         private bool lastCoverReturnStartedInReverse;
         private int completedCoverCycleShots;
+        private bool firingBurstFromCover;
         private Vector2 primaryThreatDirection;
         private float lastPenetratingHitTime = float.NegativeInfinity;
         private float defensiveRearExposureSince = float.NegativeInfinity;
@@ -268,6 +269,7 @@ namespace LocalTanks
             peekReachedAt = float.NegativeInfinity;
             holdingTacticalCover = false;
             completedCoverCycleShots = 0;
+            firingBurstFromCover = false;
             primaryThreatDirection = Vector2.zero;
             lastPenetratingHitTime = float.NegativeInfinity;
             defensiveRearExposureSince = float.NegativeInfinity;
@@ -578,6 +580,7 @@ namespace LocalTanks
             if ((State != CombatAiState.Engage && State != CombatAiState.Reposition &&
                  State != CombatAiState.Hold) || !IsTargetVisible(target))
             {
+                FinishInterruptedBurst();
                 // A bot that is still deploying keeps its turret on a visible enemy without stopping for it:
                 // its slot is the worst place to fight from, and the route is the team's decision. The hull is
                 // turned toward the enemy as well, because driving to a position is no reason to show the rear.
@@ -615,13 +618,14 @@ namespace LocalTanks
                 navigation?.SetPaused(true);
                 UpdateArmorFacing((targetPosition - (Vector2)transform.position).normalized);
                 CurrentFireBlockReason = EvaluateFirePermission(target, distance);
+                if (FinishBlockedBurst()) return;
                 if (holdingTacticalCover && hasCoverFiringPosition)
                 {
                     return;
                 }
                 if (CurrentFireBlockReason == FireBlockReason.None && weapon.TryFire())
                 {
-                    BeginReturnToCover(true);
+                    HandleCompletedShot();
                 }
                 return;
             }
@@ -630,6 +634,7 @@ namespace LocalTanks
             {
                 navigation?.SetPaused(false);
                 CurrentFireBlockReason = EvaluateFirePermission(target, distance);
+                if (FinishBlockedBurst()) return;
                 if (tacticalMovementPurpose == TacticalMovementPurpose.BreakCloseOrbit)
                 {
                     if (CurrentFireBlockReason == FireBlockReason.None)
@@ -648,7 +653,7 @@ namespace LocalTanks
                 }
                 if (CurrentFireBlockReason == FireBlockReason.None && weapon.TryFire())
                 {
-                    BeginReturnToCover(true);
+                    HandleCompletedShot();
                 }
 
                 return;
@@ -681,13 +686,14 @@ namespace LocalTanks
             }
 
             CurrentFireBlockReason = EvaluateFirePermission(target, distance);
+            if (FinishBlockedBurst()) return;
             UpdateAimRecovery();
             if (CurrentFireBlockReason == FireBlockReason.None)
             {
                 aimingBlockedSince = -1f;
                 if (weapon.TryFire())
                 {
-                    BeginReturnToCover(true);
+                    HandleCompletedShot();
                 }
             }
             else if ((CurrentFireBlockReason == FireBlockReason.AllyInLine ||
@@ -1251,7 +1257,9 @@ namespace LocalTanks
                 return;
             }
 
-            if (!IsTargetVisible(target) || weapon.IsReady) return;
+            // The short cadence inside a magazine is not a reload. Treating it as one made a cover user
+            // retreat after the first bullet whenever a decision tick landed between two rounds.
+            if (!IsTargetVisible(target) || weapon.IsReady || weapon.IsWaitingForNextBurstRound) return;
             LineOfFireAssessment exposure = EvaluateLineOfFireAssessment(target);
             float healthRatio = health != null && health.MaximumHitPoints > 0
                 ? (float)health.CurrentHitPoints / health.MaximumHitPoints
@@ -1633,6 +1641,7 @@ namespace LocalTanks
 
         private void BeginReturnToCover(bool afterShot = false)
         {
+            firingBurstFromCover = false;
             if (!hasCoverPosition || navigation == null ||
                 Vector2.Distance(transform.position, coverPosition) <= 0.55f)
             {
@@ -1669,6 +1678,48 @@ namespace LocalTanks
             State = CombatAiState.Reposition;
             navigation.SetPaused(false);
             lastTacticalPositionResult = "Возвращается в укрытие после выстрела";
+        }
+
+        private void HandleCompletedShot()
+        {
+            bool returnNow = CombatAiPolicy.ShouldReturnToCoverAfterShot(
+                weapon != null && weapon.IsBurstWeapon,
+                weapon != null ? weapon.RoundsRemaining : 0);
+            if (returnNow)
+            {
+                BeginReturnToCover(true);
+                return;
+            }
+
+            firingBurstFromCover = hasCoverPosition && navigation != null &&
+                                   Vector2.Distance(transform.position, coverPosition) > 0.55f;
+            if (firingBurstFromCover)
+            {
+                tacticalDecisionReason = "Ведёт очередь из автоматического оружия";
+                lastTacticalPositionResult = "Остаётся на огневой точке до конца очереди";
+            }
+        }
+
+        private bool FinishBlockedBurst()
+        {
+            if (!firingBurstFromCover || CombatAiPolicy.BurstCanWaitThrough(CurrentFireBlockReason))
+            {
+                return false;
+            }
+
+            FinishInterruptedBurst();
+            return true;
+        }
+
+        private void FinishInterruptedBurst()
+        {
+            if (!firingBurstFromCover)
+            {
+                return;
+            }
+
+            firingBurstFromCover = false;
+            BeginReturnToCover(true);
         }
 
         private bool TryContinueReturnForwards(TacticalDecisionPriority priority)

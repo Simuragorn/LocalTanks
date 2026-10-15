@@ -44,6 +44,10 @@ namespace LocalTanks
         public float RemainingReloadSeconds => reloadTimer.IsReady ? shotIntervalTimer.Remaining : reloadTimer.Remaining;
         public int RoundsRemaining => roundsRemaining;
         public int MagazineSize => config != null && config.weapon != null ? Mathf.Max(1, config.weapon.magazineSize) : 1;
+        /// <summary>A multi-round magazine is fired as one tactical burst rather than as separate cannon shots.</summary>
+        public bool IsBurstWeapon => MagazineSize > 1;
+        public bool IsWaitingForNextBurstRound =>
+            IsBurstWeapon && !IsReloading && roundsRemaining > 0 && !shotIntervalTimer.IsReady;
         public float ReloadProgress
         {
             get

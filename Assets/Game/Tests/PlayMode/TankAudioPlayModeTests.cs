@@ -32,12 +32,16 @@ namespace LocalTanks.Tests
             WeaponController weapon = root.AddComponent<WeaponController>();
             weapon.Configure(definition, projectile, muzzle.transform);
 
+            Assert.That(weapon.IsBurstWeapon, Is.True,
+                "A multi-round magazine must be exposed to AI as one burst-capable weapon.");
             Assert.That(weapon.CreatedProjectileCount, Is.EqualTo(3),
                 "The whole automatic-fire magazine should be prepared before the first shot.");
             Assert.That(weapon.IdleProjectileCount, Is.EqualTo(3));
 
             Assert.That(weapon.TryFire(), Is.True);
             Assert.That(weapon.RoundsRemaining, Is.EqualTo(2));
+            Assert.That(weapon.IsWaitingForNextBurstRound, Is.True,
+                "The cadence inside a magazine is not a full reload and AI must keep firing.");
             Assert.That(weapon.TryFire(), Is.False);
             yield return new WaitForSeconds(0.02f);
             Assert.That(weapon.TryFire(), Is.True);

@@ -119,6 +119,23 @@ namespace LocalTanks
             return Mathf.Abs(targetRelativeAngleDegrees) > MaximumAdvanceRearAngle;
         }
 
+        /// <summary>
+        /// A cannon may leave its firing position after one shot. A magazine weapon stays exposed long
+        /// enough to use its burst and returns only after the last round; otherwise every trigger pull
+        /// turns an automatic weapon into a slow single-shot gun.
+        /// </summary>
+        public static bool ShouldReturnToCoverAfterShot(bool burstWeapon, int roundsRemaining)
+        {
+            return !burstWeapon || roundsRemaining <= 0;
+        }
+
+        public static bool BurstCanWaitThrough(FireBlockReason reason)
+        {
+            return reason == FireBlockReason.None ||
+                   reason == FireBlockReason.Reloading ||
+                   reason == FireBlockReason.Aiming;
+        }
+
         public static bool ShouldBreakCloseOrbit(
             float targetDistance,
             float triggerDistance,
